@@ -1,0 +1,24 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "public/index.html",   "use": "@vercel/static" },
+    { "src": "public/logo.png",     "use": "@vercel/static" },
+    { "src": "public/logo-icon.png", "use": "@vercel/static" },
+    { "src": "public/logo-mvp.png",  "use": "@vercel/static" },
+    { "src": "api/tasks.js",        "use": "@vercel/node" },
+    { "src": "api/reminder.js",     "use": "@vercel/node" },
+    { "src": "api/config.js",       "use": "@vercel/node" }
+  ],
+  "routes": [
+    { "src": "/api/tasks",     "dest": "/api/tasks.js" },
+    { "src": "/api/reminder",  "dest": "/api/reminder.js" },
+    { "src": "/api/config",    "dest": "/api/config.js" },
+    { "src": "/logo.png",      "dest": "/public/logo.png" },
+    { "src": "/logo-icon.png", "dest": "/public/logo-icon.png" },
+    { "src": "/logo-mvp.png",  "dest": "/public/logo-mvp.png" },
+    { "src": "/(.*)",          "dest": "/public/index.html" }
+  ],
+  "crons": [
+    { "path": "/api/reminder", "schedule": "0 14 * * *" }
+  ]
+}

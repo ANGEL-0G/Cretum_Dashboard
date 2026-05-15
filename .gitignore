@@ -1,0 +1,30 @@
+# Dependencias
+node_modules/
+
+# Build / herramientas
+.vercel/
+.next/
+dist/
+build/
+
+# Configuración local y secretos
+.env
+.env.local
+.env.*.local
+.env.test
+.env.config
+.env.check
+.anon_tmp
+
+# Editor / OS
+.vscode/
+.idea/
+.claude/
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+
+# Temp
+*.tmp
+*.bak

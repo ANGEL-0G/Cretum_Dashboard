@@ -1,0 +1,20 @@
+{
+  "name": "cretum-tasks",
+  "version": "1.0.0",
+  "description": "CRETUM — Módulo de pendientes del equipo",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "ioredis": "^5.4.1",
+    "pg": "^8.13.1",
+    "xlsx": "^0.18.5"
+  },
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod",
+    "import": "node scripts/import_excel.mjs"
+  }
+}
