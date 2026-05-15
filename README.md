@@ -1,154 +1,141 @@
-# CRETUM · Pendientes del equipo
+# Cretum Dashboard
 
-App de gestión de tareas con vistas Kanban, Lista y Timeline.  
-Deploy en Vercel en ~10 minutos, sin saber de servidores.
+Dashboard interno para equipo Cretum. Soporta dos empresas (Cretum / MVP) con módulos compartidos:
 
----
+- **To Do Dashboard** — Tareas personales y de equipo, asignaciones con seguimiento de progreso, vistas Lista / Kanban / Timeline.
+- **Base de Datos** — Inversionistas y posiciones del portafolio (LP tracking).
+- **Recordatorios semanales** por email configurables por usuario.
 
-## Estructura del proyecto
+## Stack
+
+- **Hosting**: Vercel (serverless functions + static)
+- **Base de datos**: Supabase (Postgres + Auth + RLS)
+- **Caché de tareas**: Upstash Redis (vía `REDIS_URL`)
+- **Emails transaccionales**: Resend
+- **Frontend**: HTML / CSS / JS vanilla (sin framework, sin build step)
+- **Backend**: Node.js serverless functions (`api/*.js`)
+
+## Estructura
 
 ```
-cretum-tasks/
-├── public/
-│   └── index.html      ← toda la app (HTML + CSS + JS)
+.
 ├── api/
-│   └── tasks.js        ← API serverless (guarda/lee tareas)
-├── vercel.json         ← configuración de Vercel
+│   ├── config.js      # devuelve SUPABASE_URL + ANON_KEY al frontend
+│   ├── tasks.js       # GET/POST de tareas (Redis), valida JWT de Supabase
+│   └── reminder.js    # cron diario + endpoint manual (Resend)
+├── db/
+│   ├── 01_schema.sql       # tablas + RLS + triggers
+│   └── 02_reminders.sql    # columnas de preferencias de recordatorio
+├── public/
+│   ├── index.html     # toda la UI (single page)
+│   ├── logo.png, logo-icon.png, logo-mvp.png
+├── scripts/
+│   └── import_excel.mjs    # importa el Excel de inversionistas a Supabase
 ├── package.json
-└── README.md
+└── vercel.json        # builds + routes + cron
 ```
 
----
+## Variables de entorno (Vercel → Settings → Environment Variables)
 
-## Paso 1 — Crear cuenta en Vercel (gratis)
+| Variable | Para qué |
+|---|---|
+| `SUPABASE_URL` | Project URL de Supabase (`https://xxx.supabase.co`) |
+| `SUPABASE_ANON_KEY` | Anon public key (segura para frontend) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service role key — **Sensitive**, solo backend |
+| `REDIS_URL` | Connection string de Upstash Redis (TCP+TLS) |
+| `RESEND_API_KEY` | API key de Resend para enviar correos |
+| `CRON_SECRET` | String aleatorio largo — Vercel lo usa para autorizar el cron diario |
 
-1. Ve a **https://vercel.com** y crea una cuenta (puedes usar tu cuenta de GitHub o Google)
-2. No necesitas tarjeta de crédito
+## Setup inicial (clonar y desplegar desde cero)
 
----
-
-## Paso 2 — Instalar Vercel CLI
-
-Abre una terminal y ejecuta:
-
-```bash
-npm install -g vercel
-```
-
-Si no tienes Node.js instalado: https://nodejs.org (descarga la versión LTS)
-
----
-
-## Paso 3 — Hacer el deploy
-
-En la terminal, entra a la carpeta del proyecto y ejecuta:
+### 1. Clonar el repo
 
 ```bash
-cd cretum-tasks
+git clone https://github.com/ANGEL-0G/Cretum_Dashboard.git
+cd Cretum_Dashboard
 npm install
-vercel
 ```
 
-Vercel te preguntará:
-- **Set up and deploy?** → Y
-- **Which scope?** → selecciona tu cuenta
-- **Link to existing project?** → N
-- **Project name?** → `cretum-tasks` (o el que quieras)
-- **Directory?** → `.` (punto, la carpeta actual)
+### 2. Crear proyecto en Supabase
 
-Al final te dará una URL tipo `https://cretum-tasks-xxxx.vercel.app`
+1. https://supabase.com → New project
+2. SQL Editor → pega y corre [db/01_schema.sql](db/01_schema.sql)
+3. SQL Editor → pega y corre [db/02_reminders.sql](db/02_reminders.sql)
+4. Authentication → Users → Add user (con Auto Confirm) → crea usuarios admin
+5. Para asignar rol admin:
+   ```sql
+   UPDATE profiles SET role = 'admin', full_name = 'Nombre', initials = 'AB'
+   WHERE id = (SELECT id FROM auth.users WHERE email = 'persona@ejemplo.com');
+   ```
 
-Para subir a producción:
+### 3. Importar datos de inversionistas
+
+```powershell
+$env:DATABASE_URL = "postgresql://postgres:PASSWORD@db.PROJECT_REF.supabase.co:5432/postgres"
+$env:XLSX_PATH    = "C:\ruta\al\Cretum_MVP LP Tracking Sheet.xlsx"
+npm run import
+```
+
+(Usa la conexión "Session pooler" de Supabase si tu red no soporta IPv6 — puerto 5432).
+
+### 4. Crear cuenta en Upstash Redis
+
+1. Vercel → Storage → Marketplace → Upstash Redis
+2. Crea base de datos en región cercana
+3. Conecta al proyecto Vercel — pone `REDIS_URL` automáticamente
+
+### 5. Crear cuenta en Resend
+
+1. https://resend.com → registra cuenta
+2. API Keys → crea una con `Sending access`
+3. Para enviar a correos reales del equipo, verifica tu dominio en Resend → Domains
+
+### 6. Configurar env vars en Vercel
+
+Settings → Environment Variables → agrega las 6 variables de la tabla de arriba.
+
+`CRON_SECRET` debe ser un string largo aleatorio (puedes generar uno con cualquier generador online).
+
+### 7. Deploy
 
 ```bash
-vercel --prod
+vercel link   # vincular al proyecto
+vercel --prod # primer deploy
 ```
 
----
+O conecta el repo de GitHub a Vercel (Settings → Git) para deploy automático en cada `git push` a `main`.
 
-## Paso 4 — Configurar Vercel KV (para persistencia real)
+## Dominio personalizado
 
-Sin esto, las tareas se borran si Vercel reinicia el servidor.  
-Con KV quedan guardadas permanentemente. Es gratis hasta 256 MB.
+1. Vercel → Settings → Domains → Add → escribe el dominio
+2. Vercel da uno o dos registros DNS (CNAME para subdominio, A record para raíz)
+3. Agrega esos registros con tu proveedor de dominio
+4. Espera propagación + SSL automático
+5. Listo
 
-1. Ve a **https://vercel.com/dashboard**
-2. Entra a tu proyecto → **Storage** → **Create Database** → **KV**
-3. Dale un nombre (ej: `cretum-kv`) y click en **Create**
-4. En la sección **Environment Variables** click en **Connect to Project**
-5. Eso agrega automáticamente las variables `KV_URL`, `KV_REST_API_URL`, etc.
-6. Vuelve a hacer deploy: `vercel --prod`
+## Roles
 
-Listo. Las tareas ahora persisten entre sesiones.
+| Rol | Permisos |
+|---|---|
+| `viewer` | Solo lectura — ve tareas y base de datos |
+| `editor` | Crea/edita tareas, edita portafolio |
+| `admin` | Todo + cambiar roles |
 
----
+## Recordatorios
 
-## Paso 5 — Agregar usuarios
-
-Abre `public/index.html` y busca esta sección cerca del final:
-
-```javascript
-const USERS = {
-  'admin':  { pass: 'cretum2024', name: 'Admin',    initials: 'AD' },
-  'jlopez': { pass: 'cretum2024', name: 'J. López', initials: 'JL' },
-  'mvega':  { pass: 'cretum2024', name: 'M. Vega',  initials: 'MV' },
-};
-```
-
-Agrega o modifica los usuarios con este formato:
-
-```javascript
-'nombre_usuario': { pass: 'contraseña', name: 'Nombre que se muestra', initials: 'NI' },
-```
-
-Después vuelve a hacer deploy: `vercel --prod`
-
----
-
-## Paso 6 — Compartir con tu socio
-
-Mándale la URL de producción y sus credenciales.  
-La app se refresca automáticamente cada 30 segundos para ver los cambios del otro.
-
----
-
-## Recordatorio semanal (WhatsApp + Email)
-
-El recordatorio automático de cada lunes se puede implementar con un **Vercel Cron Job**:
-
-1. Crea el archivo `api/reminder.js` con la lógica de envío
-2. Agrega en `vercel.json`:
-```json
-"crons": [
-  { "path": "/api/reminder", "schedule": "0 9 * * 1" }
-]
-```
-Esto ejecuta el endpoint cada lunes a las 9 AM (UTC).  
-Para ajustar la zona horaria cambia el horario: si estás en CDMX (UTC-6), usa `0 15 * * 1`.
-
-Para el envío en sí:
-- **WhatsApp**: usa Twilio o Meta Cloud API con el token que ya tienes del dashboard principal
-- **Email**: usa Resend (gratis hasta 3,000 emails/mes) o SendGrid
-
----
+- Cron diario corre 8 AM CDMX (14:00 UTC) — `vercel.json`
+- Cada usuario configura su día y hora preferida en el menú de perfil
+- El cron filtra usuarios por día y manda email con su resumen personalizado
+- Sin dominio verificado en Resend, todos los emails se redirigen al email registrado en Resend (constante `ON_DEMAND_RECIPIENT` en [api/reminder.js](api/reminder.js)). Una vez verificado el dominio, cambiar a `user.email`.
 
 ## Desarrollo local
-
-Para probar en tu computadora antes de hacer deploy:
 
 ```bash
 vercel dev
 ```
 
-Esto levanta la app en `http://localhost:3000` con hot reload.
+Levanta en `http://localhost:3000` con las env vars del proyecto Vercel.
 
----
+## Migrar datos del Excel cuando cambien
 
-## Actualizar la app
-
-Cada vez que edites `index.html` o `api/tasks.js`, vuelve a hacer:
-
-```bash
-vercel --prod
-```
-
-El deploy tarda menos de 30 segundos.
+Re-ejecuta `npm run import` con `DATABASE_URL` apuntando a Supabase. El script hace `TRUNCATE contacts, investments` y vuelve a insertarlo todo (con `ON CONFLICT` en `investors`, `companies`, `series` para no duplicar).
