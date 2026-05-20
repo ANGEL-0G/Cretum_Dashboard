@@ -1356,14 +1356,42 @@ button,input,select{font-family:var(--font)}
 .db-toolbar{
   display:flex;align-items:center;gap:14px;margin-bottom:16px;flex-wrap:wrap;
 }
-.db-tabs{display:flex;gap:3px;background:var(--gray-100);padding:3px;border-radius:var(--r-md)}
-.db-tab{
-  padding:7px 14px;background:transparent;border:none;
-  font-size:12px;color:var(--gray-500);cursor:pointer;border-radius:var(--r-sm);
-  display:flex;align-items:center;gap:6px;font-family:var(--font);transition:all .15s;
+.db-title-block{
+  display:flex;align-items:center;gap:8px;
+  font-size:14px;font-weight:500;color:var(--navy);
+  padding:7px 14px 7px 0;
 }
-.db-tab.active{background:var(--white);color:var(--navy);box-shadow:var(--shadow-sm);font-weight:500}
-.db-tab:not(.active):hover{color:var(--gray-700)}
+.db-title-block i{color:var(--navy);font-size:14px}
+
+/* Selector de columnas — checkbox list dentro del cdd panel */
+.db-cols-cdd .cdd-opt{
+  display:flex;align-items:center;gap:9px;
+  padding:8px 12px;cursor:pointer;font-size:12.5px;
+  color:var(--gray-700);user-select:none;
+}
+.db-cols-cdd .cdd-opt:hover{background:var(--gray-50);padding-left:12px}
+.db-cols-cdd .cdd-opt input[type="checkbox"]{
+  width:14px;height:14px;cursor:pointer;accent-color:var(--navy);
+  margin:0;flex-shrink:0;
+}
+.db-cols-cdd .cdd-opt.locked{color:var(--gray-400);cursor:default}
+.db-cols-cdd .cdd-opt.locked:hover{background:transparent}
+
+/* Columnas extra en las filas */
+.db-row-series{
+  background:var(--navy-pale);color:var(--navy);
+  padding:2px 9px;border-radius:10px;font-size:10px;font-weight:500;
+  white-space:nowrap;
+}
+.db-row-comp{
+  background:var(--gray-100);color:var(--gray-700);
+  padding:2px 9px;border-radius:10px;font-size:10px;font-weight:500;
+  white-space:nowrap;
+}
+.db-row-actual{
+  font-family:var(--mono);color:var(--gray-700);font-size:11px;
+  white-space:nowrap;
+}
 
 .db-search{
   position:relative;flex:1;min-width:200px;
@@ -2068,13 +2096,8 @@ button,input,select{font-family:var(--font)}
   <!-- VISTA: BASE DE DATOS -->
   <div class="page page-db" id="pageDb">
     <div class="db-toolbar">
-      <div class="db-tabs">
-        <button class="db-tab active" data-tab="investors" onclick="setDbTab('investors')">
-          <i class="fa-solid fa-user-tie"></i> Inversionistas
-        </button>
-        <button class="db-tab" data-tab="companies" onclick="setDbTab('companies')">
-          <i class="fa-solid fa-building"></i> Empresas
-        </button>
+      <div class="db-title-block">
+        <i class="fa-solid fa-user-tie"></i> Inversionistas
       </div>
       <div class="db-search">
         <i class="fa-solid fa-magnifying-glass db-search-ico"></i>
@@ -2098,6 +2121,14 @@ button,input,select{font-family:var(--font)}
           <i class="fa-solid fa-chevron-down cdd-chev"></i>
         </button>
         <div class="cdd-panel" id="ddSeriesPanel"></div>
+      </div>
+      <div class="cdd db-cdd db-cols-cdd" id="ddCols">
+        <button class="cdd-btn" type="button" onclick="cddToggle('ddCols')">
+          <i class="fa-solid fa-table-columns cdd-ico"></i>
+          <span class="cdd-label">Columnas</span>
+          <i class="fa-solid fa-chevron-down cdd-chev"></i>
+        </button>
+        <div class="cdd-panel" id="ddColsPanel"></div>
       </div>
       <button class="db-clear" id="dbClear" onclick="clearFilters()" style="display:none">
         <i class="fa-solid fa-xmark"></i> Limpiar
@@ -3755,10 +3786,61 @@ document.addEventListener('keydown', (e) => {
    BASE DE DATOS — carga y render
 ═══════════════════════════════════════════ */
 let dbLoaded = false;
+
+// Columnas disponibles para la lista de inversionistas.
+// `locked: true` = siempre visible (no togglable).
+const DB_COLUMNS = [
+  { key: 'name',     label: 'Nombre',                 locked: true,  default: true  },
+  { key: 'series',   label: 'Serie',                                  default: true  },
+  { key: 'amount',   label: 'Compromiso',                             default: true  },
+  { key: 'positions',label: 'Posiciones',                             default: false },
+  { key: 'company',  label: 'Empresa',                                default: false },
+  { key: 'actual',   label: 'Compromiso ejecutado',                   default: false },
+];
+let dbVisibleCols = loadVisibleCols();
+
+function loadVisibleCols() {
+  try {
+    const raw = localStorage.getItem('dbVisibleCols');
+    if (raw) {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) return new Set(arr);
+    }
+  } catch {}
+  return new Set(DB_COLUMNS.filter(c => c.default).map(c => c.key));
+}
+function saveVisibleCols() {
+  try { localStorage.setItem('dbVisibleCols', JSON.stringify([...dbVisibleCols])); } catch {}
+}
+function isColVisible(key) {
+  if (DB_COLUMNS.find(c => c.key === key)?.locked) return true;
+  return dbVisibleCols.has(key);
+}
+function toggleCol(key) {
+  const col = DB_COLUMNS.find(c => c.key === key);
+  if (!col || col.locked) return;
+  if (dbVisibleCols.has(key)) dbVisibleCols.delete(key);
+  else dbVisibleCols.add(key);
+  saveVisibleCols();
+  renderColumnPicker();
+  renderDbList();
+}
+function renderColumnPicker() {
+  const panel = document.getElementById('ddColsPanel');
+  if (!panel) return;
+  panel.innerHTML = DB_COLUMNS.map(c => {
+    const on = isColVisible(c.key);
+    const cls = 'cdd-opt' + (c.locked ? ' locked' : '');
+    const onClick = c.locked ? '' : `onclick="toggleCol('${c.key}');event.stopPropagation()"`;
+    return `<div class="${cls}" ${onClick}>
+      <input type="checkbox" ${on ? 'checked' : ''} ${c.locked ? 'disabled' : ''}>
+      <span>${c.label}${c.locked ? ' (fijo)' : ''}</span>
+    </div>`;
+  }).join('');
+}
 let dbInvestors = [];
 let dbCompanies = [];
 let dbSeries = [];
-let dbCurrentTab = 'investors';
 const dbInvestorCompanies = {};  // investor_id → Set<company_id>
 const dbInvestorSeries = {};     // investor_id → Set<series_id>
 
@@ -3828,6 +3910,7 @@ async function loadDb() {
 
     dbLoaded = true;
     populateFilters();
+    renderColumnPicker();
     renderDbList();
   } catch (err) {
     console.error(err);
@@ -3885,22 +3968,35 @@ document.addEventListener('click', (e) => {
   }
 });
 
-function setDbTab(tab) {
-  dbCurrentTab = tab;
-  document.querySelectorAll('.db-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
-  document.getElementById('dbSearch').value = '';
-  cddPick('ddCompany', '', 'Todas las empresas');
-  cddPick('ddSeries', '', 'Todas las series');
-  document.getElementById('dbFilters').style.display = (tab === 'investors') ? '' : 'none';
-  closeDetail();
-  renderDbList();
-}
-
 function clearFilters() {
   document.getElementById('dbSearch').value = '';
   cddPick('ddCompany', '', 'Todas las empresas');
   cddPick('ddSeries', '', 'Todas las series');
   renderDbList();
+}
+
+function investorSeriesLabel(invId, filterSeriesId) {
+  const ids = [...(dbInvestorSeries[invId] || [])];
+  if (!ids.length) return '—';
+  if (filterSeriesId) {
+    const s = dbSeries.find(x => x.id === +filterSeriesId);
+    return s ? s.name : '—';
+  }
+  const names = ids.map(id => dbSeries.find(s => s.id === id)?.name).filter(Boolean);
+  if (names.length <= 2) return names.join(', ');
+  return `${names[0]}, ${names[1]} +${names.length - 2}`;
+}
+
+function investorCompanyLabel(invId, filterCompanyId) {
+  const ids = [...(dbInvestorCompanies[invId] || [])];
+  if (!ids.length) return '—';
+  if (filterCompanyId) {
+    const c = dbCompanies.find(x => x.id === +filterCompanyId);
+    return c ? c.name : '—';
+  }
+  const names = ids.map(id => dbCompanies.find(c => c.id === id)?.name).filter(Boolean);
+  if (names.length <= 2) return names.join(', ');
+  return `${names[0]}, ${names[1]} +${names.length - 2}`;
 }
 
 function renderDbList() {
@@ -3914,13 +4010,10 @@ function renderDbList() {
   const anyFilter = !!(q || companyId || seriesId);
   document.getElementById('dbClear').style.display = anyFilter ? '' : 'none';
 
-  const source = dbCurrentTab === 'investors' ? dbInvestors : dbCompanies;
-  let filtered = source;
+  let filtered = dbInvestors;
   if (q) filtered = filtered.filter(r => r.name.toLowerCase().includes(q));
-  if (dbCurrentTab === 'investors') {
-    if (companyId) filtered = filtered.filter(r => dbInvestorCompanies[r.id]?.has(+companyId));
-    if (seriesId)  filtered = filtered.filter(r => dbInvestorSeries[r.id]?.has(+seriesId));
-  }
+  if (companyId) filtered = filtered.filter(r => dbInvestorCompanies[r.id]?.has(+companyId));
+  if (seriesId)  filtered = filtered.filter(r => dbInvestorSeries[r.id]?.has(+seriesId));
   document.getElementById('dbCount').textContent = filtered.length + (filtered.length === 1 ? ' resultado' : ' resultados');
 
   if (!filtered.length) {
@@ -3928,28 +4021,19 @@ function renderDbList() {
     return;
   }
 
-  if (dbCurrentTab === 'investors') {
-    list.innerHTML = filtered.map(i => `
-      <div class="db-row" onclick="openInvestor(${i.id})">
+  list.innerHTML = filtered.map(i => {
+    const parts = [];
+    if (isColVisible('series')) parts.push(`<span class="db-row-series">${escapeHtml(investorSeriesLabel(i.id, seriesId))}</span>`);
+    if (isColVisible('company')) parts.push(`<span class="db-row-comp">${escapeHtml(investorCompanyLabel(i.id, companyId))}</span>`);
+    if (isColVisible('positions')) parts.push(`<span class="db-row-pos">${i.positions} posic.</span>`);
+    if (isColVisible('actual')) parts.push(`<span class="db-row-actual">Ejec. ${fmtMoney(i.actual)}</span>`);
+    if (isColVisible('amount')) parts.push(`<span class="db-row-amt">${fmtMoney(i.commitment)}</span>`);
+    parts.push('<i class="fa-solid fa-chevron-right db-row-arrow"></i>');
+    return `<div class="db-row" onclick="openInvestor(${i.id})">
         <div class="db-row-name">${escapeHtml(i.name)}</div>
-        <div class="db-row-meta">
-          <span class="db-row-pos">${i.positions} posic.</span>
-          <span class="db-row-amt">${fmtMoney(i.commitment)}</span>
-          <i class="fa-solid fa-chevron-right db-row-arrow"></i>
-        </div>
-      </div>`).join('');
-  } else {
-    list.innerHTML = filtered.map(c => `
-      <div class="db-row" onclick="openCompany(${c.id})">
-        <div class="db-row-name">${escapeHtml(c.name)}</div>
-        <div class="db-row-meta">
-          <span class="db-row-tag ${c.is_public ? '' : 'priv'}">${c.is_public ? 'Pública' : 'Privada'}</span>
-          <span class="db-row-pos">${c.investors} inv.</span>
-          <span class="db-row-amt">${fmtMoney(c.commitment)}</span>
-          <i class="fa-solid fa-chevron-right db-row-arrow"></i>
-        </div>
-      </div>`).join('');
-  }
+        <div class="db-row-meta">${parts.join('')}</div>
+      </div>`;
+  }).join('');
 }
 
 function escapeHtml(s) {
