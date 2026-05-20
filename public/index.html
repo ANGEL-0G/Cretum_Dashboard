@@ -164,33 +164,146 @@ button,input,select{font-family:var(--font)}
 /* ── LOGIN ── */
 #loginWrap{
   min-height:100vh;display:flex;align-items:center;justify-content:center;
-  background:linear-gradient(145deg,#0b1e3d,#1a3a6b,#2a4f8f);
+  background:linear-gradient(135deg,#0a1929 0%,#0f2e5c 30%,#1a3a6b 60%,#2a4f8f 100%);
+  background-size:300% 300%;
+  animation:loginGradient 22s ease-in-out infinite;
+  position:relative;overflow:hidden;padding:20px;
 }
+@keyframes loginGradient{
+  0%,100%{background-position:0% 50%}
+  50%{background-position:100% 50%}
+}
+/* Patrón de puntos sutil para textura */
+#loginWrap::before{
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:0;
+  background-image:radial-gradient(rgba(255,255,255,.07) 1px, transparent 1px);
+  background-size:28px 28px;
+  -webkit-mask-image:radial-gradient(ellipse at center, black 25%, transparent 75%);
+  mask-image:radial-gradient(ellipse at center, black 25%, transparent 75%);
+}
+
+/* Shapes decorativas flotantes */
+.login-bg-shape{
+  position:absolute;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,255,255,.08),transparent 70%);
+  filter:blur(40px);pointer-events:none;
+}
+.login-bg-1{width:480px;height:480px;top:-150px;left:-150px;animation:loginFloat1 14s ease-in-out infinite}
+.login-bg-2{width:380px;height:380px;bottom:-120px;right:-100px;background:radial-gradient(circle,rgba(123,168,255,.14),transparent 70%);animation:loginFloat2 17s ease-in-out infinite}
+.login-bg-3{width:260px;height:260px;top:50%;left:50%;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(93,143,245,.16),transparent 70%);animation:loginFloat3 12s ease-in-out infinite}
+@keyframes loginFloat1{0%,100%{transform:translate(0,0)}50%{transform:translate(80px,60px)}}
+@keyframes loginFloat2{0%,100%{transform:translate(0,0)}50%{transform:translate(-70px,-40px)}}
+@keyframes loginFloat3{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.25)}}
+
 .login-box{
-  width:360px;background:white;border-radius:var(--r-xl);
-  padding:40px;box-shadow:0 8px 32px rgba(0,0,0,.3);
+  position:relative;z-index:2;
+  width:380px;max-width:100%;
+  background:rgba(255,255,255,.97);
+  -webkit-backdrop-filter:blur(20px) saturate(180%);
+  backdrop-filter:blur(20px) saturate(180%);
+  border-radius:20px;
+  padding:38px 36px 28px;
+  box-shadow:
+    0 30px 70px rgba(0,0,0,.55),
+    0 8px 24px rgba(0,0,0,.22),
+    0 0 0 1px rgba(255,255,255,.4),
+    inset 0 1px 0 rgba(255,255,255,.85);
 }
+/* Línea decorativa superior dentro del card */
+.login-box::before{
+  content:'';position:absolute;top:0;left:30px;right:30px;height:1px;
+  background:linear-gradient(90deg, transparent, rgba(26,58,107,.4), transparent);
+}
+
 .login-logo{
-  width:200px;max-width:100%;display:block;margin:0 auto 18px;
+  width:190px;max-width:100%;display:block;margin:4px auto 22px;
+  filter:drop-shadow(0 4px 12px rgba(26,58,107,.14));
 }
-.login-title{font-size:20px;font-weight:500;color:var(--navy);margin-bottom:4px}
-.login-sub{font-size:13px;color:var(--gray-400);margin-bottom:24px}
+
+.login-title{
+  font-size:26px;font-weight:500;color:var(--navy);margin-bottom:4px;
+  letter-spacing:-.3px;text-align:center;
+}
+.login-sub{
+  font-size:13px;color:var(--gray-400);margin-bottom:26px;
+  text-align:center;
+}
+
+.login-field{position:relative;margin-bottom:11px}
+.login-field-ico{
+  position:absolute;left:14px;top:50%;transform:translateY(-50%);
+  color:var(--gray-300);font-size:13px;
+  pointer-events:none;transition:color .2s;z-index:1;
+}
+.login-field:focus-within .login-field-ico{color:var(--navy)}
+
 .fi{
-  width:100%;padding:10px 14px;border:1.5px solid var(--gray-200);
+  width:100%;padding:11px 14px 11px 40px;
+  border:1.5px solid var(--gray-200);
   border-radius:var(--r-md);font-size:14px;color:var(--gray-900);
-  outline:none;margin-bottom:12px;transition:border-color .2s;
+  background:var(--white);
+  outline:none;transition:border-color .2s,box-shadow .2s;
+  font-family:var(--font);
 }
-.fi:focus{border-color:var(--navy)}
+.fi:hover{border-color:var(--gray-300)}
+.fi:focus{border-color:var(--navy);box-shadow:0 0 0 3px rgba(26,58,107,.1)}
 .fi::placeholder{color:var(--gray-300)}
+
 .btn-login{
-  width:100%;padding:12px;background:var(--navy);border:none;
-  border-radius:var(--r-md);color:white;font-size:14px;font-weight:500;cursor:pointer;
+  position:relative;overflow:hidden;
+  width:100%;padding:13px 16px;margin-top:6px;
+  background:linear-gradient(135deg, var(--navy) 0%, var(--navy-mid) 100%);
+  border:none;
+  border-radius:var(--r-md);color:white;
+  font-size:14px;font-weight:500;font-family:var(--font);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  box-shadow:0 8px 20px rgba(26,58,107,.4), inset 0 1px 0 rgba(255,255,255,.18);
+  transition:all .22s cubic-bezier(.4,0,.2,1);
 }
-.btn-login:hover{background:var(--navy-mid)}
+/* Destello que cruza el botón al hacer hover */
+.btn-login::before{
+  content:'';position:absolute;top:0;left:-120%;width:80%;height:100%;
+  background:linear-gradient(90deg, transparent 0%, rgba(255,255,255,.32) 50%, transparent 100%);
+  transform:skewX(-25deg);
+  transition:left .7s cubic-bezier(.4,0,.2,1);
+}
+.btn-login:hover::before{left:120%}
+.btn-login > span,.btn-login > i{position:relative;z-index:1}
+.btn-login:hover{transform:translateY(-1px);box-shadow:0 12px 28px rgba(26,58,107,.5), inset 0 1px 0 rgba(255,255,255,.22)}
+.btn-login:active{transform:translateY(0) scale(.98);box-shadow:0 4px 14px rgba(26,58,107,.3)}
+.btn-arrow{font-size:11px;transition:transform .25s cubic-bezier(.34,1.4,.64,1)}
+.btn-login:hover .btn-arrow{transform:translateX(5px)}
+
+.login-foot{
+  text-align:center;font-size:10.5px;color:var(--gray-300);
+  margin-top:22px;letter-spacing:.3px;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+}
+.login-foot i{font-size:10px;color:var(--gray-400)}
+
 .login-err{
   font-size:12px;color:var(--red);background:var(--red-bg);
-  border-radius:var(--r-sm);padding:8px 12px;margin-bottom:12px;display:none;
+  border-radius:var(--r-md);padding:10px 13px;margin-bottom:14px;display:none;
+  align-items:center;gap:7px;
 }
+.login-err.show{display:flex}
+.login-err i{font-size:13px;flex-shrink:0}
+
+[data-theme="dark"] .login-box{
+  background:rgba(15,22,38,.92);
+  box-shadow:
+    0 30px 70px rgba(0,0,0,.75),
+    0 8px 24px rgba(0,0,0,.4),
+    0 0 0 1px rgba(255,255,255,.08),
+    inset 0 1px 0 rgba(255,255,255,.06);
+}
+[data-theme="dark"] .login-box::before{
+  background:linear-gradient(90deg, transparent, rgba(123,168,255,.4), transparent);
+}
+[data-theme="dark"] .login-title{color:#7ba8ff}
+[data-theme="dark"] .login-foot{color:rgba(255,255,255,.3)}
+[data-theme="dark"] .fi{background:#0a0a0a;border-color:#2a2a2a;color:#fff}
+[data-theme="dark"] .fi:focus{box-shadow:0 0 0 3px rgba(93,143,245,.18)}
 
 /* ── APP (hidden until login) ── */
 #app{display:none}
@@ -394,6 +507,42 @@ button,input,select{font-family:var(--font)}
 .prio-pill.active.p-baja{background:var(--green-bg);border-color:var(--green);color:var(--green)}
 .prio-pill:active{transform:scale(.96)}
 
+.multi-assign-wrap{
+  display:flex;flex-wrap:wrap;gap:6px;
+  padding:8px;border:1.5px solid var(--gray-200);border-radius:var(--r-md);
+  background:var(--white);max-height:160px;overflow-y:auto;
+}
+.multi-assign-wrap:empty::before{
+  content:'No hay otros miembros para asignar';
+  font-size:12px;color:var(--gray-400);padding:6px;
+}
+.multi-pill{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:5px 11px 5px 5px;
+  background:var(--white);border:1.5px solid var(--gray-200);
+  border-radius:999px;
+  font-size:12px;font-weight:500;color:var(--gray-700);
+  cursor:pointer;font-family:var(--font);
+  transition:all .15s cubic-bezier(.4,0,.2,1);
+}
+.multi-pill:hover{border-color:var(--gray-300);background:var(--gray-50)}
+.multi-pill-av{
+  width:22px;height:22px;border-radius:50%;
+  background:var(--gray-100);color:var(--gray-700);
+  font-size:10px;font-weight:700;
+  display:inline-flex;align-items:center;justify-content:center;
+  flex-shrink:0;letter-spacing:.3px;
+}
+.multi-pill.on{background:var(--navy);border-color:var(--navy);color:white}
+.multi-pill.on .multi-pill-av{background:rgba(255,255,255,.2);color:white}
+.multi-pill:active{transform:scale(.96)}
+[data-theme="dark"] .multi-assign-wrap{background:#0f131e;border-color:var(--gray-200)}
+[data-theme="dark"] .multi-pill{background:#0f131e;border-color:var(--gray-200);color:var(--gray-700)}
+[data-theme="dark"] .multi-pill:hover{background:#1a2238}
+[data-theme="dark"] .multi-pill.on{background:var(--navy);border-color:var(--navy);color:#0f131e}
+[data-theme="dark"] .multi-pill-av{background:#1a2238;color:var(--gray-700)}
+[data-theme="dark"] .multi-pill.on .multi-pill-av{background:rgba(15,19,30,.25);color:#0f131e}
+
 .btn-primary{
   width:100%;padding:12px 16px;
   background:var(--navy);border:none;border-radius:var(--r-md);
@@ -459,6 +608,12 @@ button,input,select{font-family:var(--font)}
   transition:all .15s;flex-shrink:0;
 }
 .team-del:hover{color:var(--red);background:var(--red-bg)}
+.team-edit{
+  background:none;border:none;color:var(--gray-300);font-size:12px;
+  cursor:pointer;padding:6px 9px;border-radius:var(--r-sm);
+  transition:all .15s;flex-shrink:0;
+}
+.team-edit:hover{color:var(--navy);background:var(--navy-pale)}
 
 .team-prog-wrap{display:flex;align-items:center;gap:8px;margin-top:7px}
 .team-prog-bar{flex:1;height:5px;background:var(--gray-100);border-radius:3px;overflow:hidden;max-width:160px}
@@ -898,6 +1053,8 @@ button,input,select{font-family:var(--font)}
 .home-ico-tasks{background:var(--navy-pale);color:var(--navy)}
 .home-ico-db{background:var(--amber-bg);color:var(--amber)}
 .home-ico-mvp{background:rgba(237,120,36,.12);color:#ED7824}
+.home-ico-dropbox{background:rgba(0,97,255,.12);color:#0061FF}
+[data-theme="dark"] .home-ico-dropbox{background:rgba(0,97,255,.22);color:#5b9aff}
 
 .home-module-content{flex:0;min-width:0;width:100%}
 .home-module-title{font-size:13px;font-weight:500;color:var(--gray-900);margin-bottom:3px;line-height:1.25}
@@ -949,6 +1106,219 @@ button,input,select{font-family:var(--font)}
   .home-module-ico{width:42px;height:42px;font-size:18px;border-radius:12px}
   .home-module-title{font-size:12.5px}
   .home-module-desc{font-size:10px}
+}
+
+/* ═══════════════════════════════════════════
+   DROPBOX — explorador de archivos
+═══════════════════════════════════════════ */
+.page-dbx{display:none}
+.page-dbx.active{display:block;animation:fadeIn .3s ease}
+
+.dbx-toolbar{
+  display:flex;align-items:center;gap:10px;
+  margin-bottom:14px;flex-wrap:wrap;
+}
+.dbx-search{
+  position:relative;flex:1;min-width:200px;
+}
+.dbx-search i{
+  position:absolute;left:13px;top:50%;transform:translateY(-50%);
+  color:var(--gray-400);font-size:13px;pointer-events:none;
+}
+.dbx-search input{
+  width:100%;padding:10px 14px 10px 36px;
+  background:var(--white);border:1px solid var(--gray-200);
+  border-radius:var(--r-md);font-size:13.5px;color:var(--gray-900);
+  outline:none;transition:border-color .15s,box-shadow .15s;
+  font-family:var(--font);
+}
+.dbx-search input:focus{border-color:var(--navy);box-shadow:0 0 0 3px var(--navy-pale)}
+.dbx-search-clear{
+  position:absolute;right:10px;top:50%;transform:translateY(-50%);
+  background:none;border:none;color:var(--gray-400);cursor:pointer;
+  width:24px;height:24px;border-radius:50%;
+  display:none;align-items:center;justify-content:center;font-size:11px;
+  transition:background .15s;
+}
+.dbx-search-clear:hover{background:var(--gray-100);color:var(--gray-700)}
+.dbx-search-clear.show{display:flex}
+
+.dbx-view-toggle{display:flex;gap:2px;background:var(--gray-100);border-radius:var(--r-md);padding:3px}
+.dbx-view-btn{
+  padding:7px 12px;border-radius:var(--r-sm);border:none;
+  background:transparent;color:var(--gray-400);cursor:pointer;transition:all .15s;
+}
+.dbx-view-btn.on{background:var(--white);color:var(--navy);box-shadow:var(--shadow-sm)}
+
+.dbx-breadcrumb{
+  display:flex;align-items:center;gap:4px;flex-wrap:wrap;
+  font-size:13px;color:var(--gray-500);margin-bottom:14px;
+}
+.dbx-crumb{
+  cursor:pointer;padding:4px 8px;border-radius:var(--r-sm);
+  transition:background .15s,color .15s;
+  background:none;border:none;font-family:var(--font);font-size:13px;color:inherit;
+}
+.dbx-crumb:hover{background:var(--gray-100);color:var(--navy)}
+.dbx-crumb.last{color:var(--gray-900);font-weight:500;cursor:default}
+.dbx-crumb.last:hover{background:transparent}
+.dbx-crumb-sep{color:var(--gray-300);font-size:11px}
+
+.dbx-status{
+  text-align:center;padding:60px 20px;color:var(--gray-400);font-size:13px;
+}
+.dbx-status i{display:block;font-size:28px;margin-bottom:10px;opacity:.5}
+.dbx-status.error{color:var(--red)}
+
+/* GRID view */
+.dbx-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+  gap:12px;
+}
+.dbx-card{
+  background:var(--white);border:1px solid var(--gray-100);
+  border-radius:var(--r-lg);padding:14px 12px;
+  cursor:pointer;text-align:center;font-family:var(--font);
+  transition:transform .18s cubic-bezier(.4,0,.2,1),box-shadow .18s,border-color .15s;
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+  position:relative;overflow:hidden;
+}
+.dbx-card:hover{
+  transform:translateY(-2px);
+  box-shadow:0 8px 22px rgba(26,58,107,.12);
+  border-color:var(--navy-light);
+}
+.dbx-card-thumb{
+  width:100%;aspect-ratio:1;border-radius:var(--r-md);
+  background:var(--gray-50);
+  display:flex;align-items:center;justify-content:center;
+  font-size:36px;color:var(--gray-300);
+  overflow:hidden;position:relative;
+}
+.dbx-card-thumb img{
+  width:100%;height:100%;object-fit:cover;
+  opacity:0;transition:opacity .3s;
+}
+.dbx-card-thumb img.loaded{opacity:1}
+.dbx-card-name{
+  font-size:12px;color:var(--gray-900);font-weight:500;
+  line-height:1.3;
+  display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;
+  overflow:hidden;word-break:break-word;
+}
+.dbx-card-meta{font-size:10.5px;color:var(--gray-400)}
+.dbx-card-folder .dbx-card-thumb{
+  background:linear-gradient(135deg,var(--navy-pale),var(--navy-ghost));
+  color:var(--navy);
+}
+
+/* LIST view */
+.dbx-list{display:flex;flex-direction:column;gap:2px}
+.dbx-row{
+  display:flex;align-items:center;gap:12px;
+  padding:10px 12px;border-radius:var(--r-md);
+  cursor:pointer;font-family:var(--font);
+  transition:background .15s;
+  border:1px solid transparent;
+}
+.dbx-row:hover{background:var(--gray-50);border-color:var(--gray-100)}
+.dbx-row-ico{
+  width:36px;height:36px;border-radius:var(--r-md);
+  background:var(--gray-50);
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;color:var(--gray-400);flex-shrink:0;
+  overflow:hidden;position:relative;
+}
+.dbx-row-ico img{width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .3s}
+.dbx-row-ico img.loaded{opacity:1}
+.dbx-row-folder .dbx-row-ico{
+  background:var(--navy-pale);color:var(--navy);
+}
+.dbx-row-name{flex:1;min-width:0;font-size:13px;color:var(--gray-900);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+.dbx-row-meta{font-size:11px;color:var(--gray-400);flex-shrink:0}
+
+[data-theme="dark"] .dbx-search input{background:#0a0a0a;border-color:#2a2a2a;color:#fff}
+[data-theme="dark"] .dbx-card{background:#181818;border-color:#262626}
+[data-theme="dark"] .dbx-card-name{color:#eee}
+[data-theme="dark"] .dbx-card-thumb{background:#0f0f0f}
+[data-theme="dark"] .dbx-row:hover{background:rgba(255,255,255,.03);border-color:#262626}
+[data-theme="dark"] .dbx-row-name{color:#eee}
+[data-theme="dark"] .dbx-row-ico{background:#0f0f0f}
+
+@media (max-width:600px){
+  .dbx-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
+  .dbx-card{padding:12px 10px}
+  .dbx-toolbar{gap:8px}
+  .dbx-view-toggle{order:2}
+}
+
+/* ── PREVIEW MODAL ── */
+.dbx-preview{
+  position:fixed;inset:0;background:rgba(0,0,0,.85);
+  z-index:400;display:flex;flex-direction:column;
+  opacity:0;visibility:hidden;
+  transition:opacity .25s ease,visibility 0s linear .25s;
+}
+.dbx-preview.show{
+  opacity:1;visibility:visible;
+  transition:opacity .25s ease,visibility 0s linear 0s;
+}
+.dbx-preview-head{
+  display:flex;align-items:center;gap:12px;
+  padding:14px 18px;color:#fff;
+  background:rgba(0,0,0,.5);backdrop-filter:blur(8px);
+  flex-shrink:0;
+}
+.dbx-preview-name{flex:1;font-size:14px;font-weight:500;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dbx-preview-btn{
+  background:rgba(255,255,255,.1);border:none;color:#fff;
+  padding:8px 14px;border-radius:var(--r-md);cursor:pointer;
+  font-size:13px;font-family:var(--font);
+  display:flex;align-items:center;gap:7px;
+  transition:background .15s;
+}
+.dbx-preview-btn:hover{background:rgba(255,255,255,.2)}
+.dbx-preview-btn.icon-only{padding:8px 11px}
+.dbx-preview-body{
+  flex:1;display:flex;align-items:center;justify-content:center;
+  overflow:auto;padding:20px;
+}
+.dbx-preview-body img,
+.dbx-preview-body video{
+  max-width:100%;max-height:100%;
+  border-radius:var(--r-md);box-shadow:0 12px 40px rgba(0,0,0,.4);
+}
+.dbx-preview-body iframe{
+  width:100%;height:100%;min-height:500px;
+  background:#fff;border:none;border-radius:var(--r-md);
+  box-shadow:0 12px 40px rgba(0,0,0,.4);
+}
+.dbx-preview-loading{
+  display:flex;flex-direction:column;align-items:center;gap:12px;
+  color:rgba(255,255,255,.7);font-size:13px;
+}
+.dbx-preview-spinner{
+  width:32px;height:32px;border:3px solid rgba(255,255,255,.2);
+  border-top-color:#fff;border-radius:50%;
+  animation:spin 1s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.dbx-preview-unsupported{
+  text-align:center;color:rgba(255,255,255,.7);
+  padding:40px;max-width:380px;
+}
+.dbx-preview-unsupported i{font-size:42px;margin-bottom:14px;opacity:.5;display:block}
+.dbx-preview-unsupported h3{color:#fff;font-size:16px;font-weight:500;margin-bottom:8px}
+.dbx-preview-unsupported p{font-size:13px;line-height:1.5;margin-bottom:18px}
+
+@media (max-width:600px){
+  .dbx-preview-head{padding:12px 14px}
+  .dbx-preview-btn span{display:none}
+  .dbx-preview-btn{padding:8px 11px}
+  .dbx-preview-body{padding:10px}
+  .dbx-preview-body iframe{min-height:400px}
 }
 
 /* ═══════════════════════════════════════════
@@ -1237,61 +1607,9 @@ button,input,select{font-family:var(--font)}
 /* Toast deslizamiento más suave */
 .toast{transition:transform .35s cubic-bezier(.34,1.4,.64,1),opacity .25s}
 
-/* ═══════════════════════════════════════════
-   ANIMACIONES DE ICONOS
-═══════════════════════════════════════════ */
-
-/* Hamburger: rotate al hover */
-.hamburger i{transition:transform .28s cubic-bezier(.34,1.4,.64,1)}
-.hamburger:hover i{transform:rotate(90deg)}
-
-/* Flecha de back: slide a la izquierda */
-.header-back i,.db-back i{transition:transform .25s cubic-bezier(.34,1.4,.64,1)}
-.header-back:hover i,.db-back:hover i{transform:translateX(-5px)}
-
-/* X de cerrar (modales, drawer, banners, eliminar): rotate 90° */
-.task-modal-close i,
-.nav-close i,
-.reminder-close i,
-.li-del i,
-.kb-del i,
-.team-del i,
-.db-clear i{transition:transform .22s cubic-bezier(.34,1.4,.64,1)}
-.task-modal-close:hover i,
-.nav-close:hover i,
-.reminder-close:hover i,
-.li-del:hover i,
-.kb-del:hover i,
-.team-del:hover i,
-.db-clear:hover i{transform:rotate(90deg)}
-
-/* + de agregar tarea: rotate 180° elástico */
-.btn-primary i.fa-plus,
-.kb-action i.fa-plus,
-.new-task-btn i.fa-plus,
-.sm-solid i.fa-plus{transition:transform .32s cubic-bezier(.34,1.56,.64,1)}
-.btn-primary:hover i.fa-plus,
-.kb-action:hover i.fa-plus,
-.new-task-btn:hover i.fa-plus{transform:rotate(180deg) scale(1.12)}
-
-/* Lupa de búsqueda: scale al focus del input + color de marca */
-.db-search-ico{transition:transform .3s cubic-bezier(.34,1.56,.64,1),color .3s}
-.db-search:focus-within .db-search-ico{transform:scale(1.18);color:var(--navy)}
-
-/* Shuffle de "Cambiar empresa": rotate 180° al hover */
-#orgSwitchBtn i{transition:transform .4s cubic-bezier(.34,1.4,.64,1)}
-#orgSwitchBtn:hover i{transform:rotate(180deg)}
-
-/* Paper-plane de "Enviar" (asignar tarea, recordatorio): liftoff */
-.btn-primary i.fa-paper-plane,
-.settings-action i.fa-paper-plane{transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
-.btn-primary:hover i.fa-paper-plane,
-.settings-action:hover i.fa-paper-plane{transform:translateX(3px) translateY(-2px) rotate(8deg)}
-
-/* Engrane → no aplica (lo quitamos) — pero check icons */
-.sm-btn i.fa-check,
-.db-row .fa-chevron-right{transition:transform .2s}
-.db-row:hover .fa-chevron-right{transform:translateX(3px) scale(1.1)}
+/* Lupa de búsqueda: tinte de color al focus (sin scale) */
+.db-search-ico{transition:color .3s}
+.db-search:focus-within .db-search-ico{color:var(--navy)}
 
 /* ═══════════════════════════════════════════
    TRANSICIÓN ENTRE EMPRESAS
@@ -1461,15 +1779,33 @@ button,input,select{font-family:var(--font)}
 
 <!-- LOGIN -->
 <div id="loginWrap">
+  <div class="login-bg-shape login-bg-1"></div>
+  <div class="login-bg-shape login-bg-2"></div>
+  <div class="login-bg-shape login-bg-3"></div>
   <div class="login-box">
     <img src="/logo.png" alt="CRETUM Partners" class="login-logo">
-    <div class="login-title">Pendientes del equipo</div>
-    <div class="login-sub">Accede con tu email del equipo</div>
-    <div class="login-err" id="loginErr">Credenciales inválidas</div>
-    <input class="fi" type="email" id="loginUser" placeholder="tu@email.com" autocomplete="username">
-    <input class="fi" type="password" id="loginPass" placeholder="Contraseña"
-      onkeydown="if(event.key==='Enter')doLogin()">
-    <button class="btn-login" onclick="doLogin()">Entrar →</button>
+    <div class="login-title">Dashboard</div>
+    <div class="login-sub">Accede con tu cuenta del equipo</div>
+    <div class="login-err" id="loginErr">
+      <i class="fa-solid fa-circle-exclamation"></i> Credenciales inválidas
+    </div>
+    <div class="login-field">
+      <i class="fa-solid fa-envelope login-field-ico"></i>
+      <input class="fi" type="email" id="loginUser" placeholder="tu@email.com" autocomplete="username">
+    </div>
+    <div class="login-field">
+      <i class="fa-solid fa-lock login-field-ico"></i>
+      <input class="fi" type="password" id="loginPass" placeholder="Contraseña"
+        autocomplete="current-password"
+        onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn-login" id="btnLogin" onclick="doLogin()">
+      <span>Entrar</span>
+      <i class="fa-solid fa-arrow-right btn-arrow"></i>
+    </button>
+    <div class="login-foot">
+      <i class="fa-solid fa-shield-halved"></i> Acceso protegido · Cretum Partners
+    </div>
   </div>
 </div>
 
@@ -1609,6 +1945,46 @@ button,input,select{font-family:var(--font)}
       <div class="home-soon-h">Próximamente</div>
       <div class="home-soon-grid" id="homeSoonGrid"></div>
     </div>
+  </div>
+
+  <!-- VISTA: DROPBOX -->
+  <div class="page page-dbx" id="pageDbx">
+    <div class="dbx-toolbar">
+      <div class="dbx-search">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input id="dbxSearchInput" type="text" placeholder="Buscar archivos..." autocomplete="off">
+        <button class="dbx-search-clear" id="dbxSearchClear" onclick="clearDbxSearch()" title="Limpiar">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="dbx-view-toggle">
+        <button class="dbx-view-btn on" id="dbxViewGrid" onclick="setDbxView('grid')" title="Cuadrícula">
+          <i class="fa-solid fa-grip"></i>
+        </button>
+        <button class="dbx-view-btn" id="dbxViewList" onclick="setDbxView('list')" title="Lista">
+          <i class="fa-solid fa-list"></i>
+        </button>
+      </div>
+    </div>
+    <div class="dbx-breadcrumb" id="dbxBreadcrumb"></div>
+    <div id="dbxContainer"></div>
+  </div>
+
+  <!-- DROPBOX PREVIEW MODAL -->
+  <div class="dbx-preview" id="dbxPreview">
+    <div class="dbx-preview-head">
+      <button class="dbx-preview-btn icon-only" onclick="closeDbxPreview()" title="Cerrar">
+        <i class="fa-solid fa-arrow-left"></i>
+      </button>
+      <div class="dbx-preview-name" id="dbxPreviewName">—</div>
+      <button class="dbx-preview-btn" id="dbxPreviewDownload" title="Descargar">
+        <i class="fa-solid fa-download"></i><span>Descargar</span>
+      </button>
+      <button class="dbx-preview-btn icon-only" onclick="closeDbxPreview()" title="Cerrar">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div class="dbx-preview-body" id="dbxPreviewBody"></div>
   </div>
 
   <div class="page" id="pageTasks">
@@ -1822,44 +2198,152 @@ button,input,select{font-family:var(--font)}
         <i class="fa-solid fa-xmark"></i>
       </button>
     </div>
+    <div class="task-modal-tabs">
+      <button class="type-tab on" id="at-simple" onclick="setAssignType('simple')">
+        <i class="fa-solid fa-check-double" style="font-size:11px;margin-right:5px"></i>Tarea rápida
+      </button>
+      <button class="type-tab" id="at-progress" onclick="setAssignType('progress')">
+        <i class="fa-solid fa-chart-line" style="font-size:11px;margin-right:5px"></i>Con progreso
+      </button>
+    </div>
+    <div class="task-modal-body">
+      <div class="form-field">
+        <label class="form-label">Asignar a <span class="form-label-opt">uno o varios</span></label>
+        <div class="multi-assign-wrap" id="aAssignees"></div>
+      </div>
+
+      <div id="formAssignSimple">
+        <div class="form-field">
+          <label class="form-label">Descripción</label>
+          <input class="form-input" id="aName" placeholder="¿Qué necesitas que hagan?" autocomplete="off">
+        </div>
+        <div class="form-row-2">
+          <div class="form-field">
+            <label class="form-label">Fecha límite <span class="form-label-opt">opcional</span></label>
+            <input class="form-input" type="date" id="aDue">
+          </div>
+          <div class="form-field">
+            <label class="form-label">Prioridad</label>
+            <input type="hidden" id="aPrio" value="Media">
+            <div class="prio-group">
+              <button type="button" class="prio-pill p-alta"  data-prio="Alta"  onclick="pickPrio(this,'aPrio')">
+                <span class="prio-dot"></span> Alta
+              </button>
+              <button type="button" class="prio-pill p-media active" data-prio="Media" onclick="pickPrio(this,'aPrio')">
+                <span class="prio-dot"></span> Media
+              </button>
+              <button type="button" class="prio-pill p-baja"  data-prio="Baja"  onclick="pickPrio(this,'aPrio')">
+                <span class="prio-dot"></span> Baja
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Nota <span class="form-label-opt">opcional</span></label>
+          <input class="form-input" id="aNote" placeholder="Contexto adicional…" autocomplete="off">
+        </div>
+      </div>
+
+      <div id="formAssignProgress" style="display:none">
+        <div class="form-field">
+          <label class="form-label">Nombre de la tarea</label>
+          <input class="form-input" id="apName" placeholder="Ej: Llamar a clientes de la lista" autocomplete="off">
+        </div>
+        <div class="form-row-2">
+          <div class="form-field">
+            <label class="form-label">Unidad <span class="form-label-opt">qué cuentas</span></label>
+            <input class="form-input" id="apUnit" placeholder="llamadas, visitas, páginas…" autocomplete="off">
+          </div>
+          <div class="form-field">
+            <label class="form-label">Total <span class="form-label-opt">por persona</span></label>
+            <input class="form-input" type="number" id="apTotal" placeholder="100" min="1" inputmode="numeric">
+          </div>
+        </div>
+        <div class="form-row-2">
+          <div class="form-field">
+            <label class="form-label">Fecha límite <span class="form-label-opt">opcional</span></label>
+            <input class="form-input" type="date" id="apDue">
+          </div>
+          <div class="form-field">
+            <label class="form-label">Prioridad</label>
+            <input type="hidden" id="apPrio" value="Media">
+            <div class="prio-group">
+              <button type="button" class="prio-pill p-alta"  data-prio="Alta"  onclick="pickPrio(this,'apPrio')">
+                <span class="prio-dot"></span> Alta
+              </button>
+              <button type="button" class="prio-pill p-media active" data-prio="Media" onclick="pickPrio(this,'apPrio')">
+                <span class="prio-dot"></span> Media
+              </button>
+              <button type="button" class="prio-pill p-baja"  data-prio="Baja"  onclick="pickPrio(this,'apPrio')">
+                <span class="prio-dot"></span> Baja
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Nota <span class="form-label-opt">opcional</span></label>
+          <input class="form-input" id="apNote" placeholder="Contexto adicional…" autocomplete="off">
+        </div>
+      </div>
+
+      <button class="btn-primary" onclick="doAssign()">
+        <i class="fa-solid fa-paper-plane"></i> Enviar tarea
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de editar tarea asignada -->
+<div class="modal-backdrop task-modal-backdrop" id="editAssignModal" onclick="if(event.target===this)closeEditAssignedModal()">
+  <div class="task-modal-box">
+    <div class="task-modal-head">
+      <div class="task-modal-title">Editar tarea <span id="editTaskType" style="font-size:11px;color:var(--gray-400);font-weight:400;margin-left:6px"></span></div>
+      <button class="task-modal-close" onclick="closeEditAssignedModal()" aria-label="Cerrar">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
     <div class="task-modal-body">
       <div class="form-field">
         <label class="form-label">Descripción</label>
-        <input class="form-input" id="aName" placeholder="¿Qué necesitas que hagan?" autocomplete="off">
+        <input class="form-input" id="eName" autocomplete="off">
       </div>
-      <div class="form-field">
-        <label class="form-label">Asignar a</label>
-        <select class="form-input" id="aTo">
-          <option value="">Selecciona un miembro del equipo…</option>
-        </select>
+      <div id="eProgressFields" style="display:none">
+        <div class="form-row-2">
+          <div class="form-field">
+            <label class="form-label">Unidad</label>
+            <input class="form-input" id="eUnit" autocomplete="off">
+          </div>
+          <div class="form-field">
+            <label class="form-label">Total</label>
+            <input class="form-input" type="number" id="eTotal" min="1" inputmode="numeric">
+          </div>
+        </div>
       </div>
       <div class="form-row-2">
         <div class="form-field">
           <label class="form-label">Fecha límite <span class="form-label-opt">opcional</span></label>
-          <input class="form-input" type="date" id="aDue">
+          <input class="form-input" type="date" id="eDue">
         </div>
         <div class="form-field">
           <label class="form-label">Prioridad</label>
-          <input type="hidden" id="aPrio" value="Media">
+          <input type="hidden" id="ePrio" value="Media">
           <div class="prio-group">
-            <button type="button" class="prio-pill p-alta"  data-prio="Alta"  onclick="pickPrio(this,'aPrio')">
-              <span class="prio-dot"></span> Alta
-            </button>
-            <button type="button" class="prio-pill p-media active" data-prio="Media" onclick="pickPrio(this,'aPrio')">
-              <span class="prio-dot"></span> Media
-            </button>
-            <button type="button" class="prio-pill p-baja"  data-prio="Baja"  onclick="pickPrio(this,'aPrio')">
-              <span class="prio-dot"></span> Baja
-            </button>
+            <button type="button" class="prio-pill p-alta"  data-prio="Alta"  onclick="pickPrio(this,'ePrio')"><span class="prio-dot"></span> Alta</button>
+            <button type="button" class="prio-pill p-media active" data-prio="Media" onclick="pickPrio(this,'ePrio')"><span class="prio-dot"></span> Media</button>
+            <button type="button" class="prio-pill p-baja"  data-prio="Baja"  onclick="pickPrio(this,'ePrio')"><span class="prio-dot"></span> Baja</button>
           </div>
         </div>
       </div>
       <div class="form-field">
         <label class="form-label">Nota <span class="form-label-opt">opcional</span></label>
-        <input class="form-input" id="aNote" placeholder="Contexto adicional…" autocomplete="off">
+        <input class="form-input" id="eNote" autocomplete="off">
       </div>
-      <button class="btn-primary" onclick="doAssign()">
-        <i class="fa-solid fa-paper-plane"></i> Enviar tarea
+      <div class="form-field">
+        <label class="form-label">Asignar también a <span class="form-label-opt">opcional, agrega más personas</span></label>
+        <div class="multi-assign-wrap" id="eAssignees"></div>
+      </div>
+      <button class="btn-primary" onclick="saveEditAssigned()">
+        <i class="fa-solid fa-check"></i> Guardar cambios
       </button>
     </div>
   </div>
@@ -1940,11 +2424,15 @@ async function enterApp(user) {
   document.getElementById('loginWrap').style.display = 'none';
   document.getElementById('app').style.display = 'block';
 
-  // assign dropdown — todos menos uno mismo
-  const sel = document.getElementById('aTo');
-  sel.innerHTML = '<option value="">Asignar a…</option>' +
-    Object.entries(USERS).filter(([k]) => k !== currentUser).map(([k,v]) =>
-      `<option value="${k}">${v.name}</option>`).join('');
+  // pills de multi-asignación — todos menos uno mismo
+  const wrap = document.getElementById('aAssignees');
+  wrap.innerHTML = Object.entries(USERS)
+    .filter(([k]) => k !== currentUser)
+    .map(([k,v]) => `
+      <button type="button" class="multi-pill" data-uid="${k}" onclick="toggleAssignee(this)">
+        <span class="multi-pill-av">${v.initials}</span>
+        <span class="multi-pill-name">${v.name}</span>
+      </button>`).join('');
 
   await loadReminderPrefs();
   applyThemeToggleState();
@@ -1981,10 +2469,10 @@ async function doLogin() {
   if (!email || !pass) { err.style.display = 'block'; return; }
   const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
   if (error || !data?.user) {
-    err.style.display = 'block';
+    err.classList.add('show');
     return;
   }
-  err.style.display = 'none';
+  err.classList.remove('show');
   document.getElementById('loginPass').value = '';
   await enterApp(data.user);
 }
@@ -2158,16 +2646,20 @@ function myTasks() {
 function render() {
   // invites para el usuario actual
   const myInvites = state.invites.filter(iv => iv.to === currentUser);
-  document.getElementById('invitesEl').innerHTML = myInvites.map(iv => `
+  document.getElementById('invitesEl').innerHTML = myInvites.map(iv => {
+    const isProg = typeof iv.total === 'number' && iv.total > 0;
+    const progLbl = isProg ? ` · ${iv.total} ${iv.unit || 'unidades'}` : '';
+    return `
     <div class="tk-invite">
       <div class="tk-invite-info">
-        <div class="tk-invite-from"><i class="fa-solid fa-user-plus"></i> ${USERS[iv.from]?.name || iv.from} te asignó una tarea</div>
+        <div class="tk-invite-from"><i class="fa-solid fa-user-plus"></i> ${USERS[iv.from]?.name || iv.from} te asignó una tarea${isProg ? ' con progreso' : ''}</div>
         <div class="tk-invite-name">${iv.name}</div>
-        <div class="tk-invite-due">${iv.due ? 'Vence ' + fmtD(iv.due) + ' · ' : ''}${iv.prio} prioridad</div>
+        <div class="tk-invite-due">${iv.due ? 'Vence ' + fmtD(iv.due) + ' · ' : ''}${iv.prio} prioridad${progLbl}</div>
       </div>
       <button class="inv-accept" onclick="acceptInvite('${iv.id}')">Aceptar</button>
       <button class="inv-decline" onclick="declineInvite('${iv.id}')">Declinar</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 
   // stats (mis tareas)
   const mt = myTasks();
@@ -2426,6 +2918,7 @@ function renderEquipo() {
           ${progressBar}
         </div>
         ${badge}
+        ${!a.accepted ? `<button class="team-edit" onclick="openEditAssigned('${a.id}')" title="Editar tarea"><i class="fa-solid fa-pen"></i></button>` : ''}
         <button class="team-del" onclick="deleteAssigned('${a.id}')" title="Eliminar de mi lista">
           <i class="fa-solid fa-xmark"></i>
         </button>
@@ -2459,6 +2952,15 @@ function setType(t) {
   document.getElementById('tt-progress')?.classList.toggle('on', t === 'progress');
   document.getElementById('formSimple').style.display = t === 'simple' ? 'block' : 'none';
   document.getElementById('formProgress').style.display = t === 'progress' ? 'block' : 'none';
+}
+function setAssignType(t) {
+  document.getElementById('at-simple')?.classList.toggle('on', t === 'simple');
+  document.getElementById('at-progress')?.classList.toggle('on', t === 'progress');
+  document.getElementById('formAssignSimple').style.display = t === 'simple' ? 'block' : 'none';
+  document.getElementById('formAssignProgress').style.display = t === 'progress' ? 'block' : 'none';
+}
+function toggleAssignee(btn) {
+  btn.classList.toggle('on');
 }
 function toggleDrawer(btnId, bodyId) {
   const btn = document.getElementById(btnId);
@@ -2582,11 +3084,112 @@ function closeTaskModal() {
 function openAssignModal() {
   const m = document.getElementById('assignModal');
   if (!m) return;
+  setAssignType('simple');
+  document.querySelectorAll('#aAssignees .multi-pill.on').forEach(p => p.classList.remove('on'));
+  ['aName','aDue','aNote','apName','apUnit','apTotal','apDue','apNote'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  resetPrio('aPrio');
+  resetPrio('apPrio');
   m.classList.add('show');
   setTimeout(() => document.getElementById('aName')?.focus(), 80);
 }
 function closeAssignModal() {
   document.getElementById('assignModal')?.classList.remove('show');
+}
+
+let editingAssignedId = null;
+function openEditAssigned(id) {
+  const a = state.assigned.find(x => x.id === id);
+  const iv = state.invites.find(x => x.id === id);
+  if (!a || !iv) { toast('No se pudo abrir esta tarea'); return; }
+  if (a.accepted) { toast('Ya fue aceptada — no se puede editar'); return; }
+
+  editingAssignedId = id;
+  const isProgress = typeof a.total === 'number' && a.total > 0;
+
+  document.getElementById('editTaskType').textContent = isProgress ? '· Con progreso' : '· Tarea rápida';
+  document.getElementById('eName').value = a.name || '';
+  document.getElementById('eDue').value  = a.due  || '';
+  document.getElementById('eNote').value = a.note || '';
+
+  document.getElementById('ePrio').value = a.prio || 'Media';
+  document.querySelectorAll('#editAssignModal .prio-pill').forEach(p => {
+    p.classList.toggle('active', p.dataset.prio === (a.prio || 'Media'));
+  });
+
+  document.getElementById('eProgressFields').style.display = isProgress ? 'block' : 'none';
+  if (isProgress) {
+    document.getElementById('eUnit').value  = a.unit || '';
+    document.getElementById('eTotal').value = a.total || '';
+  }
+
+  // Candidatos: todos menos uno mismo y los ya asignados con el mismo nombre por mí
+  const alreadyAssignees = state.assigned
+    .filter(x => x.assignedBy === currentUser && x.name === a.name)
+    .map(x => x.to);
+  const wrap = document.getElementById('eAssignees');
+  wrap.innerHTML = Object.entries(USERS)
+    .filter(([k]) => k !== currentUser && !alreadyAssignees.includes(k))
+    .map(([k,v]) => `
+      <button type="button" class="multi-pill" data-uid="${k}" onclick="toggleAssignee(this)">
+        <span class="multi-pill-av">${v.initials}</span>
+        <span class="multi-pill-name">${v.name}</span>
+      </button>`).join('');
+
+  document.getElementById('editAssignModal').classList.add('show');
+  setTimeout(() => document.getElementById('eName')?.focus(), 80);
+}
+
+function closeEditAssignedModal() {
+  document.getElementById('editAssignModal')?.classList.remove('show');
+  editingAssignedId = null;
+}
+
+function saveEditAssigned() {
+  if (!editingAssignedId) return;
+  const a  = state.assigned.find(x => x.id === editingAssignedId);
+  const iv = state.invites.find(x => x.id === editingAssignedId);
+  if (!a || !iv) { toast('No se pudo guardar'); return; }
+  if (a.accepted) { toast('Ya fue aceptada — no se puede editar'); return; }
+
+  const isProgress = typeof a.total === 'number' && a.total > 0;
+
+  const n = document.getElementById('eName').value.trim();
+  if (!n) { toast('Escribe la descripción'); return; }
+  const due  = document.getElementById('eDue').value;
+  const prio = document.getElementById('ePrio').value;
+  const note = document.getElementById('eNote').value.trim();
+
+  let unit, total;
+  if (isProgress) {
+    unit  = document.getElementById('eUnit').value.trim() || 'unidades';
+    total = parseInt(document.getElementById('eTotal').value);
+    if (!total || total < 1) { toast('Total inválido'); return; }
+  }
+
+  Object.assign(a,  { name: n, due, prio, note });
+  Object.assign(iv, { name: n, due, prio, note });
+  if (isProgress) {
+    a.unit = unit; a.total = total;
+    iv.unit = unit; iv.total = total;
+  }
+
+  const newAssignees = Array.from(document.querySelectorAll('#eAssignees .multi-pill.on'))
+    .map(el => el.dataset.uid);
+  newAssignees.forEach(to => {
+    const inviteId = 'I' + (++tkId);
+    const base = { id: inviteId, name: n, due, prio, note, createdAt: new Date().toISOString() };
+    if (isProgress) { base.unit = unit; base.total = total; }
+    state.invites.push({ ...base, from: currentUser, to });
+    state.assigned.push({ ...base, assignedBy: currentUser, to, accepted: false });
+  });
+
+  const extra = newAssignees.length
+    ? ` · ${newAssignees.length} persona${newAssignees.length > 1 ? 's' : ''} más asignada${newAssignees.length > 1 ? 's' : ''}`
+    : '';
+  scheduleSave(); render(); toast('Tarea actualizada' + extra);
+  closeEditAssignedModal();
 }
 
 function pickPrio(btn, hiddenId) {
@@ -2647,45 +3250,69 @@ function addProgress() {
 }
 
 function doAssign() {
-  const n = document.getElementById('aName').value.trim();
-  const to = document.getElementById('aTo').value;
-  if (!n || !to) { toast('Completa nombre y destinatario'); return; }
-  const inviteId = 'I' + (++tkId);
-  state.invites.push({
-    id: inviteId,
-    name: n,
-    from: currentUser,
-    to,
-    due: document.getElementById('aDue').value,
-    prio: document.getElementById('aPrio').value,
-    createdAt: new Date().toISOString()
+  const isProgress = document.getElementById('at-progress')?.classList.contains('on');
+  const assignees = Array.from(document.querySelectorAll('#aAssignees .multi-pill.on'))
+    .map(el => el.dataset.uid);
+  if (!assignees.length) { toast('Selecciona al menos una persona'); return; }
+
+  let n, due, prio, note, unit, total;
+  if (isProgress) {
+    n     = document.getElementById('apName').value.trim();
+    total = parseInt(document.getElementById('apTotal').value);
+    unit  = document.getElementById('apUnit').value.trim() || 'unidades';
+    if (!n || !total || total < 1) { toast('Completa nombre y total'); return; }
+    due  = document.getElementById('apDue').value;
+    prio = document.getElementById('apPrio').value;
+    note = document.getElementById('apNote').value.trim();
+  } else {
+    n = document.getElementById('aName').value.trim();
+    if (!n) { toast('Escribe la descripción'); return; }
+    due  = document.getElementById('aDue').value;
+    prio = document.getElementById('aPrio').value;
+    note = document.getElementById('aNote').value.trim();
+  }
+
+  assignees.forEach(to => {
+    const inviteId = 'I' + (++tkId);
+    const base = { id: inviteId, name: n, due, prio, note, createdAt: new Date().toISOString() };
+    if (isProgress) { base.unit = unit; base.total = total; }
+    state.invites.push({ ...base, from: currentUser, to });
+    state.assigned.push({ ...base, assignedBy: currentUser, to, accepted: false });
   });
-  state.assigned.push({
-    id: inviteId, name: n,
-    assignedBy: currentUser, to,
-    due: document.getElementById('aDue').value,
-    prio: document.getElementById('aPrio').value,
-    accepted: false
-  });
-  document.getElementById('aName').value = '';
-  document.getElementById('aDue').value = '';
-  document.getElementById('aNote').value = '';
-  document.getElementById('aTo').value = '';
-  resetPrio('aPrio');
-  scheduleSave(); render(); toast(`Tarea enviada a ${USERS[to]?.name || to}`);
+
+  const lbl = assignees.length === 1
+    ? (USERS[assignees[0]]?.name || assignees[0])
+    : `${assignees.length} personas`;
+  scheduleSave(); render(); toast(`Tarea enviada a ${lbl}`);
   closeAssignModal();
 }
 
 function acceptInvite(id) {
   const iv = state.invites.find(x => x.id === id); if (!iv) return;
-  const newTaskId = 'S' + (++tkId);
-  state.simple.unshift({
-    id: newTaskId,
-    name: iv.name, due: iv.due, prio: iv.prio,
-    done: false, collab: true,
-    owner: currentUser,
-    createdAt: new Date().toISOString()
-  });
+  const isProgress = typeof iv.total === 'number' && iv.total > 0;
+  const newTaskId = (isProgress ? 'P' : 'S') + (++tkId);
+
+  if (isProgress) {
+    state.progress.unshift({
+      id: newTaskId,
+      name: iv.name,
+      unit: iv.unit || 'unidades',
+      total: iv.total,
+      done: 0, log: [],
+      due: iv.due, prio: iv.prio,
+      owner: currentUser, collab: true,
+      createdAt: new Date().toISOString()
+    });
+  } else {
+    state.simple.unshift({
+      id: newTaskId,
+      name: iv.name, due: iv.due, prio: iv.prio,
+      done: false, collab: true,
+      owner: currentUser,
+      createdAt: new Date().toISOString()
+    });
+  }
+
   state.invites = state.invites.filter(x => x.id !== id);
   const a = state.assigned.find(x => x.id === id);
   if (a) {
@@ -2876,6 +3503,9 @@ const ORG_MODULES = {
     { view: 'db', icon: 'fa-database', title: 'Base de Datos',
       desc: 'Consulta inversionistas, empresas y posiciones del portafolio',
       iconClass: 'home-ico-db' },
+    { view: 'dropbox', icon: 'fa-dropbox', iconBrand: true, title: 'Dropbox',
+      desc: 'Archivos compartidos del equipo desde Dropbox',
+      iconClass: 'home-ico-dropbox' },
   ],
   mvp: [
     { view: 'db', icon: 'fa-database', title: 'Base de Datos',
@@ -2886,9 +3516,10 @@ const ORG_MODULES = {
 
 const ORG_NAV = {
   cretum: [
-    { view: 'home',  icon: 'fa-house',       label: 'Inicio' },
-    { view: 'tasks', icon: 'fa-list-check',  label: 'To Do Dashboard' },
-    { view: 'db',    icon: 'fa-database',    label: 'Base de Datos' },
+    { view: 'home',    icon: 'fa-house',       label: 'Inicio' },
+    { view: 'tasks',   icon: 'fa-list-check',  label: 'To Do Dashboard' },
+    { view: 'db',      icon: 'fa-database',    label: 'Base de Datos' },
+    { view: 'dropbox', icon: 'fa-dropbox',     label: 'Dropbox', brand: true },
   ],
   mvp: [
     { view: 'home', icon: 'fa-house',    label: 'Inicio' },
@@ -2899,7 +3530,6 @@ const ORG_NAV = {
 const ORG_SOON = {
   cretum: [
     { icon: 'fa-solid fa-chart-pie',     label: 'Reportes' },
-    { icon: 'fa-brands fa-dropbox',      label: 'Dropbox' },
     { icon: 'fa-solid fa-calendar-days', label: 'Calendario' },
   ],
   mvp: [
@@ -2983,7 +3613,7 @@ function renderHomeModules() {
   const mods = ORG_MODULES[currentOrg] || [];
   el.innerHTML = mods.map(m => `
     <button class="home-module" onclick="switchView('${m.view}')">
-      <div class="home-module-ico ${m.iconClass}"><i class="fa-solid ${m.icon}"></i></div>
+      <div class="home-module-ico ${m.iconClass}"><i class="${m.iconBrand ? 'fa-brands' : 'fa-solid'} ${m.icon}"></i></div>
       <div class="home-module-content">
         <div class="home-module-title">${m.title}</div>
         <div class="home-module-desc">${m.desc}</div>
@@ -3008,7 +3638,7 @@ function renderNavList() {
   const items = currentOrg ? ORG_NAV[currentOrg] : [];
   list.innerHTML = items.map(it => `
     <button class="nav-item" data-view="${it.view}" onclick="switchView('${it.view}')">
-      <i class="fa-solid ${it.icon}"></i>
+      <i class="${it.brand ? 'fa-brands' : 'fa-solid'} ${it.icon}"></i>
       <span>${it.label}</span>
     </button>
   `).join('');
@@ -3045,6 +3675,7 @@ function switchView(view, isBack = false) {
   document.getElementById('pageTasks').style.display = view === 'tasks' ? '' : 'none';
   document.getElementById('pageDb').classList.toggle('active', view === 'db');
   document.getElementById('pageHome').classList.toggle('active', view === 'home');
+  document.getElementById('pageDbx').classList.toggle('active', view === 'dropbox');
 
   highlightActiveNav();
 
@@ -3054,6 +3685,7 @@ function switchView(view, isBack = false) {
     'home':     'Inicio',
     'tasks':    'To Do',
     'db':       'Base de Datos',
+    'dropbox':  'Dropbox',
   }[view] || '';
   document.getElementById('headerBrandText').textContent =
     view === 'selector' ? 'Cretum · Selector' : (orgPrefix + viewLabel);
@@ -3065,6 +3697,7 @@ function switchView(view, isBack = false) {
   closeNav();
 
   if (view === 'db' && !dbLoaded) loadDb();
+  if (view === 'dropbox') openDropbox();
 }
 
 function goBack() {
@@ -3450,6 +4083,391 @@ document.addEventListener('visibilitychange', () => {
 // Click en el indicador de sync → recarga manual
 document.getElementById('syncStatus')?.addEventListener('click', () => {
   if (currentUser && currentView === 'tasks') loadData();
+});
+
+// ═══════════════════════════════════════════
+// DROPBOX — explorador
+// ═══════════════════════════════════════════
+let dbxState = {
+  path: '',
+  view: 'grid',           // 'grid' | 'list'
+  entries: [],
+  searching: false,
+  searchQuery: '',
+  loaded: false,
+};
+let dbxSearchTimer = null;
+const dbxThumbCache = new Map();   // path → object URL
+const dbxPreviewUrls = [];          // a revocar al cerrar el modal
+
+const FILE_ICONS = {
+  pdf:  { icon: 'fa-file-pdf',          color: '#e74c3c' },
+  doc:  { icon: 'fa-file-word',         color: '#2b579a' },
+  docx: { icon: 'fa-file-word',         color: '#2b579a' },
+  xls:  { icon: 'fa-file-excel',        color: '#217346' },
+  xlsx: { icon: 'fa-file-excel',        color: '#217346' },
+  csv:  { icon: 'fa-file-csv',          color: '#217346' },
+  ppt:  { icon: 'fa-file-powerpoint',   color: '#d24726' },
+  pptx: { icon: 'fa-file-powerpoint',   color: '#d24726' },
+  txt:  { icon: 'fa-file-lines',        color: '#888' },
+  md:   { icon: 'fa-file-lines',        color: '#888' },
+  zip:  { icon: 'fa-file-zipper',       color: '#b07d20' },
+  rar:  { icon: 'fa-file-zipper',       color: '#b07d20' },
+  '7z': { icon: 'fa-file-zipper',       color: '#b07d20' },
+  mp3:  { icon: 'fa-file-audio',        color: '#9b59b6' },
+  wav:  { icon: 'fa-file-audio',        color: '#9b59b6' },
+  m4a:  { icon: 'fa-file-audio',        color: '#9b59b6' },
+  mp4:  { icon: 'fa-file-video',        color: '#3498db' },
+  mov:  { icon: 'fa-file-video',        color: '#3498db' },
+  webm: { icon: 'fa-file-video',        color: '#3498db' },
+};
+const IMAGE_EXTS = new Set(['jpg','jpeg','png','gif','webp','heic','bmp','tiff']);
+const VIDEO_EXTS = new Set(['mp4','mov','webm','m4v']);
+const AUDIO_EXTS = new Set(['mp3','wav','m4a','aac','ogg']);
+const OFFICE_PREVIEWABLE = new Set(['doc','docx','xls','xlsx','ppt','pptx','rtf','csv','txt']);
+
+function extOf(name){
+  const i = name.lastIndexOf('.');
+  return i > 0 ? name.slice(i + 1).toLowerCase() : '';
+}
+function iconForFile(name){
+  return FILE_ICONS[extOf(name)] || { icon: 'fa-file', color: '#9aa3b5' };
+}
+function fmtSize(bytes){
+  if (bytes == null) return '';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB';
+  if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+}
+function fmtDbxDate(d){
+  if (!d) return '';
+  return new Date(d).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function openDropbox(){
+  if (!dbxState.loaded) {
+    dbxState.loaded = true;
+    loadDbxFolder('');
+  }
+}
+
+async function loadDbxFolder(path){
+  dbxState.searching = false;
+  dbxState.searchQuery = '';
+  document.getElementById('dbxSearchInput').value = '';
+  document.getElementById('dbxSearchClear').classList.remove('show');
+  dbxState.path = path || '';
+  renderDbxBreadcrumb();
+  const container = document.getElementById('dbxContainer');
+  container.innerHTML = `<div class="dbx-status"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando...</div>`;
+  try {
+    const url = '/api/dropbox?action=list' + (path ? '&path=' + encodeURIComponent(path) : '');
+    const r = await authedFetch(url);
+    if (!r.ok) throw new Error((await r.json()).error || `HTTP ${r.status}`);
+    const data = await r.json();
+    dbxState.entries = data.entries || [];
+    renderDbxEntries();
+  } catch (err) {
+    container.innerHTML = `<div class="dbx-status error">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+      No se pudo cargar la carpeta.<br>
+      <span style="font-size:11px;color:var(--gray-400)">${err.message}</span>
+    </div>`;
+  }
+}
+
+async function searchDbx(query){
+  const q = (query || '').trim();
+  if (!q) {
+    loadDbxFolder(dbxState.path);
+    return;
+  }
+  dbxState.searching = true;
+  dbxState.searchQuery = q;
+  renderDbxBreadcrumb();
+  const container = document.getElementById('dbxContainer');
+  container.innerHTML = `<div class="dbx-status"><i class="fa-solid fa-circle-notch fa-spin"></i> Buscando...</div>`;
+  try {
+    const r = await authedFetch('/api/dropbox?action=search&q=' + encodeURIComponent(q));
+    if (!r.ok) throw new Error((await r.json()).error || `HTTP ${r.status}`);
+    const data = await r.json();
+    dbxState.entries = data.entries || [];
+    renderDbxEntries();
+  } catch (err) {
+    container.innerHTML = `<div class="dbx-status error">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+      Error en la búsqueda.<br>
+      <span style="font-size:11px;color:var(--gray-400)">${err.message}</span>
+    </div>`;
+  }
+}
+
+function renderDbxBreadcrumb(){
+  const bc = document.getElementById('dbxBreadcrumb');
+  if (dbxState.searching) {
+    bc.innerHTML = `
+      <button class="dbx-crumb" onclick="loadDbxFolder('')"><i class="fa-solid fa-house" style="font-size:11px;margin-right:4px"></i>Inicio</button>
+      <span class="dbx-crumb-sep">/</span>
+      <span class="dbx-crumb last">Resultados de "${dbxState.searchQuery.replace(/"/g, '&quot;')}"</span>
+    `;
+    return;
+  }
+  const parts = dbxState.path.split('/').filter(Boolean);
+  let cumulative = '';
+  const crumbs = [`<button class="dbx-crumb${parts.length === 0 ? ' last' : ''}" onclick="loadDbxFolder('')"><i class="fa-solid fa-house" style="font-size:11px;margin-right:4px"></i>Inicio</button>`];
+  parts.forEach((p, i) => {
+    cumulative += '/' + p;
+    const isLast = i === parts.length - 1;
+    crumbs.push(`<span class="dbx-crumb-sep">/</span>`);
+    if (isLast) {
+      crumbs.push(`<span class="dbx-crumb last">${p}</span>`);
+    } else {
+      const path = cumulative;
+      crumbs.push(`<button class="dbx-crumb" onclick="loadDbxFolder('${path.replace(/'/g, "\\'")}')">${p}</button>`);
+    }
+  });
+  bc.innerHTML = crumbs.join('');
+}
+
+function renderDbxEntries(){
+  const container = document.getElementById('dbxContainer');
+  if (!dbxState.entries.length) {
+    container.innerHTML = `<div class="dbx-status">
+      <i class="fa-solid fa-folder-open"></i>
+      ${dbxState.searching ? 'Sin resultados' : 'Carpeta vacía'}
+    </div>`;
+    return;
+  }
+  if (dbxState.view === 'grid') renderDbxGrid();
+  else renderDbxListView();
+  // Lazy-load thumbnails
+  setTimeout(loadVisibleThumbnails, 50);
+}
+
+function renderDbxGrid(){
+  const container = document.getElementById('dbxContainer');
+  container.innerHTML = `<div class="dbx-grid">${
+    dbxState.entries.map((e, i) => {
+      if (e.type === 'folder') {
+        return `
+          <div class="dbx-card dbx-card-folder" data-idx="${i}" onclick="onDbxClick(${i})">
+            <div class="dbx-card-thumb"><i class="fa-solid fa-folder"></i></div>
+            <div class="dbx-card-name">${escapeHtml(e.name)}</div>
+          </div>`;
+      }
+      const ext = extOf(e.name);
+      const isImg = IMAGE_EXTS.has(ext);
+      const ico = iconForFile(e.name);
+      return `
+        <div class="dbx-card" data-idx="${i}" onclick="onDbxClick(${i})">
+          <div class="dbx-card-thumb" ${isImg ? `data-thumb="${escapeAttr(e.path)}"` : ''}>
+            ${isImg
+              ? `<i class="fa-solid ${ico.icon}" style="color:${ico.color}"></i>`
+              : `<i class="fa-solid ${ico.icon}" style="color:${ico.color}"></i>`}
+          </div>
+          <div class="dbx-card-name">${escapeHtml(e.name)}</div>
+          <div class="dbx-card-meta">${fmtSize(e.size)}</div>
+        </div>`;
+    }).join('')
+  }</div>`;
+}
+
+function renderDbxListView(){
+  const container = document.getElementById('dbxContainer');
+  container.innerHTML = `<div class="dbx-list">${
+    dbxState.entries.map((e, i) => {
+      if (e.type === 'folder') {
+        return `
+          <div class="dbx-row dbx-row-folder" data-idx="${i}" onclick="onDbxClick(${i})">
+            <div class="dbx-row-ico"><i class="fa-solid fa-folder"></i></div>
+            <div class="dbx-row-name">${escapeHtml(e.name)}</div>
+            <div class="dbx-row-meta">Carpeta</div>
+          </div>`;
+      }
+      const ext = extOf(e.name);
+      const isImg = IMAGE_EXTS.has(ext);
+      const ico = iconForFile(e.name);
+      return `
+        <div class="dbx-row" data-idx="${i}" onclick="onDbxClick(${i})">
+          <div class="dbx-row-ico" ${isImg ? `data-thumb="${escapeAttr(e.path)}"` : ''}>
+            <i class="fa-solid ${ico.icon}" style="color:${ico.color}"></i>
+          </div>
+          <div class="dbx-row-name">${escapeHtml(e.name)}</div>
+          <div class="dbx-row-meta">${fmtSize(e.size)} · ${fmtDbxDate(e.modified)}</div>
+        </div>`;
+    }).join('')
+  }</div>`;
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function escapeAttr(s){
+  return escapeHtml(s);
+}
+
+function onDbxClick(idx){
+  const e = dbxState.entries[idx];
+  if (!e) return;
+  if (e.type === 'folder') {
+    loadDbxFolder(e.path);
+  } else {
+    openDbxPreview(e);
+  }
+}
+
+async function loadVisibleThumbnails(){
+  const els = document.querySelectorAll('[data-thumb]');
+  for (const el of els) {
+    const path = el.getAttribute('data-thumb');
+    if (!path) continue;
+    if (dbxThumbCache.has(path)) {
+      injectThumb(el, dbxThumbCache.get(path));
+      continue;
+    }
+    try {
+      const r = await authedFetch('/api/dropbox?action=thumbnail&path=' + encodeURIComponent(path) + '&size=w256h256');
+      if (!r.ok) continue;
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      dbxThumbCache.set(path, url);
+      injectThumb(el, url);
+    } catch (e) { /* silencioso */ }
+  }
+}
+
+function injectThumb(container, url){
+  if (container.querySelector('img')) return;
+  const img = document.createElement('img');
+  img.onload = () => img.classList.add('loaded');
+  img.src = url;
+  // Reemplaza el ícono por la imagen
+  const icon = container.querySelector('i');
+  if (icon) icon.remove();
+  container.appendChild(img);
+}
+
+function setDbxView(v){
+  dbxState.view = v;
+  document.getElementById('dbxViewGrid').classList.toggle('on', v === 'grid');
+  document.getElementById('dbxViewList').classList.toggle('on', v === 'list');
+  renderDbxEntries();
+}
+
+function clearDbxSearch(){
+  document.getElementById('dbxSearchInput').value = '';
+  document.getElementById('dbxSearchClear').classList.remove('show');
+  loadDbxFolder(dbxState.path);
+}
+
+document.getElementById('dbxSearchInput')?.addEventListener('input', (e) => {
+  const v = e.target.value;
+  document.getElementById('dbxSearchClear').classList.toggle('show', v.length > 0);
+  clearTimeout(dbxSearchTimer);
+  dbxSearchTimer = setTimeout(() => {
+    if (v.trim()) searchDbx(v);
+    else if (dbxState.searching) loadDbxFolder(dbxState.path);
+  }, 350);
+});
+
+// ── PREVIEW ──
+async function openDbxPreview(entry){
+  const modal = document.getElementById('dbxPreview');
+  const body = document.getElementById('dbxPreviewBody');
+  document.getElementById('dbxPreviewName').textContent = entry.name;
+  body.innerHTML = `<div class="dbx-preview-loading">
+    <div class="dbx-preview-spinner"></div>
+    <div>Cargando vista previa...</div>
+  </div>`;
+  modal.classList.add('show');
+
+  const ext = extOf(entry.name);
+
+  // Botón descargar — siempre carga el link temporal al hacer click
+  const dlBtn = document.getElementById('dbxPreviewDownload');
+  dlBtn.onclick = async () => {
+    dlBtn.disabled = true;
+    try {
+      const r = await authedFetch('/api/dropbox?action=link&path=' + encodeURIComponent(entry.path));
+      const data = await r.json();
+      if (data.link) window.open(data.link, '_blank');
+    } finally {
+      dlBtn.disabled = false;
+    }
+  };
+
+  try {
+    if (IMAGE_EXTS.has(ext)) {
+      const r = await authedFetch('/api/dropbox?action=link&path=' + encodeURIComponent(entry.path));
+      const data = await r.json();
+      if (!data.link) throw new Error('Sin link temporal');
+      body.innerHTML = `<img src="${data.link}" alt="${escapeAttr(entry.name)}">`;
+    }
+    else if (VIDEO_EXTS.has(ext) || AUDIO_EXTS.has(ext)) {
+      const r = await authedFetch('/api/dropbox?action=link&path=' + encodeURIComponent(entry.path));
+      const data = await r.json();
+      if (!data.link) throw new Error('Sin link temporal');
+      const tag = VIDEO_EXTS.has(ext) ? 'video' : 'audio';
+      body.innerHTML = `<${tag} src="${data.link}" controls autoplay></${tag}>`;
+    }
+    else if (ext === 'pdf') {
+      // Proxy via server: el link temporal de Dropbox viene con
+      // Content-Disposition: attachment, lo que fuerza descarga en iframe.
+      const r = await authedFetch('/api/dropbox?action=download&path=' + encodeURIComponent(entry.path));
+      if (!r.ok) throw new Error('No se pudo cargar el PDF');
+      const buf = await r.arrayBuffer();
+      const blob = new Blob([buf], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      dbxPreviewUrls.push(url);
+      body.innerHTML = `<iframe src="${url}#toolbar=1" allow="fullscreen"></iframe>`;
+    }
+    else if (OFFICE_PREVIEWABLE.has(ext)) {
+      // Pide a Dropbox un preview en PDF (binario) y lo mostramos en iframe
+      const r = await authedFetch('/api/dropbox?action=preview&path=' + encodeURIComponent(entry.path));
+      if (!r.ok) throw new Error('Vista previa no disponible');
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      dbxPreviewUrls.push(url);
+      body.innerHTML = `<iframe src="${url}#toolbar=1" allow="fullscreen"></iframe>`;
+    }
+    else {
+      // Sin vista previa
+      body.innerHTML = `<div class="dbx-preview-unsupported">
+        <i class="fa-solid fa-file"></i>
+        <h3>Sin vista previa</h3>
+        <p>Este tipo de archivo no se puede previsualizar dentro del dashboard. Usa "Descargar" para abrirlo en Dropbox.</p>
+        <button class="dbx-preview-btn" onclick="document.getElementById('dbxPreviewDownload').click()">
+          <i class="fa-solid fa-download"></i> Descargar / Abrir
+        </button>
+      </div>`;
+    }
+  } catch (err) {
+    body.innerHTML = `<div class="dbx-preview-unsupported">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+      <h3>No se pudo cargar la vista previa</h3>
+      <p>${escapeHtml(err.message)}</p>
+      <button class="dbx-preview-btn" onclick="document.getElementById('dbxPreviewDownload').click()">
+        <i class="fa-solid fa-download"></i> Abrir en Dropbox
+      </button>
+    </div>`;
+  }
+}
+
+function closeDbxPreview(){
+  const modal = document.getElementById('dbxPreview');
+  modal.classList.remove('show');
+  setTimeout(() => {
+    document.getElementById('dbxPreviewBody').innerHTML = '';
+    while (dbxPreviewUrls.length) URL.revokeObjectURL(dbxPreviewUrls.pop());
+  }, 250);
+}
+
+// Cerrar preview con Escape (en orden de prioridad respeto al handler global)
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && document.getElementById('dbxPreview')?.classList.contains('show')) {
+    closeDbxPreview();
+  }
 });
 </script>
 </body>
