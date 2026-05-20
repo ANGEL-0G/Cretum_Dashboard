@@ -1054,12 +1054,38 @@ button,input,select{font-family:var(--font)}
 .home-ico-db{background:var(--amber-bg);color:var(--amber)}
 .home-ico-mvp{background:rgba(237,120,36,.12);color:#ED7824}
 .home-ico-dropbox{background:rgba(0,97,255,.12);color:#0061FF}
+.home-ico-reports{background:var(--gray-100);color:var(--gray-400)}
 [data-theme="dark"] .home-ico-dropbox{background:rgba(0,97,255,.22);color:#5b9aff}
 
 .home-module-content{flex:0;min-width:0;width:100%}
 .home-module-title{font-size:13px;font-weight:500;color:var(--gray-900);margin-bottom:3px;line-height:1.25}
 .home-module-desc{font-size:10.5px;color:var(--gray-500);line-height:1.4;padding:0 2px}
 .home-module-arrow{display:none}
+
+/* Módulo deshabilitado — "próximamente" en formato grande */
+.home-module.disabled{
+  position:relative;
+  background:var(--gray-50);
+  border:1px dashed var(--gray-200);
+  cursor:not-allowed;
+  box-shadow:none;
+}
+.home-module.disabled:hover{
+  transform:none;
+  box-shadow:none;
+  border-color:var(--gray-200);
+}
+.home-module.disabled .home-module-title{color:var(--gray-400)}
+.home-module.disabled .home-module-desc{color:var(--gray-300)}
+.home-module-badge{
+  position:absolute;top:8px;right:8px;
+  font-size:9px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;
+  color:var(--gray-400);background:var(--white);
+  border:1px solid var(--gray-200);
+  padding:2px 7px;border-radius:99px;
+}
+[data-theme="dark"] .home-module.disabled{background:rgba(255,255,255,.02)}
+[data-theme="dark"] .home-module-badge{background:rgba(255,255,255,.04)}
 
 .home-soon{margin-top:8px}
 .home-soon-h{
@@ -3506,6 +3532,9 @@ const ORG_MODULES = {
     { view: 'dropbox', icon: 'fa-dropbox', iconBrand: true, title: 'Dropbox',
       desc: 'Archivos compartidos del equipo desde Dropbox',
       iconClass: 'home-ico-dropbox' },
+    { view: 'reports', icon: 'fa-chart-pie', title: 'Reportes',
+      desc: 'Reportes personalizados por LP — Altareturn + Salesforce',
+      iconClass: 'home-ico-reports', disabled: true },
   ],
   mvp: [
     { view: 'db', icon: 'fa-database', title: 'Base de Datos',
@@ -3529,7 +3558,6 @@ const ORG_NAV = {
 
 const ORG_SOON = {
   cretum: [
-    { icon: 'fa-solid fa-chart-pie',     label: 'Reportes' },
     { icon: 'fa-solid fa-calendar-days', label: 'Calendario' },
   ],
   mvp: [
@@ -3612,7 +3640,8 @@ function renderHomeModules() {
   if (!el || !currentOrg) return;
   const mods = ORG_MODULES[currentOrg] || [];
   el.innerHTML = mods.map(m => `
-    <button class="home-module" onclick="switchView('${m.view}')">
+    <button class="home-module${m.disabled ? ' disabled' : ''}"${m.disabled ? ' disabled aria-disabled="true"' : ` onclick="switchView('${m.view}')"`}>
+      ${m.disabled ? '<span class="home-module-badge">Pronto</span>' : ''}
       <div class="home-module-ico ${m.iconClass}"><i class="${m.iconBrand ? 'fa-brands' : 'fa-solid'} ${m.icon}"></i></div>
       <div class="home-module-content">
         <div class="home-module-title">${m.title}</div>

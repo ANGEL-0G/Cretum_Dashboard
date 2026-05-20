@@ -1,0 +1,900 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Workflow Altareturn — Ingesta de PDFs</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{
+    --navy:#1a3a6b; --navy-2:#2a4f8f; --navy-pale:#eaf0fb;
+    --gray-50:#f8f9fc; --gray-100:#eef0f5; --gray-200:#e0e3eb;
+    --gray-400:#9aa3b5; --gray-700:#3d4559; --gray-900:#1a1f2e;
+    --green:#1d8f4e; --green-bg:#e8f6ee;
+    --amber:#b07d20; --amber-bg:#fbf3e0;
+    --red:#c0392b; --red-bg:#fbe6e3;
+    --r-sm:6px; --r-md:10px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:-apple-system,'Segoe UI',Arial,sans-serif;
+    background:var(--gray-50); color:var(--gray-900);
+    font-size:14px; line-height:1.6;
+  }
+  .wrap{max-width:880px; margin:0 auto; padding:32px 24px 80px}
+  header{
+    background:linear-gradient(135deg,var(--navy),var(--navy-2));
+    color:white; border-radius:14px; padding:32px 30px;
+    margin-bottom:30px;
+    box-shadow:0 4px 20px rgba(26,58,107,.18);
+  }
+  header .eyebrow{font-size:11px; letter-spacing:1.8px; opacity:.7; margin-bottom:8px}
+  header h1{margin:0 0 8px; font-size:26px; font-weight:500; letter-spacing:-.3px}
+  header p{margin:0; opacity:.85; font-size:14px}
+
+  h2{
+    font-size:20px; font-weight:500;
+    color:var(--navy); margin:36px 0 14px;
+    padding-bottom:10px; border-bottom:1px solid var(--gray-200);
+  }
+  h3{font-size:15px; font-weight:600; color:var(--gray-900); margin:22px 0 8px}
+  p{margin:8px 0}
+  code{
+    background:var(--gray-100); padding:1px 6px; border-radius:4px;
+    font-family:'DM Mono',Consolas,monospace; font-size:12.5px;
+    color:var(--navy);
+  }
+  pre{
+    background:#0e1626; color:#e6ebf5;
+    padding:14px 16px; border-radius:var(--r-md);
+    overflow-x:auto; font-size:12.5px; line-height:1.55;
+    font-family:'DM Mono',Consolas,monospace;
+  }
+  pre .c{color:#7a8aa8} /* comments */
+  pre .k{color:#6cb6ff} /* keywords */
+  pre .s{color:#f5c674} /* strings */
+
+  /* Phase cards */
+  .phase{
+    background:white; border:1px solid var(--gray-100);
+    border-radius:14px; padding:24px 26px;
+    margin:18px 0; box-shadow:0 1px 3px rgba(26,58,107,.04);
+  }
+  .phase-head{display:flex; align-items:center; gap:14px; margin-bottom:14px}
+  .phase-num{
+    width:38px; height:38px; flex-shrink:0;
+    background:var(--navy); color:white;
+    border-radius:50%; display:flex;
+    align-items:center; justify-content:center;
+    font-weight:600; font-size:15px;
+  }
+  .phase-num.opt{background:var(--gray-400)}
+  .phase-title{font-size:17px; font-weight:500; color:var(--gray-900); flex:1}
+  .phase-meta{font-size:11px; color:var(--gray-400); letter-spacing:.5px; text-transform:uppercase; margin-top:2px}
+
+  /* Tags */
+  .tag{
+    display:inline-block; padding:3px 9px; border-radius:99px;
+    font-size:11px; font-weight:500; letter-spacing:.3px;
+  }
+  .tag-free{background:var(--green-bg); color:var(--green)}
+  .tag-once{background:var(--navy-pale); color:var(--navy)}
+  .tag-recur{background:var(--amber-bg); color:var(--amber)}
+  .tag-cost{background:var(--red-bg); color:var(--red)}
+  .tag-future{background:#f0e9fb; color:#6a3ba8}
+
+  /* Flow diagrams */
+  .flow{
+    background:var(--gray-50); border:1px solid var(--gray-100);
+    border-radius:var(--r-md); padding:18px;
+    margin:14px 0; font-family:'DM Mono',Consolas,monospace;
+    font-size:12px; color:var(--gray-700); line-height:1.7;
+  }
+  .flow-step{
+    background:white; border:1px solid var(--gray-200);
+    border-left:3px solid var(--navy);
+    padding:10px 14px; border-radius:6px; margin:6px 0;
+  }
+  .flow-arrow{
+    text-align:center; color:var(--gray-400); font-size:14px;
+    margin:2px 0;
+  }
+  .flow-step strong{color:var(--navy); font-weight:600}
+
+  /* Action list */
+  .action-list{
+    background:#fdfaf2; border-left:3px solid var(--amber);
+    border-radius:6px; padding:12px 16px 12px 18px;
+    margin:14px 0; font-size:13.5px;
+  }
+  .action-list .head{color:var(--amber); font-weight:600; font-size:12px; letter-spacing:.4px; text-transform:uppercase; margin-bottom:6px}
+  .action-list ul{margin:6px 0; padding-left:20px}
+  .action-list li{margin:4px 0}
+
+  /* Result box */
+  .result{
+    background:var(--green-bg); border-left:3px solid var(--green);
+    border-radius:6px; padding:12px 16px;
+    margin:14px 0; font-size:13.5px;
+  }
+  .result .head{color:var(--green); font-weight:600; font-size:12px; letter-spacing:.4px; text-transform:uppercase; margin-bottom:4px}
+
+  .warn{
+    background:var(--red-bg); border-left:3px solid var(--red);
+    border-radius:6px; padding:12px 16px;
+    margin:14px 0; font-size:13.5px;
+  }
+  .warn .head{color:var(--red); font-weight:600; font-size:12px; letter-spacing:.4px; text-transform:uppercase; margin-bottom:4px}
+
+  /* Decisions */
+  .decisions{
+    background:white; border:2px dashed var(--navy);
+    border-radius:14px; padding:24px 26px;
+    margin:28px 0 10px;
+  }
+  .decisions h2{border:none; color:var(--navy); margin-top:0; padding:0}
+  .decision-item{
+    background:var(--gray-50); border-radius:var(--r-md);
+    padding:14px 18px; margin:10px 0;
+  }
+  .decision-item .q{font-weight:600; color:var(--navy); margin-bottom:4px}
+  .decision-item .opts{font-size:13px; color:var(--gray-700)}
+
+  /* Cost callout */
+  .cost-summary{
+    display:flex; gap:12px; flex-wrap:wrap; margin:18px 0;
+  }
+  .cost-card{
+    flex:1; min-width:160px;
+    background:white; border:1px solid var(--gray-100);
+    border-radius:var(--r-md); padding:14px 16px;
+  }
+  .cost-card .label{font-size:11px; color:var(--gray-400); letter-spacing:.5px; text-transform:uppercase}
+  .cost-card .value{font-size:22px; font-weight:500; color:var(--navy); margin-top:4px}
+  .cost-card.zero .value{color:var(--green)}
+  .cost-card .note{font-size:11px; color:var(--gray-400); margin-top:2px}
+
+  /* Table */
+  table{width:100%; border-collapse:collapse; margin:12px 0; font-size:13px}
+  th,td{padding:8px 10px; text-align:left; border-bottom:1px solid var(--gray-100)}
+  th{background:var(--gray-50); color:var(--gray-700); font-weight:600; font-size:12px}
+
+  /* ── Mockup del Modelo C ── */
+  .mockup{
+    background:linear-gradient(180deg,#f5f7fc,#eef2f9);
+    border:1px solid var(--gray-200); border-radius:12px;
+    padding:18px; margin:14px 0;
+  }
+  .mockup-label{
+    font-size:10.5px; letter-spacing:1.4px; text-transform:uppercase;
+    color:var(--gray-400); margin-bottom:10px; text-align:center;
+  }
+  .mock-window{
+    background:white; border-radius:10px;
+    box-shadow:0 4px 16px rgba(26,58,107,.10);
+    overflow:hidden;
+  }
+  .mock-bar{
+    background:var(--gray-50); border-bottom:1px solid var(--gray-100);
+    padding:9px 14px; display:flex; align-items:center; gap:6px;
+    font-size:11px; color:var(--gray-400);
+  }
+  .mock-dot{width:9px; height:9px; border-radius:50%; background:#e0e3eb}
+  .mock-dot.r{background:#ff6157} .mock-dot.y{background:#ffbd2e} .mock-dot.g{background:#28c940}
+  .mock-url{margin-left:auto; font-family:'DM Mono',Consolas,monospace; font-size:10.5px}
+  .mock-body{padding:18px 22px}
+  .mock-title{font-size:16px; font-weight:600; color:var(--navy); margin-bottom:2px}
+  .mock-sub{font-size:11.5px; color:var(--gray-400); margin-bottom:14px}
+  .mock-row{
+    display:flex; align-items:center; gap:10px;
+    padding:9px 0; border-bottom:1px solid var(--gray-100);
+    font-size:12.5px;
+  }
+  .mock-row:last-child{border-bottom:none}
+  .mock-row .lbl{color:var(--gray-400); width:130px; flex-shrink:0; font-size:11.5px}
+  .mock-row .val{color:var(--gray-900); flex:1}
+  .mock-select{
+    background:white; border:1px solid var(--gray-200);
+    padding:6px 28px 6px 10px; border-radius:6px; font-size:12px;
+    color:var(--gray-900);
+    background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239aa3b5' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 9px center;
+    width:100%;
+  }
+  .cache-panel{
+    margin-top:14px; padding:12px 14px;
+    border-radius:8px; font-size:12px;
+    display:flex; align-items:center; gap:10px;
+  }
+  .cache-panel.hit{background:var(--green-bg); color:#0f6b3a; border-left:3px solid var(--green)}
+  .cache-panel.miss{background:var(--amber-bg); color:#7a5210; border-left:3px solid var(--amber)}
+  .cache-icon{
+    width:24px; height:24px; border-radius:50%; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:700; font-size:13px; color:white;
+  }
+  .cache-icon.hit{background:var(--green)}
+  .cache-icon.miss{background:var(--amber)}
+  .cache-info strong{display:block; font-weight:600; font-size:12.5px}
+  .cache-info span{font-size:11px; opacity:.85}
+  .mock-btn{
+    margin-top:14px; width:100%;
+    background:var(--navy); color:white; border:none;
+    padding:10px; border-radius:6px; font-size:13px; font-weight:500;
+    text-align:center; cursor:default;
+  }
+  .mock-btn.disabled{background:var(--gray-200); color:var(--gray-400)}
+  .mock-side{display:flex; gap:14px; flex-wrap:wrap}
+  .mock-side > div{flex:1; min-width:280px}
+  .mock-meta{
+    font-size:10.5px; color:var(--gray-400);
+    display:flex; justify-content:space-between;
+    margin-top:8px; padding-top:8px; border-top:1px dashed var(--gray-200);
+  }
+  .invalidations{
+    background:var(--gray-50); border-radius:8px;
+    padding:12px 14px; margin-top:14px; font-size:12px;
+  }
+  .invalidations h4{margin:0 0 8px; font-size:11px; letter-spacing:.5px; text-transform:uppercase; color:var(--gray-700)}
+  .invalidations ul{margin:0; padding-left:18px; color:var(--gray-700)}
+  .invalidations li{margin:3px 0}
+
+  footer{margin-top:40px; padding-top:20px; border-top:1px solid var(--gray-200); color:var(--gray-400); font-size:12px; text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">CRETUM PARTNERS · INGESTA + REPORTES</div>
+  <h1>Workflow Altareturn → Reportes personalizados</h1>
+  <p>Cómo vamos a usar los 1000+ PDFs de Altareturn para alimentar la base y generar reportes personalizados por LP, todo desde cretumdesk.com.</p>
+</header>
+
+<h2>El objetivo final</h2>
+<p>
+  <strong>Generar reportes personalizados como el de Nathaly Marcus</strong> (Anthropic + SpaceX, MOIC,
+  escenarios IPO, dilución, eventos próximos) <strong>on-demand desde cretumdesk.com</strong>, en lugar de
+  armarlos manualmente cada vez con Claude alimentado a mano. Los PDFs de Altareturn son el insumo;
+  los reportes son el producto.
+</p>
+
+<h2>El problema en una línea</h2>
+<p>
+  Altareturn tiene <strong>~1000 PDFs heterogéneos</strong> (capital calls, K-1s, NAVs, distribuciones, todo mezclado)
+  + Salesforce con datos estructurados, ambos <strong>sin API disponible</strong>. Hay que convertirlos en datos
+  consultables desde <code>cretumdesk.com</code> sin pagar más de lo necesario — y encima poder usarlos
+  para generar reportes personalizados por LP.
+</p>
+
+<h2>La buena noticia: ya tienes la mitad</h2>
+<p>
+  Tu Supabase ya tiene las tablas <code>investors</code>, <code>contacts</code>, <code>companies</code>,
+  <code>series</code> e <code>investments</code> con todos los datos numéricos del reporte (commitment, shares,
+  valuaciones, MOIC). Lo que falta es el <strong>contexto cualitativo</strong> que vive en los PDFs (tesis,
+  eventos destacados, próximos eventos, comentario). Por eso el reporte sale así de bien:
+</p>
+<ul style="font-size:13.5px;color:var(--gray-700)">
+  <li><strong>~60% del reporte</strong> es cálculo determinístico desde tablas (panorama, métricas, escenarios IPO, comparativa)</li>
+  <li><strong>~40% del reporte</strong> es prosa / contexto extraído de PDFs vía LLM (tesis, eventos, perspectiva)</li>
+</ul>
+
+<h2>Resumen de costos</h2>
+<div class="cost-summary">
+  <div class="cost-card zero">
+    <div class="label">Fases 0 → 3</div>
+    <div class="value">$0</div>
+    <div class="note">100% open-source local + Supabase free tier</div>
+  </div>
+  <div class="cost-card">
+    <div class="label">Fase 4 (opcional)</div>
+    <div class="value">~$5/mes</div>
+    <div class="note">Estructuración de docs con IA on-demand</div>
+  </div>
+  <div class="cost-card">
+    <div class="label">Fase 5 (reportes)</div>
+    <div class="value">~$3-10/mes</div>
+    <div class="note">50 reportes/mes con Haiku — cap configurable</div>
+  </div>
+</div>
+<p style="font-size:13px;color:var(--gray-700)">
+  <strong>Importante:</strong> las fases 0 a 3 dejan los 1000+ PDFs <em>buscables en texto</em> sin tocar
+  ninguna API de pago. Postgres tiene búsqueda full-text built-in, así que puedes encontrar
+  "capital call Q3 FundXYZ" gratis. La fase 4 (estructurar datos con LLM) es opcional y a demanda.
+</p>
+
+<!-- ════════════ FASE 0 ════════════ -->
+<div class="phase">
+  <div class="phase-head">
+    <div class="phase-num">0</div>
+    <div>
+      <div class="phase-title">Setup inicial</div>
+      <div class="phase-meta">
+        <span class="tag tag-once">Una sola vez</span>
+        <span class="tag tag-free">$0</span>
+      </div>
+    </div>
+  </div>
+
+  <p>Preparar la infraestructura — código, dependencias, tabla en Supabase. No procesamos nada todavía.</p>
+
+  <h3>Qué pasa</h3>
+  <div class="flow">
+    <div class="flow-step"><strong>1.</strong> Agrego archivo <code>db/03_documents.sql</code> con la tabla <code>documents</code> e índices de búsqueda</div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><strong>2.</strong> Agrego script <code>scripts/extract_pdfs.mjs</code> con la lógica de extracción</div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><strong>3.</strong> Agrego dependencias a <code>package.json</code>: <code>pdf-parse</code>, <code>tesseract.js</code></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><strong>4.</strong> Push a git → deploy automático (no afecta nada en producción todavía)</div>
+  </div>
+
+  <h3>Esquema de la tabla <code>documents</code></h3>
+<pre><span class="k">create table</span> documents (
+  id            uuid <span class="k">primary key default</span> gen_random_uuid(),
+  filename      <span class="k">text not null</span>,
+  source_path   <span class="k">text not null unique</span>,    <span class="c">-- ruta en Dropbox</span>
+  file_hash     <span class="k">text not null</span>,           <span class="c">-- SHA256, para idempotencia</span>
+  raw_text      <span class="k">text</span>,                    <span class="c">-- texto extraído</span>
+  page_count    <span class="k">int</span>,
+  byte_size     <span class="k">int</span>,
+  extraction_method <span class="k">text</span>,             <span class="c">-- 'pdf-parse' o 'tesseract'</span>
+  extracted_at  timestamptz <span class="k">default</span> now()
+);
+
+<span class="c">-- Índice GIN para búsqueda full-text en español</span>
+<span class="k">create index</span> documents_search <span class="k">on</span> documents
+  <span class="k">using</span> gin (to_tsvector(<span class="s">'spanish'</span>, raw_text));</pre>
+
+  <div class="action-list">
+    <div class="head">Qué necesito de ti antes de empezar</div>
+    <ul>
+      <li>Confirmar que el idioma principal de los PDFs es: <strong>inglés</strong> o <strong>español</strong> (cambia el modelo de OCR y el índice de búsqueda)</li>
+      <li>Confirmar dónde está la base de Supabase actualmente (asumo que el proyecto es el que ya tienes vinculado)</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ════════════ FASE 1 ════════════ -->
+<div class="phase">
+  <div class="phase-head">
+    <div class="phase-num">1</div>
+    <div>
+      <div class="phase-title">Procesar el backlog (1000+ PDFs)</div>
+      <div class="phase-meta">
+        <span class="tag tag-once">Una sola vez</span>
+        <span class="tag tag-free">$0</span>
+      </div>
+    </div>
+  </div>
+
+  <p>Convertir todos los PDFs viejos de Altareturn a texto, guardar en Supabase. Todo local, todo gratis.</p>
+
+  <h3>Qué pasa</h3>
+  <div class="flow">
+    <div class="flow-step"><strong>Tú:</strong> Descargas manualmente los PDFs de Altareturn → carpeta local <code>C:\altareturn-pdfs\</code></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><strong>Tú:</strong> Abres terminal en el proyecto → <code>npm run extract</code></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><strong>Script:</strong> Por cada PDF en la carpeta:
+      <ul style="margin:6px 0;padding-left:18px;font-family:inherit">
+        <li>Calcula hash SHA256 → si ya existe en Supabase, skipea</li>
+        <li>Intenta <code>pdf-parse</code> (PDFs basados en texto, rápido)</li>
+        <li>Si el texto extraído es &lt; 100 caracteres → cae a <code>tesseract.js</code> (OCR para escaneos)</li>
+        <li>Sube el PDF original a Dropbox <code>/altareturn/processed/</code></li>
+        <li>Hace INSERT en Supabase con texto + metadata + ruta Dropbox</li>
+      </ul>
+    </div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><strong>Salida en terminal:</strong>
+<pre style="margin:6px 0">[  1/1000] Q3_FundABC_NAV.pdf       ✓ pdf-parse  (1.2s)
+[  2/1000] CapitalCall_2024_FundXYZ ✓ tesseract  (8.4s) <span class="c">// escaneado</span>
+[  3/1000] K1_2023_FundABC.pdf      ↪ skip (ya procesado)
+...</pre>
+    </div>
+  </div>
+
+  <h3>Costos reales</h3>
+  <table>
+    <tr><th>Recurso</th><th>Costo</th><th>Por qué</th></tr>
+    <tr><td>Procesamiento de los 1000 PDFs</td><td>$0</td><td>Corre en tu laptop, no en la nube</td></tr>
+    <tr><td>Storage en Dropbox</td><td>$0</td><td>Si caben en tu plan actual (~5 GB típico)</td></tr>
+    <tr><td>Storage en Supabase (texto)</td><td>$0</td><td>Texto es muy ligero; cabe en free tier</td></tr>
+    <tr><td>Tiempo de máquina</td><td>~2-6 hrs</td><td>Depende de cuántos sean escaneados (OCR es lento)</td></tr>
+  </table>
+
+  <div class="result">
+    <div class="head">Resultado de esta fase</div>
+    1000 documentos en Supabase con texto extraído, hash, ruta al original. Ya son buscables vía SQL,
+    aunque la UI todavía no existe (eso es la fase 2).
+  </div>
+
+  <div class="action-list">
+    <div class="head">Qué necesito de ti</div>
+    <ul>
+      <li>Descargar los PDFs (puedes hacerlo en tandas, el script es idempotente)</li>
+      <li>Tener la laptop encendida unas horas mientras corre</li>
+      <li>(Opcional) Verificar 5-10 resultados en Supabase para asegurar calidad de extracción</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ════════════ FASE 2 ════════════ -->
+<div class="phase">
+  <div class="phase-head">
+    <div class="phase-num">2</div>
+    <div>
+      <div class="phase-title">UI de búsqueda en cretumdesk.com</div>
+      <div class="phase-meta">
+        <span class="tag tag-once">Una sola vez</span>
+        <span class="tag tag-free">$0</span>
+      </div>
+    </div>
+  </div>
+
+  <p>Página nueva en el dashboard para buscar y leer los documentos.</p>
+
+  <h3>Qué pasa</h3>
+  <div class="flow">
+    <div class="flow-step"><strong>1.</strong> Agrego endpoint <code>/api/documents?q=...</code> que hace búsqueda full-text en Postgres</div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><strong>2.</strong> Agrego sección "Documentos" en el menú lateral</div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><strong>3.</strong> Página con buscador + lista de resultados (filename + snippet)</div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><strong>4.</strong> Click en un resultado → vista detallada con texto extraído y preview del PDF original (uso el endpoint Dropbox que ya tienes)</div>
+  </div>
+
+  <div class="result">
+    <div class="head">Resultado de esta fase</div>
+    Cualquiera del equipo entra a <code>cretumdesk.com</code> → Documentos → busca "Fund XYZ Q3" y ve
+    todos los PDFs relacionados, con preview del original. Sin gastar un peso en LLM.
+  </div>
+</div>
+
+<!-- ════════════ FASE 3 ════════════ -->
+<div class="phase">
+  <div class="phase-head">
+    <div class="phase-num">3</div>
+    <div>
+      <div class="phase-title">Ongoing — PDFs nuevos (~30/mes)</div>
+      <div class="phase-meta">
+        <span class="tag tag-recur">Recurrente</span>
+        <span class="tag tag-free">$0</span>
+      </div>
+    </div>
+  </div>
+
+  <p>El mismo workflow de la fase 1, repetido mensualmente o cuando juntes PDFs nuevos.</p>
+
+  <h3>Cómo se ve</h3>
+  <div class="flow">
+    <div class="flow-step"><strong>Tú:</strong> Descargas los PDFs nuevos de Altareturn a <code>C:\altareturn-pdfs\</code></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><strong>Tú:</strong> <code>npm run extract</code></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><strong>Script:</strong> Detecta que los del backlog ya están procesados (por hash) y solo procesa los nuevos</div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><strong>Aparecen automáticamente</strong> en cretumdesk.com → Documentos</div>
+  </div>
+
+  <p style="font-size:13px;color:var(--gray-700)">
+    Si en algún momento quieres automatizarlo más (Dropbox watcher + cron de Vercel), se puede agregar
+    en una fase posterior. Por ahora, manual está bien y ahorra dolores de cabeza.
+  </p>
+</div>
+
+<!-- ════════════ FASE 4 ════════════ -->
+<div class="phase">
+  <div class="phase-head">
+    <div class="phase-num">4</div>
+    <div>
+      <div class="phase-title">Extracción estructurada automática</div>
+      <div class="phase-meta">
+        <span class="tag tag-recur">Cada PDF nuevo</span>
+        <span class="tag tag-cost">~$1 backlog, &lt; $1/mes ongoing</span>
+      </div>
+    </div>
+  </div>
+
+  <p>
+    Aquí está la pieza crítica: cada vez que un PDF entra al sistema (sea del backlog o nuevo),
+    Claude lo lee y rellena automáticamente las tablas estructuradas (<code>investors</code>,
+    <code>investments</code>, etc.). Sin esto, los reportes nunca tendrían datos frescos cuando
+    llega un LP nuevo o cuando un cliente existente recibe un capital account statement nuevo.
+  </p>
+
+  <h3>Cómo se integra con la Fase 1</h3>
+  <div class="flow">
+    <div class="flow-step"><strong>Script de Fase 1:</strong> extrae <code>raw_text</code> del PDF (gratis, local)</div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><strong>Inmediatamente después:</strong> manda <code>raw_text</code> a Claude Haiku con schema JSON:
+<pre style="margin:6px 0">{
+  <span class="s">"doc_type"</span>: <span class="s">"capital_account_statement"</span> | <span class="s">"welcome_letter"</span> | <span class="s">"k1"</span> | ...,
+  <span class="s">"investor_name"</span>: <span class="s">"Nathaly Marcus Roffe"</span>,
+  <span class="s">"investor_email"</span>: <span class="s">"nmarcus@bienesta.com"</span>,
+  <span class="s">"fund_name"</span>: <span class="s">"MVP Opportunity Fund VI LLC"</span>,
+  <span class="s">"series"</span>: <span class="s">"23F"</span>,
+  <span class="s">"company"</span>: <span class="s">"Anthropic"</span>,
+  <span class="s">"commitment_usd"</span>: 50000,
+  <span class="s">"shares"</span>: 1497,
+  <span class="s">"pps_entry"</span>: 31.37,
+  <span class="s">"as_of_date"</span>: <span class="s">"2026-05-13"</span>,
+  <span class="s">"confidence"</span>: 0.92
+}</pre>
+    </div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><strong>Backend:</strong>
+      <ul style="margin:6px 0;padding-left:18px;font-family:inherit">
+        <li>Si <code>confidence ≥ 0.85</code> y los campos hacen match → upsert automático a las tablas</li>
+        <li>Si <code>confidence &lt; 0.85</code> o hay datos ambiguos → cola de revisión humana</li>
+        <li>Guarda link <code>documents.investor_id</code> = match encontrado (resuelve "qué docs son de quién")</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Por qué esto es importante para los reportes</h3>
+  <p>
+    Cuando alguien pide el reporte de <strong>Nathaly Marcus</strong>, el sistema necesita saber automáticamente:
+  </p>
+  <ul>
+    <li>Qué <code>investor_id</code> es ella (matcheado al nombre del PDF)</li>
+    <li>Qué documentos son suyos (linkeados por <code>documents.investor_id</code>)</li>
+    <li>Qué shares tiene actualmente (poblado por extracción de los capital account statements)</li>
+  </ul>
+  <p>Sin la Fase 4, todo eso sería taggeo manual.</p>
+
+  <h3>Costos reales</h3>
+  <table>
+    <tr><th>Volumen</th><th>Costo Haiku 4.5</th><th>Notas</th></tr>
+    <tr><td>1000 PDFs backlog (una vez)</td><td>~$1 USD</td><td>~2000 tokens input + ~500 output cada uno</td></tr>
+    <tr><td>30 PDFs ongoing (al mes)</td><td>~$0.03 USD</td><td>Por debajo del costo de una taza de café</td></tr>
+  </table>
+
+  <div class="warn">
+    <div class="head">⚠️ Revisión humana en casos borderline</div>
+    Son datos financieros. Si Claude no está seguro (confidence baja, conflictos con datos existentes,
+    LP que no aparece en <code>investors</code>), el doc va a una cola "Pendientes de revisión" en
+    cretumdesk.com en lugar de meterse directo. Solo cuando hay match alto y limpio, va automático.
+  </div>
+</div>
+
+<!-- ════════════ FASE 4.5 ════════════ -->
+<div class="phase">
+  <div class="phase-head">
+    <div class="phase-num">4.5</div>
+    <div>
+      <div class="phase-title">Monitoreo de valuaciones (empresas en portafolio)</div>
+      <div class="phase-meta">
+        <span class="tag tag-recur">Diario / semanal</span>
+        <span class="tag tag-cost">~$1-3/mes</span>
+      </div>
+    </div>
+  </div>
+
+  <p>
+    Las valuaciones de las empresas privadas no cambian diario en realidad —
+    cambian cuando hay un evento (ronda, secondary, S-1, noticia). El sistema busca diariamente
+    si hubo un evento y, si lo hay, propone una actualización para revisión humana.
+  </p>
+
+  <div class="warn">
+    <div class="head">📌 Aclaración importante sobre "valuaciones que cambian diario"</div>
+    Para empresas <strong>públicas</strong> (acciones que cotizan), sí cambian diario y se puede jalar
+    de Yahoo Finance gratis. Para empresas <strong>privadas</strong> (Anthropic, SpaceX, todas las del
+    portafolio MVP), las valuaciones se mueven en saltos discretos cuando hay rondas o secondary sales.
+    "Diario" para estas no aplica — lo que sí podemos hacer diario es buscar noticias.
+  </div>
+
+  <h3>Cómo se ve</h3>
+  <div class="flow">
+    <div class="flow-step"><strong>Cron diario</strong> (ej. 7 AM CDMX) en Vercel</div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><strong>Para cada empresa</strong> en <code>companies</code> donde <code>is_public = false</code>:
+      <ul style="margin:6px 0;padding-left:18px;font-family:inherit">
+        <li>Claude con web search: "noticias últimos 7 días sobre [empresa] valuación / ronda / secondary"</li>
+        <li>Si encuentra algo material → crear registro en tabla <code>valuation_events</code></li>
+        <li>Si no → log silencioso, sigue al siguiente</li>
+      </ul>
+    </div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><strong>Para cada empresa</strong> donde <code>is_public = true</code>:
+      <ul style="margin:6px 0;padding-left:18px;font-family:inherit">
+        <li>Pulla precio actual de Yahoo Finance (gratis, sin API key)</li>
+        <li>Update directo en <code>companies.current_price</code></li>
+      </ul>
+    </div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><strong>UI en cretumdesk.com → "Eventos de Valuación"</strong> muestra los hallazgos:
+      <ul style="margin:6px 0;padding-left:18px;font-family:inherit">
+        <li>Evento detectado, fuente, snippet de la noticia, valuación propuesta</li>
+        <li>Botones: "Aplicar a investments" / "Ignorar" / "Editar valor antes de aplicar"</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Por qué no automático sin revisión humana</h3>
+  <p>
+    Una noticia puede decir "SpaceX podría valuarse en $2T en su próximo round" — eso no significa que
+    el mark cambió, es especulación. Otra puede decir "Forge muestra acciones de Anthropic transándose
+    a 50% premium" — eso sí podría ser un re-mark. Claude no debería tomar esa decisión solo, va a
+    revisión. Pero el trabajo pesado (buscar, leer, resumir) ya está hecho.
+  </p>
+
+  <h3>Fuentes que vamos a usar</h3>
+  <ul>
+    <li><strong>Empresas privadas:</strong> Claude con web search → TechCrunch, The Information, Bloomberg, WSJ, Reuters, PitchBook (lo que sea público).</li>
+    <li><strong>Secondary markets (cuando estén públicos):</strong> Forge Global, EquityZen — feed RSS/news si lo tienen.</li>
+    <li><strong>Empresas públicas:</strong> Yahoo Finance (gratis, sin API key, vía scraping ligero o librerías como <code>yahoo-finance2</code>).</li>
+  </ul>
+</div>
+
+<!-- ════════════ FASE 5 ════════════ -->
+<div class="phase">
+  <div class="phase-head">
+    <div class="phase-num opt">5</div>
+    <div>
+      <div class="phase-title">Reportes personalizados on-demand</div>
+      <div class="phase-meta">
+        <span class="tag tag-future">Producto final</span>
+        <span class="tag tag-cost">~$3-10/mes</span>
+      </div>
+    </div>
+  </div>
+
+  <p>
+    Aquí es donde el sistema empieza a pagar el esfuerzo. Cualquier miembro del equipo entra a
+    cretumdesk.com, escoge un LP del dropdown, y obtiene un reporte tipo Nathaly Marcus en segundos —
+    sin abrir Claude manualmente, sin copiar PDFs uno por uno.
+  </p>
+
+  <h3>Modelo de generación: on-demand con caché inteligente</h3>
+  <p>
+    Cada reporte se genera <strong>solo cuando alguien lo pide</strong> y se cachea por LP. Si los datos
+    de ese LP no han cambiado desde la última generación, sirve la versión cacheada al instante ($0).
+    Cuando algo cambia (PDF nuevo, valuación, edición manual), el caché se invalida y la próxima
+    petición regenera con datos frescos.
+  </p>
+
+  <div class="mockup">
+    <div class="mockup-label">Mockup · cretumdesk.com / Reportes</div>
+
+    <div class="mock-side">
+      <!-- Estado: CACHE HIT (instant) -->
+      <div>
+        <div class="mock-window">
+          <div class="mock-bar">
+            <div class="mock-dot r"></div><div class="mock-dot y"></div><div class="mock-dot g"></div>
+            <div class="mock-url">cretumdesk.com/reportes</div>
+          </div>
+          <div class="mock-body">
+            <div class="mock-title">Generar reporte</div>
+            <div class="mock-sub">Posiciones Directas · MVP Opportunity Fund VI</div>
+
+            <div class="mock-row">
+              <div class="lbl">LP</div>
+              <div class="val"><div class="mock-select">Nathaly Marcus Roffe</div></div>
+            </div>
+            <div class="mock-row">
+              <div class="lbl">Tipo</div>
+              <div class="val"><div class="mock-select">Posiciones Directas</div></div>
+            </div>
+            <div class="mock-row">
+              <div class="lbl">Posiciones</div>
+              <div class="val"><div class="mock-select">Todas (Anthropic + SpaceX)</div></div>
+            </div>
+
+            <div class="cache-panel hit">
+              <div class="cache-icon hit">✓</div>
+              <div class="cache-info">
+                <strong>Caché disponible · datos al día</strong>
+                <span>Generado hace 2h 14min · sin cambios desde entonces</span>
+              </div>
+            </div>
+
+            <div class="mock-btn">Ver reporte (instantáneo) →</div>
+
+            <div class="mock-meta">
+              <span>Última generación: 13 may 2026 · 11:42</span>
+              <span style="color:var(--navy)">↻ Forzar regenerar</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Estado: CACHE MISS (regenerating) -->
+      <div>
+        <div class="mock-window">
+          <div class="mock-bar">
+            <div class="mock-dot r"></div><div class="mock-dot y"></div><div class="mock-dot g"></div>
+            <div class="mock-url">cretumdesk.com/reportes</div>
+          </div>
+          <div class="mock-body">
+            <div class="mock-title">Generar reporte</div>
+            <div class="mock-sub">Posiciones Directas · MVP Opportunity Fund VI</div>
+
+            <div class="mock-row">
+              <div class="lbl">LP</div>
+              <div class="val"><div class="mock-select">Nathaly Marcus Roffe</div></div>
+            </div>
+            <div class="mock-row">
+              <div class="lbl">Tipo</div>
+              <div class="val"><div class="mock-select">Posiciones Directas</div></div>
+            </div>
+            <div class="mock-row">
+              <div class="lbl">Posiciones</div>
+              <div class="val"><div class="mock-select">Solo SpaceX</div></div>
+            </div>
+
+            <div class="cache-panel miss">
+              <div class="cache-icon miss">!</div>
+              <div class="cache-info">
+                <strong>Datos actualizados · regenerará al pedir</strong>
+                <span>Nuevo capital account statement procesado hace 4h</span>
+              </div>
+            </div>
+
+            <div class="mock-btn">Generar reporte (≈ 15s)</div>
+
+            <div class="mock-meta">
+              <span>Última generación: 11 may 2026 · 09:18</span>
+              <span style="color:var(--gray-400)">Cache invalidado</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="invalidations">
+      <h4>¿Qué invalida el caché de un LP?</h4>
+      <ul>
+        <li>Llega un PDF nuevo asociado a ese LP (capital account, distribución, K-1)</li>
+        <li>Alguien edita manualmente una <code>investment</code> del LP en cretumdesk.com</li>
+        <li>Se aplica un evento de valuación (Fase 4.5) a una empresa donde el LP tiene posición</li>
+        <li>El usuario hace click en "Forzar regenerar"</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Cómo se ve para el usuario</h3>
+  <div class="flow">
+    <div class="flow-step"><strong>Usuario:</strong> Entra a cretumdesk.com → menú "Reportes"</div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><strong>Usuario:</strong> Selecciona LP del dropdown (autocompletar): "Nathaly Marcus Roffe"</div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><strong>Usuario:</strong> Selecciona tipo de reporte: "Posiciones Directas"</div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><strong>Usuario:</strong> Click "Generar" → loader 10-20s mientras Claude procesa</div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><strong>Sistema:</strong> Muestra el reporte completo en la pantalla (mismo diseño que tu PDF de ejemplo)</div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><strong>Usuario:</strong> "Imprimir → Guardar como PDF" desde el navegador, o click "Enviar por email"</div>
+  </div>
+
+  <h3>Cómo funciona por dentro</h3>
+  <div class="flow">
+    <div class="flow-step"><strong>Backend</strong> recibe: <code>{ investorId, reportType: 'direct_positions' }</code></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><strong>SQL determinístico:</strong> trae de Supabase todo lo cuantitativo
+      <ul style="margin:6px 0;padding-left:18px;font-family:inherit">
+        <li>Datos del LP (nombre, email, código FA)</li>
+        <li>Todas sus <code>investments</code> con shares, commitment, valuaciones, MOIC</li>
+        <li>Calcula derivados: escenarios IPO (proporcional al mark actual), comparativa side-by-side</li>
+      </ul>
+    </div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><strong>SQL trae PDFs:</strong> <code>SELECT raw_text FROM documents WHERE investor_id = X</code>
+      <ul style="margin:6px 0;padding-left:18px;font-family:inherit">
+        <li>10-20 documentos típicamente (capital account statements, welcome letters, etc.)</li>
+        <li>Concatenados como contexto para Claude</li>
+      </ul>
+    </div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><strong>Claude Haiku 4.5:</strong> recibe el contexto + un schema JSON estricto
+<pre style="margin:6px 0">{
+  <span class="s">"tesis_por_posicion"</span>: { <span class="s">"anthropic"</span>: <span class="s">"..."</span>, <span class="s">"spacex"</span>: <span class="s">"..."</span> },
+  <span class="s">"eventos_destacados"</span>: [{ <span class="s">"posicion"</span>: ..., <span class="s">"label"</span>: ..., <span class="s">"valor"</span>: ... }],
+  <span class="s">"eventos_proximos"</span>: { <span class="s">"anthropic"</span>: [...], <span class="s">"spacex"</span>: [...] },
+  <span class="s">"resumen_performance"</span>: <span class="s">"..."</span>
+}</pre>
+    </div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><strong>Template HTML</strong> (fijo, con tu branding) recibe JSON de Claude + datos SQL → renderiza el reporte completo</div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><strong>Frontend</strong> lo muestra en pantalla. Botón "Imprimir como PDF" usa el diálogo nativo del browser</div>
+  </div>
+
+  <h3>Por qué el template fijo (y NO dejar que Claude genere todo)</h3>
+  <ul>
+    <li><strong>Layout consistente:</strong> tu marca, tus colores, tu disposición. Claude no inventa layouts.</li>
+    <li><strong>Números siempre correctos:</strong> los cálculos (MOIC, escenarios IPO) vienen de SQL, no de un LLM que puede equivocarse con decimales.</li>
+    <li><strong>Costo mucho menor:</strong> Claude solo escribe ~5K tokens de prosa, no las 6 páginas completas. Output token count cae 5x.</li>
+    <li><strong>Iteración rápida:</strong> cambiar el diseño del reporte es editar HTML, no re-tunear un prompt frágil.</li>
+  </ul>
+
+  <h3>Costos reales</h3>
+  <table>
+    <tr><th>Volumen</th><th>Con Haiku 4.5</th><th>Con Sonnet 4.6</th></tr>
+    <tr><td>10 reportes/mes</td><td>~$0.30</td><td>~$1</td></tr>
+    <tr><td>50 reportes/mes</td><td>~$1.50</td><td>~$5</td></tr>
+    <tr><td>200 reportes/mes</td><td>~$6</td><td>~$20</td></tr>
+  </table>
+  <p style="font-size:12.5px;color:var(--gray-400)">
+    Asume 15 docs/LP, ~2000 tokens cada uno, ~5000 tokens de output. Con prompt caching activado
+    estos costos bajan 30-50% más, especialmente si el mismo LP se consulta varias veces al mes.
+  </p>
+
+  <div class="warn">
+    <div class="head">⚠️ Cap de gasto obligatorio</div>
+    Vamos a meter una variable <code>ANTHROPIC_MAX_USD_MONTH</code> en Vercel. Antes de cada llamada,
+    el backend revisa cuánto va gastado en el mes (contador en Redis) y rechaza si pasaste el cap.
+    Sin sorpresas tipo los $40 que mencionaste antes.
+  </div>
+
+  <h3>Tipos de reporte que podemos generar</h3>
+  <p>Una vez funcione el primero (Posiciones Directas como Nathaly Marcus), podemos clonar el template para otros:</p>
+  <ul>
+    <li><strong>Posiciones Directas</strong> — el de ejemplo. Para LPs con holdings via SPVs.</li>
+    <li><strong>Resumen Anual</strong> — performance del año + tax considerations.</li>
+    <li><strong>Capital Account Statement</strong> — formato estándar para LP que lo pida.</li>
+    <li><strong>Reporte de Fondo</strong> — vista del fondo completo, no del LP individual.</li>
+  </ul>
+
+  <div class="action-list">
+    <div class="head">Qué necesito saber para arrancar</div>
+    <ul>
+      <li><strong>¿Cómo vinculamos cada PDF a su LP?</strong> Opciones: (a) que el script de la Fase 1 le pregunte a Claude "¿de qué LP es este doc?" al ingestar; (b) parsing del filename si Altareturn los nombra consistentemente (ej. <code>Nathaly_Marcus_CapAccount_Q1.pdf</code>); (c) tagging manual desde la UI. La opción (a) es más robusta pero gasta ~$1 USD por los 1000 PDFs.</li>
+      <li><strong>¿Quién mantiene las valuaciones actuales de las empresas privadas (Anthropic $900B, SpaceX $1.75T)?</strong> ¿Ya viven en <code>investments.current_ev_b</code> de tu tabla, o hay un proceso aparte?</li>
+      <li><strong>¿Tu coworker te puede pasar el prompt original que usó?</strong> Si ya tiene uno que funciona, lo adaptamos en vez de empezar de cero.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ════════════ DECISIONES TOMADAS ════════════ -->
+<div class="decisions" style="border-color:var(--green); background:#f6fcf8">
+  <h2 style="color:var(--green)">✓ Decisiones tomadas</h2>
+
+  <div class="decision-item">
+    <div class="q">1. Idioma de los PDFs → <strong style="color:var(--green)">Mayormente inglés</strong></div>
+    <div class="opts">
+      Implicaciones técnicas: Tesseract OCR usará el modelo <code>eng</code>; el índice GIN de Postgres
+      usará <code>to_tsvector('english', raw_text)</code> en lugar de <code>'spanish'</code>. Si aparecen
+      docs en español ocasionales, se buscan igual pero con menos precisión (sin stemming).
+    </div>
+  </div>
+
+  <div class="decision-item">
+    <div class="q">2. Storage del original → <strong style="color:var(--green)">Dropbox + respaldo en disco duro físico</strong></div>
+    <div class="opts">
+      El script sube cada PDF a Dropbox <code>/altareturn/processed/</code>. El respaldo en disco duro
+      lo haces tú manualmente (recomendable: copia de la carpeta entera antes de ejecutar el script,
+      por si algo sale mal).
+    </div>
+  </div>
+
+  <div class="decision-item">
+    <div class="q">3. Borrar los PDFs de la compu local → <strong style="color:var(--green)">Sí, automático</strong></div>
+    <div class="opts">
+      Después de verificar que el PDF está en Dropbox <strong>y</strong> el texto está en Supabase,
+      el script elimina el archivo local. Si falla algún paso, el archivo se queda y se registra en
+      el log para investigar.
+    </div>
+  </div>
+
+  <div class="decision-item">
+    <div class="q">4. Arrancar Fase 0 → <strong style="color:var(--amber)">En pausa · pendiente de revisión</strong></div>
+    <div class="opts">
+      El usuario está revisando cosas extra antes de dar luz verde. No se construye nada todavía —
+      el plan queda registrado y se retoma cuando esté listo.
+    </div>
+  </div>
+</div>
+
+<footer>
+  Documento generado por Claude · Workflow para ingesta de PDFs de Altareturn en cretumdesk.com<br>
+  Actualizado: mayo 2026
+</footer>
+
+</div>
+</body>
+</html>
