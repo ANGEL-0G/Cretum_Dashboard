@@ -379,12 +379,14 @@ function buildLista() {
 
 /* ── KANBAN ── */
 function buildKanban() {
+  const tasks = myTasks();
+  if (!tasks.length) return '<div style="padding:32px;text-align:center;color:var(--gray-400)">Sin tareas</div>';
   const cols = [
     { key: 'pending',  label: 'Pendiente',   dot: 'var(--gray-300)', tasks: [] },
     { key: 'progress', label: 'En progreso',  dot: 'var(--amber)',    tasks: [] },
     { key: 'done',     label: 'Completado',   dot: 'var(--green)',    tasks: [] },
   ];
-  myTasks().forEach(t => {
+  tasks.forEach(t => {
     if (isDone(t)) cols[2].tasks.push(t);
     else if (t.kind === 'progress' && t.done > 0) cols[1].tasks.push(t);
     else cols[0].tasks.push(t);
