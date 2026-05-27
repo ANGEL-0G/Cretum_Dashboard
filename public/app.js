@@ -326,7 +326,7 @@ function render() {
 /* ── LISTA ── */
 function buildLista() {
   const tasks = myTasks();
-  if (!tasks.length) return '<div style="padding:32px;text-align:center;color:var(--gray-400)">Sin tareas — usa "Nueva tarea" arriba</div>';
+  if (!tasks.length) return '<div style="padding:32px;text-align:center;color:var(--gray-400)">Sin tareas</div>';
   return `<div class="list-view">${tasks.map((t, i) => {
     const done = isDone(t);
     const od = isOD(t.due) && !done;
