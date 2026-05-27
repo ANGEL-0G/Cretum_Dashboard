@@ -2,6 +2,7 @@
   "version": 2,
   "builds": [
     { "src": "public/index.html",   "use": "@vercel/static" },
+    { "src": "public/app.js",       "use": "@vercel/static" },
     { "src": "public/logo.png",     "use": "@vercel/static" },
     { "src": "public/logo-icon.png", "use": "@vercel/static" },
     { "src": "public/logo-mvp.png",  "use": "@vercel/static" },
@@ -15,6 +16,7 @@
     { "src": "/api/reminder",  "dest": "/api/reminder.js" },
     { "src": "/api/config",    "dest": "/api/config.js" },
     { "src": "/api/dropbox",   "dest": "/api/dropbox.js" },
+    { "src": "/app.js",        "dest": "/public/app.js" },
     { "src": "/logo.png",      "dest": "/public/logo.png" },
     { "src": "/logo-icon.png", "dest": "/public/logo-icon.png" },
     { "src": "/logo-mvp.png",  "dest": "/public/logo-mvp.png" },
