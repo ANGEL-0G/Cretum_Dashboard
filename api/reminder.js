@@ -12,8 +12,9 @@
  * quien recibe físicamente los correos. La info del resumen sí es por usuario.
  */
 
-import Redis from 'ioredis';
-import { createClient } from '@supabase/supabase-js';
+import { getRedis } from './_lib/redis.js';
+import { getSupabase, getSupabaseAdmin } from './_lib/supabase.js';
+import { bearerToken } from './_lib/auth.js';
 
 const APP_URL = 'https://cretum-tasks.vercel.app';
 
@@ -23,28 +24,11 @@ const ON_DEMAND_RECIPIENT = 'angelarmandooliverosgutierrez@gmail.com';
 
 const SEED = { simple: [], progress: [], assigned: [], invites: [] };
 
-let redisClient = null;
-function getRedis() {
-  if (redisClient || !process.env.REDIS_URL) return redisClient;
-  redisClient = new Redis(process.env.REDIS_URL, {
-    maxRetriesPerRequest: 3,
-    connectTimeout: 10000,
-  });
-  redisClient.on('error', (e) => console.error('[redis]', e.message));
-  return redisClient;
-}
-
 async function getTasks() {
   const r = getRedis();
   if (!r) return SEED;
   const raw = await r.get('tasks');
   return raw ? JSON.parse(raw) : SEED;
-}
-
-function supabaseUrl() {
-  return (process.env.SUPABASE_URL || '')
-    .replace(/\/rest\/v1\/?$/, '')
-    .replace(/\/$/, '');
 }
 
 function fmtDate(d) {
@@ -159,8 +143,7 @@ async function sendForUser({ id, email, displayName }, tasks) {
 }
 
 export default async function handler(req, res) {
-  const auth = req.headers.authorization || '';
-  const token = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
+  const token = bearerToken(req);
 
   if (!process.env.RESEND_API_KEY) {
     return res.status(500).json({ error: 'RESEND_API_KEY no configurada' });
@@ -175,9 +158,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'SUPABASE_SERVICE_ROLE_KEY no configurada' });
     }
     try {
-      const sbAdmin = createClient(supabaseUrl(), process.env.SUPABASE_SERVICE_ROLE_KEY, {
-        auth: { persistSession: false },
-      });
+      const sbAdmin = getSupabaseAdmin();
       const { data: { users }, error } = await sbAdmin.auth.admin.listUsers();
       if (error) throw error;
       const { data: profiles } = await sbAdmin.from('profiles')
@@ -223,9 +204,7 @@ export default async function handler(req, res) {
   if (!token) return res.status(401).json({ error: 'No autorizado' });
 
   try {
-    const sb = createClient(supabaseUrl(), process.env.SUPABASE_ANON_KEY, {
-      auth: { persistSession: false },
-    });
+    const sb = getSupabase();
     const { data: userData, error: userErr } = await sb.auth.getUser(token);
     if (userErr || !userData?.user) return res.status(401).json({ error: 'JWT inválido' });
 

@@ -8,45 +8,12 @@
  * Persistencia: Upstash Redis vía REDIS_URL (TCP+TLS), fallback en memoria.
  */
 
-import Redis from 'ioredis';
-import { createClient } from '@supabase/supabase-js';
+import { getRedis } from './_lib/redis.js';
+import { authenticate } from './_lib/auth.js';
 
 const SEED = { simple: [], progress: [], assigned: [], invites: [] };
 
 let memoryStore = SEED;
-let redisClient = null;
-let supabaseClient = null;
-
-function getRedis() {
-  if (redisClient || !process.env.REDIS_URL) return redisClient;
-  redisClient = new Redis(process.env.REDIS_URL, {
-    maxRetriesPerRequest: 3,
-    connectTimeout: 10000,
-  });
-  redisClient.on('error', (e) => console.error('[redis]', e.message));
-  return redisClient;
-}
-
-function getSupabase() {
-  if (supabaseClient) return supabaseClient;
-  const url = (process.env.SUPABASE_URL || '').replace(/\/rest\/v1\/?$/, '').replace(/\/$/, '');
-  const key = process.env.SUPABASE_ANON_KEY;
-  if (!url || !key) return null;
-  supabaseClient = createClient(url, key, { auth: { persistSession: false } });
-  return supabaseClient;
-}
-
-async function authenticate(req) {
-  const auth = req.headers.authorization || '';
-  if (!auth.startsWith('Bearer ')) return null;
-  const token = auth.slice(7).trim();
-  if (!token) return null;
-  const sb = getSupabase();
-  if (!sb) return null;
-  const { data, error } = await sb.auth.getUser(token);
-  if (error || !data?.user) return null;
-  return data.user;
-}
 
 async function getStore() {
   const r = getRedis();

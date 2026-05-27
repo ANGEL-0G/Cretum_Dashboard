@@ -16,23 +16,12 @@
  * Auth: requiere Bearer JWT de Supabase en todas las acciones.
  */
 
-import Redis from 'ioredis';
-import { createClient } from '@supabase/supabase-js';
+import { getRedis } from './_lib/redis.js';
+import { authenticate } from './_lib/auth.js';
 
 const DROPBOX_API = 'https://api.dropboxapi.com';
 const DROPBOX_CONTENT = 'https://content.dropboxapi.com';
 const TOKEN_CACHE_KEY = 'dropbox:access_token';
-
-let redisClient = null;
-function getRedis() {
-  if (redisClient || !process.env.REDIS_URL) return redisClient;
-  redisClient = new Redis(process.env.REDIS_URL, {
-    maxRetriesPerRequest: 3,
-    connectTimeout: 10000,
-  });
-  redisClient.on('error', (e) => console.error('[redis]', e.message));
-  return redisClient;
-}
 
 let memoryToken = { token: null, expiresAt: 0 };
 
@@ -88,24 +77,6 @@ async function getAccessToken() {
     } catch (e) { /* ignore */ }
   }
   return token;
-}
-
-function supabaseUrl() {
-  return (process.env.SUPABASE_URL || '')
-    .replace(/\/rest\/v1\/?$/, '')
-    .replace(/\/$/, '');
-}
-
-async function verifyUser(req) {
-  const auth = req.headers.authorization || '';
-  const token = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
-  if (!token) return null;
-  const sb = createClient(supabaseUrl(), process.env.SUPABASE_ANON_KEY, {
-    auth: { persistSession: false },
-  });
-  const { data, error } = await sb.auth.getUser(token);
-  if (error || !data?.user) return null;
-  return data.user;
 }
 
 function joinPath(root, path) {
@@ -166,7 +137,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Supabase no configurado' });
   }
 
-  const user = await verifyUser(req);
+  const user = await authenticate(req);
   if (!user) return res.status(401).json({ error: 'No autorizado' });
 
   const action = (req.query.action || 'list').toString();
