@@ -311,6 +311,9 @@ function render() {
   // scope UI
   const isEquipo = tkScope === 'equipo';
   document.getElementById('viewToggle').style.display = isEquipo ? 'none' : 'flex';
+  // En "Equipo" se asigna vía openAssignModal (botón propio en renderEquipo);
+  // el botón "Nueva tarea" personal solo aplica en scope personal.
+  document.getElementById('newTaskBtn').style.display = isEquipo ? 'none' : 'flex';
 
   if (isEquipo) { renderEquipo(); return; }
 
@@ -323,7 +326,7 @@ function render() {
 /* ── LISTA ── */
 function buildLista() {
   const tasks = myTasks();
-  if (!tasks.length) return '<div style="padding:32px;text-align:center;color:var(--gray-400)">Sin tareas — agrega una abajo</div>';
+  if (!tasks.length) return '<div style="padding:32px;text-align:center;color:var(--gray-400)">Sin tareas — usa "Nueva tarea" arriba</div>';
   return `<div class="list-view">${tasks.map((t, i) => {
     const done = isDone(t);
     const od = isOD(t.due) && !done;
@@ -394,9 +397,6 @@ function buildKanban() {
         <span class="kb-col-count">${col.tasks.length}</span>
       </div>
       <div class="kb-cards">
-        ${col.key === 'pending'
-          ? `<button class="kb-action" onclick="openTaskModal()"><i class="fa-solid fa-plus"></i> Nueva tarea</button>`
-          : ''}
         ${col.tasks.map((t, i) => {
           const done = isDone(t);
           const od = isOD(t.due) && !done;

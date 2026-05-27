@@ -317,6 +317,17 @@ button,input,select{font-family:var(--font)}
   cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .15s;
 }
 .tk-tog-btn.on{background:var(--white);color:var(--navy);box-shadow:var(--shadow-sm)}
+.tk-new-btn{
+  display:flex;align-items:center;gap:7px;
+  padding:8px 16px;border:none;border-radius:var(--r-md);
+  background:var(--navy);color:white;font-size:13px;font-weight:500;
+  font-family:var(--font);cursor:pointer;
+  box-shadow:0 2px 8px rgba(26,58,107,.18);
+  transition:all .18s cubic-bezier(.4,0,.2,1);
+}
+.tk-new-btn:hover{background:var(--navy-mid);box-shadow:0 6px 18px rgba(26,58,107,.3);transform:translateY(-1px)}
+.tk-new-btn:active{transform:translateY(0) scale(.99)}
+.tk-new-btn i{font-size:12px}
 .tk-view-toggle{display:flex;gap:2px;background:var(--gray-100);border-radius:var(--r-md);padding:3px;margin-left:auto}
 .tk-view-btn{
   padding:7px 12px;border-radius:var(--r-sm);border:none;
@@ -2120,6 +2131,9 @@ button,input,select{font-family:var(--font)}
           <i class="fa-solid fa-users"></i> Equipo
         </button>
       </div>
+      <button class="tk-new-btn" id="newTaskBtn" onclick="openTaskModal()">
+        <i class="fa-solid fa-plus"></i> Nueva tarea
+      </button>
       <div class="tk-view-toggle" id="viewToggle">
         <button class="tk-view-btn" id="vbtn-lista" onclick="setView('lista')" title="Lista">
           <i class="fa-solid fa-list"></i>
