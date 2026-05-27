@@ -80,11 +80,11 @@ async function enterApp(user) {
   document.getElementById('selUserName').textContent = firstName;
   document.getElementById('selGreet').textContent = greet;
 
-  // Empieza en el selector de empresa
+  // Restaura la vista desde el hash de la URL (o selector si no hay/ inválido)
   currentOrg = null;
   applyOrgTheme();
   renderNavList();
-  switchView('selector');
+  applyRoute();
 
   loadData();
 }
@@ -1342,7 +1342,47 @@ function switchView(view, isBack = false) {
 
   if (view === 'db' && !dbLoaded) loadDb();
   if (view === 'dropbox') openDropbox();
+
+  syncHash();
 }
+
+/* ── Routing por hash (#org/vista) — persiste la vista al refrescar ── */
+let suppressHashChange = false;
+
+function syncHash() {
+  const target = (currentView === 'selector' || !currentOrg)
+    ? '#/'
+    : `#${currentOrg}/${currentView}`;
+  if (location.hash === target) return;
+  suppressHashChange = true;   // evita que nuestro propio cambio dispare applyRoute
+  location.hash = target;
+}
+
+function applyRoute() {
+  const parts = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
+  const org = parts[0];
+  const view = parts[1];
+  if (org === 'cretum' || org === 'mvp') {
+    if (currentOrg !== org) {
+      currentOrg = org;
+      applyOrgTheme();
+      renderHomeModules();
+      renderNavList();
+      viewHistory = [];
+    }
+    const allowed = (ORG_NAV[org] || []).some(it => it.view === view);
+    switchView(allowed ? view : 'home', true);
+  } else {
+    switchView('selector', true);
+  }
+}
+
+// Back/forward del navegador
+window.addEventListener('hashchange', () => {
+  if (suppressHashChange) { suppressHashChange = false; return; }
+  if (!currentUser) return;   // sin sesión no navegamos
+  applyRoute();
+});
 
 function goBack() {
   // Caso especial: si estamos en detalle de DB, cerrar detalle primero
