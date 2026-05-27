@@ -508,7 +508,7 @@ function renderEquipo() {
   const container = document.getElementById('viewContainer');
 
   const assignBtn = `
-    <button class="kb-action" onclick="openAssignModal()" style="margin-bottom:14px">
+    <button class="tk-new-btn" onclick="openAssignModal()" style="margin-bottom:14px">
       <i class="fa-solid fa-paper-plane"></i> Asignar nueva tarea
     </button>`;
 
