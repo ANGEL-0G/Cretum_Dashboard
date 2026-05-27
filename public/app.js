@@ -1623,10 +1623,27 @@ function investorCompanyLabel(invId, filterCompanyId) {
   return `${names[0]}, ${names[1]} +${names.length - 2}`;
 }
 
+// Filtros activos de la BD (búsqueda + empresa + serie). Fuente única de verdad
+// para render y export, así el export respeta exactamente lo que se ve.
+function getDbFilters() {
+  return {
+    q: (document.getElementById('dbSearch').value || '').trim().toLowerCase(),
+    companyId: document.getElementById('ddCompany')?.dataset.value || '',
+    seriesId: document.getElementById('ddSeries')?.dataset.value || '',
+  };
+}
+
+function getFilteredInvestors() {
+  const { q, companyId, seriesId } = getDbFilters();
+  let filtered = dbInvestors;
+  if (q) filtered = filtered.filter(r => r.name.toLowerCase().includes(q));
+  if (companyId) filtered = filtered.filter(r => dbInvestorCompanies[r.id]?.has(+companyId));
+  if (seriesId)  filtered = filtered.filter(r => dbInvestorSeries[r.id]?.has(+seriesId));
+  return filtered;
+}
+
 function renderDbList() {
-  const q = (document.getElementById('dbSearch').value || '').trim().toLowerCase();
-  const companyId = document.getElementById('ddCompany')?.dataset.value || '';
-  const seriesId = document.getElementById('ddSeries')?.dataset.value || '';
+  const { q, companyId, seriesId } = getDbFilters();
   const list = document.getElementById('dbList');
   list.style.display = '';
   document.getElementById('dbDetail').classList.remove('show');
@@ -1634,10 +1651,7 @@ function renderDbList() {
   const anyFilter = !!(q || companyId || seriesId);
   document.getElementById('dbClear').style.display = anyFilter ? '' : 'none';
 
-  let filtered = dbInvestors;
-  if (q) filtered = filtered.filter(r => r.name.toLowerCase().includes(q));
-  if (companyId) filtered = filtered.filter(r => dbInvestorCompanies[r.id]?.has(+companyId));
-  if (seriesId)  filtered = filtered.filter(r => dbInvestorSeries[r.id]?.has(+seriesId));
+  const filtered = getFilteredInvestors();
   document.getElementById('dbCount').textContent = filtered.length + (filtered.length === 1 ? ' resultado' : ' resultados');
 
   if (!filtered.length) {
@@ -1683,6 +1697,133 @@ function renderDbList() {
 
 function escapeHtml(s) {
   return String(s || '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+/* ═══════════════════════════════════════════
+   EXPORT — PDF / CSV / Excel (respeta filtros y columnas visibles)
+═══════════════════════════════════════════ */
+
+// Carga un <script> externo una sola vez (lazy-load de librerías de export).
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    if (document.querySelector(`script[data-src="${src}"]`)) return resolve();
+    const s = document.createElement('script');
+    s.src = src;
+    s.dataset.src = src;
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error('No se pudo cargar la librería de export'));
+    document.head.appendChild(s);
+  });
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// Construye {cols, rows} de la BD con los filtros y columnas visibles actuales.
+// rows contiene valores crudos (números sin formato) para CSV/Excel usables.
+function getExportTable() {
+  const { companyId, seriesId } = getDbFilters();
+  const cols = [{ key: 'name', label: 'Nombre', type: 'text' }];
+  if (isColVisible('series'))    cols.push({ key: 'series',    label: 'Serie',                type: 'text'  });
+  if (isColVisible('company'))   cols.push({ key: 'company',   label: 'Empresa',              type: 'text'  });
+  if (isColVisible('positions')) cols.push({ key: 'positions', label: 'Posiciones',           type: 'num'   });
+  if (isColVisible('actual'))    cols.push({ key: 'actual',    label: 'Compromiso ejecutado', type: 'money' });
+  if (isColVisible('amount'))    cols.push({ key: 'amount',    label: 'Compromiso',           type: 'money' });
+
+  const rows = getFilteredInvestors().map(i => cols.map(c => {
+    switch (c.key) {
+      case 'name':      return i.name;
+      case 'series':    return investorSeriesLabel(i.id, seriesId);
+      case 'company':   return investorCompanyLabel(i.id, companyId);
+      case 'positions': return i.positions;
+      case 'actual':    return i.actual;
+      case 'amount':    return i.commitment;
+      default:          return '';
+    }
+  }));
+  return { cols, rows };
+}
+
+function exportFilename() {
+  return `cretum_inversionistas_${new Date().toISOString().slice(0, 10)}`;
+}
+
+async function exportData(format) {
+  document.getElementById('ddExport')?.classList.remove('open');
+  const { cols, rows } = getExportTable();
+  if (!rows.length) { toast('No hay datos para exportar'); return; }
+  try {
+    if (format === 'csv')        exportCSV(cols, rows);
+    else if (format === 'excel') await exportExcel(cols, rows);
+    else if (format === 'pdf')   await exportPDF(cols, rows);
+  } catch (e) {
+    console.error('[export]', e);
+    toast('Error al exportar: ' + e.message);
+  }
+}
+
+function exportCSV(cols, rows) {
+  const esc = (v) => {
+    const s = v == null ? '' : String(v);
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  const lines = [cols.map(c => esc(c.label)).join(',')];
+  rows.forEach(r => lines.push(r.map(esc).join(',')));
+  // BOM (﻿) para que Excel lea UTF-8 (acentos) correctamente
+  const csv = '﻿' + lines.join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  downloadBlob(blob, exportFilename() + '.csv');
+  toast(`Exportadas ${rows.length} filas a CSV`);
+}
+
+async function exportExcel(cols, rows) {
+  await loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
+  const aoa = [cols.map(c => c.label), ...rows];
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  // Ancho de columnas según el header
+  ws['!cols'] = cols.map(c => ({ wch: Math.max(c.label.length + 2, 14) }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Inversionistas');
+  XLSX.writeFile(wb, exportFilename() + '.xlsx');
+  toast(`Exportadas ${rows.length} filas a Excel`);
+}
+
+async function exportPDF(cols, rows) {
+  await loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
+  await loadScript('https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js');
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  // Formatea dinero solo para el PDF (CSV/Excel llevan número crudo)
+  const body = rows.map(r => r.map((cell, idx) =>
+    cols[idx].type === 'money' ? fmtMoney(cell) : (cell == null ? '' : String(cell))
+  ));
+
+  doc.setFontSize(15);
+  doc.setTextColor(26, 58, 107);
+  doc.text('Inversionistas — Cretum', 14, 16);
+  doc.setFontSize(9);
+  doc.setTextColor(120);
+  doc.text(`Generado ${new Date().toLocaleDateString('es-MX')} · ${rows.length} registros`, 14, 22);
+
+  doc.autoTable({
+    head: [cols.map(c => c.label)],
+    body,
+    startY: 27,
+    styles: { fontSize: 8, cellPadding: 3 },
+    headStyles: { fillColor: [26, 58, 107], textColor: 255 },
+    alternateRowStyles: { fillColor: [244, 247, 252] },
+  });
+  doc.save(exportFilename() + '.pdf');
+  toast(`Exportadas ${rows.length} filas a PDF`);
 }
 
 async function openInvestor(id) {

@@ -1388,6 +1388,14 @@ button,input,select{font-family:var(--font)}
 .db-cols-cdd .cdd-opt.locked{color:var(--gray-400);cursor:default}
 .db-cols-cdd .cdd-opt.locked:hover{background:transparent}
 
+/* Menú de exportar */
+.db-export-cdd .cdd-opt{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--gray-700)}
+.db-export-cdd .cdd-opt:hover{background:var(--gray-50);padding-left:12px}
+.db-export-cdd .cdd-opt i{width:15px;text-align:center;font-size:13px}
+.db-export-cdd .cdd-opt .fa-file-pdf{color:#c0392b}
+.db-export-cdd .cdd-opt .fa-file-csv{color:#1d8f4e}
+.db-export-cdd .cdd-opt .fa-file-excel{color:#1d6f42}
+
 /* ── Tabla de inversionistas (vista lista con columnas) ── */
 .db-list-wrap{
   background:var(--white);
@@ -2199,6 +2207,18 @@ button,input,select{font-family:var(--font)}
           <i class="fa-solid fa-chevron-down cdd-chev"></i>
         </button>
         <div class="cdd-panel" id="ddColsPanel"></div>
+      </div>
+      <div class="cdd db-cdd db-export-cdd" id="ddExport">
+        <button class="cdd-btn" type="button" onclick="cddToggle('ddExport')">
+          <i class="fa-solid fa-file-export cdd-ico"></i>
+          <span class="cdd-label">Exportar</span>
+          <i class="fa-solid fa-chevron-down cdd-chev"></i>
+        </button>
+        <div class="cdd-panel" id="ddExportPanel">
+          <div class="cdd-opt" onclick="exportData('pdf');event.stopPropagation()"><i class="fa-solid fa-file-pdf"></i> PDF</div>
+          <div class="cdd-opt" onclick="exportData('csv');event.stopPropagation()"><i class="fa-solid fa-file-csv"></i> CSV</div>
+          <div class="cdd-opt" onclick="exportData('excel');event.stopPropagation()"><i class="fa-solid fa-file-excel"></i> Excel</div>
+        </div>
       </div>
       <button class="db-clear" id="dbClear" onclick="clearFilters()" style="display:none">
         <i class="fa-solid fa-xmark"></i> Limpiar
