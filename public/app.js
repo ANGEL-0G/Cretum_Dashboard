@@ -888,6 +888,31 @@ function addProgress() {
   closeTaskModal();
 }
 
+/* Notificación por email al asignar / aceptar / declinar tareas.
+   Si falla, muestra toast al asignador y dispara email al admin (server-side). */
+async function notifyAssignment(payload) {
+  if (!sb) return;
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) return;
+    const r = await fetch('/api/notify-assignment', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!data.ok) {
+      const name = USERS[payload.recipientUserId]?.name || 'el destinatario';
+      toast(`⚠️ No pudimos avisar a ${name} por email`);
+    }
+  } catch (err) {
+    console.error('notifyAssignment falló:', err);
+  }
+}
+
 function doAssign() {
   const isProgress = document.getElementById('at-progress')?.classList.contains('on');
   const assignees = Array.from(document.querySelectorAll('#aAssignees .multi-pill.on'))
@@ -911,12 +936,29 @@ function doAssign() {
     note = document.getElementById('aNote').value.trim();
   }
 
+  const actorName = currentProfile?.full_name || 'Alguien';
+
   assignees.forEach(to => {
+    // Si ya hay invite pendiente del mismo asignador → mismo destinatario → misma tarea, no spam
+    const alreadyPending = state.invites.some(iv =>
+      iv.from === currentUser && iv.to === to && iv.name === n
+    );
+
     const inviteId = 'I' + (++tkId);
     const base = { id: inviteId, name: n, due, prio, note, createdAt: new Date().toISOString() };
     if (isProgress) { base.unit = unit; base.total = total; }
     state.invites.push({ ...base, from: currentUser, to });
     state.assigned.push({ ...base, assignedBy: currentUser, to, accepted: false });
+
+    if (!alreadyPending) {
+      notifyAssignment({
+        type: 'new_assignment',
+        recipientUserId: to,
+        actorName,
+        taskName: n,
+        due,
+      });
+    }
   });
 
   const lbl = assignees.length === 1
@@ -928,6 +970,8 @@ function doAssign() {
 
 function acceptInvite(id) {
   const iv = state.invites.find(x => x.id === id); if (!iv) return;
+  const inviterId = iv.from;
+  const taskName = iv.name;
   const isProgress = typeof iv.total === 'number' && iv.total > 0;
   const newTaskId = (isProgress ? 'P' : 'S') + (++tkId);
 
@@ -961,11 +1005,33 @@ function acceptInvite(id) {
     a.acceptedAt = new Date().toISOString();
   }
   scheduleSave(); render(); toast('Tarea aceptada y agregada a tu lista');
+
+  if (inviterId && inviterId !== currentUser) {
+    notifyAssignment({
+      type: 'accepted',
+      recipientUserId: inviterId,
+      actorName: currentProfile?.full_name || 'Alguien',
+      taskName,
+    });
+  }
 }
 
 function declineInvite(id) {
+  const iv = state.invites.find(x => x.id === id);
+  if (!iv) return;
+  const inviterId = iv.from;
+  const taskName = iv.name;
   state.invites = state.invites.filter(x => x.id !== id);
   scheduleSave(); render(); toast('Invitación declinada');
+
+  if (inviterId && inviterId !== currentUser) {
+    notifyAssignment({
+      type: 'declined',
+      recipientUserId: inviterId,
+      actorName: currentProfile?.full_name || 'Alguien',
+      taskName,
+    });
+  }
 }
 
 /* ═══════════════════════════════════════════

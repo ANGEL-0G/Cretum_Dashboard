@@ -11,6 +11,7 @@
 import { getRedis } from './_lib/redis.js';
 import { getSupabase, getSupabaseAdmin } from './_lib/supabase.js';
 import { bearerToken } from './_lib/auth.js';
+import { sendEmail } from './_lib/email.js';
 
 const APP_URL = 'https://cretumdesk.com';
 
@@ -100,27 +101,6 @@ function htmlEmail(s) {
     </div>
   </div>
 </body></html>`;
-}
-
-async function sendEmail(to, subject, html) {
-  const r = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: 'CRETUM <notificaciones@cretumdesk.com>',
-      to: [to],
-      subject,
-      html,
-    }),
-  });
-  if (!r.ok) {
-    const err = await r.text();
-    throw new Error(`Resend ${r.status}: ${err}`);
-  }
-  return r.json();
 }
 
 async function sendForUser({ id, email, displayName }, tasks) {
