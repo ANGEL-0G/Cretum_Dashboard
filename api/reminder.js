@@ -240,9 +240,16 @@ export default async function handler(req, res) {
     if (userErr || !userData?.user) return res.status(401).json({ error: 'JWT inválido' });
 
     const user = userData.user;
-    // Obtener nombre desde profiles (con anon respetando RLS)
-    const { data: profile } = await sb.from('profiles').select('full_name').eq('id', user.id).single();
-    const displayName = niceName(profile?.full_name, user.email);
+    // Leer profile con cliente admin para evitar RLS (ya validamos el JWT arriba).
+    // Con el cliente anon, sb.from('profiles')... no respeta auth.uid() porque
+    // no le estamos pasando la sesión del usuario, por lo que devuelve null.
+    const sbAdmin = getSupabaseAdmin();
+    let profileName = null;
+    if (sbAdmin) {
+      const { data: profile } = await sbAdmin.from('profiles').select('full_name').eq('id', user.id).single();
+      profileName = profile?.full_name;
+    }
+    const displayName = niceName(profileName, user.email);
 
     const tasks = await getTasks();
     const result = await sendForUser({ id: user.id, email: user.email, displayName }, tasks);
