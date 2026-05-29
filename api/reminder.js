@@ -55,51 +55,111 @@ function buildSummary(userId, tasks, displayName) {
   return { pending, overdue, dueWeek, inProgress, displayName, total: all.length };
 }
 
-function htmlList(items, opts = {}) {
-  if (!items.length) return '<p style="color:#9aa3b5;font-style:italic;margin:4px 0 14px;font-size:13px">— ninguna —</p>';
-  return `<ul style="margin:4px 0 14px;padding-left:20px;color:#3d4559;font-size:14px;line-height:1.6">
-    ${items.map(t => {
-      const tail = opts.progress
-        ? ` <span style="color:#9aa3b5;font-size:12px">— ${t.done}/${t.total} ${t.unit}</span>`
-        : (t.due ? ` <span style="color:#9aa3b5;font-size:12px">— ${fmtDate(t.due)}</span>` : '');
-      return `<li style="margin:4px 0">${t.name}${tail}</li>`;
-    }).join('')}
-  </ul>`;
+function escapeHtml(s) {
+  return String(s || '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+/** Nombre legible: full_name si existe; si no, parte antes del @ capitalizada. */
+function niceName(fullName, email) {
+  const trimmed = (fullName || '').trim();
+  if (trimmed) return trimmed;
+  const username = (email || '').split('@')[0];
+  if (!username) return 'tú';
+  return username.charAt(0).toUpperCase() + username.slice(1);
+}
+
+function greetingByHour() {
+  const cdmxNow = new Date(Date.now() - 6 * 3600 * 1000);
+  const h = cdmxNow.getUTCHours();
+  if (h < 12) return 'Buenos días';
+  if (h < 19) return 'Buenas tardes';
+  return 'Buenas noches';
+}
+
+function taskCard(t, accent) {
+  const due = t.due
+    ? `<div style="color:#9aa3b5;font-size:12px;margin-top:4px">${fmtDate(t.due)}</div>`
+    : '';
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:separate;margin:0 0 8px">
+    <tr><td style="background:#fafbfd;border-left:3px solid ${accent};border-radius:6px;padding:14px 16px">
+      <div style="color:#1a1f2e;font-size:14px;font-weight:500;line-height:1.4">${escapeHtml(t.name)}</div>
+      ${due}
+    </td></tr>
+  </table>`;
+}
+
+function progressCard(t) {
+  const pct = Math.min(100, Math.round((t.done / t.total) * 100));
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:separate;margin:0 0 8px">
+    <tr><td style="background:#fafbfd;border-left:3px solid #b07d20;border-radius:6px;padding:14px 16px">
+      <div style="color:#1a1f2e;font-size:14px;font-weight:500;line-height:1.4">${escapeHtml(t.name)}</div>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top:10px">
+        <tr><td style="background:#eef0f5;height:6px;border-radius:3px;font-size:0;line-height:0">
+          <div style="background:#b07d20;width:${pct}%;height:6px;border-radius:3px;font-size:0;line-height:0">&nbsp;</div>
+        </td></tr>
+      </table>
+      <div style="color:#9aa3b5;font-size:11px;margin-top:6px">${t.done} de ${t.total} ${escapeHtml(t.unit || '')}</div>
+    </td></tr>
+  </table>`;
+}
+
+function sectionHeader(label, count, color) {
+  return `<div style="font-size:11px;font-weight:700;color:${color};letter-spacing:1.2px;text-transform:uppercase;margin:0 0 10px">
+    ${label} <span style="opacity:.55;font-weight:500">· ${count}</span>
+  </div>`;
 }
 
 function htmlEmail(s) {
+  const firstName = (s.displayName || 'tú').split(' ')[0] || s.displayName;
+  const pendingCount = s.pending.length;
+  const overdueText = s.overdue.length
+    ? `, de las cuales <strong style="color:#c0392b">${s.overdue.length} ${s.overdue.length === 1 ? 'está vencida' : 'están vencidas'}</strong>`
+    : '';
+  const summary = pendingCount
+    ? `Tienes <strong style="color:#1a3a6b">${pendingCount}</strong> ${pendingCount === 1 ? 'tarea pendiente' : 'tareas pendientes'} esta semana${overdueText}.`
+    : `No tienes tareas pendientes esta semana. ¡Buen trabajo!`;
+
   return `<!doctype html>
-<html><body style="font-family:-apple-system,'Segoe UI',Arial,sans-serif;background:#f8f9fc;margin:0;padding:24px;color:#1a1f2e">
-  <div style="max-width:560px;margin:0 auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(26,58,107,.1)">
-    <div style="background:white;padding:22px 26px 0;text-align:center">
-      <img src="${APP_URL}/logo.png" alt="CRETUM Partners" width="160" style="display:inline-block;max-width:100%">
-    </div>
-    <div style="background:linear-gradient(135deg,#1a3a6b,#2a4f8f);color:white;padding:18px 26px">
-      <div style="font-size:11px;letter-spacing:1.6px;opacity:.75">RESUMEN DE TAREAS</div>
-      <div style="font-size:22px;font-weight:500;margin-top:4px">Hola, ${s.displayName}</div>
-    </div>
-    <div style="padding:24px 26px">
-      <p style="color:#3d4559;line-height:1.6;margin:0 0 20px;font-size:14px">
-        Tienes <strong style="color:#1a3a6b">${s.pending.length}</strong> tarea${s.pending.length !== 1 ? 's' : ''} pendiente${s.pending.length !== 1 ? 's' : ''}${s.overdue.length ? `, de las cuales <strong style="color:#c0392b">${s.overdue.length}</strong> ${s.overdue.length !== 1 ? 'están vencidas' : 'está vencida'}` : ''}.
-      </p>
+<html><body style="font-family:-apple-system,'Segoe UI',Arial,sans-serif;background:#f5f6fa;margin:0;padding:28px 16px;color:#1a1f2e">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:600px;margin:0 auto;background:white;border-radius:14px;box-shadow:0 4px 24px rgba(26,58,107,.06)">
+    <tr><td style="padding:36px 36px 4px">
+      <p style="margin:0;font-size:11px;color:#9aa3b5;letter-spacing:1px;text-transform:uppercase;font-weight:700">${greetingByHour()}</p>
+      <h1 style="margin:6px 0 12px;font-size:24px;font-weight:600;color:#1a1f2e;line-height:1.2">${escapeHtml(firstName)}</h1>
+      <p style="margin:0;font-size:14px;color:#5a6478;line-height:1.6">${summary}</p>
+    </td></tr>
 
-      ${s.overdue.length ? `
-        <div style="font-size:12px;font-weight:600;color:#c0392b;letter-spacing:.4px;text-transform:uppercase;margin-bottom:2px">⚠️ Vencidas</div>
-        ${htmlList(s.overdue)}` : ''}
+    ${s.overdue.length ? `<tr><td style="padding:28px 36px 0">
+      ${sectionHeader('Vencidas', s.overdue.length, '#c0392b')}
+      ${s.overdue.map(t => taskCard(t, '#c0392b')).join('')}
+    </td></tr>` : ''}
 
-      <div style="font-size:12px;font-weight:600;color:#1a3a6b;letter-spacing:.4px;text-transform:uppercase;margin-bottom:2px">📅 Esta semana</div>
-      ${htmlList(s.dueWeek)}
+    ${s.dueWeek.length ? `<tr><td style="padding:${s.overdue.length ? '18' : '28'}px 36px 0">
+      ${sectionHeader('Esta semana', s.dueWeek.length, '#1a3a6b')}
+      ${s.dueWeek.map(t => taskCard(t, '#1a3a6b')).join('')}
+    </td></tr>` : ''}
 
-      ${s.inProgress.length ? `
-        <div style="font-size:12px;font-weight:600;color:#b07d20;letter-spacing:.4px;text-transform:uppercase;margin-bottom:2px">⏳ En progreso</div>
-        ${htmlList(s.inProgress, { progress: true })}` : ''}
+    ${s.inProgress.length ? `<tr><td style="padding:18px 36px 0">
+      ${sectionHeader('En progreso', s.inProgress.length, '#b07d20')}
+      ${s.inProgress.map(t => progressCard(t)).join('')}
+    </td></tr>` : ''}
 
-      <a href="${APP_URL}" style="display:inline-block;background:#1a3a6b;color:white;text-decoration:none;padding:11px 22px;border-radius:6px;font-size:13px;font-weight:500;margin-top:6px">Abrir CRETUM →</a>
-    </div>
-    <div style="padding:14px 26px;border-top:1px solid #eef0f5;color:#9aa3b5;font-size:11px">
-      Resumen automático · Cretum Partners
-    </div>
-  </div>
+    <tr><td style="padding:28px 36px 8px">
+      <a href="${APP_URL}" style="display:inline-block;background:#1a3a6b;color:white;text-decoration:none;padding:13px 28px;border-radius:8px;font-size:14px;font-weight:500">Abrir CRETUM →</a>
+    </td></tr>
+
+    <tr><td style="padding:24px 36px 30px">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-top:1px solid #eef0f5">
+        <tr>
+          <td style="padding-top:16px;font-size:11px;color:#9aa3b5;vertical-align:middle">Resumen automático · Cretum Partners</td>
+          <td style="padding-top:16px;text-align:right;vertical-align:middle;width:50px">
+            <img src="${APP_URL}/logo-icon.png" alt="CRETUM" width="36" height="36" style="display:inline-block;opacity:.75;border:0">
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
 </body></html>`;
 }
 
@@ -158,7 +218,7 @@ export default async function handler(req, res) {
           const r = await sendForUser({
             id: u.id,
             email: u.email,
-            displayName: profile?.full_name || u.email,
+            displayName: niceName(profile?.full_name, u.email),
           }, tasks);
           results.push({ ...r, ok: true });
         } catch (err) {
@@ -182,7 +242,7 @@ export default async function handler(req, res) {
     const user = userData.user;
     // Obtener nombre desde profiles (con anon respetando RLS)
     const { data: profile } = await sb.from('profiles').select('full_name').eq('id', user.id).single();
-    const displayName = profile?.full_name || user.email;
+    const displayName = niceName(profile?.full_name, user.email);
 
     const tasks = await getTasks();
     const result = await sendForUser({ id: user.id, email: user.email, displayName }, tasks);
