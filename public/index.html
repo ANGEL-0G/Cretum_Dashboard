@@ -779,6 +779,23 @@ button,input,select{font-family:var(--font)}
 .settings-userhead-name{font-size:13px;font-weight:500;color:var(--gray-900);line-height:1.3;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .settings-userhead-role{font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+.settings-userhead-namewrap{display:flex;align-items:center;gap:6px;min-width:0}
+.settings-userhead-namewrap .settings-userhead-name{flex:1;min-width:0}
+.settings-userhead-edit{
+  background:none;border:none;cursor:pointer;color:var(--gray-400);
+  padding:3px 5px;border-radius:4px;font-size:11px;line-height:1;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  opacity:0;transition:opacity .15s,background .15s,color .15s;
+}
+.settings-userhead:hover .settings-userhead-edit{opacity:1}
+.settings-userhead-edit:hover{background:var(--navy-pale);color:var(--navy)}
+.settings-userhead-input{
+  font-size:13px;font-weight:500;color:var(--gray-900);line-height:1.3;
+  background:white;border:1px solid var(--navy);border-radius:4px;
+  padding:3px 6px;width:100%;outline:none;font-family:inherit;box-sizing:border-box;
+}
+[data-theme="dark"] .settings-userhead-input{background:#1a1a1a;color:#e8eef7;border-color:var(--navy-light)}
+[data-theme="dark"] .settings-userhead-edit:hover{background:rgba(93,143,245,.18);color:var(--navy-light)}
 
 .settings-sep{height:1px;background:var(--gray-100);margin:4px 0}
 
@@ -1986,7 +2003,16 @@ button,input,select{font-family:var(--font)}
     <div class="settings-userhead">
       <div class="settings-userhead-av" id="dropdownAv">—</div>
       <div style="flex:1;min-width:0">
-        <div class="settings-userhead-name" id="dropdownUserName">—</div>
+        <div class="settings-userhead-namewrap">
+          <div class="settings-userhead-name" id="dropdownUserName">—</div>
+          <button class="settings-userhead-edit" type="button" onclick="startEditName()" title="Editar nombre">
+            <i class="fa-solid fa-pen"></i>
+          </button>
+        </div>
+        <input type="text" id="dropdownUserNameInput" class="settings-userhead-input" maxlength="60" placeholder="Tu nombre"
+          style="display:none"
+          onblur="saveProfileName(this.value)"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}else if(event.key==='Escape'){event.preventDefault();this.dataset.canceled='1';this.blur()}">
         <div class="settings-userhead-role" id="dropdownUserRole">—</div>
       </div>
     </div>

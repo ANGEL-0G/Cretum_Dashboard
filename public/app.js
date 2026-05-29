@@ -1059,9 +1059,84 @@ function toggleSettings(e) {
     document.getElementById('dropdownUserName').textContent = currentProfile.full_name || '—';
     document.getElementById('dropdownUserRole').textContent = currentProfile.role || '';
     applyThemeToggleState();
+    // Asegurar que el editor de nombre vuelva a estado cerrado al abrir el menú
+    cancelEditName();
   }
   pop.classList.toggle('show');
   btn?.classList.toggle('open');
+}
+
+/* ── Edición de nombre de perfil (click en el ícono de lápiz del dropdown) ── */
+function startEditName() {
+  const nameEl = document.getElementById('dropdownUserName');
+  const editBtn = document.querySelector('.settings-userhead-edit');
+  const input = document.getElementById('dropdownUserNameInput');
+  if (!input || !nameEl) return;
+  input.value = currentProfile?.full_name || '';
+  input.dataset.canceled = '';
+  nameEl.style.display = 'none';
+  if (editBtn) editBtn.style.display = 'none';
+  input.style.display = 'block';
+  setTimeout(() => { input.focus(); input.select(); }, 0);
+}
+
+function cancelEditName() {
+  const nameEl = document.getElementById('dropdownUserName');
+  const editBtn = document.querySelector('.settings-userhead-edit');
+  const input = document.getElementById('dropdownUserNameInput');
+  if (!input || !nameEl) return;
+  nameEl.style.display = '';
+  if (editBtn) editBtn.style.display = '';
+  input.style.display = 'none';
+}
+
+async function saveProfileName(newName) {
+  const input = document.getElementById('dropdownUserNameInput');
+  if (input?.dataset.canceled === '1') {
+    input.dataset.canceled = '';
+    cancelEditName();
+    return;
+  }
+  const trimmed = (newName || '').trim();
+  cancelEditName();
+  if (!trimmed || !currentProfile) return;
+  if (trimmed === currentProfile.full_name) return;
+
+  // Iniciales auto: primera letra del primer y último nombre, o 2 primeras letras si una sola palabra
+  const parts = trimmed.split(/\s+/).filter(Boolean);
+  const initials = (parts.length >= 2
+    ? parts[0][0] + parts[parts.length - 1][0]
+    : trimmed.slice(0, 2)
+  ).toUpperCase();
+
+  try {
+    const { error } = await sb.from('profiles')
+      .update({ full_name: trimmed, initials })
+      .eq('id', currentUser);
+    if (error) throw error;
+
+    currentProfile.full_name = trimmed;
+    currentProfile.initials = initials;
+    if (USERS[currentUser]) {
+      USERS[currentUser].name = trimmed;
+      USERS[currentUser].initials = initials;
+    }
+    document.getElementById('headerAv').textContent = initials;
+    document.getElementById('headerUser').textContent = trimmed;
+    document.getElementById('dropdownAv').textContent = initials;
+    document.getElementById('dropdownUserName').textContent = trimmed;
+
+    // Refrescar partes de la UI que usan el nombre o iniciales
+    if (typeof render === 'function') render();
+    const homeUserName = document.getElementById('homeUserName');
+    if (homeUserName) homeUserName.textContent = (trimmed.split(' ')[0] || trimmed);
+    const selUserName = document.getElementById('selUserName');
+    if (selUserName) selUserName.textContent = (trimmed.split(' ')[0] || trimmed);
+
+    toast('Nombre actualizado');
+  } catch (e) {
+    toast('Error al guardar: ' + e.message);
+  }
 }
 /* ── Recordatorios — preferencias por usuario, persistidas en Supabase ── */
 const DAYS_ES = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
