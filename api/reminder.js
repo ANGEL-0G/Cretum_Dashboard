@@ -114,20 +114,34 @@ function sectionHeader(label, count, color) {
 function htmlEmail(s) {
   const firstName = (s.displayName || 'tú').split(' ')[0] || s.displayName;
   const pendingCount = s.pending.length;
-  const overdueText = s.overdue.length
-    ? `, de las cuales <strong style="color:#c0392b">${s.overdue.length} ${s.overdue.length === 1 ? 'está vencida' : 'están vencidas'}</strong>`
-    : '';
-  const summary = pendingCount
-    ? `Tienes <strong style="color:#1a3a6b">${pendingCount}</strong> ${pendingCount === 1 ? 'tarea pendiente' : 'tareas pendientes'} esta semana${overdueText}.`
-    : `No tienes tareas pendientes esta semana. ¡Buen trabajo!`;
+  const overdueCount = s.overdue.length;
+
+  const heroLine = pendingCount === 0
+    ? 'Sin tareas pendientes'
+    : `Tienes <span style="color:#1a3a6b">${pendingCount}</span> ${pendingCount === 1 ? 'tarea pendiente' : 'tareas pendientes'}`;
+
+  const subLine = pendingCount === 0
+    ? '¡Buen trabajo! 🎉'
+    : (overdueCount
+        ? `<strong style="color:#c0392b">${overdueCount} ${overdueCount === 1 ? 'está vencida' : 'están vencidas'}</strong> — atiéndelas primero`
+        : 'esta semana');
+
+  // Preheader oculto: lo que aparece en la línea de preview del inbox
+  const preheader = pendingCount === 0
+    ? 'Sin tareas pendientes esta semana · ¡Buen trabajo!'
+    : `Tienes ${pendingCount} ${pendingCount === 1 ? 'tarea pendiente' : 'tareas pendientes'}${overdueCount ? ' · ' + overdueCount + ' vencidas' : ''}`;
 
   return `<!doctype html>
 <html><body style="font-family:-apple-system,'Segoe UI',Arial,sans-serif;background:#f5f6fa;margin:0;padding:28px 16px;color:#1a1f2e">
+  <div style="display:none;max-height:0;overflow:hidden;font-size:1px;line-height:1px;color:transparent;mso-hide:all">${preheader}</div>
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:600px;margin:0 auto;background:white;border-radius:14px;box-shadow:0 4px 24px rgba(26,58,107,.06)">
     <tr><td style="padding:36px 36px 4px">
-      <p style="margin:0;font-size:11px;color:#9aa3b5;letter-spacing:1px;text-transform:uppercase;font-weight:700">${greetingByHour()}</p>
-      <h1 style="margin:6px 0 12px;font-size:24px;font-weight:600;color:#1a1f2e;line-height:1.2">${escapeHtml(firstName)}</h1>
-      <p style="margin:0;font-size:14px;color:#5a6478;line-height:1.6">${summary}</p>
+      <p style="margin:0;font-size:11px;color:#9aa3b5;letter-spacing:1.2px;text-transform:uppercase;font-weight:700">Resumen Semanal</p>
+      <h1 style="margin:10px 0 8px;font-size:30px;font-weight:600;color:#1a1f2e;line-height:1.15">${heroLine}</h1>
+      <p style="margin:0;font-size:14px;color:#5a6478;line-height:1.5">${subLine}</p>
+      <div style="margin-top:22px;padding-top:16px;border-top:1px solid #eef0f5;font-size:13px;color:#5a6478">
+        ${greetingByHour()}, <strong style="color:#1a1f2e">${escapeHtml(firstName)}</strong>
+      </div>
     </td></tr>
 
     ${s.overdue.length ? `<tr><td style="padding:28px 36px 0">
@@ -165,9 +179,7 @@ function htmlEmail(s) {
 
 async function sendForUser({ id, email, displayName }, tasks) {
   const summary = buildSummary(id, tasks, displayName);
-  const subject = summary.overdue.length
-    ? `CRETUM · ${summary.pending.length} pendientes (${summary.overdue.length} vencidas)`
-    : `CRETUM · Resumen — ${summary.pending.length} pendientes`;
+  const subject = 'Cretum Desk: Resumen Semanal';
   const html = htmlEmail(summary);
   const r = await sendEmail(email, subject, html);
   return { user: email, recipient: email, id: r.id };
