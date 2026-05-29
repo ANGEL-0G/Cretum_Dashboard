@@ -72,7 +72,7 @@ function buildEmail(type, { actorName, taskName, due }) {
       ? `<p style="color:#3d4559;margin:0 0 16px;font-size:14px">📅 Fecha límite: <strong>${escapeHtml(fmtDate(due))}</strong></p>`
       : '';
     return {
-      subject: `CRETUM · ${actorName} te asignó "${taskName}"`,
+      subject: `${actorName} te asignó "${taskName}"`,
       html: wrapTemplate('NUEVA ASIGNACIÓN', `${safeActor} te asignó una tarea`, `
         <p style="color:#3d4559;line-height:1.6;margin:0 0 16px;font-size:14px">
           <strong style="color:#1a3a6b">${safeActor}</strong> te asignó esta tarea para que la revises:
@@ -89,7 +89,7 @@ function buildEmail(type, { actorName, taskName, due }) {
 
   if (type === 'accepted') {
     return {
-      subject: `CRETUM · ${actorName} aceptó "${taskName}"`,
+      subject: `${actorName} aceptó "${taskName}"`,
       html: wrapTemplate('TAREA ACEPTADA', `${safeActor} aceptó tu asignación`, `
         <p style="color:#3d4559;line-height:1.6;margin:0 0 16px;font-size:14px">
           <strong style="color:#1a3a6b">${safeActor}</strong> aceptó la tarea que le asignaste:
@@ -105,7 +105,7 @@ function buildEmail(type, { actorName, taskName, due }) {
 
   // declined
   return {
-    subject: `CRETUM · ${actorName} declinó "${taskName}"`,
+    subject: `${actorName} declinó "${taskName}"`,
     html: wrapTemplate('TAREA DECLINADA', `${safeActor} declinó tu asignación`, `
       <p style="color:#3d4559;line-height:1.6;margin:0 0 16px;font-size:14px">
         <strong style="color:#c0392b">${safeActor}</strong> declinó la tarea que le asignaste:

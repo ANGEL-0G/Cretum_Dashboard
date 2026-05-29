@@ -179,7 +179,7 @@ function htmlEmail(s) {
 
 async function sendForUser({ id, email, displayName }, tasks) {
   const summary = buildSummary(id, tasks, displayName);
-  const subject = 'Cretum Desk: Resumen Semanal';
+  const subject = 'Resumen Semanal';
   const html = htmlEmail(summary);
   const r = await sendEmail(email, subject, html);
   return { user: email, recipient: email, id: r.id };

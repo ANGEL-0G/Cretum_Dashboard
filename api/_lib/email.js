@@ -5,7 +5,7 @@
  * Usado por api/reminder.js y api/notify-assignment.js.
  */
 
-const FROM_ADDRESS = 'CRETUM <notificaciones@cretumdesk.com>';
+const FROM_ADDRESS = 'Cretum Desk <notificaciones@cretumdesk.com>';
 const ADMIN_EMAIL = 'aoliveros@cretumpartners.com';
 
 export async function sendEmail(to, subject, html) {
@@ -34,7 +34,7 @@ export async function notifyAdminOfFailure({ context, recipient, error }) {
   try {
     await sendEmail(
       ADMIN_EMAIL,
-      `CRETUM · Error enviando email (${context})`,
+      `Error enviando email (${context})`,
       `<p>No se pudo entregar un email automático.</p>
        <ul>
          <li><strong>Contexto:</strong> ${context}</li>
