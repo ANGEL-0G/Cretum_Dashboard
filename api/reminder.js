@@ -6,21 +6,13 @@
  *      envía resumen a TODOS los usuarios de Supabase.
  *   2) Usuario (Authorization: Bearer <supabase_jwt>) — disparado desde la UI
  *      con el botón "Enviar resumen ahora"; envía solo al usuario autenticado.
- *
- * Hasta que verifiquemos el dominio en Resend, todos los emails se redirigen
- * a la dirección registrada (ON_DEMAND_RECIPIENT) — quien tenga esa cuenta es
- * quien recibe físicamente los correos. La info del resumen sí es por usuario.
  */
 
 import { getRedis } from './_lib/redis.js';
 import { getSupabase, getSupabaseAdmin } from './_lib/supabase.js';
 import { bearerToken } from './_lib/auth.js';
 
-const APP_URL = 'https://cretum-tasks.vercel.app';
-
-// Mientras el dominio cretumpartners.com no esté verificado en Resend,
-// todos los correos van a esta dirección (la registrada en Resend).
-const ON_DEMAND_RECIPIENT = 'angelarmandooliverosgutierrez@gmail.com';
+const APP_URL = 'https://cretumdesk.com';
 
 const SEED = { simple: [], progress: [], assigned: [], invites: [] };
 
@@ -118,7 +110,7 @@ async function sendEmail(to, subject, html) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from: 'CRETUM <onboarding@resend.dev>',
+      from: 'CRETUM <notificaciones@cretumdesk.com>',
       to: [to],
       subject,
       html,
@@ -137,9 +129,8 @@ async function sendForUser({ id, email, displayName }, tasks) {
     ? `CRETUM · ${summary.pending.length} pendientes (${summary.overdue.length} vencidas)`
     : `CRETUM · Resumen — ${summary.pending.length} pendientes`;
   const html = htmlEmail(summary);
-  const recipient = ON_DEMAND_RECIPIENT;  // hasta verificar dominio
-  const r = await sendEmail(recipient, subject, html);
-  return { user: email, recipient, id: r.id };
+  const r = await sendEmail(email, subject, html);
+  return { user: email, recipient: email, id: r.id };
 }
 
 export default async function handler(req, res) {
