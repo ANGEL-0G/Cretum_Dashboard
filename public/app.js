@@ -1975,8 +1975,10 @@ async function openInvestor(id) {
     const [{ data: contacts }, { data: positions }] = await Promise.all([
       sb.from('contacts').select('name, email').eq('investor_id', id).order('id'),
       sb.from('investments')
-        .select(`entry_ev_b, entry_pps, current_ev_b, current_ev_pps, shares, commitment, commitment_actual, dpi_moic,
-                 series(name), companies(name, is_public)`)
+        .select(`id, entry_ev_b, entry_pps, current_ev_b, current_ev_pps, shares, commitment, commitment_actual, dpi_moic,
+                 series(name), companies(name, is_public),
+                 investment_distributions(distribution_date, letter_type, underlying_company,
+                   price_per_share, shares_distributed, cash_proceeds, value_in_kind, letter_url, notes)`)
         .eq('investor_id', id),
     ]);
     renderInvestorDetail(inv, contacts || [], positions || []);
@@ -2013,6 +2015,17 @@ function closeDetail() {
 
 function renderInvestorDetail(inv, contacts, positions) {
   const totalEv = positions.reduce((s, p) => s + (+p.current_ev_b || 0), 0);
+  const distros = [];
+  positions.forEach(p => {
+    (p.investment_distributions || []).forEach(d => {
+      distros.push({
+        ...d,
+        _company: p.companies?.name || '—',
+        _series: p.series?.name || '—',
+      });
+    });
+  });
+  distros.sort((a, b) => (b.distribution_date || '').localeCompare(a.distribution_date || ''));
   const html = `
     <div class="db-detail-head">
       <div class="db-detail-name">${escapeHtml(inv.name)}</div>
@@ -2064,7 +2077,39 @@ function renderInvestorDetail(inv, contacts, positions) {
             </tr>`).join('')}
         </tbody>
       </table>
-    </div>`;
+    </div>
+
+    ${distros.length ? `
+      <div class="db-section">
+        <div class="db-section-h">Distribuciones (${distros.length})</div>
+        <table class="db-table">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Empresa</th>
+              <th class="hide-mobile">Series</th>
+              <th>Tipo</th>
+              <th class="num">Cash</th>
+              <th class="num hide-mobile">Shares</th>
+              <th class="num hide-mobile">PPS</th>
+              <th class="hide-mobile">Carta</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${distros.map(d => `
+              <tr>
+                <td>${escapeHtml(d.distribution_date || '—')}</td>
+                <td>${escapeHtml(d.underlying_company || d._company)}</td>
+                <td class="hide-mobile">${escapeHtml(d._series)}</td>
+                <td>${d.letter_type === 'distribution_cash' ? 'Cash' : 'In-Kind'}</td>
+                <td class="num">${d.cash_proceeds != null ? fmtMoney(+d.cash_proceeds) : '—'}</td>
+                <td class="num hide-mobile">${d.shares_distributed != null ? Number(d.shares_distributed).toLocaleString('en-US') : '—'}</td>
+                <td class="num hide-mobile">${d.price_per_share != null ? '$' + (+d.price_per_share).toFixed(2) : '—'}</td>
+                <td class="hide-mobile">${d.letter_url ? `<a href="${escapeHtml(d.letter_url)}" target="_blank" rel="noopener"><i class="fa-solid fa-file-pdf"></i> PDF</a>` : '—'}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>` : ''}`;
   document.getElementById('dbDetailContent').innerHTML = html;
 }
 
