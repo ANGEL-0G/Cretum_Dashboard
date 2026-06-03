@@ -1975,8 +1975,8 @@ async function openInvestor(id) {
     const [{ data: contacts }, { data: positions }] = await Promise.all([
       sb.from('contacts').select('name, email').eq('investor_id', id).order('id'),
       sb.from('investments')
-        .select(`id, entry_ev_b, entry_pps, current_ev_b, current_ev_pps, shares, commitment, commitment_actual, dpi_moic,
-                 series(name), companies(name, is_public),
+        .select(`id, entry_ev_b, entry_pps, current_ev_b, current_ev_pps, shares, commitment, commitment_actual, dpi_moic, distributed_at,
+                 series(name), companies(id, name, is_public),
                  investment_distributions(distribution_date, letter_type, underlying_company,
                    price_per_share, shares_distributed, cash_proceeds, value_in_kind, letter_url, notes)`)
         .eq('investor_id', id),
@@ -2013,19 +2013,97 @@ function closeDetail() {
   document.getElementById('dbList').style.display = '';
 }
 
+function renderPositionsBlock(title, rows) {
+  if (!rows.length) return '';
+  return `
+    <div class="db-section">
+      <div class="db-section-h">${escapeHtml(title)} (${rows.length})</div>
+      <table class="db-table">
+        <thead>
+          <tr>
+            <th>Empresa</th>
+            <th>Series</th>
+            <th class="num hide-mobile">Entry EV</th>
+            <th class="num hide-mobile">Current EV</th>
+            <th class="num hide-mobile">Shares</th>
+            <th class="num">Commitment</th>
+            <th class="num hide-mobile">Actual</th>
+            <th class="num">MOIC</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(p => `
+            <tr>
+              <td>${escapeHtml(p.companies?.name || '—')}</td>
+              <td>${escapeHtml(p.series?.name || '—')}</td>
+              <td class="num hide-mobile">${p.entry_ev_b ? '$' + (+p.entry_ev_b).toFixed(2) + 'B' : '—'}</td>
+              <td class="num hide-mobile">${p.current_ev_b ? '$' + (+p.current_ev_b).toFixed(2) + 'B' : '—'}</td>
+              <td class="num hide-mobile">${p.shares ? Number(p.shares).toLocaleString('en-US') : (p.companies?.is_public ? 'Public' : '—')}</td>
+              <td class="num">${fmtMoney(+p.commitment)}</td>
+              <td class="num hide-mobile">${fmtMoney(+p.commitment_actual)}</td>
+              <td class="num">${p.dpi_moic ? (+p.dpi_moic).toFixed(2) + 'x' : '—'}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function renderDistrosBlock(title, rows) {
+  if (!rows.length) return '';
+  return `
+    <div class="db-section">
+      <div class="db-section-h">${escapeHtml(title)} (${rows.length})</div>
+      <table class="db-table">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Empresa</th>
+            <th class="hide-mobile">Series</th>
+            <th>Tipo</th>
+            <th class="num">Cash</th>
+            <th class="num hide-mobile">Shares</th>
+            <th class="num hide-mobile">PPS</th>
+            <th class="hide-mobile">Carta</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(d => `
+            <tr>
+              <td>${escapeHtml(d.distribution_date || '—')}</td>
+              <td>${escapeHtml(d.underlying_company || d._company)}</td>
+              <td class="hide-mobile">${escapeHtml(d._series)}</td>
+              <td>${d.letter_type === 'distribution_cash' ? 'Cash' : 'In-Kind'}</td>
+              <td class="num">${d.cash_proceeds != null ? fmtMoney(+d.cash_proceeds) : '—'}</td>
+              <td class="num hide-mobile">${d.shares_distributed != null ? Number(d.shares_distributed).toLocaleString('en-US') : '—'}</td>
+              <td class="num hide-mobile">${d.price_per_share != null ? '$' + (+d.price_per_share).toFixed(2) : '—'}</td>
+              <td class="hide-mobile">${d.letter_url ? `<a href="${escapeHtml(d.letter_url)}" target="_blank" rel="noopener"><i class="fa-solid fa-file-pdf"></i> PDF</a>` : '—'}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
 function renderInvestorDetail(inv, contacts, positions) {
   const totalEv = positions.reduce((s, p) => s + (+p.current_ev_b || 0), 0);
-  const distros = [];
+  const DIVERSIFIED_FUND_ID = 10;
+  const activePositions = positions.filter(p => !p.distributed_at);
+  const terminatedPositions = positions.filter(p => p.distributed_at);
+  const distrosSpv = [];
+  const distrosFund = [];
   positions.forEach(p => {
+    const isFund = p.companies?.id === DIVERSIFIED_FUND_ID;
     (p.investment_distributions || []).forEach(d => {
-      distros.push({
+      const row = {
         ...d,
         _company: p.companies?.name || '—',
         _series: p.series?.name || '—',
-      });
+      };
+      (isFund ? distrosFund : distrosSpv).push(row);
     });
   });
-  distros.sort((a, b) => (b.distribution_date || '').localeCompare(a.distribution_date || ''));
+  const sortDesc = (a, b) => (b.distribution_date || '').localeCompare(a.distribution_date || '');
+  distrosSpv.sort(sortDesc);
+  distrosFund.sort(sortDesc);
   const html = `
     <div class="db-detail-head">
       <div class="db-detail-name">${escapeHtml(inv.name)}</div>
@@ -2048,68 +2126,11 @@ function renderInvestorDetail(inv, contacts, positions) {
           </div>`).join('')}
       </div>` : ''}
 
-    <div class="db-section">
-      <div class="db-section-h">Posiciones (${positions.length})</div>
-      <table class="db-table">
-        <thead>
-          <tr>
-            <th>Empresa</th>
-            <th>Series</th>
-            <th class="num hide-mobile">Entry EV</th>
-            <th class="num hide-mobile">Current EV</th>
-            <th class="num hide-mobile">Shares</th>
-            <th class="num">Commitment</th>
-            <th class="num hide-mobile">Actual</th>
-            <th class="num">MOIC</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${positions.map(p => `
-            <tr>
-              <td>${escapeHtml(p.companies?.name || '—')}</td>
-              <td>${escapeHtml(p.series?.name || '—')}</td>
-              <td class="num hide-mobile">${p.entry_ev_b ? '$' + (+p.entry_ev_b).toFixed(2) + 'B' : '—'}</td>
-              <td class="num hide-mobile">${p.current_ev_b ? '$' + (+p.current_ev_b).toFixed(2) + 'B' : '—'}</td>
-              <td class="num hide-mobile">${p.shares ? Number(p.shares).toLocaleString('en-US') : (p.companies?.is_public ? 'Public' : '—')}</td>
-              <td class="num">${fmtMoney(+p.commitment)}</td>
-              <td class="num hide-mobile">${fmtMoney(+p.commitment_actual)}</td>
-              <td class="num">${p.dpi_moic ? (+p.dpi_moic).toFixed(2) + 'x' : '—'}</td>
-            </tr>`).join('')}
-        </tbody>
-      </table>
-    </div>
+    ${renderPositionsBlock('Posiciones activas', activePositions)}
+    ${renderPositionsBlock('Posiciones terminadas', terminatedPositions)}
 
-    ${distros.length ? `
-      <div class="db-section">
-        <div class="db-section-h">Distribuciones (${distros.length})</div>
-        <table class="db-table">
-          <thead>
-            <tr>
-              <th>Fecha</th>
-              <th>Empresa</th>
-              <th class="hide-mobile">Series</th>
-              <th>Tipo</th>
-              <th class="num">Cash</th>
-              <th class="num hide-mobile">Shares</th>
-              <th class="num hide-mobile">PPS</th>
-              <th class="hide-mobile">Carta</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${distros.map(d => `
-              <tr>
-                <td>${escapeHtml(d.distribution_date || '—')}</td>
-                <td>${escapeHtml(d.underlying_company || d._company)}</td>
-                <td class="hide-mobile">${escapeHtml(d._series)}</td>
-                <td>${d.letter_type === 'distribution_cash' ? 'Cash' : 'In-Kind'}</td>
-                <td class="num">${d.cash_proceeds != null ? fmtMoney(+d.cash_proceeds) : '—'}</td>
-                <td class="num hide-mobile">${d.shares_distributed != null ? Number(d.shares_distributed).toLocaleString('en-US') : '—'}</td>
-                <td class="num hide-mobile">${d.price_per_share != null ? '$' + (+d.price_per_share).toFixed(2) : '—'}</td>
-                <td class="hide-mobile">${d.letter_url ? `<a href="${escapeHtml(d.letter_url)}" target="_blank" rel="noopener"><i class="fa-solid fa-file-pdf"></i> PDF</a>` : '—'}</td>
-              </tr>`).join('')}
-          </tbody>
-        </table>
-      </div>` : ''}`;
+    ${renderDistrosBlock('Distribuciones · Oportunidades en directo (SPVs)', distrosSpv)}
+    ${renderDistrosBlock('Distribuciones · Fondos MVP', distrosFund)}`;
   document.getElementById('dbDetailContent').innerHTML = html;
 }
 
