@@ -80,7 +80,11 @@ async function main() {
   console.log(`Leyendo: ${CSV_PATH}`);
   if (DRY_RUN) console.log('⚠️  DRY_RUN activo — no se escribirá nada\n');
 
-  const wb = XLSX.read(readFileSync(CSV_PATH), { type: 'buffer' });
+  // Lee el CSV como UTF-8 (preserva ñ/á/é/í/ó/ú). SheetJS leía el buffer como
+  // Latin-1 por defecto y corrompía "Magaña" → "MagaÃ±a".
+  let text = readFileSync(CSV_PATH, 'utf8');
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1); // strip BOM si lo hubiera
+  const wb = XLSX.read(text, { type: 'string' });
   const sheetName = wb.SheetNames[0];
   const ws = wb.Sheets[sheetName];
   const rawRows = XLSX.utils.sheet_to_json(ws, { defval: null });
