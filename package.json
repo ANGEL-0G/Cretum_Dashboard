@@ -15,6 +15,7 @@
   "scripts": {
     "dev": "vercel dev",
     "deploy": "vercel --prod",
-    "import": "node scripts/import_excel.mjs"
+    "import": "node scripts/import_excel.mjs",
+    "update-csv": "node scripts/update_from_csv.mjs"
   }
 }
