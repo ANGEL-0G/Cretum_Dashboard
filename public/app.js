@@ -1975,7 +1975,9 @@ async function openInvestor(id) {
     const [{ data: contacts }, { data: positions }] = await Promise.all([
       sb.from('contacts').select('name, email').eq('investor_id', id).order('id'),
       sb.from('investments')
-        .select(`id, entry_ev_b, entry_pps, current_ev_b, current_ev_pps, shares, commitment, commitment_actual, dpi_moic, distributed_at,
+        .select(`id, entry_ev_b, entry_pps, current_ev_b, current_ev_pps, shares,
+                 commitment, commitment_actual, dpi_moic, carry_pct,
+                 start_date, end_date, duration_years, distributed_at,
                  series(name), companies(id, name, is_public),
                  investment_distributions(distribution_date, letter_type, underlying_company,
                    price_per_share, shares_distributed, cash_proceeds, value_in_kind, letter_url, notes)`)
@@ -2015,36 +2017,59 @@ function closeDetail() {
 
 function renderPositionsBlock(title, rows) {
   if (!rows.length) return '';
+  const dash = '<span style="color:var(--gray-300)">—</span>';
+  const num  = (v) => (v != null && v !== '') ? Number(v).toLocaleString('en-US') : dash;
+  const ev   = (v) => (v != null && v !== '') ? '$' + (+v).toFixed(2) + 'B' : dash;
+  const pps  = (v) => (v != null && v !== '') ? '$' + (+v).toFixed(2) : dash;
+  const moic = (v) => (v != null && v !== '') ? (+v).toFixed(2) + 'x' : dash;
+  const carry= (v) => (v != null && v !== '') ? (+v * 100).toFixed(2) + '%' : dash;
+  const dur  = (v) => (v != null && v !== '') ? (+v).toFixed(2) + ' yrs' : dash;
+  const date = (v) => v ? new Date(v + 'T12:00:00').toLocaleDateString('es-MX', { day:'numeric', month:'short', year:'numeric' }) : dash;
+
   return `
     <div class="db-section">
       <div class="db-section-h">${escapeHtml(title)} (${rows.length})</div>
-      <table class="db-table">
-        <thead>
-          <tr>
-            <th>Empresa</th>
-            <th>Series</th>
-            <th class="num hide-mobile">Entry EV</th>
-            <th class="num hide-mobile">Current EV</th>
-            <th class="num hide-mobile">Shares</th>
-            <th class="num">Commitment</th>
-            <th class="num hide-mobile">Actual</th>
-            <th class="num">MOIC</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rows.map(p => `
+      <div class="db-list-wrap">
+        <table class="db-list-table">
+          <thead>
             <tr>
-              <td>${escapeHtml(p.companies?.name || '—')}</td>
-              <td>${escapeHtml(p.series?.name || '—')}</td>
-              <td class="num hide-mobile">${p.entry_ev_b ? '$' + (+p.entry_ev_b).toFixed(2) + 'B' : '—'}</td>
-              <td class="num hide-mobile">${p.current_ev_b ? '$' + (+p.current_ev_b).toFixed(2) + 'B' : '—'}</td>
-              <td class="num hide-mobile">${p.shares ? Number(p.shares).toLocaleString('en-US') : (p.companies?.is_public ? 'Public' : '—')}</td>
-              <td class="num">${fmtMoney(+p.commitment)}</td>
-              <td class="num hide-mobile">${fmtMoney(+p.commitment_actual)}</td>
-              <td class="num">${p.dpi_moic ? (+p.dpi_moic).toFixed(2) + 'x' : '—'}</td>
-            </tr>`).join('')}
-        </tbody>
-      </table>
+              <th>Empresa</th>
+              <th>Series</th>
+              <th class="num">Commitment</th>
+              <th class="num">Compromiso ejec.</th>
+              <th class="num">DPI / MOIC</th>
+              <th class="num">Carry</th>
+              <th class="num">Shares</th>
+              <th class="num">Entry EV</th>
+              <th class="num">Entry PPS</th>
+              <th class="num">Current EV</th>
+              <th class="num">Current PPS</th>
+              <th>Inicio</th>
+              <th>Fin</th>
+              <th class="num">Duración</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(p => `
+              <tr>
+                <td class="col-name">${escapeHtml(p.companies?.name || '—')}</td>
+                <td>${escapeHtml(p.series?.name || '—')}</td>
+                <td class="num">${fmtMoney(+p.commitment)}</td>
+                <td class="num muted">${fmtMoney(+p.commitment_actual)}</td>
+                <td class="num">${moic(p.dpi_moic)}</td>
+                <td class="num muted">${carry(p.carry_pct)}</td>
+                <td class="num muted">${p.shares != null ? num(p.shares) : (p.companies?.is_public ? '<span style="color:var(--gray-400);font-style:italic">Public</span>' : dash)}</td>
+                <td class="num muted">${ev(p.entry_ev_b)}</td>
+                <td class="num muted">${pps(p.entry_pps)}</td>
+                <td class="num muted">${ev(p.current_ev_b)}</td>
+                <td class="num muted">${pps(p.current_ev_pps)}</td>
+                <td class="muted">${date(p.start_date)}</td>
+                <td class="muted">${date(p.end_date)}</td>
+                <td class="num muted">${dur(p.duration_years)}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
     </div>`;
 }
 
