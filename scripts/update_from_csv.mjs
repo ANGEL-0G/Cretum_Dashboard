@@ -111,6 +111,24 @@ async function main() {
   const client = new pg.Client({ connectionString: DATABASE_URL });
   await client.connect();
 
+  // Sync secuencias de id con MAX(id) actual. Cuando Eugenio cargó datos vía
+  // pipeline (o se hizo un restore), las secuencias quedaron desfasadas y
+  // nextval() generaba ids ya existentes — duplicate key error.
+  // setval NO es transaccional, así que esto persiste incluso con ROLLBACK
+  // del DRY_RUN. Es seguro: solo arregla el problema, nunca empeora.
+  if (ALLOW_INSERTS) {
+    for (const tbl of ['investors', 'series', 'contacts', 'investments']) {
+      await client.query(
+        `SELECT setval(
+           pg_get_serial_sequence($1, 'id'),
+           COALESCE((SELECT MAX(id) FROM ${tbl}), 1)
+         )`,
+        [tbl]
+      );
+    }
+    console.log('  Secuencias de id sincronizadas con MAX(id) por tabla\n');
+  }
+
   // Lookup maps: trim + lowercase para tolerar variaciones de formato.
   const { rows: invs }    = await client.query('SELECT id, name FROM investors');
   const { rows: cmps }    = await client.query('SELECT id, name FROM companies');
