@@ -124,6 +124,7 @@ async function main() {
 
   let updated = 0;
   let insertedInvestors = 0;
+  let insertedSeries = 0;
   let insertedContacts = 0;
   let insertedInvestments = 0;
   const unmatched = [];
@@ -143,18 +144,39 @@ async function main() {
       }
 
       let invId = invByName.get(norm(investor));
-      const serId = serByName.get(norm(seriesName));
+      let serId = serByName.get(norm(seriesName));
       const cmpId = cmpByName.get(norm(company));
 
-      // Series y companies NUNCA se insertan automáticamente (ya están todas en BD
-      // según el análisis). Si faltara alguna, reportar y continuar — el usuario decide.
-      if (!serId || !cmpId) {
+      // Companies NUNCA se insertan automáticamente — necesitan flag public/private.
+      // Si falta la empresa, reportar para que el usuario la cree manualmente.
+      if (!cmpId) {
         unmatched.push({
           idx: i + 2, reason: 'lookup falló',
           investor, series: seriesName, company,
-          missing: [!serId && 'series', !cmpId && 'company'].filter(Boolean),
+          missing: ['company'],
         });
         continue;
+      }
+
+      // Series sí se pueden insertar auto: tenemos el nombre y company_id válido.
+      if (!serId) {
+        if (!ALLOW_INSERTS) {
+          unmatched.push({
+            idx: i + 2, reason: 'lookup falló',
+            investor, series: seriesName, company,
+            missing: ['series'],
+          });
+          continue;
+        }
+        const { rows: sr } = await client.query(
+          `INSERT INTO series (name, company_id) VALUES ($1, $2)
+           ON CONFLICT (name) DO UPDATE SET company_id = EXCLUDED.company_id
+           RETURNING id`,
+          [seriesName, cmpId]
+        );
+        serId = Number(sr[0].id);
+        serByName.set(norm(seriesName), serId);
+        insertedSeries++;
       }
 
       // Investor: si no existe y ALLOW_INSERTS está activo, crearlo
@@ -270,6 +292,7 @@ async function main() {
   console.log(`  Investments updated:     ${updated}`);
   if (ALLOW_INSERTS) {
     console.log(`  Investors nuevos:        ${insertedInvestors}`);
+    console.log(`  Series nuevas:           ${insertedSeries}`);
     console.log(`  Contactos nuevos:        ${insertedContacts}`);
     console.log(`  Investments nuevos:      ${insertedInvestments}`);
   }
