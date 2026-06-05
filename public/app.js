@@ -2015,59 +2015,116 @@ function closeDetail() {
   document.getElementById('dbList').style.display = '';
 }
 
+/* ─── Selector de columnas del detalle del inversionista ─── */
+const POSITION_COLUMNS = [
+  { key: 'company',           label: 'Empresa',     locked: true,  default: true  },
+  { key: 'series',            label: 'Series',                      default: true  },
+  { key: 'commitment',        label: 'Commitment',                  default: true  },
+  { key: 'commitment_actual', label: 'Comp. ejec.',                 default: true  },
+  { key: 'dpi_moic',          label: 'DPI / MOIC',                  default: true  },
+  { key: 'carry_pct',         label: 'Carry',                       default: false },
+  { key: 'shares',            label: 'Shares',                      default: true  },
+  { key: 'entry_ev_b',        label: 'Entry EV',                    default: true  },
+  { key: 'entry_pps',         label: 'Entry PPS',                   default: false },
+  { key: 'current_ev_b',      label: 'Current EV',                  default: true  },
+  { key: 'current_ev_pps',    label: 'Current PPS',                 default: false },
+  { key: 'start_date',        label: 'Inicio',                      default: false },
+  { key: 'end_date',          label: 'Fin',                         default: false },
+  { key: 'duration_years',    label: 'Duración',                    default: false },
+];
+let dbPosVisibleCols = loadPosVisibleCols();
+let lastInvestorDetail = null;   // caché para re-render al toggle (evita re-fetch)
+
+function loadPosVisibleCols() {
+  try {
+    const raw = localStorage.getItem('dbPosVisibleCols');
+    if (raw) {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) return new Set(arr);
+    }
+  } catch {}
+  return new Set(POSITION_COLUMNS.filter(c => c.default).map(c => c.key));
+}
+function savePosVisibleCols() {
+  try { localStorage.setItem('dbPosVisibleCols', JSON.stringify([...dbPosVisibleCols])); } catch {}
+}
+function isPosColVisible(key) {
+  if (POSITION_COLUMNS.find(c => c.key === key)?.locked) return true;
+  return dbPosVisibleCols.has(key);
+}
+function togglePosCol(key) {
+  const col = POSITION_COLUMNS.find(c => c.key === key);
+  if (!col || col.locked) return;
+  if (dbPosVisibleCols.has(key)) dbPosVisibleCols.delete(key);
+  else dbPosVisibleCols.add(key);
+  savePosVisibleCols();
+  // Re-render del detalle desde caché y reabre el dropdown para seguir tocando
+  if (lastInvestorDetail) {
+    const wasOpen = document.getElementById('ddPosCols')?.classList.contains('open');
+    renderInvestorDetail(lastInvestorDetail.inv, lastInvestorDetail.contacts, lastInvestorDetail.positions);
+    if (wasOpen) document.getElementById('ddPosCols')?.classList.add('open');
+  }
+}
+function renderPosColumnPicker() {
+  const panel = document.getElementById('ddPosColsPanel');
+  if (!panel) return;
+  panel.innerHTML = POSITION_COLUMNS.map(c => {
+    const on = isPosColVisible(c.key);
+    const cls = 'cdd-opt' + (c.locked ? ' locked' : '');
+    const onClick = c.locked ? '' : `onclick="togglePosCol('${c.key}');event.stopPropagation()"`;
+    return `<div class="${cls}" ${onClick}>
+      <input type="checkbox" ${on ? 'checked' : ''} ${c.locked ? 'disabled' : ''}>
+      <span>${c.label}${c.locked ? ' (fijo)' : ''}</span>
+    </div>`;
+  }).join('');
+}
+
 function renderPositionsBlock(title, rows) {
   if (!rows.length) return '';
   const dash = '<span style="color:var(--gray-300)">—</span>';
-  const num  = (v) => (v != null && v !== '') ? Number(v).toLocaleString('en-US') : dash;
-  const ev   = (v) => (v != null && v !== '') ? '$' + (+v).toFixed(2) + 'B' : dash;
-  const pps  = (v) => (v != null && v !== '') ? '$' + (+v).toFixed(2) : dash;
-  const moic = (v) => (v != null && v !== '') ? (+v).toFixed(2) + 'x' : dash;
-  const carry= (v) => (v != null && v !== '') ? (+v * 100).toFixed(2) + '%' : dash;
-  const dur  = (v) => (v != null && v !== '') ? (+v).toFixed(2) + ' yrs' : dash;
-  const date = (v) => v ? new Date(v + 'T12:00:00').toLocaleDateString('es-MX', { day:'numeric', month:'short', year:'numeric' }) : dash;
+  const fmt = {
+    num:   (v) => (v != null && v !== '') ? Number(v).toLocaleString('en-US') : dash,
+    ev:    (v) => (v != null && v !== '') ? '$' + (+v).toFixed(2) + 'B' : dash,
+    pps:   (v) => (v != null && v !== '') ? '$' + (+v).toFixed(2) : dash,
+    moic:  (v) => (v != null && v !== '') ? (+v).toFixed(2) + 'x' : dash,
+    carry: (v) => (v != null && v !== '') ? (+v * 100).toFixed(2) + '%' : dash,
+    dur:   (v) => (v != null && v !== '') ? (+v).toFixed(2) + ' yrs' : dash,
+    date:  (v) => v ? new Date(v + 'T12:00:00').toLocaleDateString('es-MX', { day:'numeric', month:'short', year:'numeric' }) : dash,
+    money: (v) => fmtMoney(+v),
+  };
+  const numericKeys = new Set(['commitment','commitment_actual','dpi_moic','carry_pct','shares','entry_ev_b','entry_pps','current_ev_b','current_ev_pps','duration_years']);
+
+  const cellFor = (p, key) => {
+    switch (key) {
+      case 'company':           return `<td class="col-name">${escapeHtml(p.companies?.name || '—')}</td>`;
+      case 'series':            return `<td>${escapeHtml(p.series?.name || '—')}</td>`;
+      case 'commitment':        return `<td class="num">${fmt.money(p.commitment)}</td>`;
+      case 'commitment_actual': return `<td class="num muted">${fmt.money(p.commitment_actual)}</td>`;
+      case 'dpi_moic':          return `<td class="num">${fmt.moic(p.dpi_moic)}</td>`;
+      case 'carry_pct':         return `<td class="num muted">${fmt.carry(p.carry_pct)}</td>`;
+      case 'shares':            return `<td class="num muted">${p.shares != null ? fmt.num(p.shares) : (p.companies?.is_public ? '<span style="color:var(--gray-400);font-style:italic">Public</span>' : dash)}</td>`;
+      case 'entry_ev_b':        return `<td class="num muted">${fmt.ev(p.entry_ev_b)}</td>`;
+      case 'entry_pps':         return `<td class="num muted">${fmt.pps(p.entry_pps)}</td>`;
+      case 'current_ev_b':      return `<td class="num muted">${fmt.ev(p.current_ev_b)}</td>`;
+      case 'current_ev_pps':    return `<td class="num muted">${fmt.pps(p.current_ev_pps)}</td>`;
+      case 'start_date':        return `<td class="muted">${fmt.date(p.start_date)}</td>`;
+      case 'end_date':          return `<td class="muted">${fmt.date(p.end_date)}</td>`;
+      case 'duration_years':    return `<td class="num muted">${fmt.dur(p.duration_years)}</td>`;
+      default: return '<td></td>';
+    }
+  };
+
+  const visible = POSITION_COLUMNS.filter(c => isPosColVisible(c.key));
+  const headers = visible.map(c => `<th class="${numericKeys.has(c.key) ? 'num' : ''}">${escapeHtml(c.label)}</th>`).join('');
+  const body = rows.map(p => `<tr>${visible.map(c => cellFor(p, c.key)).join('')}</tr>`).join('');
 
   return `
     <div class="db-section">
       <div class="db-section-h">${escapeHtml(title)} (${rows.length})</div>
       <div class="db-list-wrap">
         <table class="db-list-table">
-          <thead>
-            <tr>
-              <th>Empresa</th>
-              <th>Series</th>
-              <th class="num">Commitment</th>
-              <th class="num">Compromiso ejec.</th>
-              <th class="num">DPI / MOIC</th>
-              <th class="num">Carry</th>
-              <th class="num">Shares</th>
-              <th class="num">Entry EV</th>
-              <th class="num">Entry PPS</th>
-              <th class="num">Current EV</th>
-              <th class="num">Current PPS</th>
-              <th>Inicio</th>
-              <th>Fin</th>
-              <th class="num">Duración</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows.map(p => `
-              <tr>
-                <td class="col-name">${escapeHtml(p.companies?.name || '—')}</td>
-                <td>${escapeHtml(p.series?.name || '—')}</td>
-                <td class="num">${fmtMoney(+p.commitment)}</td>
-                <td class="num muted">${fmtMoney(+p.commitment_actual)}</td>
-                <td class="num">${moic(p.dpi_moic)}</td>
-                <td class="num muted">${carry(p.carry_pct)}</td>
-                <td class="num muted">${p.shares != null ? num(p.shares) : (p.companies?.is_public ? '<span style="color:var(--gray-400);font-style:italic">Public</span>' : dash)}</td>
-                <td class="num muted">${ev(p.entry_ev_b)}</td>
-                <td class="num muted">${pps(p.entry_pps)}</td>
-                <td class="num muted">${ev(p.current_ev_b)}</td>
-                <td class="num muted">${pps(p.current_ev_pps)}</td>
-                <td class="muted">${date(p.start_date)}</td>
-                <td class="muted">${date(p.end_date)}</td>
-                <td class="num muted">${dur(p.duration_years)}</td>
-              </tr>`).join('')}
-          </tbody>
+          <thead><tr>${headers}</tr></thead>
+          <tbody>${body}</tbody>
         </table>
       </div>
     </div>`;
@@ -2109,6 +2166,7 @@ function renderDistrosBlock(title, rows) {
 }
 
 function renderInvestorDetail(inv, contacts, positions) {
+  lastInvestorDetail = { inv, contacts, positions };
   const totalEv = positions.reduce((s, p) => s + (+p.current_ev_b || 0), 0);
   const DIVERSIFIED_FUND_ID = 10;
   const activePositions = positions.filter(p => !p.distributed_at);
@@ -2151,12 +2209,26 @@ function renderInvestorDetail(inv, contacts, positions) {
           </div>`).join('')}
       </div>` : ''}
 
+    ${(activePositions.length || terminatedPositions.length) ? `
+      <div class="db-pos-toolbar">
+        <div class="db-pos-toolbar-label">Columnas de posiciones</div>
+        <div class="cdd db-cdd db-cols-cdd" id="ddPosCols">
+          <button class="cdd-btn" type="button" onclick="cddToggle('ddPosCols')">
+            <i class="fa-solid fa-table-columns cdd-ico"></i>
+            <span class="cdd-label">Columnas</span>
+            <i class="fa-solid fa-chevron-down cdd-chev"></i>
+          </button>
+          <div class="cdd-panel" id="ddPosColsPanel"></div>
+        </div>
+      </div>` : ''}
+
     ${renderPositionsBlock('Posiciones activas', activePositions)}
     ${renderPositionsBlock('Posiciones terminadas', terminatedPositions)}
 
     ${renderDistrosBlock('Distribuciones · Oportunidades en directo (SPVs)', distrosSpv)}
     ${renderDistrosBlock('Distribuciones · Fondos MVP', distrosFund)}`;
   document.getElementById('dbDetailContent').innerHTML = html;
+  renderPosColumnPicker();   // pobla el panel después de que el DOM existe
 }
 
 function renderCompanyDetail(co, positions) {
