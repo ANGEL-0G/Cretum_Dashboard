@@ -63,6 +63,19 @@ const pct = (v) => {
   return num / 100;
 };
 
+// "9/25/2020" (M/D/YYYY) → "2020-09-25" (ISO). "" o inválido → null.
+const parseDate = (v) => {
+  if (v === null || v === undefined) return null;
+  const t = String(v).trim();
+  if (!t || ['NA', 'N/A', '-'].includes(t.toUpperCase())) return null;
+  const m = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!m) return null;
+  const [, mm, dd, yyyy] = m;
+  return `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+};
+
+// "3.88 years" → 3.88 (n() ya lo soporta porque parseFloat se detiene en " years")
+
 // Normaliza keys de un row del CSV (trim) para tolerar headers con espacios.
 function normRow(row) {
   const out = {};
@@ -143,6 +156,9 @@ async function main() {
         n(row['Commitment Actual']),
         n(row['DPI / MOIC']),
         pct(row['Carry']),
+        parseDate(row['Start']),
+        parseDate(row['End']),
+        n(row['Duration (years)']),
         invId, serId, cmpId,
       ];
 
@@ -157,8 +173,11 @@ async function main() {
            commitment_actual = $7,
            dpi_moic          = $8,
            carry_pct         = $9,
+           start_date        = $10,
+           end_date          = $11,
+           duration_years    = $12,
            updated_at        = NOW()
-         WHERE investor_id = $10 AND series_id = $11 AND company_id = $12`,
+         WHERE investor_id = $13 AND series_id = $14 AND company_id = $15`,
         params
       );
 
