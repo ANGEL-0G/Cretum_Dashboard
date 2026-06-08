@@ -3373,6 +3373,21 @@ function campExportYesware() {
   toast(`Exportados ${list.length} contactos para Yesware`);
 }
 
+/* ── Borrar los datos de un mes (el seleccionado en "Mes del reporte") ── */
+async function campDeleteMonth() {
+  const month = document.getElementById('campMonth').value;
+  if (!month) { toast('Elige primero el mes a borrar en "Mes del reporte"'); return; }
+  const periodo = month + '-01';
+  const n = campEngagement.filter(e => periodoKey(e.periodo) === month).length;
+  if (!n) { toast(`No hay datos cargados para ${periodoLabel(periodo)}`); return; }
+  if (!confirm(`¿Borrar los ${n} registros de ${periodoLabel(periodo)}?\nEsta acción no se puede deshacer (los contactos NO se borran, solo el engagement de ese mes).`)) return;
+  const { error } = await sb.from('campaign_engagement').delete().eq('periodo', periodo);
+  if (error) { toast('Error al borrar: ' + error.message); return; }
+  toast(`Borrado ${periodoLabel(periodo)} — ${n} registros`);
+  campaignsLoaded = false;
+  await loadCampaigns();
+}
+
 /* ── Generador de plantilla del correo ── */
 const CAMP_TPL = `<div><br /></div>
 <div><br /></div>
