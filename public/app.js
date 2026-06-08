@@ -1294,6 +1294,9 @@ const ORG_MODULES = {
     { view: 'db', icon: 'fa-database', title: 'Base de Datos',
       desc: 'Datos del proyecto MVP',
       iconClass: 'home-ico-mvp' },
+    { view: 'fundTrackers', icon: 'fa-chart-column', title: 'MVP Fund Trackers',
+      desc: 'Valuación de fondos por empresa subyacente',
+      iconClass: 'home-ico-trackers' },
     { view: 'altareturn', icon: 'fa-chart-line', title: 'Altareturn',
       desc: 'Ingesta y consulta de documentos del portafolio MVP',
       iconClass: 'home-ico-reports', disabled: true },
@@ -1308,8 +1311,9 @@ const ORG_NAV = {
     { view: 'dropbox', icon: 'fa-dropbox',     label: 'Dropbox', brand: true },
   ],
   mvp: [
-    { view: 'home', icon: 'fa-house',    label: 'Inicio' },
-    { view: 'db',   icon: 'fa-database', label: 'Base de Datos' },
+    { view: 'home',         icon: 'fa-house',         label: 'Inicio' },
+    { view: 'db',           icon: 'fa-database',      label: 'Base de Datos' },
+    { view: 'fundTrackers', icon: 'fa-chart-column',  label: 'Fund Trackers' },
   ],
 };
 
@@ -1461,16 +1465,19 @@ function switchView(view, isBack = false) {
   document.getElementById('pageDb').classList.toggle('active', view === 'db');
   document.getElementById('pageHome').classList.toggle('active', view === 'home');
   document.getElementById('pageDbx').classList.toggle('active', view === 'dropbox');
+  const pageFt = document.getElementById('pageFundTrackers');
+  if (pageFt) pageFt.classList.toggle('active', view === 'fundTrackers');
 
   highlightActiveNav();
 
   const orgPrefix = currentOrg ? ORG_NAMES[currentOrg] + ' · ' : '';
   const viewLabel = {
-    'selector': 'Empresas',
-    'home':     'Inicio',
-    'tasks':    'To Do',
-    'db':       'Base de Datos',
-    'dropbox':  'Dropbox',
+    'selector':     'Empresas',
+    'home':         'Inicio',
+    'tasks':        'To Do',
+    'db':           'Base de Datos',
+    'dropbox':      'Dropbox',
+    'fundTrackers': 'Fund Trackers',
   }[view] || '';
   document.getElementById('headerBrandText').textContent =
     view === 'selector' ? 'Cretum · Selector' : (orgPrefix + viewLabel);
@@ -1483,6 +1490,7 @@ function switchView(view, isBack = false) {
 
   if (view === 'db' && !dbLoaded) loadDb();
   if (view === 'dropbox') openDropbox();
+  if (view === 'fundTrackers') renderFundTrackerHome();
 
   syncHash();
 }
@@ -2670,3 +2678,246 @@ document.addEventListener('keydown', (e) => {
     closeDbxPreview();
   }
 });
+
+/* ============================================================================
+ * MVP FUND TRACKERS
+ * Refleja el "Valuation Overview" del Excel de cada fondo.
+ * Fund IV: data del archivo "Fund IV Tracker.xlsx" (cutoff 2026-08-06).
+ * Fund V : placeholder hasta recibir el Excel.
+ * ========================================================================= */
+
+const FUND_TRACKERS = {
+  fundIV: {
+    id: 'fundIV',
+    name: 'MVP All-Star Fund IV',
+    subtitle: 'Valuation Overview',
+    cutoff: '2026-08-06',
+    status: 'Preliminary, Unaudited',
+    confidentiality: 'CONFIDENTIAL',
+    columns: [
+      { key: 'company', label: 'Company' },
+      { key: 'invested', label: 'Investment Amount', type: 'money' },
+      { key: 'pct',      label: '% of Invested Capital', type: 'pct' },
+      { key: 'mtm',      label: 'Mark-to-Market Valuation', type: 'money' },
+      { key: 'moic',     label: 'MTM MOIC (x)', type: 'moic' },
+      { key: 'corpVal',  label: 'Corp. Valuation ($B)', type: 'num' },
+      { key: 'pps',      label: 'Current Mark (PPS)', type: 'num' },
+      { key: 'entry',    label: 'Weighted Avg. Entry (PPS)', type: 'num' },
+      { key: 'shares',   label: 'MVP Shares', type: 'int' },
+      { key: 'fdso',     label: 'Current FDSO (M)', type: 'num' }
+    ],
+    active: [
+      { company: 'RapidSOS, Inc.',                              invested: 11320276, pct: 0.088, mtm: 16669264, moic: 1.4725, corpVal: 1,      pps: 1.71,    entry: 1.16,    shares: 9761237,  fdso: 585.6 },
+      { company: 'BlueVoyant, Inc.',                            invested: 9074404,  pct: 0.071, mtm: 12215672, moic: 1.3462, corpVal: 1.728,  pps: 2.25,    entry: 1.68,    shares: 5391889,  fdso: 767.9 },
+      { company: 'Job and Talent Holding, Ltd',                 invested: 8011558,  pct: 0.062, mtm: 8959202,  moic: 1.1183, corpVal: 2.095,  pps: 23.61,   entry: 23.61,   shares: 339321,   fdso: 88.7  },
+      { company: 'Epic Games, Inc.',                            invested: 7838750,  pct: 0.061, mtm: 5593029,  moic: 0.7135, corpVal: 30.364, pps: 696.43,  entry: 976.06,  shares: 8031,     fdso: 43.6  },
+      { company: 'Space Exploration Technologies Corp. (X)',    invested: 7320000,  pct: 0.057, mtm: 19655325, moic: 2.6852, corpVal: 1770,   pps: 135,     entry: 50.28,   shares: 145595,   fdso: 2373.8},
+      { company: 'Platform Science, Inc.',                      invested: 5999999,  pct: 0.047, mtm: 10664808, moic: 1.7775, corpVal: 1.988,  pps: 10.91,   entry: 8.51,    shares: 3352634,  fdso: 182.1 },
+      { company: 'Patreon, Inc.',                               invested: 5603191,  pct: 0.044, mtm: 1460185,  moic: 0.2606, corpVal: 1.506,  pps: 15.71,   entry: 60.28,   shares: 92955,    fdso: 95.9  },
+      { company: 'Wefox Holding AG',                            invested: 5235977,  pct: 0.041, mtm: 8953521,  moic: 1.7100, corpVal: 7.144,  pps: 194.48,  entry: 113.71,  shares: 4453292,  fdso: 36.7  },
+      { company: 'Cohere',                                      invested: 4868890,  pct: 0.038, mtm: 8382848,  moic: 1.7217, corpVal: 7,      pps: 230.71,  entry: 134,     shares: 36335,    fdso: 30.3  },
+      { company: 'Hawkeye 360, Inc.',                           invested: 4816730,  pct: 0.037, mtm: 10856231, moic: 2.2539, corpVal: 1.823,  pps: 18.86,   entry: 8.37,    shares: 575622,   fdso: 96.7  },
+      { company: 'Cohesity Global, Inc.',                       invested: 4799372,  pct: 0.037, mtm: 4799372,  moic: 1.0000, corpVal: 6.389,  pps: 17,      entry: 17,      shares: 282316,   fdso: 375.8 },
+      { company: 'Trusted, Inc.',                               invested: 3970451,  pct: 0.031, mtm: 3204906,  moic: 0.8072, corpVal: 0.162,  pps: 0.28,    entry: 1.31,    shares: 7617310,  fdso: 582.1 },
+      { company: 'Forto Logistics GmbH & Co',                   invested: 3000000,  pct: 0.023, mtm: 2658222,  moic: 0.8861, corpVal: 1.785,  pps: 9198,    entry: 10380.62,shares: 289,      fdso: 0.2   },
+      { company: 'Revolut Ltd',                                 invested: 2061842,  pct: 0.016, mtm: 5466235,  moic: 2.6511, corpVal: 75,     pps: 1381.06, entry: 520.93,  shares: 3958,     fdso: 54.3  },
+      { company: 'Quantstamp, Inc.',                            invested: 1999995,  pct: 0.016, mtm: 2010394,  moic: 1.0052, corpVal: 1.024,  pps: 123.52,  entry: 122.88,  shares: 16276,    fdso: 8.3   },
+      { company: 'Groq, Inc.',                                  invested: 1506552,  pct: 0.012, mtm: 6677427,  moic: 4.4323, corpVal: 14.198, pps: 68.7,    entry: 15.5,    shares: 97197,    fdso: 206.7 },
+      { company: 'IONQ (Capella Space Corp.)',                  invested: 1366439,  pct: 0.011, mtm: 1209681,  moic: 0.8853, corpVal: 9.558,  pps: 27,      entry: 30.5,    shares: 44803,    fdso: 354   },
+      { company: 'Transfix, Inc.',                              invested: 1031895,  pct: 0.008, mtm: 1032549,  moic: 1.0006, corpVal: 0.559,  pps: 6.31,    entry: 6.31,    shares: 163637,   fdso: 88.6  },
+      { company: 'Loft Holdings, Ltd',                          invested: 1000017,  pct: 0.008, mtm: 859242,   moic: 0.8592, corpVal: 3.286,  pps: 66.06,   entry: 76.88,   shares: 13007,    fdso: 49.7  },
+      { company: 'Automattic, Inc.',                            invested: 904924,   pct: 0.007, mtm: 840508,   moic: 0.9288, corpVal: 3.312,  pps: 42.75,   entry: 46.03,   shares: 19661,    fdso: 77.5  },
+      { company: 'Figure AI Inc.',                              invested: 873359,   pct: 0.007, mtm: 12490436, moic: 14.3016,corpVal: 39,     pps: 194.93,  entry: 13.63,   shares: 64076,    fdso: 200.1 },
+      { company: 'Amazegroup, Inc.',                            invested: 786004,   pct: 0.006, mtm: 350505,   moic: 0.4459, corpVal: 0.015,  pps: 0.21,    entry: 0.47,    shares: 1666691,  fdso: 72.4  },
+      { company: 'Neutron Holdings, Inc., DBA Lime',            invested: 765039,   pct: 0.006, mtm: 3021661,  moic: 3.9497, corpVal: 4.061,  pps: 0.10,    entry: 0.03,    shares: 30307529, fdso: 40729.9},
+      { company: 'Space Exploration Technologies Corp.',        invested: 375300,   pct: 0.003, mtm: 8444250,  moic: 22.500, corpVal: 1770,   pps: 135,     entry: 6,       shares: 62550,    fdso: 2373.8},
+      { company: 'Payward Inc., DBA Kraken',                    invested: 248200,   pct: 0.002, mtm: 337347,   moic: 1.3592, corpVal: 20,     pps: 61.47,   entry: 45.23,   shares: 5488,     fdso: 325.4 },
+      { company: 'Turo, Inc.',                                  invested: 99750,    pct: 0.001, mtm: 99750,    moic: 1.0000, corpVal: 2.906,  pps: 21,      entry: 21,      shares: 4750,     fdso: 140.2 }
+    ],
+    activeTotal:      { invested: 94878914,  mtm: 156912570, moic: 1.6538 },
+    distributed: [
+      { company: 'Klarna Holding AB',           invested: 11297454, pct: 0.088, mtm: 9286151,  moic: 0.8220, corpVal: 6.292,  pps: 15.05, entry: 18.31, shares: 617020, fdso: 418.1 },
+      { company: 'Bolt Financial, Inc.',        invested: 7505795,  pct: 0.058, mtm: 401219,   moic: 0.0535, corpVal: 0.323,  pps: 1.47,  entry: 27.5,  shares: 272938, fdso: 219.5 },
+      { company: 'IONQ (Capella Space Corp.)',  invested: 5523644,  pct: 0.043, mtm: 7646205,  moic: 1.3843, corpVal: 14.945, pps: 42.22, entry: 30.5,  shares: 181110, fdso: 354   },
+      { company: 'Instacart',                   invested: 4482095,  pct: 0.035, mtm: 953588,   moic: 0.2128, corpVal: 8.134,  pps: 26.07, entry: 122.54,shares: 36578,  fdso: 312   },
+      { company: 'Groq, Inc.',                  invested: 3493454,  pct: 0.027, mtm: 15483888, moic: 4.4323, corpVal: 14.198, pps: 68.7,  entry: 15.5,  shares: 225384, fdso: 206.7 },
+      { company: 'Udemy',                       invested: 960094,   pct: 0.007, mtm: 308052,   moic: 0.3209, corpVal: 1.261,  pps: 9.22,  entry: 28.74, shares: 33406,  fdso: 136.8 },
+      { company: 'Figure AI Inc.',              invested: 426634,   pct: 0.003, mtm: 5446374,  moic: 12.7659,corpVal: 34.812, pps: 174,   entry: 13.63, shares: 31301,  fdso: 200.1 }
+    ],
+    overallTotal:     { invested: 128568084, mtm: 196438047, moic: 1.5279 }
+  },
+  fundV: {
+    id: 'fundV',
+    name: 'MVP All-Star Fund V',
+    subtitle: 'En desarrollo',
+    placeholder: true
+  }
+};
+
+function fmtTrackerCell(value, type) {
+  if (value === null || value === undefined || value === '') return '—';
+  if (type === 'money') {
+    return '$' + Math.round(value).toLocaleString('en-US');
+  }
+  if (type === 'pct') {
+    return (value * 100).toFixed(1) + '%';
+  }
+  if (type === 'moic') {
+    return value.toFixed(2) + 'x';
+  }
+  if (type === 'int') {
+    return Math.round(value).toLocaleString('en-US');
+  }
+  if (type === 'num') {
+    if (typeof value !== 'number') return value;
+    if (Math.abs(value) >= 100) return value.toLocaleString('en-US', { maximumFractionDigits: 2 });
+    return value.toFixed(2);
+  }
+  return value;
+}
+
+function moicClass(moic) {
+  if (moic == null) return '';
+  if (moic >= 1.05) return 'moic-pos';
+  if (moic <= 0.95) return 'moic-neg';
+  return 'moic-flat';
+}
+
+function renderFundTrackerHome() {
+  const sel = document.getElementById('ftSelector');
+  const det = document.getElementById('ftDetail');
+  if (!sel || !det) return;
+  sel.style.display = '';
+  det.style.display = 'none';
+  const cards = document.getElementById('ftCards');
+  if (!cards) return;
+  const funds = [FUND_TRACKERS.fundIV, FUND_TRACKERS.fundV];
+  cards.innerHTML = funds.map(f => {
+    const isPh = !!f.placeholder;
+    const stat = isPh
+      ? `<div class="ft-card-meta">En desarrollo</div>`
+      : `<div class="ft-card-meta">
+           <span><strong>${f.active.length}</strong> activas</span>
+           <span><strong>${f.distributed.length}</strong> distribuidas</span>
+           <span class="${moicClass(f.overallTotal.moic)}"><strong>${f.overallTotal.moic.toFixed(2)}x</strong> MOIC overall</span>
+         </div>`;
+    return `
+      <div class="ft-card${isPh ? ' ft-card-placeholder' : ''}" onclick="openFundTracker('${f.id}')">
+        <div class="ft-card-ico"><i class="fa-solid fa-chart-column"></i></div>
+        <div class="ft-card-body">
+          <div class="ft-card-title">${escapeHtml(f.name)}</div>
+          <div class="ft-card-sub">${escapeHtml(f.subtitle || '')}</div>
+          ${stat}
+        </div>
+        <div class="ft-card-chev"><i class="fa-solid fa-chevron-right"></i></div>
+      </div>`;
+  }).join('');
+}
+
+function openFundTracker(fundId) {
+  const f = FUND_TRACKERS[fundId];
+  if (!f) return;
+  const sel = document.getElementById('ftSelector');
+  const det = document.getElementById('ftDetail');
+  sel.style.display = 'none';
+  det.style.display = '';
+  renderFundTrackerDetail(fundId);
+}
+
+function closeFundTracker() {
+  renderFundTrackerHome();
+}
+
+function renderFundTrackerDetail(fundId) {
+  const f = FUND_TRACKERS[fundId];
+  const host = document.getElementById('ftDetailContent');
+  if (!f || !host) return;
+
+  if (f.placeholder) {
+    host.innerHTML = `
+      <div class="ft-header">
+        <div class="ft-name">${escapeHtml(f.name)}</div>
+        <div class="ft-sub">${escapeHtml(f.subtitle)}</div>
+      </div>
+      <div class="ft-empty">
+        <div class="ft-empty-ico"><i class="fa-solid fa-clock"></i></div>
+        <div class="ft-empty-h">Tracker en desarrollo</div>
+        <div>El Valuation Overview de ${escapeHtml(f.name)} se publicará en cuanto esté disponible el archivo oficial.</div>
+      </div>`;
+    return;
+  }
+
+  const cutoffPretty = new Date(f.cutoff + 'T00:00:00').toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  const renderRow = (row) => {
+    return `<tr>` + f.columns.map(c => {
+      const v = row[c.key];
+      const cls = c.key === 'moic' ? moicClass(v) : '';
+      const alignCls = c.type && c.type !== undefined && c.key !== 'company' ? ' ft-num' : '';
+      return `<td class="${cls}${alignCls}">${escapeHtml(fmtTrackerCell(v, c.type))}</td>`;
+    }).join('') + `</tr>`;
+  };
+
+  const renderTotalRow = (label, t) => {
+    const cells = f.columns.map(c => {
+      if (c.key === 'company') return `<td class="ft-total-lbl">${escapeHtml(label)}</td>`;
+      if (c.key === 'invested') return `<td class="ft-num">${fmtTrackerCell(t.invested, 'money')}</td>`;
+      if (c.key === 'mtm')      return `<td class="ft-num">${fmtTrackerCell(t.mtm, 'money')}</td>`;
+      if (c.key === 'moic')     return `<td class="ft-num ${moicClass(t.moic)}">${fmtTrackerCell(t.moic, 'moic')}</td>`;
+      return `<td></td>`;
+    }).join('');
+    return `<tr class="ft-total">${cells}</tr>`;
+  };
+
+  const head = f.columns.map(c => {
+    const alignCls = c.key === 'company' ? '' : ' ft-num';
+    return `<th class="${alignCls.trim()}">${escapeHtml(c.label)}</th>`;
+  }).join('');
+
+  const activeBody = f.active.map(renderRow).join('') + renderTotalRow('Total — Active', f.activeTotal);
+  const distBody   = f.distributed.map(renderRow).join('');
+  const overallRow = renderTotalRow('Total — Overall', f.overallTotal);
+
+  host.innerHTML = `
+    <div class="ft-header">
+      <div class="ft-name">${escapeHtml(f.name)} — ${escapeHtml(f.subtitle)}</div>
+      <div class="ft-sub">${escapeHtml(f.status)} · ${escapeHtml(f.confidentiality)} · Cutoff ${escapeHtml(cutoffPretty)}</div>
+      <div class="ft-stats">
+        <div>
+          <div class="ft-stat-l">Invested (overall)</div>
+          <div class="ft-stat-v">${fmtTrackerCell(f.overallTotal.invested, 'money')}</div>
+        </div>
+        <div>
+          <div class="ft-stat-l">MTM Valuation</div>
+          <div class="ft-stat-v">${fmtTrackerCell(f.overallTotal.mtm, 'money')}</div>
+        </div>
+        <div>
+          <div class="ft-stat-l">MOIC overall</div>
+          <div class="ft-stat-v ${moicClass(f.overallTotal.moic)}">${fmtTrackerCell(f.overallTotal.moic, 'moic')}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ft-section">
+      <div class="ft-section-title">Active Positions</div>
+      <div class="ft-table-wrap">
+        <table class="ft-table">
+          <thead><tr>${head}</tr></thead>
+          <tbody>${activeBody}</tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="ft-section">
+      <div class="ft-section-title">Distributed Positions</div>
+      <div class="ft-table-wrap">
+        <table class="ft-table">
+          <thead><tr>${head}</tr></thead>
+          <tbody>${distBody}${overallRow}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+window.openFundTracker = openFundTracker;
+window.closeFundTracker = closeFundTracker;

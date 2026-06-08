@@ -1085,6 +1085,8 @@ button,input,select{font-family:var(--font)}
 .home-ico-mvp{background:rgba(237,120,36,.12);color:#ED7824}
 .home-ico-dropbox{background:rgba(0,97,255,.12);color:#0061FF}
 .home-ico-reports{background:var(--gray-100);color:var(--gray-400)}
+.home-ico-trackers{background:rgba(176,125,32,.14);color:var(--amber)}
+[data-org="mvp"] .home-ico-trackers{background:rgba(237,120,36,.14);color:#ED7824}
 [data-theme="dark"] .home-ico-dropbox{background:rgba(0,97,255,.22);color:#5b9aff}
 
 .home-module-content{flex:0;min-width:0;width:100%}
@@ -1382,6 +1384,108 @@ button,input,select{font-family:var(--font)}
 ═══════════════════════════════════════════ */
 .page-db{display:none}
 .page-db.active{display:block;animation:fadeIn .3s ease}
+
+/* ── MVP FUND TRACKERS ─────────────────────────────────────────── */
+.page-ft{display:none}
+.page-ft.active{display:block;animation:fadeIn .3s ease}
+.ft-hero{
+  background:linear-gradient(135deg, var(--navy-pale), var(--navy-ghost));
+  border-radius:14px;padding:24px 28px;margin-bottom:20px;
+  border:1px solid var(--gray-200);
+}
+.ft-hero-title{font-size:22px;font-weight:600;color:var(--navy);margin-bottom:6px}
+.ft-hero-sub{font-size:13px;color:var(--gray-500);line-height:1.5}
+.ft-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.ft-card{
+  background:#fff;border:1px solid var(--gray-200);border-radius:14px;
+  padding:22px 20px;cursor:pointer;transition:all .18s ease;
+  display:flex;flex-direction:column;gap:12px;text-align:left;
+}
+.ft-card:hover{transform:translateY(-2px);border-color:var(--navy);box-shadow:0 6px 20px rgba(26,58,107,.08)}
+.ft-card.disabled{cursor:default;opacity:.55}
+.ft-card.disabled:hover{transform:none;border-color:var(--gray-200);box-shadow:none}
+.ft-card-head{display:flex;align-items:center;gap:12px}
+.ft-card-ico{
+  width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;
+  background:rgba(176,125,32,.14);color:var(--amber);font-size:18px;
+}
+[data-org="mvp"] .ft-card-ico{background:rgba(237,120,36,.14);color:#ED7824}
+.ft-card-title{font-size:15px;font-weight:600;color:var(--gray-900)}
+.ft-card-badge{
+  display:inline-block;font-size:10px;font-weight:600;padding:2px 8px;border-radius:6px;
+  background:var(--gray-100);color:var(--gray-500);text-transform:uppercase;letter-spacing:.4px;
+}
+.ft-card-meta{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--gray-500)}
+.ft-card-meta-i{display:flex;flex-direction:column;gap:1px}
+.ft-card-meta-l{font-size:10.5px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.4px}
+.ft-card-meta-v{font-size:13px;font-weight:500;color:var(--gray-900)}
+[data-theme="dark"] .ft-card{background:var(--gray-50)}
+
+/* Detalle del fondo */
+.ft-detail{display:none}
+.ft-detail.show{display:block}
+.ft-header{
+  background:#fff;border:1px solid var(--gray-200);border-radius:14px;
+  padding:20px 24px;margin:14px 0 18px;
+}
+[data-theme="dark"] .ft-header{background:var(--gray-50)}
+.ft-name{font-size:20px;font-weight:600;color:var(--navy);margin-bottom:4px}
+.ft-sub{font-size:12px;color:var(--gray-500);margin-bottom:14px}
+.ft-stats{display:flex;gap:24px;flex-wrap:wrap}
+.ft-stat-l{font-size:10.5px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px}
+.ft-stat-v{font-size:17px;font-weight:600;color:var(--gray-900)}
+.ft-empty{
+  background:var(--gray-50);border:1px dashed var(--gray-300);border-radius:12px;
+  padding:48px 24px;text-align:center;color:var(--gray-500);font-size:14px;
+}
+.ft-empty-ico{font-size:36px;color:var(--gray-300);margin-bottom:14px}
+.ft-empty-h{font-size:16px;font-weight:600;color:var(--gray-700);margin-bottom:6px}
+.moic-pos{color:#1b8a3a;font-weight:600}
+.moic-neg{color:#c0392b;font-weight:600}
+.moic-flat{color:var(--gray-700)}
+
+/* Estructura de cards en selector */
+.ft-card{flex-direction:row;align-items:center}
+.ft-card-body{flex:1;display:flex;flex-direction:column;gap:8px}
+.ft-card-sub{font-size:12px;color:var(--gray-500)}
+.ft-card-chev{color:var(--gray-300);font-size:16px;transition:color .18s ease,transform .18s ease}
+.ft-card:hover .ft-card-chev{color:var(--navy);transform:translateX(2px)}
+.ft-card-placeholder{opacity:.7}
+.ft-card-placeholder .ft-card-meta{font-style:italic}
+
+/* Secciones y tabla del detalle */
+.ft-section{
+  background:#fff;border:1px solid var(--gray-200);border-radius:14px;
+  padding:18px 20px;margin-bottom:18px;
+}
+[data-theme="dark"] .ft-section{background:var(--gray-50)}
+.ft-section-title{
+  font-size:13px;font-weight:600;color:var(--gray-700);
+  text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;
+}
+.ft-table-wrap{overflow-x:auto;margin:0 -4px}
+.ft-table{
+  width:100%;border-collapse:collapse;font-size:12.5px;
+}
+.ft-table th{
+  text-align:left;padding:10px 10px;font-weight:600;color:var(--gray-500);
+  font-size:11px;text-transform:uppercase;letter-spacing:.3px;
+  border-bottom:1px solid var(--gray-200);background:var(--gray-50);
+  position:sticky;top:0;
+}
+[data-theme="dark"] .ft-table th{background:var(--gray-100)}
+.ft-table th.ft-num,.ft-table td.ft-num{text-align:right;font-variant-numeric:tabular-nums}
+.ft-table td{
+  padding:8px 10px;border-bottom:1px solid var(--gray-100);color:var(--gray-900);
+  white-space:nowrap;
+}
+.ft-table tr:hover td{background:rgba(26,58,107,.03)}
+.ft-table .ft-total td{
+  font-weight:600;background:var(--gray-50);border-top:2px solid var(--gray-200);
+  border-bottom:none;
+}
+[data-theme="dark"] .ft-table .ft-total td{background:var(--gray-100)}
+.ft-total-lbl{color:var(--navy)}
 
 .db-toolbar{
   display:flex;align-items:center;gap:14px;margin-bottom:16px;flex-wrap:wrap;
@@ -2373,6 +2477,26 @@ button,input,select{font-family:var(--font)}
         </button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- VISTA: MVP FUND TRACKERS -->
+<div class="page page-ft" id="pageFundTrackers">
+  <!-- Selector de fondo -->
+  <div class="ft-selector" id="ftSelector">
+    <div class="ft-hero">
+      <div class="ft-hero-title">MVP Fund Trackers</div>
+      <div class="ft-hero-sub">Selecciona un fondo para ver el detalle por empresa subyacente.</div>
+    </div>
+    <div class="ft-cards" id="ftCards"></div>
+  </div>
+
+  <!-- Detalle de un fondo -->
+  <div class="ft-detail" id="ftDetail">
+    <button class="db-back" onclick="closeFundTracker()">
+      <i class="fa-solid fa-arrow-left"></i> Volver
+    </button>
+    <div id="ftDetailContent"></div>
   </div>
 </div>
 
