@@ -2474,6 +2474,34 @@ button,input,select{font-family:var(--font)}
     .camp-empty{padding:48px 20px;text-align:center;color:var(--ink-soft,#889)}
     .camp-empty i{font-size:34px;opacity:.4;display:block;margin-bottom:12px}
     [data-theme="dark"] .camp-name,[data-theme="dark"] .camp-month{background:var(--card,#1a2030)}
+    .camp-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    /* mini-modales de campañas */
+    .camp-modal-backdrop{position:fixed;inset:0;background:rgba(15,20,35,.45);display:none;align-items:center;justify-content:center;z-index:1000;padding:20px}
+    .camp-modal-backdrop.show{display:flex}
+    .camp-modal{background:var(--white,#fff);border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.25);width:100%;max-width:440px;max-height:90vh;overflow:auto;display:flex;flex-direction:column}
+    .camp-modal-wide{max-width:920px}
+    .camp-modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--line,#eee)}
+    .camp-modal-title{font-size:16px;font-weight:600;color:var(--navy)}
+    .camp-modal-title i{margin-right:8px}
+    .camp-modal-x{background:none;border:none;font-size:18px;color:var(--ink-soft,#889);cursor:pointer;padding:4px 8px}
+    .camp-modal-body{padding:18px 20px}
+    .camp-modal-foot{display:flex;gap:12px;align-items:center;justify-content:flex-end;padding:14px 20px;border-top:1px solid var(--line,#eee)}
+    .camp-f-lbl{display:block;font-size:12px;font-weight:500;color:var(--ink-soft,#667);margin:12px 0 4px}
+    .camp-f-lbl:first-child{margin-top:0}
+    .camp-f-inp{width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid var(--line,#dde3ec);border-radius:8px;font-size:14px;font-family:inherit;background:var(--white,#fff);color:inherit}
+    .camp-f-inp:focus{border-color:var(--navy);outline:none;box-shadow:0 0 0 3px var(--navy-pale)}
+    .camp-req{color:#c0392b}
+    .camp-opt{color:var(--ink-soft,#aab);font-weight:400}
+    .camp-modal-msg{margin-top:12px;font-size:13px;min-height:18px}
+    .camp-modal-msg.err{color:#c0392b}
+    .camp-tpl-grid{display:grid;grid-template-columns:300px 1fr;gap:20px}
+    .camp-tpl-actions{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+    .camp-tpl-hint{margin-top:14px;font-size:11px;color:var(--ink-soft,#889);line-height:1.5}
+    .camp-tpl-hint code{background:var(--navy-ghost);padding:1px 4px;border-radius:3px}
+    .camp-tpl-prev-lbl{font-size:12px;color:var(--ink-soft,#778);margin-bottom:6px}
+    #campTplFrame{width:100%;height:520px;border:1px solid var(--line,#e3e8f0);border-radius:8px;background:#f0f1f5}
+    [data-theme="dark"] .camp-modal,[data-theme="dark"] .camp-f-inp{background:var(--card,#1a2030)}
+    @media(max-width:760px){.camp-tpl-grid{grid-template-columns:1fr}#campTplFrame{height:360px}}
   </style>
   <div class="page page-db" id="pageCampaigns">
     <div class="db-toolbar">
@@ -2496,9 +2524,12 @@ button,input,select{font-family:var(--font)}
           <span>Arrastra aquí el CSV de Yesware, o haz clic para elegirlo</span>
           <input type="file" id="campFileInput" accept=".csv,text/csv" style="display:none" onchange="campHandleFiles(this.files)">
         </div>
-        <button class="cdd-btn camp-export" type="button" onclick="campExportExcel()">
-          <i class="fa-solid fa-file-excel"></i> Exportar Excel
-        </button>
+      </div>
+      <div class="camp-actions">
+        <button class="cdd-btn" type="button" onclick="campAddContactOpen()"><i class="fa-solid fa-user-plus"></i> Añadir contacto</button>
+        <button class="cdd-btn" type="button" onclick="campTemplateOpen()"><i class="fa-solid fa-envelope-open-text"></i> Plantilla del correo</button>
+        <button class="cdd-btn" type="button" onclick="campExportExcel()"><i class="fa-solid fa-file-excel"></i> Exportar Excel</button>
+        <button class="cdd-btn" type="button" onclick="campExportYesware()"><i class="fa-solid fa-paper-plane"></i> Exportar Yesware</button>
       </div>
       <div class="camp-preview" id="campPreview" style="display:none"></div>
     </div>
@@ -2513,6 +2544,64 @@ button,input,select{font-family:var(--font)}
     </div>
 
     <div id="campMatrix" class="camp-matrix"></div>
+  </div>
+
+  <!-- Modal: Añadir contacto -->
+  <div class="camp-modal-backdrop" id="campContactModal" onclick="if(event.target===this)campAddContactClose()">
+    <div class="camp-modal">
+      <div class="camp-modal-head">
+        <div class="camp-modal-title"><i class="fa-solid fa-user-plus"></i> Añadir contacto</div>
+        <button class="camp-modal-x" onclick="campAddContactClose()" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="camp-modal-body">
+        <label class="camp-f-lbl">Nombre <span class="camp-req">*</span></label>
+        <input id="campCNombre" class="camp-f-inp" placeholder="Nombre (sin apellido — el que ve Yesware)" autocomplete="off">
+        <label class="camp-f-lbl">Nombre completo <span class="camp-opt">opcional</span></label>
+        <input id="campCFull" class="camp-f-inp" placeholder="Nombre y apellidos (para la matriz)" autocomplete="off">
+        <label class="camp-f-lbl">Email <span class="camp-req">*</span></label>
+        <input id="campCEmail" class="camp-f-inp" type="email" placeholder="correo@dominio.com" autocomplete="off">
+        <label class="camp-f-lbl">Responsable <span class="camp-opt">opcional</span></label>
+        <input id="campCResp" class="camp-f-inp" placeholder="Quién le da seguimiento" autocomplete="off">
+        <div class="camp-modal-msg" id="campCMsg"></div>
+      </div>
+      <div class="camp-modal-foot">
+        <button class="camp-prev-cancel" onclick="campAddContactClose()">Cancelar</button>
+        <button class="btn-primary" onclick="campAddContactSave()"><i class="fa-solid fa-check"></i> Guardar contacto</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Generador de plantilla del correo -->
+  <div class="camp-modal-backdrop" id="campTplModal" onclick="if(event.target===this)campTemplateClose()">
+    <div class="camp-modal camp-modal-wide">
+      <div class="camp-modal-head">
+        <div class="camp-modal-title"><i class="fa-solid fa-envelope-open-text"></i> Plantilla del correo (Yesware)</div>
+        <button class="camp-modal-x" onclick="campTemplateClose()" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="camp-modal-body camp-tpl-grid">
+        <div class="camp-tpl-form">
+          <label class="camp-f-lbl">Mes</label>
+          <select id="campTplMes" class="camp-f-inp" onchange="campTemplateRender()"></select>
+          <label class="camp-f-lbl">Año</label>
+          <input id="campTplAnio" class="camp-f-inp" value="2026" oninput="campTemplateRender()">
+          <label class="camp-f-lbl">% del mes <span class="camp-opt">ej. +7.27 ó -2.5 — vacío = en blanco</span></label>
+          <input id="campTplMensual" class="camp-f-inp" placeholder="+7.27" oninput="campTemplateRender()">
+          <label class="camp-f-lbl">% acumulado del año</label>
+          <input id="campTplAcum" class="camp-f-inp" placeholder="+1.02" oninput="campTemplateRender()">
+          <label class="camp-f-lbl">Link al informe (Drive)</label>
+          <input id="campTplLink" class="camp-f-inp" placeholder="https://drive.google.com/..." oninput="campTemplateRender()">
+          <div class="camp-tpl-actions">
+            <button class="btn-primary" type="button" onclick="campTemplateCopy()"><i class="fa-solid fa-copy"></i> Copiar HTML</button>
+            <button class="cdd-btn" type="button" onclick="campTemplateDownload()"><i class="fa-solid fa-download"></i> Descargar .html</button>
+          </div>
+          <div class="camp-tpl-hint">Verde si + / rojo si − (automático). Los <code>{!Nombre}</code> son el campo de Yesware, no los toques. Deja un % vacío si quieres ese espacio en blanco.</div>
+        </div>
+        <div class="camp-tpl-preview">
+          <div class="camp-tpl-prev-lbl">Vista previa</div>
+          <iframe id="campTplFrame" title="Vista previa del correo"></iframe>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 

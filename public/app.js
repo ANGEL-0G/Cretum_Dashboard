@@ -3330,3 +3330,225 @@ async function campExportExcel() {
   XLSX.writeFile(wb, `cretum_campanas_${new Date().toISOString().slice(0, 10)}.xlsx`);
   toast(`Exportados ${rows.length} LPs a Excel`);
 }
+
+/* ── Añadir contacto (mini-modal) ── */
+function campAddContactOpen() {
+  ['campCNombre', 'campCFull', 'campCEmail', 'campCResp'].forEach(id => { document.getElementById(id).value = ''; });
+  const msg = document.getElementById('campCMsg'); msg.textContent = ''; msg.className = 'camp-modal-msg';
+  document.getElementById('campContactModal').classList.add('show');
+  setTimeout(() => document.getElementById('campCNombre').focus(), 60);
+}
+function campAddContactClose() { document.getElementById('campContactModal').classList.remove('show'); }
+
+async function campAddContactSave() {
+  const nombre = document.getElementById('campCNombre').value.trim();
+  const full   = document.getElementById('campCFull').value.trim();
+  const email  = document.getElementById('campCEmail').value.trim().toLowerCase();
+  const resp   = document.getElementById('campCResp').value.trim();
+  const msg    = document.getElementById('campCMsg');
+  const fail = (t) => { msg.textContent = t; msg.className = 'camp-modal-msg err'; };
+  if (!nombre || !email) return fail('Nombre y email son obligatorios.');
+  if (!email.includes('@')) return fail('El email no parece válido.');
+  const dup = campContacts.find(c => c.email === email);
+  if (dup) return fail(`Ya existe: ${dup.nombre_completo || dup.nombre || email}.`);
+  const { error } = await sb.from('lp_contacts').insert({
+    email, nombre, nombre_completo: full || nombre, responsable: resp || null, comentarios: null,
+  });
+  if (error) return fail('Error al guardar: ' + error.message);
+  toast(`Contacto añadido: ${nombre}`);
+  campAddContactClose();
+  campaignsLoaded = false;
+  await loadCampaigns();
+}
+
+/* ── Exportar contactos para Yesware (email + nombre, sin apellido) ── */
+function campExportYesware() {
+  if (!campContacts.length) { toast('No hay contactos para exportar'); return; }
+  const esc = (v) => { const s = v == null ? '' : String(v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const list = campContacts.slice().sort((a, b) => (a.nombre || a.email).localeCompare(b.nombre || b.email, 'es'));
+  const lines = ['email,first_name'];
+  list.forEach(c => lines.push(esc(c.email) + ',' + esc(c.nombre || '')));
+  const csv = '﻿' + lines.join('\r\n');
+  downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), `yesware_contactos_${new Date().toISOString().slice(0, 10)}.csv`);
+  toast(`Exportados ${list.length} contactos para Yesware`);
+}
+
+/* ── Generador de plantilla del correo ── */
+const CAMP_TPL = `<div><br /></div>
+<div><br /></div>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" bgcolor="#f0f1f5">
+<tbody>
+<tr>
+<td style="padding: 20px 0;" align="center">
+<table style="max-width: 600px; background: #ffffff; color: #333333; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin: 0 auto;" role="presentation" width="100%" cellspacing="0" cellpadding="0">
+<tbody>
+<tr>
+<td style="padding: 40px 30px;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+<tbody>
+<tr>
+<td style="padding-bottom: 20px; border-bottom: 1px solid #eeeeee;" align="center"><a href="http://www.cretumpartners.com" target="_blank" rel="noopener"> <img style="display: block; border: 0; max-width: 180px; height: auto;" src="https://images.ywcontent.com/c9b31bb447702d0be2d91c3d3396d47f1fbdb90f/7c76c59e-2aa0-481d-81e6-704ce3e6cae3" alt="Cretum Partners" width="180" /> </a></td>
+</tr>
+<tr>
+<td style="padding-top: 25px;" align="center">
+<h1 style="margin: 0; font-family: 'Georgia', serif; font-size: 24px; color: #17436b; font-weight: normal;">Informe Mensual: <strong>{{MES_ANIO}}</strong></h1>
+</td>
+</tr>
+</tbody>
+</table>
+<table role="presentation" width="100%">
+<tbody>
+<tr>
+<td style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 16px; line-height: 1.6; color: #555555; padding-top: 20px;">
+<p style="margin: 0 0 15px 0;">Hola {!Nombre},</p>
+<p style="margin: 0 0 20px 0;">Nos complace compartir con usted el desempeño mensual del fondo GVV de <strong>Cretum Capital Partners, LP</strong>.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<table style="background-color: #f8f9fa; border-radius: 6px; border: 1px solid #e9ecef;" role="presentation" width="100%">
+<tbody>
+<tr>
+<td style="padding: 20px; border-right: 1px solid #e9ecef;" align="center" width="50%">
+<p style="font-family: Helvetica, Arial, sans-serif; font-size: 12px; color: #777; text-transform: uppercase; margin: 0 0 5px 0; letter-spacing: 1px;">{{MES_UPPER}}</p>
+<p style="font-family: Georgia, serif; font-size: 24px; color: #17436b; font-weight: bold; margin: 0;"><span style="color: {{MENSUAL_COLOR}};">{{MENSUAL}}</span></p>
+</td>
+<td style="padding: 20px;" align="center" width="50%">
+<p style="font-family: Helvetica, Arial, sans-serif; font-size: 12px; color: #777; text-transform: uppercase; margin: 0 0 5px 0; letter-spacing: 1px;">Acumulado {{ANIO}}</p>
+<p style="font-family: Georgia, serif; font-size: 24px; color: #28a745; font-weight: bold; margin: 0;"><span style="color: {{ACUM_COLOR}};">{{ACUM}}</span></p>
+</td>
+</tr>
+</tbody>
+</table>
+<table role="presentation" width="100%">
+<tbody>
+<tr>
+<td style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 16px; line-height: 1.6; color: #555555; padding-top: 25px;">
+<p style="margin: 0 0 15px 0;">En este informe encontrará el desglose detallado de nuestra estrategia:</p>
+<ul style="margin: 0 0 25px 0; padding-left: 20px; color: #333;">
+<li style="margin-bottom: 8px;">Análisis del mercado para los próximos meses.</li>
+<li style="margin-bottom: 8px;">Factores clave del desempeño anual.</li>
+<li style="margin-bottom: 8px;">Sectores estratégicos de interés.</li>
+</ul>
+<p style="margin: 0 0 25px 0;">Para cualquier consulta o para agendar una reunión personal sobre el fondo, contáctenos directamente.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+<tbody>
+<tr>
+<td align="center">
+<table role="presentation" cellspacing="0" cellpadding="0">
+<tbody>
+<tr>
+<td style="border-radius: 50px;" align="center" bgcolor="#17436b"><a style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 16px; color: #ffffff; text-decoration: none; font-weight: bold; display: inline-block; padding: 14px 40px; border: 1px solid #17436b; border-radius: 50px;" href="{{LINK}}" target="_blank" rel="noopener"> Ver Informe Completo → </a></td>
+</tr>
+</tbody>
+</table>
+</td>
+</tr>
+</tbody>
+</table>
+<table role="presentation" width="100%">
+<tbody>
+<tr>
+<td height="40"><br /></td>
+</tr>
+</tbody>
+</table>
+<table style="border-top: 1px solid #eeeeee; padding-top: 20px;" role="presentation" width="100%">
+<tbody>
+<tr>
+<td style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #777777;">
+<p style="margin: 0 0 5px 0; color: #333;"><strong>Alejandro Creixell</strong></p>
+<p style="margin: 0 0 15px 0;">Chief Investment Officer | Cretum Partners</p>
+<p style="margin: 0 0 5px 0; font-size: 12px;"><strong>Estructura del Fondo</strong></p>
+<p style="margin: 0 0 20px 0; font-size: 12px;">Admin: NAV Consulting | Custodia: Pershing / BNY Mellon</p>
+<p style="font-size: 12px; margin: 0;">1015 Prol Paseo de la Reforma Av.<br />Punta Santa Fe, Tower A 22nd Floor<br />Ciudad de México, México</p>
+<p style="margin-top: 5px;"><a style="color: #17436b; text-decoration: none; font-size: 12px;" href="https://www.cretumpartners.com/">www.cretumpartners.com</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</td>
+</tr>
+</tbody>
+</table>
+<table style="max-width: 600px; margin: 0 auto;" role="presentation" width="100%" cellspacing="0" cellpadding="0">
+<tbody>
+<tr>
+<td style="padding: 20px; font-family: Helvetica, Arial, sans-serif; font-size: 10px; line-height: 1.4; color: #999999; text-align: center;">
+<p style="margin: 0 0 10px 0;">*Retorno mensual sujeto a verificación final por NAV Consulting (SSAE 18).</p>
+<p style="margin: 0;">Para cancelar futuras comunicaciones, responda a este correo con la palabra "Cancelar".<br />© {{ANIO}} Cretum Partners.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</td>
+</tr>
+</tbody>
+</table>`;
+
+function campTemplateOpen() {
+  const sel = document.getElementById('campTplMes');
+  if (!sel.options.length) {
+    sel.innerHTML = MESES_ES.map((m, i) => `<option value="${i}">${m}</option>`).join('');
+    sel.value = String(new Date().getMonth());
+  }
+  document.getElementById('campTplModal').classList.add('show');
+  campTemplateRender();
+}
+function campTemplateClose() { document.getElementById('campTplModal').classList.remove('show'); }
+
+// Color por signo: verde si + , rojo si − , azul si vacío/0
+function campPctColor(v) {
+  const t = String(v).trim();
+  if (!t) return '#17436b';
+  const num = parseFloat(t.replace(/[%+\s]/g, '').replace(',', '.'));
+  if (!Number.isFinite(num)) return '#17436b';
+  return num < 0 ? '#c0392b' : num > 0 ? '#28a745' : '#17436b';
+}
+// Formatea "+7.27" → "+7.27%"; vacío → "" (deja el espacio en blanco)
+function campPctFmt(v) {
+  const t = String(v).trim();
+  if (!t) return '';
+  return /%\s*$/.test(t) ? t : t + '%';
+}
+function campTemplateHtml() {
+  const mes  = MESES_ES[+document.getElementById('campTplMes').value] || '';
+  const anio = document.getElementById('campTplAnio').value.trim();
+  const mensual = document.getElementById('campTplMensual').value;
+  const acum    = document.getElementById('campTplAcum').value;
+  const link    = document.getElementById('campTplLink').value.trim() || '#';
+  const map = {
+    '{{MES_ANIO}}': `${mes} ${anio}`.trim(),
+    '{{MES_UPPER}}': mes.toUpperCase(),
+    '{{ANIO}}': anio,
+    '{{MENSUAL_COLOR}}': campPctColor(mensual),
+    '{{MENSUAL}}': campPctFmt(mensual),
+    '{{ACUM_COLOR}}': campPctColor(acum),
+    '{{ACUM}}': campPctFmt(acum),
+    '{{LINK}}': link,
+  };
+  let out = CAMP_TPL;
+  for (const [k, val] of Object.entries(map)) out = out.split(k).join(val);
+  return out;
+}
+function campTemplateRender() {
+  document.getElementById('campTplFrame').srcdoc =
+    `<!doctype html><html><head><meta charset="utf-8"></head><body style="margin:0">${campTemplateHtml()}</body></html>`;
+}
+function campTemplateCopy() {
+  const html = campTemplateHtml();
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(html).then(() => toast('HTML copiado al portapapeles')).catch(() => toast('No se pudo copiar — usa Descargar'));
+  } else {
+    toast('No se pudo copiar — usa Descargar .html');
+  }
+}
+function campTemplateDownload() {
+  const mes  = (MESES_ES[+document.getElementById('campTplMes').value] || 'campana').toLowerCase();
+  const anio = document.getElementById('campTplAnio').value.trim();
+  downloadBlob(new Blob([campTemplateHtml()], { type: 'text/html;charset=utf-8;' }), `campana_${mes}_${anio}.html`);
+}
