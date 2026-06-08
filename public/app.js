@@ -3192,6 +3192,7 @@ function renderCampaigns() {
     }).join('');
     return `<tr>
       <td class="camp-name">
+        <button class="camp-row-del" title="Borrar contacto (ej. canceló)" onclick="campDeleteContact('${c.email}')"><i class="fa-solid fa-xmark"></i></button>
         <div class="camp-name-main">${escapeHtml(c.nombre_completo || c.nombre || '—')}</div>
         <div class="camp-name-sub">${escapeHtml(c.email)}${c.responsable ? ' · ' + escapeHtml(c.responsable) : ''}</div>
       </td>
@@ -3384,6 +3385,20 @@ async function campDeleteMonth() {
   const { error } = await sb.from('campaign_engagement').delete().eq('periodo', periodo);
   if (error) { toast('Error al borrar: ' + error.message); return; }
   toast(`Borrado ${periodoLabel(periodo)} — ${n} registros`);
+  campaignsLoaded = false;
+  await loadCampaigns();
+}
+
+/* ── Borrar un contacto (ej. respondió "CANCELAR") — elimina LP + su historial ── */
+async function campDeleteContact(email) {
+  const c = campContacts.find(x => x.email === email);
+  if (!c) return;
+  if (!confirm(`¿Borrar a ${c.nombre_completo || c.nombre || email} de la lista de LPs?\nSe elimina el contacto y TODO su historial de campañas. Útil cuando responden "CANCELAR".`)) return;
+  const { error: e1 } = await sb.from('campaign_engagement').delete().eq('email', email);
+  if (e1) { toast('Error al borrar historial: ' + e1.message); return; }
+  const { error: e2 } = await sb.from('lp_contacts').delete().eq('email', email);
+  if (e2) { toast('Error al borrar contacto: ' + e2.message); return; }
+  toast(`Contacto borrado: ${c.nombre || email}`);
   campaignsLoaded = false;
   await loadCampaigns();
 }

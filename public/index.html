@@ -2477,6 +2477,9 @@ button,input,select{font-family:var(--font)}
     .camp-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
     .camp-btn-danger{color:#c0392b;border-color:rgba(192,57,43,.3)}
     .camp-btn-danger:hover{background:rgba(192,57,43,.08);border-color:#c0392b}
+    .camp-row-del{float:right;background:none;border:none;color:var(--ink-soft,#c2c8d2);cursor:pointer;font-size:13px;padding:0 2px;margin-left:6px;opacity:0;transition:opacity .12s}
+    .camp-table tbody tr:hover .camp-row-del{opacity:1}
+    .camp-row-del:hover{color:#c0392b}
     /* mini-modales de campañas */
     .camp-modal-backdrop{position:fixed;inset:0;background:rgba(15,20,35,.45);display:none;align-items:center;justify-content:center;z-index:1000;padding:20px}
     .camp-modal-backdrop.show{display:flex}
