@@ -1421,9 +1421,14 @@ button,input,select{font-family:var(--font)}
 .ft-card-meta-v{font-size:13px;font-weight:500;color:var(--gray-900)}
 [data-theme="dark"] .ft-card{background:var(--gray-50)}
 
-/* Detalle del fondo */
+/* Detalle del fondo — rompe el max-width del .page para que las tablas
+   muestren todas las columnas sin scroll horizontal */
 .ft-detail{display:none}
 .ft-detail.show{display:block}
+.ft-detail{
+  width:min(1400px, calc(100vw - 40px));
+  position:relative;left:50%;transform:translateX(-50%);
+}
 .ft-header{
   background:#fff;border:1px solid var(--gray-200);border-radius:14px;
   padding:20px 24px;margin:14px 0 18px;
