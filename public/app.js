@@ -3318,30 +3318,38 @@ function campDrop(e) {
   campHandleFiles(e.dataTransfer.files);
 }
 
-/* ── Exportar matriz a Excel ── */
+/* ── Exportar matriz a Excel — MISMO formato que el Sheets (3 sub-columnas/mes) ── */
 async function campExportExcel() {
   if (!campContacts.length) { toast('No hay datos para exportar'); return; }
   const periods = [...new Set(campEngagement.map(e => periodoKey(e.periodo)))].sort();
   const lvl = new Map();
   campEngagement.forEach(e => lvl.set(`${e.email}|${periodoKey(e.periodo)}`, e.nivel));
-  const header = ['Email', 'Nombre Completo', 'Responsable', 'Comentarios',
-    ...periods.map(periodoLabel), 'Meses Vistos'];
+
+  // Fila 1 de encabezado: 6 columnas fijas + cada mes ocupando 3 columnas
+  const h1 = ['Email', 'Nombre', 'Nombre Completo (Para Registro)', 'Responsable (s) Registrados', 'Comentarios', 'Meses Vistos'];
+  periods.forEach(p => h1.push(periodoLabel(p), '', ''));
+
   const contacts = campContacts.slice().sort((a, b) =>
     (a.nombre_completo || a.email).localeCompare(b.nombre_completo || b.email, 'es'));
   const rows = contacts.map(c => {
     let vistos = 0;
-    const cells = periods.map(p => {
+    const cells = [];
+    periods.forEach(p => {
       const n = lvl.get(`${c.email}|${p}`) || 0;
       if (n >= 1) vistos++;
-      return nivelGlyph(n);
+      cells.push(n === 1 ? '⚡' : '', n === 2 ? '⚡⚡' : '', n === 3 ? '⚡⚡⚡' : '');
     });
-    return [c.email, c.nombre_completo || c.nombre || '', c.responsable || '', c.comentarios || '', ...cells, vistos];
+    return [c.email, c.nombre || '', c.nombre_completo || '', c.responsable || '', c.comentarios || '', vistos, ...cells];
   });
+
   await loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
-  const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
-  ws['!cols'] = header.map((h, i) => ({ wch: i < 4 ? Math.max(h.length + 2, 18) : 7 }));
+  const ws = XLSX.utils.aoa_to_sheet([h1, ...rows]);
+  // Combina las 3 celdas del encabezado de cada mes (como en tu Sheets)
+  ws['!merges'] = periods.map((p, i) => ({ s: { r: 0, c: 6 + i * 3 }, e: { r: 0, c: 6 + i * 3 + 2 } }));
+  ws['!cols'] = [{ wch: 30 }, { wch: 14 }, { wch: 28 }, { wch: 24 }, { wch: 30 }, { wch: 7 },
+    ...periods.flatMap(() => [{ wch: 5 }, { wch: 5 }, { wch: 5 }])];
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Bloques de Envios LP's");
+  XLSX.utils.book_append_sheet(wb, ws, 'LPs');
   XLSX.writeFile(wb, `cretum_campanas_${new Date().toISOString().slice(0, 10)}.xlsx`);
   toast(`Exportados ${rows.length} LPs a Excel`);
 }
