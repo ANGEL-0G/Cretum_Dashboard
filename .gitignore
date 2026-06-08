@@ -28,3 +28,8 @@ npm-debug.log*
 # Temp
 *.tmp
 *.bak
+
+# Datos sensibles de LPs (PII) — no versionar
+_seed_*.sql
+_seed_gen.mjs
+cretum_seed_campanas.sql
