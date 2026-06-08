@@ -1390,6 +1390,9 @@ const ORG_MODULES = {
     { view: 'dropbox', icon: 'fa-dropbox', iconBrand: true, title: 'Dropbox',
       desc: 'Archivos compartidos del equipo desde Dropbox',
       iconClass: 'home-ico-dropbox' },
+    { view: 'campaigns', icon: 'fa-bolt', title: 'Campañas',
+      desc: 'Seguimiento de aperturas e interacción de tus campañas de Yesware',
+      iconClass: 'home-ico-reports', adminOnly: true },
     { view: 'reports', icon: 'fa-chart-pie', title: 'Reportes',
       desc: 'Reportes personalizados por LP — Altareturn + Salesforce',
       iconClass: 'home-ico-reports', disabled: true },
@@ -1413,6 +1416,7 @@ const ORG_NAV = {
     { view: 'tasks',   icon: 'fa-list-check',  label: 'To Do Dashboard' },
     { view: 'db',      icon: 'fa-database',    label: 'Base de Datos' },
     { view: 'dropbox', icon: 'fa-dropbox',     label: 'Dropbox', brand: true },
+    { view: 'campaigns', icon: 'fa-bolt',      label: 'Campañas', adminOnly: true },
   ],
   mvp: [
     { view: 'home',         icon: 'fa-house',         label: 'Inicio' },
@@ -1502,7 +1506,8 @@ function switchToOtherOrg() {
 function renderHomeModules() {
   const el = document.getElementById('homeModules');
   if (!el || !currentOrg) return;
-  const mods = ORG_MODULES[currentOrg] || [];
+  const isAdmin = currentProfile?.role === 'admin';
+  const mods = (ORG_MODULES[currentOrg] || []).filter(m => !m.adminOnly || isAdmin);
   el.innerHTML = mods.map(m => `
     <button class="home-module${m.disabled ? ' disabled' : ''}"${m.disabled ? ' disabled aria-disabled="true"' : ` onclick="switchView('${m.view}')"`}>
       ${m.disabled ? '<span class="home-module-badge">Pronto</span>' : ''}
@@ -1528,7 +1533,8 @@ function renderHomeModules() {
 function renderNavList() {
   const list = document.getElementById('navList');
   if (!list) return;
-  const items = currentOrg ? ORG_NAV[currentOrg] : [];
+  const isAdmin = currentProfile?.role === 'admin';
+  const items = (currentOrg ? ORG_NAV[currentOrg] : []).filter(it => !it.adminOnly || isAdmin);
   list.innerHTML = items.map(it => `
     <button class="nav-item" data-view="${it.view}" onclick="switchView('${it.view}')">
       <i class="${it.brand ? 'fa-brands' : 'fa-solid'} ${it.icon}"></i>
@@ -1571,6 +1577,7 @@ function switchView(view, isBack = false) {
   document.getElementById('pageDbx').classList.toggle('active', view === 'dropbox');
   const pageFt = document.getElementById('pageFundTrackers');
   if (pageFt) pageFt.classList.toggle('active', view === 'fundTrackers');
+  document.getElementById('pageCampaigns').classList.toggle('active', view === 'campaigns');
 
   highlightActiveNav();
 
@@ -1582,6 +1589,7 @@ function switchView(view, isBack = false) {
     'db':           'Base de Datos',
     'dropbox':      'Dropbox',
     'fundTrackers': 'Fund Trackers',
+    'campaigns':    'Campañas',
   }[view] || '';
   document.getElementById('headerBrandText').textContent =
     view === 'selector' ? 'Cretum · Selector' : (orgPrefix + viewLabel);
@@ -1599,6 +1607,7 @@ function switchView(view, isBack = false) {
   if (view === 'db' && !dbLoaded) loadDb();
   if (view === 'dropbox') openDropbox();
   if (view === 'fundTrackers') renderFundTrackerHome();
+  if (view === 'campaigns') loadCampaigns();
 
   syncHash();
 }
@@ -1627,7 +1636,8 @@ function applyRoute() {
       renderNavList();
       viewHistory = [];
     }
-    const allowed = (ORG_NAV[org] || []).some(it => it.view === view);
+    const isAdmin = currentProfile?.role === 'admin';
+    const allowed = (ORG_NAV[org] || []).some(it => it.view === view && (!it.adminOnly || isAdmin));
     switchView(allowed ? view : 'home', true);
   } else {
     switchView('selector', true);
@@ -3041,3 +3051,282 @@ function renderFundTrackerDetail(fundId) {
 
 window.openFundTracker = openFundTracker;
 window.closeFundTracker = closeFundTracker;
+
+/* ═══════════════════════════════════════════
+   CAMPAÑAS (Yesware) — solo-admin
+   Sube el CSV que exporta Yesware, calcula el nivel ⚡ por LP y mes,
+   y muestra la matriz tipo "Bloques de Envios LP's GVV".
+   Niveles (acumulativos):
+     1 ⚡   = abrió           (touchN_opened)
+     2 ⚡⚡  = abrió + click    (touchN_clicked)
+     3 ⚡⚡⚡ = abrió+click+resp (touchN_replied) — OOO y llamadas NO cuentan
+═══════════════════════════════════════════ */
+let campaignsLoaded = false;
+let campContacts = [];          // [{email, nombre, nombre_completo, responsable, comentarios}]
+let campEngagement = [];        // [{email, periodo, nivel, ...}]
+let campPending = null;         // upload pendiente de confirmar
+
+const MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                  'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+// 'YYYY-MM-DD' o 'YYYY-MM' → "Abril 2026"
+function periodoLabel(p) {
+  const [y, m] = String(p).split('-');
+  return `${MESES_ES[(+m) - 1] || m} ${y}`;
+}
+// 'YYYY-MM-DD' → 'YYYY-MM' (clave de agrupación)
+const periodoKey = (p) => String(p).slice(0, 7);
+const nivelGlyph = (n) => n >= 3 ? '⚡⚡⚡' : n >= 2 ? '⚡⚡' : n >= 1 ? '⚡' : '';
+
+/* ── Parser CSV robusto (respeta comas dentro de comillas) ── */
+function parseCSV(text) {
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  const rows = []; let row = [], field = '', inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQ) {
+      if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else inQ = false; }
+      else field += c;
+    } else {
+      if (c === '"') inQ = true;
+      else if (c === ',') { row.push(field); field = ''; }
+      else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+      else if (c !== '\r') field += c;
+    }
+  }
+  if (field.length || row.length) { row.push(field); rows.push(row); }
+  return rows.filter(r => r.length > 1 || (r.length === 1 && r[0] !== ''));
+}
+
+/* ── CSV de Yesware → [{email, opened, clicked, replied, nivel}] ── */
+function deriveEngagement(rows) {
+  if (!rows.length) return [];
+  const header = rows[0].map(h => h.trim().toLowerCase());
+  const emailIdx = header.indexOf('email');
+  if (emailIdx < 0) throw new Error('El CSV no tiene columna "email"');
+  const cols = (re) => header.map((h, i) => re.test(h) ? i : -1).filter(i => i >= 0);
+  const openCols  = cols(/^touch\d+_opened$/);
+  const clickCols = cols(/^touch\d+_clicked$/);
+  const replyCols = cols(/^touch\d+_replied$/);   // NO matchea touchN_ooo_replied
+  if (!openCols.length) throw new Error('El CSV no parece de Yesware (faltan columnas touchN_opened)');
+  const isTrue = (v) => String(v ?? '').trim().toLowerCase() === 'true';
+  const out = [];
+  for (let r = 1; r < rows.length; r++) {
+    const cells = rows[r];
+    const email = (cells[emailIdx] || '').trim().toLowerCase();
+    if (!email) continue;
+    const opened  = openCols.some(i => isTrue(cells[i]));
+    const clicked = clickCols.some(i => isTrue(cells[i]));
+    const replied = replyCols.some(i => isTrue(cells[i]));
+    out.push({ email, opened, clicked, replied, nivel: replied ? 3 : clicked ? 2 : opened ? 1 : 0 });
+  }
+  return out;
+}
+
+/* ── Carga de datos ── */
+async function loadCampaigns() {
+  if (currentProfile?.role !== 'admin') return;   // defensa extra
+  if (campaignsLoaded) { renderCampaigns(); return; }
+  const matrix = document.getElementById('campMatrix');
+  if (matrix) matrix.innerHTML = '<div class="db-loading"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
+  try {
+    const [{ data: contacts, error: e1 }, { data: eng, error: e2 }] = await Promise.all([
+      sb.from('lp_contacts').select('email, nombre, nombre_completo, responsable, comentarios'),
+      sb.from('campaign_engagement').select('email, periodo, nivel, opened, clicked, replied'),
+    ]);
+    if (e1) throw e1; if (e2) throw e2;
+    campContacts = contacts || [];
+    campEngagement = eng || [];
+    campaignsLoaded = true;
+    // Default del selector de mes = mes actual
+    const sel = document.getElementById('campMonth');
+    if (sel && !sel.value) sel.value = new Date().toISOString().slice(0, 7);
+    renderCampaigns();
+  } catch (err) {
+    console.error('[campaigns]', err);
+    if (matrix) matrix.innerHTML = `<div class="db-loading">Error al cargar: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+/* ── Render de la matriz contactos × meses ── */
+function renderCampaigns() {
+  const matrix = document.getElementById('campMatrix');
+  if (!matrix) return;
+
+  // Periodos presentes (orden cronológico)
+  const periods = [...new Set(campEngagement.map(e => periodoKey(e.periodo)))].sort();
+  // mapa email|periodo → nivel
+  const lvl = new Map();
+  campEngagement.forEach(e => lvl.set(`${e.email}|${periodoKey(e.periodo)}`, e.nivel));
+
+  // Filtro de búsqueda
+  const q = (document.getElementById('campSearch')?.value || '').trim().toLowerCase();
+  let contacts = campContacts.slice().sort((a, b) =>
+    (a.nombre_completo || a.email).localeCompare(b.nombre_completo || b.email, 'es'));
+  if (q) contacts = contacts.filter(c =>
+    (c.nombre_completo || '').toLowerCase().includes(q) ||
+    (c.email || '').toLowerCase().includes(q) ||
+    (c.responsable || '').toLowerCase().includes(q));
+
+  document.getElementById('campCount').textContent =
+    `${contacts.length} LP${contacts.length === 1 ? '' : 's'} · ${periods.length} mes${periods.length === 1 ? '' : 'es'}`;
+
+  if (!campContacts.length) {
+    matrix.innerHTML = `<div class="camp-empty">
+      <i class="fa-solid fa-inbox"></i>
+      <p>Aún no hay LPs cargados. Pídeme la carga inicial del histórico, o sube tu primer CSV de Yesware arriba.</p>
+    </div>`;
+    return;
+  }
+
+  const headCells = periods.map(p =>
+    `<th class="camp-mth" title="${periodoLabel(p)}">${MESES_ES[(+p.slice(5, 7)) - 1].slice(0, 3)}<span class="camp-yr">${p.slice(2, 4)}</span></th>`
+  ).join('');
+
+  const bodyRows = contacts.map(c => {
+    let vistos = 0;
+    const cells = periods.map(p => {
+      const n = lvl.get(`${c.email}|${p}`) || 0;
+      if (n >= 1) vistos++;
+      return `<td class="camp-cell camp-l${n}">${nivelGlyph(n)}</td>`;
+    }).join('');
+    return `<tr>
+      <td class="camp-name">
+        <div class="camp-name-main">${escapeHtml(c.nombre_completo || c.nombre || '—')}</div>
+        <div class="camp-name-sub">${escapeHtml(c.email)}${c.responsable ? ' · ' + escapeHtml(c.responsable) : ''}</div>
+      </td>
+      ${cells}
+      <td class="camp-total">${vistos}</td>
+    </tr>`;
+  }).join('');
+
+  matrix.innerHTML = `<div class="camp-table-scroll">
+    <table class="camp-table">
+      <thead><tr>
+        <th class="camp-name camp-name-h">LP</th>
+        ${headCells}
+        <th class="camp-total camp-total-h" title="Meses con interacción">Vistos</th>
+      </tr></thead>
+      <tbody>${bodyRows}</tbody>
+    </table>
+  </div>`;
+}
+
+/* ── Carga de CSV (drag-drop o file picker) ── */
+function campHandleFiles(files) {
+  const file = files && files[0];
+  if (!file) return;
+  const month = document.getElementById('campMonth').value;
+  if (!month) { toast('Elige primero el mes del reporte'); return; }
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const eng = deriveEngagement(parseCSV(String(reader.result)));
+      if (!eng.length) { toast('El CSV no trae filas con email'); return; }
+      const known = new Set(campContacts.map(c => c.email));
+      const matched = eng.filter(e => known.has(e.email));
+      const nuevos  = eng.filter(e => !known.has(e.email) && e.nivel >= 1);
+      campPending = { periodo: month + '-01', label: file.name, rows: matched, nuevos };
+      campShowPreview(eng, matched, nuevos, month);
+    } catch (err) {
+      console.error('[campaigns csv]', err);
+      toast('Error al leer el CSV: ' + err.message);
+    }
+  };
+  reader.onerror = () => toast('No se pudo leer el archivo');
+  reader.readAsText(file, 'utf-8');
+}
+
+function campShowPreview(eng, matched, nuevos, month) {
+  const t = { 1: 0, 2: 0, 3: 0 };
+  matched.forEach(e => { if (e.nivel >= 1) t[e.nivel]++; });
+  const box = document.getElementById('campPreview');
+  box.style.display = '';
+  box.innerHTML = `
+    <div class="camp-prev-head">
+      <i class="fa-solid fa-circle-check"></i>
+      Reporte leído para <strong>${periodoLabel(month + '-01')}</strong> — ${eng.length} destinatarios
+    </div>
+    <div class="camp-prev-stats">
+      <div class="camp-stat camp-l1"><span class="camp-stat-n">${t[1]}</span> ⚡ abrieron</div>
+      <div class="camp-stat camp-l2"><span class="camp-stat-n">${t[2]}</span> ⚡⚡ + click</div>
+      <div class="camp-stat camp-l3"><span class="camp-stat-n">${t[3]}</span> ⚡⚡⚡ + respondieron</div>
+      <div class="camp-stat"><span class="camp-stat-n">${matched.length}</span> emparejados con LPs</div>
+    </div>
+    ${nuevos.length ? `<details class="camp-prev-new">
+      <summary>⚠️ ${nuevos.length} con interacción que NO están en tu lista de LPs (no se guardarán)</summary>
+      <div class="camp-prev-new-list">${nuevos.map(e => `${escapeHtml(e.email)} <span class="camp-l${e.nivel}">${nivelGlyph(e.nivel)}</span>`).join('<br>')}</div>
+    </details>` : ''}
+    <div class="camp-prev-actions">
+      <button class="btn-primary" onclick="campConfirmUpload()"><i class="fa-solid fa-floppy-disk"></i> Guardar ${periodoLabel(month + '-01')}</button>
+      <button class="camp-prev-cancel" onclick="campCancelUpload()">Cancelar</button>
+    </div>`;
+}
+
+function campCancelUpload() {
+  campPending = null;
+  const box = document.getElementById('campPreview');
+  box.style.display = 'none';
+  box.innerHTML = '';
+  const inp = document.getElementById('campFileInput');
+  if (inp) inp.value = '';
+}
+
+async function campConfirmUpload() {
+  if (!campPending) return;
+  const { periodo, label, rows } = campPending;
+  const payload = rows.map(e => ({
+    email: e.email, periodo,
+    opened: e.opened, clicked: e.clicked, replied: e.replied, nivel: e.nivel,
+    campaign: label, uploaded_by: currentUser, uploaded_at: new Date().toISOString(),
+  }));
+  try {
+    const { error } = await sb.from('campaign_engagement')
+      .upsert(payload, { onConflict: 'email,periodo' });
+    if (error) throw error;
+    toast(`Guardado ${periodoLabel(periodo)} — ${payload.length} LPs actualizados`);
+    campCancelUpload();
+    campaignsLoaded = false;
+    await loadCampaigns();
+  } catch (err) {
+    console.error('[campaigns upsert]', err);
+    toast('Error al guardar: ' + err.message);
+  }
+}
+
+/* ── Drag & drop ── */
+function campDragOver(e) { e.preventDefault(); document.getElementById('campDrop').classList.add('drag'); }
+function campDragLeave() { document.getElementById('campDrop').classList.remove('drag'); }
+function campDrop(e) {
+  e.preventDefault();
+  document.getElementById('campDrop').classList.remove('drag');
+  campHandleFiles(e.dataTransfer.files);
+}
+
+/* ── Exportar matriz a Excel ── */
+async function campExportExcel() {
+  if (!campContacts.length) { toast('No hay datos para exportar'); return; }
+  const periods = [...new Set(campEngagement.map(e => periodoKey(e.periodo)))].sort();
+  const lvl = new Map();
+  campEngagement.forEach(e => lvl.set(`${e.email}|${periodoKey(e.periodo)}`, e.nivel));
+  const header = ['Email', 'Nombre Completo', 'Responsable', 'Comentarios',
+    ...periods.map(periodoLabel), 'Meses Vistos'];
+  const contacts = campContacts.slice().sort((a, b) =>
+    (a.nombre_completo || a.email).localeCompare(b.nombre_completo || b.email, 'es'));
+  const rows = contacts.map(c => {
+    let vistos = 0;
+    const cells = periods.map(p => {
+      const n = lvl.get(`${c.email}|${p}`) || 0;
+      if (n >= 1) vistos++;
+      return nivelGlyph(n);
+    });
+    return [c.email, c.nombre_completo || c.nombre || '', c.responsable || '', c.comentarios || '', ...cells, vistos];
+  });
+  await loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
+  const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+  ws['!cols'] = header.map((h, i) => ({ wch: i < 4 ? Math.max(h.length + 2, 18) : 7 }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Bloques de Envios LP's");
+  XLSX.writeFile(wb, `cretum_campanas_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  toast(`Exportados ${rows.length} LPs a Excel`);
+}
