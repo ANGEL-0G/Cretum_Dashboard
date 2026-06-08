@@ -2787,7 +2787,8 @@ function renderFundTrackerHome() {
   const sel = document.getElementById('ftSelector');
   const det = document.getElementById('ftDetail');
   if (!sel || !det) return;
-  sel.style.display = '';
+  sel.style.display = 'block';
+  det.classList.remove('show');
   det.style.display = 'none';
   const cards = document.getElementById('ftCards');
   if (!cards) return;
@@ -2820,8 +2821,10 @@ function openFundTracker(fundId) {
   const sel = document.getElementById('ftSelector');
   const det = document.getElementById('ftDetail');
   sel.style.display = 'none';
-  det.style.display = '';
+  det.style.display = 'block';
+  det.classList.add('show');
   renderFundTrackerDetail(fundId);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function closeFundTracker() {
