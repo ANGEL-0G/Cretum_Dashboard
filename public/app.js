@@ -3131,7 +3131,7 @@ async function loadCampaigns() {
   if (matrix) matrix.innerHTML = '<div class="db-loading"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
   try {
     const [{ data: contacts, error: e1 }, { data: eng, error: e2 }] = await Promise.all([
-      sb.from('lp_contacts').select('email, nombre, nombre_completo, responsable, comentarios'),
+      sb.from('lp_contacts').select('email, nombre, nombre_completo, responsable, comentarios, cancelado'),
       sb.from('campaign_engagement').select('email, periodo, nivel, opened, clicked, replied'),
     ]);
     if (e1) throw e1; if (e2) throw e2;
@@ -3179,8 +3179,13 @@ function renderCampaigns() {
     return;
   }
 
-  const headCells = periods.map(p =>
-    `<th class="camp-mth" title="${periodoLabel(p)}">${MESES_ES[(+p.slice(5, 7)) - 1].slice(0, 3)}<span class="camp-yr">${p.slice(2, 4)}</span></th>`
+  // Header fila 1: cada mes agrupa 3 sub-columnas (un nivel ⚡ cada una)
+  const grpCells = periods.map(p =>
+    `<th class="camp-mth-grp" colspan="3" title="${periodoLabel(p)}">${MESES_ES[(+p.slice(5, 7)) - 1]} '${p.slice(2, 4)}</th>`
+  ).join('');
+  // Header fila 2: las sub-columnas ⚡ / ⚡⚡ / ⚡⚡⚡
+  const subCells = periods.map(() =>
+    `<th class="camp-sub camp-mth-start camp-l1">⚡</th><th class="camp-sub camp-l2">⚡⚡</th><th class="camp-sub camp-l3">⚡⚡⚡</th>`
   ).join('');
 
   const bodyRows = contacts.map(c => {
@@ -3188,12 +3193,18 @@ function renderCampaigns() {
     const cells = periods.map(p => {
       const n = lvl.get(`${c.email}|${p}`) || 0;
       if (n >= 1) vistos++;
-      return `<td class="camp-cell camp-l${n}">${nivelGlyph(n)}</td>`;
+      return `<td class="camp-cell camp-mth-start camp-l1">${n === 1 ? '⚡' : ''}</td>` +
+             `<td class="camp-cell camp-l2">${n === 2 ? '⚡⚡' : ''}</td>` +
+             `<td class="camp-cell camp-l3">${n === 3 ? '⚡⚡⚡' : ''}</td>`;
     }).join('');
-    return `<tr>
+    const nombre = escapeHtml(c.nombre_completo || c.nombre || '—');
+    return `<tr class="${c.cancelado ? 'camp-row-cancel' : ''}">
       <td class="camp-name">
-        <button class="camp-row-del" title="Borrar contacto (ej. canceló)" onclick="campDeleteContact('${c.email}')"><i class="fa-solid fa-xmark"></i></button>
-        <div class="camp-name-main">${escapeHtml(c.nombre_completo || c.nombre || '—')}</div>
+        <span class="camp-row-acts">
+          <button class="camp-row-act" title="${c.cancelado ? 'Reactivar (quitar cancelado)' : 'Marcar como cancelado'}" onclick="campToggleCancel('${c.email}')"><i class="fa-solid ${c.cancelado ? 'fa-rotate-left' : 'fa-ban'}"></i></button>
+          <button class="camp-row-act camp-row-del" title="Borrar contacto" onclick="campDeleteContact('${c.email}')"><i class="fa-solid fa-xmark"></i></button>
+        </span>
+        <div class="camp-name-main">${nombre}${c.cancelado ? ' <span class="camp-cancel-badge">CANCELÓ</span>' : ''}</div>
         <div class="camp-name-sub">${escapeHtml(c.email)}${c.responsable ? ' · ' + escapeHtml(c.responsable) : ''}</div>
       </td>
       ${cells}
@@ -3203,11 +3214,14 @@ function renderCampaigns() {
 
   matrix.innerHTML = `<div class="camp-table-scroll">
     <table class="camp-table">
-      <thead><tr>
-        <th class="camp-name camp-name-h">LP</th>
-        ${headCells}
-        <th class="camp-total camp-total-h" title="Meses con interacción">Vistos</th>
-      </tr></thead>
+      <thead>
+        <tr>
+          <th class="camp-name camp-name-h" rowspan="2">LP</th>
+          ${grpCells}
+          <th class="camp-total camp-total-h" rowspan="2" title="Meses con interacción">Vistos</th>
+        </tr>
+        <tr>${subCells}</tr>
+      </thead>
       <tbody>${bodyRows}</tbody>
     </table>
   </div>`;
@@ -3399,6 +3413,24 @@ async function campDeleteContact(email) {
   const { error: e2 } = await sb.from('lp_contacts').delete().eq('email', email);
   if (e2) { toast('Error al borrar contacto: ' + e2.message); return; }
   toast(`Contacto borrado: ${c.nombre || email}`);
+  campaignsLoaded = false;
+  await loadCampaigns();
+}
+
+/* ── Marcar/desmarcar "CANCELÓ" — pinta la fila de rojo y lo anota ── */
+async function campToggleCancel(email) {
+  const c = campContacts.find(x => x.email === email);
+  if (!c) return;
+  const nuevo = !c.cancelado;
+  let nota = (c.comentarios || '').replace(/\s*·?\s*CANCELÓ/g, '').trim();  // quita marca previa
+  if (nuevo) nota = nota ? `${nota} · CANCELÓ` : 'CANCELÓ';
+  const { error } = await sb.from('lp_contacts').update({
+    cancelado: nuevo,
+    cancelado_at: nuevo ? new Date().toISOString() : null,
+    comentarios: nota || null,
+  }).eq('email', email);
+  if (error) { toast('Error: ' + error.message); return; }
+  toast(nuevo ? `${c.nombre || email} marcado como cancelado` : `${c.nombre || email} reactivado`);
   campaignsLoaded = false;
   await loadCampaigns();
 }

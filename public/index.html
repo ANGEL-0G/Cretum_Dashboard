@@ -2463,9 +2463,11 @@ button,input,select{font-family:var(--font)}
     .camp-name-h{z-index:3;background:var(--navy)!important;color:#fff}
     .camp-name-main{font-weight:500;overflow:hidden;text-overflow:ellipsis}
     .camp-name-sub{font-size:11px;color:var(--ink-soft,#889);overflow:hidden;text-overflow:ellipsis}
-    .camp-mth{min-width:42px}
-    .camp-yr{display:block;font-size:9px;opacity:.7;font-weight:400}
-    .camp-cell{font-size:11px;letter-spacing:-1px}
+    .camp-mth-grp{font-size:11px;font-weight:600;white-space:nowrap}
+    .camp-table thead th.camp-sub{position:sticky;top:30px;z-index:2;background:var(--navy);color:#fff;font-size:11px;font-weight:400;min-width:26px}
+    .camp-mth-start{border-left:2px solid var(--line,#e3e8f0)}
+    .camp-table thead .camp-mth-start{border-left:2px solid rgba(255,255,255,.28)}
+    .camp-cell{font-size:11px;letter-spacing:-1px;min-width:26px}
     .camp-total,.camp-total-h{font-family:var(--mono,monospace);font-weight:600;min-width:48px;background:var(--navy-ghost)}
     .camp-total-h{background:var(--navy)!important}
     .camp-l1{color:#e6a417}
@@ -2477,9 +2479,16 @@ button,input,select{font-family:var(--font)}
     .camp-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
     .camp-btn-danger{color:#c0392b;border-color:rgba(192,57,43,.3)}
     .camp-btn-danger:hover{background:rgba(192,57,43,.08);border-color:#c0392b}
-    .camp-row-del{float:right;background:none;border:none;color:var(--ink-soft,#c2c8d2);cursor:pointer;font-size:13px;padding:0 2px;margin-left:6px;opacity:0;transition:opacity .12s}
-    .camp-table tbody tr:hover .camp-row-del{opacity:1}
+    .camp-row-acts{float:right;display:inline-flex;gap:2px;margin-left:6px;opacity:0;transition:opacity .12s}
+    .camp-table tbody tr:hover .camp-row-acts{opacity:1}
+    .camp-row-act{background:none;border:none;color:var(--ink-soft,#c2c8d2);cursor:pointer;font-size:12px;padding:0 3px}
+    .camp-row-act:hover{color:var(--navy)}
     .camp-row-del:hover{color:#c0392b}
+    /* fila cancelada */
+    .camp-row-cancel{background:rgba(192,57,43,.06)}
+    .camp-row-cancel .camp-name{background:rgba(192,57,43,.06)}
+    .camp-row-cancel .camp-name-main{color:#c0392b;text-decoration:line-through}
+    .camp-cancel-badge{display:inline-block;font-size:9px;font-weight:700;color:#fff;background:#c0392b;padding:1px 5px;border-radius:8px;letter-spacing:.5px;text-decoration:none;vertical-align:middle;margin-left:4px}
     /* mini-modales de campañas */
     .camp-modal-backdrop{position:fixed;inset:0;background:rgba(15,20,35,.45);display:none;align-items:center;justify-content:center;z-index:1000;padding:20px}
     .camp-modal-backdrop.show{display:flex}

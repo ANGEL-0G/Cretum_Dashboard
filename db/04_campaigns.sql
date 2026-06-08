@@ -16,9 +16,15 @@ CREATE TABLE IF NOT EXISTS lp_contacts (
   nombre_completo  TEXT,
   responsable      TEXT,
   comentarios      TEXT,
+  cancelado        BOOLEAN NOT NULL DEFAULT FALSE,  -- respondió "CANCELAR" / baja
+  cancelado_at     TIMESTAMPTZ,
   created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- si la tabla ya existía sin estas columnas:
+ALTER TABLE lp_contacts
+  ADD COLUMN IF NOT EXISTS cancelado    BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS cancelado_at TIMESTAMPTZ;
 
 -- ── Engagement por LP y por mes ──────────────────────────────────────────────
 -- nivel: 0 = nada · 1 = ⚡ (abrió) · 2 = ⚡⚡ (abrió+click) · 3 = ⚡⚡⚡ (abrió+click+respondió)
