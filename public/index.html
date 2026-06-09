@@ -1495,6 +1495,15 @@ button,input,select{font-family:var(--font)}
 .db-toolbar{
   display:flex;align-items:center;gap:14px;margin-bottom:16px;flex-wrap:wrap;
 }
+.db-back-btn{
+  display:inline-flex;align-items:center;gap:7px;
+  background:#fff;border:1px solid var(--gray-200);border-radius:8px;
+  padding:7px 12px;font-size:13px;font-weight:500;color:var(--gray-700);
+  cursor:pointer;transition:all .15s ease;
+}
+.db-back-btn:hover{background:var(--gray-50);border-color:var(--gray-300);color:var(--navy)}
+.db-back-btn i{font-size:12px}
+.home-back-btn{margin-bottom:18px}
 .db-title-block{
   display:flex;align-items:center;gap:8px;
   font-size:14px;font-weight:500;color:var(--navy);
@@ -2212,6 +2221,10 @@ button,input,select{font-family:var(--font)}
 
   <!-- VISTA: INICIO -->
   <div class="page page-home" id="pageHome">
+    <button class="db-back-btn home-back-btn" onclick="switchView('selector')" title="Cambiar empresa">
+      <i class="fa-solid fa-arrow-left"></i>
+      <span>Cambiar empresa</span>
+    </button>
     <div class="home-hero" id="homeHero">
       <div class="home-greeting"><span id="homeGreet">Hola</span>, <span id="homeUserName">—</span></div>
       <div class="home-question" id="homeQuestion">¿Con qué quieres empezar hoy?</div>
@@ -2228,6 +2241,10 @@ button,input,select{font-family:var(--font)}
   <!-- VISTA: DROPBOX -->
   <div class="page page-dbx" id="pageDbx">
     <div class="dbx-toolbar">
+      <button class="db-back-btn" onclick="switchView('home')" title="Volver al menú principal">
+        <i class="fa-solid fa-arrow-left"></i>
+        <span>Menú</span>
+      </button>
       <div class="dbx-search">
         <i class="fa-solid fa-magnifying-glass"></i>
         <input id="dbxSearchInput" type="text" placeholder="Buscar archivos..." autocomplete="off">
@@ -2323,6 +2340,10 @@ button,input,select{font-family:var(--font)}
   <!-- VISTA: BASE DE DATOS -->
   <div class="page page-db" id="pageDb">
     <div class="db-toolbar">
+      <button class="db-back-btn" onclick="switchView('home')" title="Volver al menú principal">
+        <i class="fa-solid fa-arrow-left"></i>
+        <span>Menú</span>
+      </button>
       <div class="db-title-block">
         <i class="fa-solid fa-user-tie"></i> Inversionistas
       </div>
@@ -2489,6 +2510,10 @@ button,input,select{font-family:var(--font)}
 <div class="page page-ft" id="pageFundTrackers">
   <!-- Selector de fondo -->
   <div class="ft-selector" id="ftSelector">
+    <button class="db-back-btn" onclick="switchView('home')" title="Volver al menú principal" style="margin-bottom:14px">
+      <i class="fa-solid fa-arrow-left"></i>
+      <span>Menú</span>
+    </button>
     <div class="ft-hero">
       <div class="ft-hero-title">MVP Fund Trackers</div>
       <div class="ft-hero-sub">Selecciona un fondo para ver el detalle por empresa subyacente.</div>
