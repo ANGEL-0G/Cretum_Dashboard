@@ -1486,6 +1486,10 @@ function switchView(view, isBack = false) {
   const backBtn = document.getElementById('backBtn');
   if (backBtn) backBtn.style.display = viewHistory.length > 0 ? '' : 'none';
 
+  // Botón "Regresar a Menú" en header: visible en cualquier vista que no sea el selector
+  const headerBackBtn = document.getElementById('headerBackMenuBtn');
+  if (headerBackBtn) headerBackBtn.style.display = (view === 'selector') ? 'none' : '';
+
   closeNav();
 
   if (view === 'db' && !dbLoaded) loadDb();
@@ -1542,6 +1546,15 @@ function goBack() {
   if (viewHistory.length === 0) return;
   const prev = viewHistory.pop();
   switchView(prev, true);
+}
+
+/* "Regresar a Menú" desde header: sub-vista → home; home → selector (cambiar empresa). */
+function headerBackToMenu() {
+  if (currentView === 'home') {
+    switchView('selector');
+  } else if (currentView !== 'selector') {
+    switchView('home');
+  }
 }
 
 document.addEventListener('keydown', (e) => {
