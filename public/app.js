@@ -102,9 +102,28 @@ async function doLogin() {
   const pass = document.getElementById('loginPass').value;
   const err = document.getElementById('loginErr');
   if (!email || !pass) { err.style.display = 'block'; return; }
-  const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+  if (!sb) {
+    err.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> No se pudo cargar la configuración del servidor. Recarga la página.';
+    err.classList.add('show'); err.style.display = 'block';
+    console.error('[login] sb no inicializado (config no cargó)');
+    return;
+  }
+  let data, error;
+  try {
+    ({ data, error } = await sb.auth.signInWithPassword({ email, password: pass }));
+  } catch (e) {
+    error = e;
+  }
   if (error || !data?.user) {
-    err.classList.add('show');
+    const m = (error && (error.message || String(error))) || '';
+    let txt = 'Credenciales inválidas';
+    if (/invalid login credentials/i.test(m)) txt = 'Correo o contraseña incorrectos';
+    else if (/email not confirmed/i.test(m)) txt = 'Falta confirmar el correo de esta cuenta';
+    else if (/failed to fetch|networkerror|load failed/i.test(m)) txt = 'No se pudo conectar con el servidor (revisa tu conexión)';
+    else if (m) txt = m;
+    err.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> ${txt}`;
+    err.classList.add('show'); err.style.display = 'block';
+    console.error('[login]', error);
     return;
   }
   err.classList.remove('show');
