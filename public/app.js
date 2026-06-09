@@ -310,12 +310,15 @@ function render() {
 
   // scope UI
   const isEquipo = tkScope === 'equipo';
-  document.getElementById('viewToggle').style.display = isEquipo ? 'none' : 'flex';
+  const isOtros  = tkScope === 'otros';
+  document.getElementById('viewToggle').style.display = (isEquipo || isOtros) ? 'none' : 'flex';
   // En "Equipo" se asigna vía openAssignModal (botón propio en renderEquipo);
-  // el botón "Nueva tarea" personal solo aplica en scope personal.
-  document.getElementById('newTaskBtn').style.display = isEquipo ? 'none' : 'flex';
+  // "Otros miembros" es solo lectura.
+  // El botón "Nueva tarea" personal solo aplica en scope personal.
+  document.getElementById('newTaskBtn').style.display = (isEquipo || isOtros) ? 'none' : 'flex';
 
   if (isEquipo) { renderEquipo(); return; }
+  if (isOtros)  { renderOtros();  return; }
 
   const c = document.getElementById('viewContainer');
   if (tkView === 'lista')       c.innerHTML = buildLista();
@@ -571,6 +574,106 @@ function renderEquipo() {
 }
 
 /* ═══════════════════════════════════════════
+   OTROS MIEMBROS (acordeón read-only)
+═══════════════════════════════════════════ */
+const otrosOpen = new Set();   // miembros desplegados (uid → expandido)
+
+function activeTasksOf(uid) {
+  const simples = state.simple.filter(t => t.owner === uid && !t.done);
+  const progs   = state.progress.filter(t => t.owner === uid && (t.done || 0) < t.total);
+  return [...simples, ...progs].sort((a, b) => {
+    // ordenar por fecha (los sin fecha al final)
+    if (!a.due && !b.due) return 0;
+    if (!a.due) return 1;
+    if (!b.due) return -1;
+    return a.due.localeCompare(b.due);
+  });
+}
+
+function getAssignerId(task) {
+  // Si la tarea no es colaborativa, fue creada por el propio owner.
+  if (!task.collab) return null;
+  // Buscar en assigned el registro cuya taskId apunte a esta tarea.
+  const a = state.assigned.find(x => x.to === task.owner && x.taskId === task.id);
+  return a ? a.assignedBy : null;
+}
+
+function renderOtros() {
+  const container = document.getElementById('viewContainer');
+  const others = Object.entries(USERS)
+    .filter(([uid]) => uid !== currentUser)
+    .sort((a, b) => (a[1].name || '').localeCompare(b[1].name || ''));
+
+  if (!others.length) {
+    container.innerHTML = `<div style="padding:32px;text-align:center;color:var(--gray-400)">No hay otros miembros registrados.</div>`;
+    return;
+  }
+
+  const rows = others.map(([uid, u]) => {
+    const tasks = activeTasksOf(uid);
+    const isOpen = otrosOpen.has(uid);
+    const countLbl = `${tasks.length} activa${tasks.length === 1 ? '' : 's'}`;
+
+    let bodyHtml = '';
+    if (isOpen) {
+      if (!tasks.length) {
+        bodyHtml = `<div class="om-body"><div class="om-empty">Sin tareas activas.</div></div>`;
+      } else {
+        const taskRows = tasks.map(t => {
+          const isProg = typeof t.done === 'number';
+          const progLbl = isProg ? ` · ${t.done}/${t.total} ${t.unit || 'unidades'}` : '';
+          const assignerId = getAssignerId(t);
+          let assignerHtml;
+          if (!assignerId || assignerId === uid) {
+            assignerHtml = `<span class="om-assigner om-assigner-self"><i class="fa-solid fa-user-pen"></i>Propia</span>`;
+          } else if (assignerId === currentUser) {
+            assignerHtml = `<span class="om-assigner"><i class="fa-solid fa-user-pen"></i>Asignada por ti</span>`;
+          } else {
+            const name = USERS[assignerId]?.name || assignerId;
+            assignerHtml = `<span class="om-assigner"><i class="fa-solid fa-user-pen"></i>Asignada por ${name}</span>`;
+          }
+          const prioCls = t.prio === 'Alta' ? 'om-prio-alta' : t.prio === 'Baja' ? 'om-prio-baja' : 'om-prio-media';
+          const dueHtml = t.due
+            ? `<span class="${isOD(t.due) ? 'om-overdue' : ''}"><i class="fa-regular fa-calendar"></i>${fmtD(t.due)}${isOD(t.due) ? ' (vencida)' : ''}</span>`
+            : `<span style="color:var(--gray-400)"><i class="fa-regular fa-calendar"></i>Sin fecha</span>`;
+          return `
+            <div class="om-task">
+              <div class="om-task-name">${t.name}${progLbl}</div>
+              <div class="om-task-meta">
+                ${dueHtml}
+                <span class="om-prio ${prioCls}">${t.prio}</span>
+                ${assignerHtml}
+              </div>
+            </div>`;
+        }).join('');
+        bodyHtml = `<div class="om-body">${taskRows}</div>`;
+      }
+    }
+
+    return `
+      <div class="om-member ${isOpen ? 'open' : ''}">
+        <button class="om-member-head" onclick="toggleOtroMember('${uid}')">
+          <div class="om-av">${u.initials}</div>
+          <div class="om-name">${u.name}</div>
+          <div class="om-count">${countLbl}</div>
+          <i class="fa-solid fa-chevron-down om-chev"></i>
+        </button>
+        ${bodyHtml}
+      </div>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div style="font-size:11px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Tareas activas de los demás miembros</div>
+    <div class="om-list">${rows}</div>`;
+}
+
+function toggleOtroMember(uid) {
+  if (otrosOpen.has(uid)) otrosOpen.delete(uid);
+  else otrosOpen.add(uid);
+  renderOtros();
+}
+
+/* ═══════════════════════════════════════════
    CONTROLES DE VISTA
 ═══════════════════════════════════════════ */
 function setView(v) {
@@ -583,6 +686,7 @@ function setScope(s) {
   tkScope = s;
   document.getElementById('togPersonal')?.classList.toggle('on', s === 'personal');
   document.getElementById('togEquipo')?.classList.toggle('on', s === 'equipo');
+  document.getElementById('togOtros')?.classList.toggle('on', s === 'otros');
   render();
 }
 function setType(t) {

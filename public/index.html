@@ -610,6 +610,32 @@ button,input,select{font-family:var(--font)}
 .add-btn.amber{background:var(--amber)}
 .add-btn.amber:hover{background:#946b1a}
 
+/* ── OTROS MIEMBROS (acordeón) ── */
+.om-list{display:flex;flex-direction:column;gap:8px}
+.om-member{background:var(--white);border:1px solid var(--gray-100);border-radius:var(--r-lg);overflow:hidden;transition:border-color .15s}
+.om-member.open{border-color:var(--navy-pale)}
+.om-member-head{display:flex;align-items:center;gap:12px;width:100%;padding:12px 16px;background:transparent;border:none;cursor:pointer;text-align:left;transition:background .12s}
+.om-member-head:hover{background:var(--gray-50)}
+.om-av{width:32px;height:32px;border-radius:50%;background:var(--navy-pale);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--navy);flex-shrink:0}
+.om-name{flex:1;font-size:13.5px;font-weight:500;color:var(--navy);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.om-count{font-size:11px;font-weight:500;color:var(--gray-500);background:var(--gray-100);padding:3px 10px;border-radius:12px;flex-shrink:0}
+.om-member.open .om-count{background:var(--navy-pale);color:var(--navy)}
+.om-chev{font-size:11px;color:var(--gray-400);transition:transform .2s;flex-shrink:0}
+.om-member.open .om-chev{transform:rotate(180deg)}
+.om-body{padding:4px 12px 12px 12px;border-top:1px solid var(--gray-100);display:flex;flex-direction:column;gap:6px}
+.om-task{padding:9px 12px;background:var(--gray-50);border-radius:var(--r-md);border:1px solid transparent}
+.om-task-name{font-size:13px;font-weight:500;color:var(--navy);margin-bottom:4px}
+.om-task-meta{display:flex;flex-wrap:wrap;gap:10px;font-size:11.5px;color:var(--gray-500);align-items:center}
+.om-task-meta i{font-size:10px;margin-right:3px}
+.om-prio{padding:1px 8px;border-radius:10px;font-size:10.5px;font-weight:500}
+.om-prio-alta{background:#fee2e2;color:#b91c1c}
+.om-prio-media{background:#fef3c7;color:#92400e}
+.om-prio-baja{background:#dcfce7;color:#166534}
+.om-assigner{display:inline-flex;align-items:center;color:var(--gray-500)}
+.om-assigner-self{color:var(--gray-400);font-style:italic}
+.om-empty{padding:16px;text-align:center;color:var(--gray-400);font-size:12.5px}
+.om-overdue{color:#b91c1c;font-weight:500}
+
 /* ── EQUIPO ── */
 .team-list{display:flex;flex-direction:column;gap:7px}
 .team-item{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--white);border:1px solid var(--gray-100);border-radius:var(--r-lg)}
@@ -2301,6 +2327,9 @@ button,input,select{font-family:var(--font)}
         </button>
         <button class="tk-tog-btn" id="togEquipo" onclick="setScope('equipo')">
           <i class="fa-solid fa-users"></i> Equipo
+        </button>
+        <button class="tk-tog-btn" id="togOtros" onclick="setScope('otros')">
+          <i class="fa-solid fa-user-group"></i> Otros miembros
         </button>
       </div>
       <button class="tk-new-btn" id="newTaskBtn" onclick="openTaskModal()">
