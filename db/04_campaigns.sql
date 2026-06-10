@@ -90,9 +90,11 @@ CREATE POLICY "campaign_current_admin" ON campaign_current
   FOR ALL TO authenticated USING (is_admin()) WITH CHECK (is_admin());
 
 -- Ranking de interacción. SECURITY DEFINER: salta RLS pero SOLO devuelve
--- nombre + agregados (nunca email ni comentarios). Solo authenticated (no anon).
-CREATE OR REPLACE FUNCTION public.campaign_ranking()
-RETURNS TABLE (nombre TEXT, score INT, meses_vistos INT, ultimo_periodo DATE, momentum TEXT)
+-- nombre + agregados + historial mes a mes (nunca email ni comentarios).
+-- Solo authenticated (no anon). historial alimenta el detalle por LP.
+DROP FUNCTION IF EXISTS public.campaign_ranking();
+CREATE FUNCTION public.campaign_ranking()
+RETURNS TABLE (nombre TEXT, score INT, meses_vistos INT, ultimo_periodo DATE, momentum TEXT, historial JSONB)
 LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public AS $$
   WITH per AS (SELECT DISTINCT periodo FROM campaign_engagement),
        ranked AS (SELECT periodo, row_number() OVER (ORDER BY periodo DESC) rn FROM per),
@@ -105,7 +107,11 @@ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public AS $$
                 COUNT(*) FILTER (WHERE e.nivel >= 1) AS meses_vistos,
                 MAX(e.periodo) FILTER (WHERE e.nivel >= 1) AS ultimo_periodo,
                 COALESCE(MAX(e.nivel) FILTER (WHERE e.periodo = (SELECT periodo FROM lastp)), 0) AS last_n,
-                COALESCE(MAX(e.nivel) FILTER (WHERE e.periodo = (SELECT periodo FROM prevp)), 0) AS prev_n
+                COALESCE(MAX(e.nivel) FILTER (WHERE e.periodo = (SELECT periodo FROM prevp)), 0) AS prev_n,
+                COALESCE(jsonb_agg(jsonb_build_object(
+                    'periodo', e.periodo, 'opened', e.opened, 'clicked', e.clicked,
+                    'replied', e.replied, 'nivel', e.nivel) ORDER BY e.periodo)
+                  FILTER (WHERE e.periodo IS NOT NULL), '[]'::jsonb) AS historial
          FROM lp_contacts c
          LEFT JOIN campaign_engagement e ON e.email = c.email
          WHERE COALESCE(c.cancelado, FALSE) = FALSE
@@ -114,7 +120,8 @@ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public AS $$
   SELECT nombre, score::INT, meses_vistos::INT, ultimo_periodo,
          CASE WHEN last_n >= 1 AND last_n >= prev_n THEN 'up'
               WHEN last_n < prev_n THEN 'down'
-              ELSE 'flat' END AS momentum
+              ELSE 'flat' END AS momentum,
+         historial
   FROM agg WHERE meses_vistos >= 1
   ORDER BY score DESC, meses_vistos DESC, nombre;
 $$;

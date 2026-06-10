@@ -2455,13 +2455,14 @@ button,input,select{font-family:var(--font)}
     .camp-prev-cancel{background:none;border:none;color:var(--ink-soft,#889);cursor:pointer;font-size:13px}
     .camp-legend{font-size:12px;color:var(--ink-soft,#778);margin-left:auto}
     .camp-matrix{margin-top:6px}
-    .camp-table-scroll{overflow:auto;max-height:calc(100vh - 320px);border:1px solid var(--line,#e3e8f0);border-radius:var(--r-sm,8px)}
+    .camp-table-scroll{overflow:auto;max-height:calc(100vh - 210px);border:1px solid var(--line,#e3e8f0);border-radius:var(--r-sm,8px)}
     .camp-table{border-collapse:separate;border-spacing:0;width:100%;font-size:13px}
     .camp-table th,.camp-table td{padding:8px 6px;text-align:center;white-space:nowrap;border-bottom:1px solid var(--line,#eef1f6)}
     .camp-table thead th{position:sticky;top:0;z-index:2;background:var(--navy);color:#fff;font-weight:600;font-size:11px;text-align:center}
     .camp-name,.camp-name-h{text-align:left!important;position:sticky;left:0;z-index:1;background:var(--white,#fff);width:240px;min-width:240px;max-width:240px}
     .camp-table thead th.camp-name-h{z-index:4;background:var(--navy)!important;color:#fff;text-align:center!important}
-    .camp-name-main{font-weight:500;overflow:hidden;text-overflow:ellipsis}
+    .camp-name-main{font-weight:500;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+    .camp-name-main:hover{color:var(--navy);text-decoration:underline}
     .camp-name-sub{font-size:11px;color:var(--ink-soft,#889);overflow:hidden;text-overflow:ellipsis}
     /* "Vistos" fijo junto al LP (segunda columna pegada a la izquierda) */
     .camp-total,.camp-total-h{position:sticky;left:240px;z-index:1;width:54px;min-width:54px;font-family:var(--mono,monospace);font-weight:700;background:var(--navy-pale)}
@@ -2543,7 +2544,8 @@ button,input,select{font-family:var(--font)}
     .camp-rank-sub{font-size:13px;color:var(--ink-soft,#889);font-weight:400}
     .camp-rank-note{font-size:12px;color:var(--ink-soft,#778);background:var(--navy-ghost);padding:5px 12px;border-radius:20px}
     .camp-rank-list{display:flex;flex-direction:column;gap:6px;max-width:760px}
-    .camp-rank-row{display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--line,#eef1f6);border-radius:10px;background:var(--white,#fff)}
+    .camp-rank-row{display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--line,#eef1f6);border-radius:10px;background:var(--white,#fff);cursor:pointer;transition:border-color .15s}
+    .camp-rank-row:hover{border-color:var(--navy)}
     .camp-rank-row.top1{border-color:#e6a417;background:linear-gradient(90deg,rgba(230,164,23,.10),transparent)}
     .camp-rank-row.top2{border-color:#9aa7b8}
     .camp-rank-row.top3{border-color:#cd7f32}
@@ -2559,6 +2561,25 @@ button,input,select{font-family:var(--font)}
     .camp-rank-stat{text-align:right;white-space:nowrap}
     .camp-rank-score{font-family:var(--mono,monospace);font-weight:700;font-size:16px;color:var(--navy)}
     .camp-rank-veces{font-size:11px;color:var(--ink-soft,#889)}
+    /* detalle por LP (feedback para el vendedor) */
+    .camp-lp-summary{font-size:14.5px;line-height:1.65;color:var(--ink,#223);margin-bottom:16px}
+    .camp-lp-summary strong{color:var(--navy)}
+    .camp-lp-stats{display:flex;gap:10px;margin-bottom:18px}
+    .camp-lp-stat{flex:1;text-align:center;padding:13px 8px;border:1px solid var(--line,#e8ecf3);border-radius:10px;background:#fafbfe}
+    .camp-lp-stat-n{font-family:var(--mono,monospace);font-size:23px;font-weight:700;color:var(--navy);line-height:1}
+    .camp-lp-stat-l{font-size:11px;color:var(--ink-soft,#889);margin-top:5px}
+    .camp-lp-tl{display:flex;flex-direction:column;max-height:300px;overflow:auto}
+    .camp-lp-tl-row{display:flex;align-items:center;gap:11px;padding:7px 2px;border-top:1px solid #f0f3f8;font-size:13px}
+    .camp-lp-tl-row:first-child{border-top:none}
+    .camp-lp-dot{width:9px;height:9px;border-radius:50%;flex:none}
+    .camp-lp-dot.n0{background:#dde3ec}
+    .camp-lp-dot.n1{background:#8fb8e8}
+    .camp-lp-dot.n2{background:var(--navy)}
+    .camp-lp-dot.n3{background:#16a34a}
+    .camp-lp-mes{width:118px;flex:none;color:var(--ink-soft,#667)}
+    .camp-lp-desc{flex:1;color:var(--ink,#334)}
+    .camp-lp-desc.n0{color:#aab3c0}
+    .camp-lp-desc.n3{color:#16a34a;font-weight:500}
     /* campaña actual */
     .camp-actual-note{font-size:13px;color:var(--ink-soft,#667);margin-bottom:12px;display:flex;align-items:center;gap:8px}
     .camp-actual-note .badge{background:var(--navy);color:#fff;padding:2px 10px;border-radius:20px;font-size:12px}
@@ -2656,6 +2677,17 @@ button,input,select{font-family:var(--font)}
         <button class="camp-prev-cancel" onclick="campAddContactClose()">Cancelar</button>
         <button class="btn-primary" onclick="campAddContactSave()"><i class="fa-solid fa-check"></i> Guardar contacto</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Modal: Detalle de interacción por LP (todos los usuarios) -->
+  <div class="camp-modal-backdrop" id="campLpModal" onclick="if(event.target===this)campLpClose()">
+    <div class="camp-modal">
+      <div class="camp-modal-head">
+        <div class="camp-modal-title" id="campLpName"></div>
+        <button class="camp-modal-x" onclick="campLpClose()" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="camp-modal-body" id="campLpBody"></div>
     </div>
   </div>
 

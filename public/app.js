@@ -3157,6 +3157,7 @@ function deriveEngagement(rows) {
 /* ── Carga de datos ── */
 let campTab = null;
 let campLatestPeriodo = null;   // último mes con datos (para "Último visto")
+let campRankRows = [];          // filas del ranking (con historial) para el detalle por LP
 
 function campSetTab(tab) {
   campTab = tab;
@@ -3231,6 +3232,7 @@ function renderCampRanking(rows) {
     if (note) note.textContent = '';
     return;
   }
+  campRankRows = rows;
   const maxScore = Math.max(...rows.map(r => r.score), 1);
   const ultimo = rows.map(r => r.ultimo_periodo).filter(Boolean).sort().slice(-1)[0];
   campLatestPeriodo = ultimo || null;
@@ -3241,7 +3243,7 @@ function renderCampRanking(rows) {
     const [mc, mg] = mov[r.momentum] || mov.flat;
     const topCls = pos === 1 ? ' top1' : pos === 2 ? ' top2' : pos === 3 ? ' top3' : '';
     const pct = Math.round((r.score / maxScore) * 100);
-    return `<div class="camp-rank-row${topCls}">
+    return `<div class="camp-rank-row${topCls}" onclick="campLpOpen(${i})" title="Ver detalle de interacción">
       <div class="camp-rank-pos">${pos}</div>
       <div class="camp-rank-mov ${mc}" title="${r.momentum === 'up' ? 'Subiendo / constante' : r.momentum === 'down' ? 'Bajó / dejó de ver' : 'Sin cambio'}">${mg}</div>
       <div class="camp-rank-info">
@@ -3277,6 +3279,58 @@ async function loadCampActual() {
     console.error('[campActual]', err);
     if (note) note.innerHTML = `<i class="fa-solid fa-circle-info"></i> No se pudo cargar la campaña actual.`;
   }
+}
+
+/* ── Detalle de interacción por LP (feedback para el vendedor) ── */
+// Desde el ranking: usa el historial que trae campaign_ranking() (sin email).
+function campLpOpen(i) {
+  const r = campRankRows[i];
+  if (r) campLpRender(r.nombre, r.historial || []);
+}
+// Desde la matriz (admin): arma el historial con los datos ya cargados.
+function campLpOpenEmail(email) {
+  const c = campContacts.find(x => x.email === email);
+  const hist = campEngagement
+    .filter(e => e.email === email)
+    .map(e => ({ periodo: e.periodo, opened: e.opened, clicked: e.clicked, replied: e.replied, nivel: e.nivel }))
+    .sort((a, b) => String(a.periodo).localeCompare(String(b.periodo)));
+  campLpRender(c?.nombre_completo || c?.nombre || email, hist);
+}
+function campLpClose() { document.getElementById('campLpModal').classList.remove('show'); }
+
+function campLpRender(nombre, hist) {
+  const abiertos = hist.filter(h => h.opened).length;
+  const cartas   = hist.filter(h => h.clicked).length;
+  const resp     = hist.filter(h => h.replied).length;
+  const vistos   = hist.filter(h => h.nivel >= 1);
+  document.getElementById('campLpName').innerHTML =
+    `<i class="fa-solid fa-user"></i> ${escapeHtml(nombre)}`;
+  const body = document.getElementById('campLpBody');
+  if (!vistos.length) {
+    body.innerHTML = `<div class="camp-empty-mini"><i class="fa-solid fa-envelope"></i>
+      <p>Aún no registra interacciones con las campañas.</p></div>`;
+  } else {
+    const desde = periodoLabel(vistos[0].periodo);
+    const frase = `Ha visto la carta <strong>${cartas}</strong> ${cartas === 1 ? 'vez' : 'veces'}, ` +
+      `con <strong>${resp}</strong> ${resp === 1 ? 'respuesta' : 'respuestas'}, ` +
+      `y ha abierto nuestros correos <strong>${abiertos}</strong> ${abiertos === 1 ? 'vez' : 'veces'} ` +
+      `desde <strong>${desde}</strong>.`;
+    const DESC = ['Sin interacción', 'Abrió el correo', 'Abrió el correo y vio la carta', 'Abrió, vio la carta y respondió'];
+    const tl = hist.map(h => `<div class="camp-lp-tl-row">
+        <span class="camp-lp-dot n${h.nivel}"></span>
+        <span class="camp-lp-mes">${periodoLabel(h.periodo)}</span>
+        <span class="camp-lp-desc n${h.nivel}">${DESC[h.nivel] || DESC[0]}</span>
+      </div>`).join('');
+    body.innerHTML = `
+      <div class="camp-lp-summary">${frase}</div>
+      <div class="camp-lp-stats">
+        <div class="camp-lp-stat"><div class="camp-lp-stat-n">${abiertos}</div><div class="camp-lp-stat-l">correos abiertos</div></div>
+        <div class="camp-lp-stat"><div class="camp-lp-stat-n">${cartas}</div><div class="camp-lp-stat-l">cartas vistas</div></div>
+        <div class="camp-lp-stat"><div class="camp-lp-stat-n">${resp}</div><div class="camp-lp-stat-l">respuestas</div></div>
+      </div>
+      <div class="camp-lp-tl">${tl}</div>`;
+  }
+  document.getElementById('campLpModal').classList.add('show');
 }
 
 /* ── Render de la matriz contactos × meses ── */
@@ -3339,7 +3393,7 @@ function renderCampaigns() {
           <button class="camp-row-act" title="${c.cancelado ? 'Reactivar (quitar cancelado)' : 'Marcar como cancelado'}" onclick="campToggleCancel('${c.email}')"><i class="fa-solid ${c.cancelado ? 'fa-rotate-left' : 'fa-ban'}"></i></button>
           <button class="camp-row-act camp-row-del" title="Borrar contacto" onclick="campDeleteContact('${c.email}')"><i class="fa-solid fa-xmark"></i></button>
         </span>
-        <div class="camp-name-main">${nombre}${c.cancelado ? ' <span class="camp-cancel-badge">CANCELÓ</span>' : ''}</div>
+        <div class="camp-name-main" onclick="campLpOpenEmail('${c.email}')" title="Ver detalle de interacción">${nombre}${c.cancelado ? ' <span class="camp-cancel-badge">CANCELÓ</span>' : ''}</div>
         <div class="camp-name-sub">${escapeHtml(c.email)}${c.responsable ? ' · ' + escapeHtml(c.responsable) : ''}</div>
       </td>
       <td class="camp-total">${vistos}</td>
