@@ -3499,16 +3499,20 @@ async function campAddContactSave() {
   await loadCampaigns();
 }
 
-/* ── Exportar contactos para Yesware (email + nombre, sin apellido) ── */
+/* ── Exportar contactos para Yesware (email + nombre, sin apellido) ──
+   Excluye CANCELADOS: si van en la lista de envío, les llega el correo otra
+   vez y nos marcan spam. (Siguen en el Excel de seguimiento, no aquí.) ── */
 function campExportYesware() {
   if (!campContacts.length) { toast('No hay contactos para exportar'); return; }
   const esc = (v) => { const s = v == null ? '' : String(v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
-  const list = campContacts.slice().sort((a, b) => (a.nombre || a.email).localeCompare(b.nombre || b.email, 'es'));
+  const activos = campContacts.filter(c => !c.cancelado);
+  const excluidos = campContacts.length - activos.length;
+  const list = activos.slice().sort((a, b) => (a.nombre || a.email).localeCompare(b.nombre || b.email, 'es'));
   const lines = ['email,first_name'];
   list.forEach(c => lines.push(esc(c.email) + ',' + esc(c.nombre || '')));
   const csv = '﻿' + lines.join('\r\n');
   downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), `yesware_contactos_${new Date().toISOString().slice(0, 10)}.csv`);
-  toast(`Exportados ${list.length} contactos para Yesware`);
+  toast(`Exportados ${list.length} contactos${excluidos ? ` (${excluidos} cancelado${excluidos === 1 ? '' : 's'} excluido${excluidos === 1 ? '' : 's'})` : ''}`);
 }
 
 /* ── Borrar los datos de un mes (el seleccionado en "Mes del reporte") ── */
