@@ -3293,23 +3293,24 @@ function renderCampaigns() {
     return;
   }
 
-  // Header fila 1: cada mes agrupa 3 sub-columnas (un nivel ⚡ cada una)
-  const grpCells = periods.map(p =>
-    `<th class="camp-mth-grp" colspan="3" title="${periodoLabel(p)}">${MESES_ES[(+p.slice(5, 7)) - 1]} '${p.slice(2, 4)}</th>`
+  // Header fila 1: cada mes agrupa 3 sub-columnas; bandas alternadas por mes
+  const grpCells = periods.map((p, i) =>
+    `<th class="camp-mth-grp camp-g${i % 2}" colspan="3" title="${periodoLabel(p)}">${MESES_ES[(+p.slice(5, 7)) - 1]} '${p.slice(2, 4)}</th>`
   ).join('');
-  // Header fila 2: las sub-columnas ⚡ / ⚡⚡ / ⚡⚡⚡
-  const subCells = periods.map(() =>
-    `<th class="camp-sub camp-mth-start camp-l1">⚡</th><th class="camp-sub camp-l2">⚡⚡</th><th class="camp-sub camp-l3">⚡⚡⚡</th>`
+  // Header fila 2: las sub-columnas ⚡ / ⚡⚡ / ⚡⚡⚡ (subtítulo en azul claro)
+  const subCells = periods.map((p, i) =>
+    `<th class="camp-sub camp-mth-start camp-g${i % 2}">⚡</th><th class="camp-sub camp-g${i % 2}">⚡⚡</th><th class="camp-sub camp-g${i % 2}">⚡⚡⚡</th>`
   ).join('');
 
   const bodyRows = contacts.map(c => {
     let vistos = 0;
-    const cells = periods.map(p => {
+    const cells = periods.map((p, i) => {
       const n = lvl.get(`${c.email}|${p}`) || 0;
       if (n >= 1) vistos++;
-      return `<td class="camp-cell camp-mth-start camp-l1">${n === 1 ? '⚡' : ''}</td>` +
-             `<td class="camp-cell camp-l2">${n === 2 ? '⚡⚡' : ''}</td>` +
-             `<td class="camp-cell camp-l3">${n === 3 ? '⚡⚡⚡' : ''}</td>`;
+      const g = `camp-g${i % 2}`;
+      return `<td class="camp-cell camp-mth-start ${g} camp-l1">${n === 1 ? '⚡' : ''}</td>` +
+             `<td class="camp-cell ${g} camp-l2">${n === 2 ? '⚡⚡' : ''}</td>` +
+             `<td class="camp-cell ${g} camp-l3">${n === 3 ? '⚡⚡⚡' : ''}</td>`;
     }).join('');
     const nombre = escapeHtml(c.nombre_completo || c.nombre || '—');
     return `<tr class="${c.cancelado ? 'camp-row-cancel' : ''}">

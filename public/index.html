@@ -2458,21 +2458,32 @@ button,input,select{font-family:var(--font)}
     .camp-table-scroll{overflow:auto;max-height:calc(100vh - 320px);border:1px solid var(--line,#e3e8f0);border-radius:var(--r-sm,8px)}
     .camp-table{border-collapse:separate;border-spacing:0;width:100%;font-size:13px}
     .camp-table th,.camp-table td{padding:8px 6px;text-align:center;white-space:nowrap;border-bottom:1px solid var(--line,#eef1f6)}
-    .camp-table thead th{position:sticky;top:0;z-index:2;background:var(--navy);color:#fff;font-weight:600;font-size:11px}
+    .camp-table thead th{position:sticky;top:0;z-index:2;background:var(--navy);color:#fff;font-weight:600;font-size:11px;text-align:center}
     .camp-name,.camp-name-h{text-align:left!important;position:sticky;left:0;z-index:1;background:var(--white,#fff);min-width:230px;max-width:280px}
-    .camp-name-h{z-index:3;background:var(--navy)!important;color:#fff}
+    .camp-name-h{z-index:4;background:var(--navy)!important;color:#fff}
     .camp-name-main{font-weight:500;overflow:hidden;text-overflow:ellipsis}
     .camp-name-sub{font-size:11px;color:var(--ink-soft,#889);overflow:hidden;text-overflow:ellipsis}
-    .camp-mth-grp{font-size:11px;font-weight:600;white-space:nowrap}
-    .camp-table thead th.camp-sub{position:sticky;top:30px;z-index:2;background:var(--navy);color:#fff;font-size:11px;font-weight:400;min-width:26px}
-    .camp-mth-start{border-left:2px solid var(--line,#e3e8f0)}
-    .camp-table thead .camp-mth-start{border-left:2px solid rgba(255,255,255,.28)}
-    .camp-cell{font-size:11px;letter-spacing:-1px;min-width:26px}
-    .camp-total,.camp-total-h{font-family:var(--mono,monospace);font-weight:600;min-width:48px;background:var(--navy-ghost)}
-    .camp-total-h{background:var(--navy)!important}
+    .camp-mth-grp{font-size:11px;font-weight:700;white-space:nowrap;text-align:center;letter-spacing:.3px}
+    /* subtítulo ⚡ en azul claro, sobre un navy un tono más claro */
+    .camp-table thead th.camp-sub{position:sticky;top:30px;z-index:2;background:var(--navy-mid,#2a4f8f);color:#9ec5ff;font-size:12px;font-weight:500;min-width:30px}
+    /* separación clara entre meses */
+    .camp-mth-start{border-left:2px solid #dde5f1}
+    .camp-table thead .camp-mth-start{border-left:2px solid rgba(255,255,255,.35)}
+    .camp-cell{font-size:13px;letter-spacing:-1px;min-width:30px}
+    /* bandas alternadas por mes (un mes con tinte claro, el otro blanco) */
+    .camp-table tbody td.camp-g1{background:#f2f6fc}
+    /* hover de fila completa */
+    .camp-table tbody tr:hover td{background:#e7eefb}
+    .camp-table tbody tr:hover .camp-name{background:#e7eefb}
+    .camp-table tbody tr.camp-row-cancel td{background:#fbeceb}
+    .camp-total,.camp-total-h{font-family:var(--mono,monospace);font-weight:700;min-width:50px;background:var(--navy-pale)}
+    .camp-total-h{background:var(--navy)!important;color:#fff}
     .camp-l1{color:#e6a417}
     .camp-l2{color:#ED7824}
     .camp-l3{color:#16a34a}
+    [data-theme="dark"] .camp-table tbody td.camp-g1{background:rgba(255,255,255,.035)}
+    [data-theme="dark"] .camp-table tbody tr:hover td,[data-theme="dark"] .camp-table tbody tr:hover .camp-name{background:rgba(93,143,245,.14)}
+    [data-theme="dark"] .camp-mth-start{border-left-color:rgba(255,255,255,.12)}
     .camp-empty{padding:48px 20px;text-align:center;color:var(--ink-soft,#889)}
     .camp-empty i{font-size:34px;opacity:.4;display:block;margin-bottom:12px}
     [data-theme="dark"] .camp-name,[data-theme="dark"] .camp-month{background:var(--card,#1a2030)}
