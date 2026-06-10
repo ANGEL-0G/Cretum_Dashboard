@@ -3709,7 +3709,10 @@ function campTemplateOpen() {
   const sel = document.getElementById('campTplMes');
   if (!sel.options.length) {
     sel.innerHTML = MESES_ES.map((m, i) => `<option value="${i}">${m}</option>`).join('');
-    sel.value = String(new Date().getMonth());
+    // La campaña reporta el mes ANTERIOR (se envía la primera semana del mes siguiente)
+    const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1);
+    sel.value = String(d.getMonth());
+    document.getElementById('campTplAnio').value = String(d.getFullYear());
   }
   document.getElementById('campTplModal').classList.add('show');
   campTemplateRender();
