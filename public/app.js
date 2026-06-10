@@ -3139,7 +3139,19 @@ function deriveEngagement(rows) {
     const replied = replyCols.some(i => isTrue(cells[i]));
     out.push({ email, opened, clicked, replied, nivel: replied ? 3 : clicked ? 2 : opened ? 1 : 0 });
   }
-  return out;
+  // Dedup por email: Yesware puede traer la misma persona repetida. Combinamos
+  // sus interacciones (OR) y nos quedamos con un solo registro por email; de lo
+  // contrario el upsert falla con "ON CONFLICT ... cannot affect row a second time".
+  const byEmail = new Map();
+  for (const e of out) {
+    const ex = byEmail.get(e.email);
+    if (!ex) { byEmail.set(e.email, e); continue; }
+    ex.opened = ex.opened || e.opened;
+    ex.clicked = ex.clicked || e.clicked;
+    ex.replied = ex.replied || e.replied;
+    ex.nivel = ex.replied ? 3 : ex.clicked ? 2 : ex.opened ? 1 : 0;
+  }
+  return [...byEmail.values()];
 }
 
 /* ── Carga de datos ── */
