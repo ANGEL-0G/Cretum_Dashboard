@@ -3194,8 +3194,13 @@ async function loadCampaigns() {
     campContacts = contacts || [];
     campEngagement = eng || [];
     campaignsLoaded = true;
+    // Mes por defecto = el ANTERIOR (la campaña de un mes se envía la 1ª semana
+    // del mes siguiente, así que lo que se sube en junio es el reporte de mayo).
     const sel = document.getElementById('campMonth');
-    if (sel && !sel.value) sel.value = new Date().toISOString().slice(0, 7);
+    if (sel && !sel.value) {
+      const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1);
+      sel.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    }
     renderCampaigns();
   } catch (err) {
     console.error('[campaigns]', err);
@@ -3305,9 +3310,12 @@ function renderCampaigns() {
     return;
   }
 
-  // Header fila 1: cada mes agrupa 3 sub-columnas; bandas alternadas por mes
+  // Header fila 1: cada mes agrupa 3 sub-columnas; bandas alternadas + botón borrar mes
   const grpCells = periods.map((p, i) =>
-    `<th class="camp-mth-grp camp-g${i % 2}" colspan="3" title="${periodoLabel(p)}">${MESES_ES[(+p.slice(5, 7)) - 1]} '${p.slice(2, 4)}</th>`
+    `<th class="camp-mth-grp camp-g${i % 2}" colspan="3" title="${periodoLabel(p)}">` +
+      `<span class="camp-mth-lbl">${MESES_ES[(+p.slice(5, 7)) - 1]} '${p.slice(2, 4)}</span>` +
+      `<button class="camp-mth-del" title="Borrar ${periodoLabel(p)}" onclick="campDeleteMonthKey('${p}')"><i class="fa-solid fa-xmark"></i></button>` +
+    `</th>`
   ).join('');
   // Header fila 2: las sub-columnas ⚡ / ⚡⚡ / ⚡⚡⚡ (subtítulo en azul claro)
   const subCells = periods.map((p, i) =>
@@ -3528,11 +3536,10 @@ function campExportYesware() {
 }
 
 /* ── Borrar los datos de un mes (el seleccionado en "Mes del reporte") ── */
-async function campDeleteMonth() {
-  const month = document.getElementById('campMonth').value;
-  if (!month) { toast('Elige primero el mes a borrar en "Mes del reporte"'); return; }
-  const periodo = month + '-01';
-  const n = campEngagement.filter(e => periodoKey(e.periodo) === month).length;
+// Borra un mes específico (usado por la × del encabezado de cada mes)
+async function campDeleteMonthKey(monthKey) {
+  const periodo = monthKey + '-01';
+  const n = campEngagement.filter(e => periodoKey(e.periodo) === monthKey).length;
   if (!n) { toast(`No hay datos cargados para ${periodoLabel(periodo)}`); return; }
   if (!confirm(`¿Borrar los ${n} registros de ${periodoLabel(periodo)}?\nEsta acción no se puede deshacer (los contactos NO se borran, solo el engagement de ese mes).`)) return;
   const { error } = await sb.from('campaign_engagement').delete().eq('periodo', periodo);
@@ -3540,6 +3547,13 @@ async function campDeleteMonth() {
   toast(`Borrado ${periodoLabel(periodo)} — ${n} registros`);
   campaignsLoaded = false;
   await loadCampaigns();
+}
+
+// Botón "Borrar mes": borra el mes elegido en el selector "Mes del reporte"
+async function campDeleteMonth() {
+  const month = document.getElementById('campMonth').value;
+  if (!month) { toast('Elige primero el mes a borrar en "Mes del reporte"'); return; }
+  await campDeleteMonthKey(month);
 }
 
 /* ── Borrar un contacto (ej. respondió "CANCELAR") — elimina LP + su historial ── */
