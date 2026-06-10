@@ -1410,8 +1410,8 @@ const ORG_MODULES = {
       desc: 'Archivos compartidos del equipo desde Dropbox',
       iconClass: 'home-ico-dropbox' },
     { view: 'campaigns', icon: 'fa-bolt', title: 'Campañas',
-      desc: 'Seguimiento de aperturas e interacción de tus campañas de Yesware',
-      iconClass: 'home-ico-reports', adminOnly: true },
+      desc: 'Ranking de interacción de los LPs y la campaña actual del fondo',
+      iconClass: 'home-ico-reports' },
     { view: 'reports', icon: 'fa-chart-pie', title: 'Reportes',
       desc: 'Reportes personalizados por LP — Altareturn + Salesforce',
       iconClass: 'home-ico-reports', disabled: true },
@@ -1435,7 +1435,7 @@ const ORG_NAV = {
     { view: 'tasks',   icon: 'fa-list-check',  label: 'To Do Dashboard' },
     { view: 'db',      icon: 'fa-database',    label: 'Base de Datos' },
     { view: 'dropbox', icon: 'fa-dropbox',     label: 'Dropbox', brand: true },
-    { view: 'campaigns', icon: 'fa-bolt',      label: 'Campañas', adminOnly: true },
+    { view: 'campaigns', icon: 'fa-bolt',      label: 'Campañas' },
   ],
   mvp: [
     { view: 'home',         icon: 'fa-house',         label: 'Inicio' },
@@ -3143,8 +3143,33 @@ function deriveEngagement(rows) {
 }
 
 /* ── Carga de datos ── */
+let campTab = null;
+let campLatestPeriodo = null;   // último mes con datos (para "Último visto")
+
+function campSetTab(tab) {
+  campTab = tab;
+  document.querySelectorAll('#pageCampaigns .camp-tab').forEach(b =>
+    b.classList.toggle('on', b.dataset.ctab === tab));
+  document.getElementById('campPaneRanking').style.display = tab === 'ranking' ? '' : 'none';
+  document.getElementById('campPaneActual').style.display  = tab === 'actual'  ? '' : 'none';
+  document.getElementById('campPaneGestion').style.display = tab === 'gestion' ? '' : 'none';
+}
+
 async function loadCampaigns() {
-  if (currentProfile?.role !== 'admin') return;   // defensa extra
+  const isAdmin = currentProfile?.role === 'admin';
+  // La pestaña Gestión solo existe para admin
+  const gTab = document.querySelector('#pageCampaigns .camp-tab-admin');
+  if (gTab) gTab.style.display = isAdmin ? '' : 'none';
+  // Pestaña por defecto la primera vez
+  if (!campTab) campSetTab('ranking');
+  else if (campTab === 'gestion' && !isAdmin) campSetTab('ranking');
+
+  // Ranking y Campaña Actual: para TODOS (ranking primero para saber el último mes)
+  await loadCampRanking();
+  loadCampActual();
+
+  // Matriz de gestión: solo admin (lee tablas directo; RLS lo permite solo a admin)
+  if (!isAdmin) return;
   if (campaignsLoaded) { renderCampaigns(); return; }
   const matrix = document.getElementById('campMatrix');
   if (matrix) matrix.innerHTML = '<div class="db-loading"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
@@ -3157,13 +3182,83 @@ async function loadCampaigns() {
     campContacts = contacts || [];
     campEngagement = eng || [];
     campaignsLoaded = true;
-    // Default del selector de mes = mes actual
     const sel = document.getElementById('campMonth');
     if (sel && !sel.value) sel.value = new Date().toISOString().slice(0, 7);
     renderCampaigns();
   } catch (err) {
     console.error('[campaigns]', err);
     if (matrix) matrix.innerHTML = `<div class="db-loading">Error al cargar: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+/* ── Ranking (todos los usuarios) — vía RPC segura campaign_ranking() ── */
+async function loadCampRanking() {
+  const list = document.getElementById('campRankList');
+  if (!list) return;
+  list.innerHTML = '<div class="db-loading"><i class="fa-solid fa-spinner fa-spin"></i> Cargando ranking…</div>';
+  try {
+    const { data, error } = await sb.rpc('campaign_ranking');
+    if (error) throw error;
+    renderCampRanking(data || []);
+  } catch (err) {
+    console.error('[ranking]', err);
+    list.innerHTML = `<div class="camp-empty-mini">No se pudo cargar el ranking: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function renderCampRanking(rows) {
+  const list = document.getElementById('campRankList');
+  const note = document.getElementById('campRankNote');
+  if (!rows.length) {
+    list.innerHTML = `<div class="camp-empty-mini"><i class="fa-solid fa-ranking-star"></i><p>Aún no hay interacciones registradas.</p></div>`;
+    if (note) note.textContent = '';
+    return;
+  }
+  const maxScore = Math.max(...rows.map(r => r.score), 1);
+  const ultimo = rows.map(r => r.ultimo_periodo).filter(Boolean).sort().slice(-1)[0];
+  campLatestPeriodo = ultimo || null;
+  if (note) note.textContent = ultimo ? `Último mes con datos: ${periodoLabel(ultimo)}` : '';
+  const mov = { up: ['up', '▲'], down: ['down', '▼'], flat: ['flat', '–'] };
+  list.innerHTML = rows.map((r, i) => {
+    const pos = i + 1;
+    const [mc, mg] = mov[r.momentum] || mov.flat;
+    const topCls = pos === 1 ? ' top1' : pos === 2 ? ' top2' : pos === 3 ? ' top3' : '';
+    const pct = Math.round((r.score / maxScore) * 100);
+    return `<div class="camp-rank-row${topCls}">
+      <div class="camp-rank-pos">${pos}</div>
+      <div class="camp-rank-mov ${mc}" title="${r.momentum === 'up' ? 'Subiendo / constante' : r.momentum === 'down' ? 'Bajó / dejó de ver' : 'Sin cambio'}">${mg}</div>
+      <div class="camp-rank-info">
+        <div class="camp-rank-name">${escapeHtml(r.nombre)}</div>
+        <div class="camp-rank-bar-wrap"><div class="camp-rank-bar" style="width:${pct}%"></div></div>
+      </div>
+      <div class="camp-rank-stat">
+        <div class="camp-rank-score">${r.score}</div>
+        <div class="camp-rank-veces">${r.meses_vistos} ${r.meses_vistos === 1 ? 'mes' : 'meses'}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ── Campaña Actual (todos) — última plantilla generada por el admin ── */
+async function loadCampActual() {
+  const frameWrap = document.querySelector('#campPaneActual .camp-actual-frame-wrap');
+  const note = document.getElementById('campActualNote');
+  const frame = document.getElementById('campActualFrame');
+  try {
+    const { data, error } = await sb.from('campaign_current').select('html, mes, updated_at').eq('id', 1).maybeSingle();
+    if (error) throw error;
+    if (!data || !data.html) {
+      if (frameWrap) frameWrap.style.display = 'none';
+      if (note) note.innerHTML = `<i class="fa-solid fa-circle-info"></i> Aún no hay una campaña publicada.`;
+      return;
+    }
+    if (frameWrap) frameWrap.style.display = '';
+    frame.srcdoc = `<!doctype html><html><head><meta charset="utf-8"></head><body style="margin:0">${data.html}</body></html>`;
+    const visto = campLatestPeriodo ? periodoLabel(campLatestPeriodo) : (data.mes || '—');
+    note.innerHTML = `<span class="badge">${escapeHtml(data.mes || 'Campaña')}</span> Último visto: ${escapeHtml(visto)}`;
+  } catch (err) {
+    console.error('[campActual]', err);
+    if (note) note.innerHTML = `<i class="fa-solid fa-circle-info"></i> No se pudo cargar la campaña actual.`;
   }
 }
 
@@ -3588,7 +3683,7 @@ function campTemplateOpen() {
   document.getElementById('campTplModal').classList.add('show');
   campTemplateRender();
 }
-function campTemplateClose() { document.getElementById('campTplModal').classList.remove('show'); }
+function campTemplateClose() { campSaveCurrent(); document.getElementById('campTplModal').classList.remove('show'); }
 
 // Color por signo: verde si + , rojo si − , azul si vacío/0
 function campPctColor(v) {
@@ -3628,16 +3723,29 @@ function campTemplateRender() {
   document.getElementById('campTplFrame').srcdoc =
     `<!doctype html><html><head><meta charset="utf-8"></head><body style="margin:0">${campTemplateHtml()}</body></html>`;
 }
+// Guarda la plantilla actual como "Campaña Actual" (lo que ven los no-admin)
+async function campSaveCurrent() {
+  if (currentProfile?.role !== 'admin') return;
+  const mes  = MESES_ES[+document.getElementById('campTplMes').value] || '';
+  const anio = document.getElementById('campTplAnio').value.trim();
+  try {
+    await sb.from('campaign_current').upsert(
+      { id: 1, html: campTemplateHtml(), mes: `${mes} ${anio}`.trim(), updated_at: new Date().toISOString() },
+      { onConflict: 'id' });
+  } catch (e) { console.error('[campSaveCurrent]', e); }
+}
 function campTemplateCopy() {
   const html = campTemplateHtml();
   if (navigator.clipboard?.writeText) {
-    navigator.clipboard.writeText(html).then(() => toast('HTML copiado al portapapeles')).catch(() => toast('No se pudo copiar — usa Descargar'));
+    navigator.clipboard.writeText(html).then(() => toast('HTML copiado — guardado como Campaña Actual')).catch(() => toast('No se pudo copiar — usa Descargar'));
   } else {
     toast('No se pudo copiar — usa Descargar .html');
   }
+  campSaveCurrent();
 }
 function campTemplateDownload() {
   const mes  = (MESES_ES[+document.getElementById('campTplMes').value] || 'campana').toLowerCase();
   const anio = document.getElementById('campTplAnio').value.trim();
   downloadBlob(new Blob([campTemplateHtml()], { type: 'text/html;charset=utf-8;' }), `campana_${mes}_${anio}.html`);
+  campSaveCurrent();
 }

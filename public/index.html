@@ -2516,49 +2516,106 @@ button,input,select{font-family:var(--font)}
     #campTplFrame{width:100%;height:520px;border:1px solid var(--line,#e3e8f0);border-radius:8px;background:#f0f1f5}
     [data-theme="dark"] .camp-modal,[data-theme="dark"] .camp-f-inp{background:var(--card,#1a2030)}
     @media(max-width:760px){.camp-tpl-grid{grid-template-columns:1fr}#campTplFrame{height:360px}}
+    /* pestañas de campañas */
+    .camp-tabs{display:flex;gap:6px}
+    .camp-tab{background:var(--navy-ghost);border:1px solid transparent;border-radius:var(--r-sm,8px);padding:8px 14px;font-size:13px;font-family:inherit;color:var(--ink-soft,#667);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+    .camp-tab.on{background:var(--navy);color:#fff}
+    .camp-tab:not(.on):hover{border-color:var(--navy-light)}
+    /* ranking tipo chart */
+    .camp-rank-head{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+    .camp-rank-title{font-size:18px;font-weight:500;color:var(--navy)}
+    .camp-rank-sub{font-size:13px;color:var(--ink-soft,#889);font-weight:400}
+    .camp-rank-note{font-size:12px;color:var(--ink-soft,#778);background:var(--navy-ghost);padding:5px 12px;border-radius:20px}
+    .camp-rank-list{display:flex;flex-direction:column;gap:6px;max-width:760px}
+    .camp-rank-row{display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--line,#eef1f6);border-radius:10px;background:var(--white,#fff)}
+    .camp-rank-row.top1{border-color:#e6a417;background:linear-gradient(90deg,rgba(230,164,23,.10),transparent)}
+    .camp-rank-row.top2{border-color:#9aa7b8}
+    .camp-rank-row.top3{border-color:#cd7f32}
+    .camp-rank-pos{font-family:var(--mono,monospace);font-size:18px;font-weight:700;color:var(--navy);min-width:30px;text-align:center}
+    .camp-rank-mov{font-size:14px;width:16px;text-align:center}
+    .camp-rank-mov.up{color:#16a34a}
+    .camp-rank-mov.down{color:#c0392b}
+    .camp-rank-mov.flat{color:#c2c8d2}
+    .camp-rank-info{flex:1;min-width:0}
+    .camp-rank-name{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .camp-rank-bar-wrap{height:6px;background:var(--navy-ghost);border-radius:3px;margin-top:5px;overflow:hidden}
+    .camp-rank-bar{height:100%;background:var(--navy);border-radius:3px}
+    .camp-rank-stat{text-align:right;white-space:nowrap}
+    .camp-rank-score{font-family:var(--mono,monospace);font-weight:700;font-size:16px;color:var(--navy)}
+    .camp-rank-veces{font-size:11px;color:var(--ink-soft,#889)}
+    /* campaña actual */
+    .camp-actual-note{font-size:13px;color:var(--ink-soft,#667);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+    .camp-actual-note .badge{background:var(--navy);color:#fff;padding:2px 10px;border-radius:20px;font-size:12px}
+    .camp-actual-frame-wrap{max-width:640px;margin:0 auto;border:1px solid var(--line,#e3e8f0);border-radius:8px;overflow:hidden}
+    #campActualFrame{width:100%;height:calc(100vh - 240px);min-height:480px;border:0;background:#f0f1f5;display:block}
+    .camp-empty-mini{padding:40px 20px;text-align:center;color:var(--ink-soft,#889)}
+    .camp-empty-mini i{font-size:30px;opacity:.4;display:block;margin-bottom:10px}
   </style>
   <div class="page page-db" id="pageCampaigns">
     <div class="db-toolbar">
-      <div class="db-title-block"><i class="fa-solid fa-bolt"></i> Seguimiento de Campañas</div>
-      <div class="db-search">
+      <div class="db-title-block"><i class="fa-solid fa-bolt"></i> Campañas</div>
+      <div class="camp-tabs">
+        <button class="camp-tab on" data-ctab="ranking" onclick="campSetTab('ranking')"><i class="fa-solid fa-ranking-star"></i> Ranking</button>
+        <button class="camp-tab" data-ctab="actual" onclick="campSetTab('actual')"><i class="fa-solid fa-envelope-open-text"></i> Campaña Actual</button>
+        <button class="camp-tab camp-tab-admin" data-ctab="gestion" onclick="campSetTab('gestion')" style="display:none"><i class="fa-solid fa-sliders"></i> Gestión</button>
+      </div>
+    </div>
+
+    <!-- TAB: Ranking (todos) -->
+    <div class="camp-pane" id="campPaneRanking">
+      <div class="camp-rank-head">
+        <div class="camp-rank-title">Top de interacción <span class="camp-rank-sub">— qué LPs abren más las campañas</span></div>
+        <div class="camp-rank-note" id="campRankNote"></div>
+      </div>
+      <div id="campRankList" class="camp-rank-list"></div>
+    </div>
+
+    <!-- TAB: Campaña Actual (todos) -->
+    <div class="camp-pane" id="campPaneActual" style="display:none">
+      <div class="camp-actual-note" id="campActualNote"></div>
+      <div class="camp-actual-frame-wrap"><iframe id="campActualFrame" title="Campaña actual"></iframe></div>
+    </div>
+
+    <!-- TAB: Gestión (solo admin) -->
+    <div class="camp-pane" id="campPaneGestion" style="display:none">
+      <div class="db-search camp-gestion-search">
         <i class="fa-solid fa-magnifying-glass db-search-ico"></i>
         <input id="campSearch" class="db-search-inp" placeholder="Buscar LP, email o responsable…" oninput="renderCampaigns()" autocomplete="off">
       </div>
-    </div>
-
-    <div class="camp-upload">
-      <div class="camp-upload-row">
-        <label class="camp-month-lbl">Mes del reporte
-          <input type="month" id="campMonth" class="camp-month">
-        </label>
-        <div class="camp-drop" id="campDrop"
-             ondragover="campDragOver(event)" ondragleave="campDragLeave()" ondrop="campDrop(event)"
-             onclick="document.getElementById('campFileInput').click()">
-          <i class="fa-solid fa-cloud-arrow-up"></i>
-          <span>Arrastra aquí el CSV de Yesware, o haz clic para elegirlo</span>
-          <input type="file" id="campFileInput" accept=".csv,text/csv" style="display:none" onchange="campHandleFiles(this.files)">
+      <div class="camp-upload">
+        <div class="camp-upload-row">
+          <label class="camp-month-lbl">Mes del reporte
+            <input type="month" id="campMonth" class="camp-month">
+          </label>
+          <div class="camp-drop" id="campDrop"
+               ondragover="campDragOver(event)" ondragleave="campDragLeave()" ondrop="campDrop(event)"
+               onclick="document.getElementById('campFileInput').click()">
+            <i class="fa-solid fa-cloud-arrow-up"></i>
+            <span>Arrastra aquí el CSV de Yesware, o haz clic para elegirlo</span>
+            <input type="file" id="campFileInput" accept=".csv,text/csv" style="display:none" onchange="campHandleFiles(this.files)">
+          </div>
         </div>
+        <div class="camp-actions">
+          <button class="cdd-btn" type="button" onclick="campAddContactOpen()"><i class="fa-solid fa-user-plus"></i> Añadir contacto</button>
+          <button class="cdd-btn" type="button" onclick="campTemplateOpen()"><i class="fa-solid fa-envelope-open-text"></i> Plantilla del correo</button>
+          <button class="cdd-btn" type="button" onclick="campExportExcel()"><i class="fa-solid fa-file-excel"></i> Exportar Excel</button>
+          <button class="cdd-btn" type="button" onclick="campExportYesware()"><i class="fa-solid fa-paper-plane"></i> Exportar Yesware</button>
+          <button class="cdd-btn camp-btn-danger" type="button" onclick="campDeleteMonth()"><i class="fa-solid fa-trash"></i> Borrar mes</button>
+        </div>
+        <div class="camp-preview" id="campPreview" style="display:none"></div>
       </div>
-      <div class="camp-actions">
-        <button class="cdd-btn" type="button" onclick="campAddContactOpen()"><i class="fa-solid fa-user-plus"></i> Añadir contacto</button>
-        <button class="cdd-btn" type="button" onclick="campTemplateOpen()"><i class="fa-solid fa-envelope-open-text"></i> Plantilla del correo</button>
-        <button class="cdd-btn" type="button" onclick="campExportExcel()"><i class="fa-solid fa-file-excel"></i> Exportar Excel</button>
-        <button class="cdd-btn" type="button" onclick="campExportYesware()"><i class="fa-solid fa-paper-plane"></i> Exportar Yesware</button>
-        <button class="cdd-btn camp-btn-danger" type="button" onclick="campDeleteMonth()"><i class="fa-solid fa-trash"></i> Borrar mes</button>
+
+      <div class="db-filters" style="border:none;padding-bottom:8px">
+        <span class="db-count" id="campCount">—</span>
+        <span class="camp-legend">
+          <span class="camp-l1">⚡</span> abrió ·
+          <span class="camp-l2">⚡⚡</span> + click ·
+          <span class="camp-l3">⚡⚡⚡</span> + respondió
+        </span>
       </div>
-      <div class="camp-preview" id="campPreview" style="display:none"></div>
-    </div>
 
-    <div class="db-filters" style="border:none;padding-bottom:8px">
-      <span class="db-count" id="campCount">—</span>
-      <span class="camp-legend">
-        <span class="camp-l1">⚡</span> abrió ·
-        <span class="camp-l2">⚡⚡</span> + click ·
-        <span class="camp-l3">⚡⚡⚡</span> + respondió
-      </span>
+      <div id="campMatrix" class="camp-matrix"></div>
     </div>
-
-    <div id="campMatrix" class="camp-matrix"></div>
   </div>
 
   <!-- Modal: Añadir contacto -->
