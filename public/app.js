@@ -3342,8 +3342,8 @@ function renderCampaigns() {
         <div class="camp-name-main">${nombre}${c.cancelado ? ' <span class="camp-cancel-badge">CANCELÓ</span>' : ''}</div>
         <div class="camp-name-sub">${escapeHtml(c.email)}${c.responsable ? ' · ' + escapeHtml(c.responsable) : ''}</div>
       </td>
-      ${cells}
       <td class="camp-total">${vistos}</td>
+      ${cells}
     </tr>`;
   }).join('');
 
@@ -3352,8 +3352,8 @@ function renderCampaigns() {
       <thead>
         <tr>
           <th class="camp-name camp-name-h" rowspan="2">LP</th>
-          ${grpCells}
           <th class="camp-total camp-total-h" rowspan="2" title="Meses con interacción">Vistos</th>
+          ${grpCells}
         </tr>
         <tr>${subCells}</tr>
       </thead>

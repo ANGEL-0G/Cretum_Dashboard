@@ -2459,12 +2459,16 @@ button,input,select{font-family:var(--font)}
     .camp-table{border-collapse:separate;border-spacing:0;width:100%;font-size:13px}
     .camp-table th,.camp-table td{padding:8px 6px;text-align:center;white-space:nowrap;border-bottom:1px solid var(--line,#eef1f6)}
     .camp-table thead th{position:sticky;top:0;z-index:2;background:var(--navy);color:#fff;font-weight:600;font-size:11px;text-align:center}
-    .camp-name,.camp-name-h{text-align:left!important;position:sticky;left:0;z-index:1;background:var(--white,#fff);min-width:230px;max-width:280px}
+    .camp-name,.camp-name-h{text-align:left!important;position:sticky;left:0;z-index:1;background:var(--white,#fff);width:240px;min-width:240px;max-width:240px}
     .camp-table thead th.camp-name-h{z-index:4;background:var(--navy)!important;color:#fff;text-align:center!important}
     .camp-name-main{font-weight:500;overflow:hidden;text-overflow:ellipsis}
     .camp-name-sub{font-size:11px;color:var(--ink-soft,#889);overflow:hidden;text-overflow:ellipsis}
-    .camp-mth-grp{font-size:11px;font-weight:700;white-space:nowrap;text-align:center;letter-spacing:.3px}
-    .camp-mth-del{margin-left:5px;background:none;border:none;color:rgba(255,255,255,.55);cursor:pointer;font-size:11px;padding:0 2px;opacity:0;transition:opacity .12s}
+    /* "Vistos" fijo junto al LP (segunda columna pegada a la izquierda) */
+    .camp-total,.camp-total-h{position:sticky;left:240px;z-index:1;width:54px;min-width:54px;font-family:var(--mono,monospace);font-weight:700;background:var(--navy-pale)}
+    .camp-table thead th.camp-total-h{top:0;z-index:3;background:var(--navy)!important;color:#fff}
+    [data-theme="dark"] .camp-total{background:var(--card,#1a2030)}
+    .camp-mth-grp{position:relative;font-size:11px;font-weight:700;white-space:nowrap;text-align:center;letter-spacing:.3px}
+    .camp-mth-del{position:absolute;right:3px;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(255,255,255,.55);cursor:pointer;font-size:11px;padding:0 2px;opacity:0;transition:opacity .12s}
     .camp-mth-grp:hover .camp-mth-del{opacity:1}
     .camp-mth-del:hover{color:#ff8d7a}
     /* subtítulo ⚡ en azul claro, sobre un navy un tono más claro */
@@ -2479,8 +2483,6 @@ button,input,select{font-family:var(--font)}
     .camp-table tbody tr:hover td{background:#e7eefb}
     .camp-table tbody tr:hover .camp-name{background:#e7eefb}
     .camp-table tbody tr.camp-row-cancel td{background:#fbeceb}
-    .camp-total,.camp-total-h{font-family:var(--mono,monospace);font-weight:700;min-width:50px;background:var(--navy-pale)}
-    .camp-total-h{background:var(--navy)!important;color:#fff}
     .camp-l1{color:#e6a417}
     .camp-l2{color:#ED7824}
     .camp-l3{color:#16a34a}
