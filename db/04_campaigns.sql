@@ -70,6 +70,57 @@ CREATE POLICY "campaign_eng_admin" ON campaign_engagement
   USING (is_admin()) WITH CHECK (is_admin());
 
 -- ═══════════════════════════════════════════════════════════════════════════
--- LISTO. Las tablas quedan vacías; el front (sección "Campañas", solo-admin)
--- las llena: primero la carga inicial del histórico, luego cada CSV mensual.
+-- RANKING (visible para TODOS los usuarios) + CAMPAÑA ACTUAL
+-- ═══════════════════════════════════════════════════════════════════════════
+
+-- Campaña actual: un solo registro. La escribe el admin (desde el generador de
+-- plantilla); la leen todos los autenticados (es el correo de marketing).
+CREATE TABLE IF NOT EXISTS campaign_current (
+  id          SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+  html        TEXT,
+  mes         TEXT,
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE campaign_current ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "campaign_current_read" ON campaign_current;
+CREATE POLICY "campaign_current_read" ON campaign_current
+  FOR SELECT TO authenticated USING (TRUE);
+DROP POLICY IF EXISTS "campaign_current_admin" ON campaign_current;
+CREATE POLICY "campaign_current_admin" ON campaign_current
+  FOR ALL TO authenticated USING (is_admin()) WITH CHECK (is_admin());
+
+-- Ranking de interacción. SECURITY DEFINER: salta RLS pero SOLO devuelve
+-- nombre + agregados (nunca email ni comentarios). Solo authenticated (no anon).
+CREATE OR REPLACE FUNCTION public.campaign_ranking()
+RETURNS TABLE (nombre TEXT, score INT, meses_vistos INT, ultimo_periodo DATE, momentum TEXT)
+LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public AS $$
+  WITH per AS (SELECT DISTINCT periodo FROM campaign_engagement),
+       ranked AS (SELECT periodo, row_number() OVER (ORDER BY periodo DESC) rn FROM per),
+       lastp AS (SELECT periodo FROM ranked WHERE rn = 1),
+       prevp AS (SELECT periodo FROM ranked WHERE rn = 2),
+       agg AS (
+         SELECT c.email,
+                COALESCE(c.nombre_completo, c.nombre, 'LP') AS nombre,
+                COALESCE(SUM(e.nivel), 0) AS score,
+                COUNT(*) FILTER (WHERE e.nivel >= 1) AS meses_vistos,
+                MAX(e.periodo) FILTER (WHERE e.nivel >= 1) AS ultimo_periodo,
+                COALESCE(MAX(e.nivel) FILTER (WHERE e.periodo = (SELECT periodo FROM lastp)), 0) AS last_n,
+                COALESCE(MAX(e.nivel) FILTER (WHERE e.periodo = (SELECT periodo FROM prevp)), 0) AS prev_n
+         FROM lp_contacts c
+         LEFT JOIN campaign_engagement e ON e.email = c.email
+         WHERE COALESCE(c.cancelado, FALSE) = FALSE
+         GROUP BY c.email, COALESCE(c.nombre_completo, c.nombre, 'LP')
+       )
+  SELECT nombre, score::INT, meses_vistos::INT, ultimo_periodo,
+         CASE WHEN last_n >= 1 AND last_n >= prev_n THEN 'up'
+              WHEN last_n < prev_n THEN 'down'
+              ELSE 'flat' END AS momentum
+  FROM agg WHERE meses_vistos >= 1
+  ORDER BY score DESC, meses_vistos DESC, nombre;
+$$;
+REVOKE EXECUTE ON FUNCTION public.campaign_ranking() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.campaign_ranking() TO authenticated;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- LISTO. Gestión (matriz/upload) = solo admin · Ranking + Campaña Actual = todos.
 -- ═══════════════════════════════════════════════════════════════════════════
