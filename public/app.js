@@ -3647,7 +3647,7 @@ function campExportYesware() {
   const activos = campContacts.filter(c => !c.cancelado);
   const excluidos = campContacts.length - activos.length;
   const list = activos.slice().sort((a, b) => (a.nombre || a.email).localeCompare(b.nombre || b.email, 'es'));
-  const lines = ['email,first_name'];
+  const lines = ['email,Nombre'];
   list.forEach(c => lines.push(esc(c.email) + ',' + esc(c.nombre || '')));
   const csv = '﻿' + lines.join('\r\n');
   downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), `yesware_contactos_${new Date().toISOString().slice(0, 10)}.csv`);
