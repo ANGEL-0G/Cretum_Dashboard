@@ -3180,6 +3180,7 @@ async function loadCampaigns() {
   // Ranking y Campaña Actual: para TODOS (ranking primero para saber el último mes)
   await loadCampRanking();
   loadCampActual();
+  loadCampCarta();
 
   // Matriz de gestión: solo admin (lee tablas directo; RLS lo permite solo a admin)
   if (!isAdmin) return;
@@ -3278,6 +3279,70 @@ async function loadCampActual() {
   } catch (err) {
     console.error('[campActual]', err);
     if (note) note.innerHTML = `<i class="fa-solid fa-circle-info"></i> No se pudo cargar la campaña actual.`;
+  }
+}
+
+/* ── Carta mensual autorizada (Dropbox) — botón "Carta <Mes>" ──
+   Cuando la carta está en esta carpeta es porque ya está autorizada y
+   confirmada. Se toma el archivo más reciente de la carpeta del año. */
+const CARTA_DBX_DIR = '/CRETUM RAIZ/Cretum/Cretum Capital Partners/Marketing/Carta Mensual';
+let campCartaFile = null;
+
+async function loadCampCarta() {
+  const btn = document.getElementById('campCartaBtn');
+  if (!btn || campCartaFile) return;   // ya resuelta en esta sesión
+  try {
+    const y = new Date().getFullYear();
+    let entries = await campCartaList(`${CARTA_DBX_DIR}/${y}`);
+    // En enero la última carta autorizada puede seguir en la carpeta del año pasado
+    if (!entries.some(e => e.type === 'file')) entries = await campCartaList(`${CARTA_DBX_DIR}/${y - 1}`);
+    const files = entries.filter(e => e.type === 'file');
+    if (!files.length) { btn.style.display = 'none'; return; }
+    files.sort((a, b) => String(b.modified || '').localeCompare(String(a.modified || '')));
+    campCartaFile = files[0];
+    btn.innerHTML = `<i class="fa-solid fa-file-pdf"></i> Carta ${campCartaMes(campCartaFile)}`;
+    btn.style.display = '';
+  } catch (err) {
+    console.error('[carta]', err);
+    btn.style.display = 'none';
+  }
+}
+
+async function campCartaList(path) {
+  const r = await authedFetch('/api/dropbox?action=list&path=' + encodeURIComponent(path));
+  if (!r.ok) return [];
+  const d = await r.json();
+  return d.entries || [];
+}
+
+// Mes de la carta: primero busca el nombre del mes en el archivo;
+// si no viene, asume el mes anterior a su fecha de subida.
+function campCartaMes(f) {
+  const low = (f.name || '').toLowerCase();
+  const i = MESES_ES.findIndex(m => low.includes(m.toLowerCase()));
+  if (i >= 0) {
+    const anio = ((f.name || '').match(/20\d{2}/) || [])[0];
+    return MESES_ES[i] + (anio ? ' ' + anio : '');
+  }
+  const d = new Date(f.modified || Date.now());
+  d.setDate(1); d.setMonth(d.getMonth() - 1);
+  return `${MESES_ES[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+async function campCartaOpen() {
+  if (!campCartaFile) return;
+  // Abrir la pestaña ANTES del fetch para que el bloqueador de popups no la pare
+  const w = window.open('', '_blank');
+  try {
+    const r = await authedFetch('/api/dropbox?action=download&path=' + encodeURIComponent(campCartaFile.path));
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    if (w) w.location = url; else window.open(url, '_blank');
+  } catch (err) {
+    console.error('[carta]', err);
+    if (w) w.close();
+    toast('No se pudo abrir la carta');
   }
 }
 

@@ -2581,6 +2581,10 @@ button,input,select{font-family:var(--font)}
     .camp-lp-desc.n0{color:#aab3c0}
     .camp-lp-desc.n3{color:#16a34a;font-weight:500}
     /* campaña actual */
+    .camp-actual-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;max-width:640px;margin:0 auto 12px}
+    .camp-actual-head .camp-actual-note{margin-bottom:0}
+    .camp-carta-btn{white-space:nowrap}
+    .camp-carta-btn i{color:#c0392b}
     .camp-actual-note{font-size:13px;color:var(--ink-soft,#667);margin-bottom:12px;display:flex;align-items:center;gap:8px}
     .camp-actual-note .badge{background:var(--navy);color:#fff;padding:2px 10px;border-radius:20px;font-size:12px}
     .camp-actual-frame-wrap{max-width:640px;margin:0 auto;border:1px solid var(--line,#e3e8f0);border-radius:8px;overflow:hidden}
@@ -2609,7 +2613,10 @@ button,input,select{font-family:var(--font)}
 
     <!-- TAB: Campaña Actual (todos) -->
     <div class="camp-pane" id="campPaneActual" style="display:none">
-      <div class="camp-actual-note" id="campActualNote"></div>
+      <div class="camp-actual-head">
+        <div class="camp-actual-note" id="campActualNote"></div>
+        <button class="cdd-btn camp-carta-btn" id="campCartaBtn" style="display:none" onclick="campCartaOpen()" title="Carta mensual autorizada (Dropbox)"></button>
+      </div>
       <div class="camp-actual-frame-wrap"><iframe id="campActualFrame" title="Campaña actual"></iframe></div>
     </div>
 
