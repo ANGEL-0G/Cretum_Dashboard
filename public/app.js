@@ -3158,6 +3158,7 @@ function deriveEngagement(rows) {
 let campTab = null;
 let campLatestPeriodo = null;   // último mes con datos (para "Último visto")
 let campRankRows = [];          // filas del ranking (con historial) para el detalle por LP
+let campCurrentParams = null;   // valores del generador de la última campaña publicada
 
 function campSetTab(tab) {
   campTab = tab;
@@ -3265,8 +3266,9 @@ async function loadCampActual() {
   const note = document.getElementById('campActualNote');
   const frame = document.getElementById('campActualFrame');
   try {
-    const { data, error } = await sb.from('campaign_current').select('html, mes, updated_at').eq('id', 1).maybeSingle();
+    const { data, error } = await sb.from('campaign_current').select('html, mes, updated_at, params').eq('id', 1).maybeSingle();
     if (error) throw error;
+    campCurrentParams = data?.params || null;
     if (!data || !data.html) {
       if (frameWrap) frameWrap.style.display = 'none';
       if (note) note.innerHTML = `<i class="fa-solid fa-circle-info"></i> Aún no hay una campaña publicada.`;
@@ -3978,6 +3980,16 @@ function campTemplateOpen() {
   const sel = document.getElementById('campTplMes');
   if (!sel.options.length) {
     sel.innerHTML = MESES_ES.map((m, i) => `<option value="${i}">${m}</option>`).join('');
+  }
+  const p = campCurrentParams;
+  if (p && p.mes != null) {
+    // Pre-llena con la última campaña publicada (no se pierden los números)
+    sel.value = String(p.mes);
+    document.getElementById('campTplAnio').value = p.anio || String(new Date().getFullYear());
+    document.getElementById('campTplMensual').value = p.mensual || '';
+    document.getElementById('campTplAcum').value = p.acum || '';
+    document.getElementById('campTplLink').value = p.link || '';
+  } else {
     // La campaña reporta el mes ANTERIOR (se envía la primera semana del mes siguiente)
     const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1);
     sel.value = String(d.getMonth());
@@ -3986,7 +3998,9 @@ function campTemplateOpen() {
   document.getElementById('campTplModal').classList.add('show');
   campTemplateRender();
 }
-function campTemplateClose() { campSaveCurrent(); document.getElementById('campTplModal').classList.remove('show'); }
+// Cerrar NO guarda: solo Copiar HTML / Descargar publican la Campaña Actual
+// (antes cerrar sobreescribía la campaña publicada con campos vacíos).
+function campTemplateClose() { document.getElementById('campTplModal').classList.remove('show'); }
 
 // Color por signo: verde si + , rojo si − , azul si vacío/0
 function campPctColor(v) {
@@ -4029,12 +4043,21 @@ function campTemplateRender() {
 // Guarda la plantilla actual como "Campaña Actual" (lo que ven los no-admin)
 async function campSaveCurrent() {
   if (currentProfile?.role !== 'admin') return;
-  const mes  = MESES_ES[+document.getElementById('campTplMes').value] || '';
+  const mesIdx = +document.getElementById('campTplMes').value;
+  const mes  = MESES_ES[mesIdx] || '';
   const anio = document.getElementById('campTplAnio').value.trim();
+  const params = {
+    mes: mesIdx,
+    anio,
+    mensual: document.getElementById('campTplMensual').value,
+    acum: document.getElementById('campTplAcum').value,
+    link: document.getElementById('campTplLink').value.trim(),
+  };
   try {
     await sb.from('campaign_current').upsert(
-      { id: 1, html: campTemplateHtml(), mes: `${mes} ${anio}`.trim(), updated_at: new Date().toISOString() },
+      { id: 1, html: campTemplateHtml(), mes: `${mes} ${anio}`.trim(), params, updated_at: new Date().toISOString() },
       { onConflict: 'id' });
+    campCurrentParams = params;
   } catch (e) { console.error('[campSaveCurrent]', e); }
 }
 function campTemplateCopy() {

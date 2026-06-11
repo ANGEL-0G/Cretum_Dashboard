@@ -79,8 +79,10 @@ CREATE TABLE IF NOT EXISTS campaign_current (
   id          SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
   html        TEXT,
   mes         TEXT,
+  params      JSONB,   -- valores del generador (mes, año, %, link) para pre-llenar
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+ALTER TABLE campaign_current ADD COLUMN IF NOT EXISTS params JSONB;
 ALTER TABLE campaign_current ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "campaign_current_read" ON campaign_current;
 CREATE POLICY "campaign_current_read" ON campaign_current
