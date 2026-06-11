@@ -3683,6 +3683,81 @@ async function campSheetsSync() {
   }
 }
 
+/* ── Contactos Apertura (correo diario de noticias de mercados) ──
+   Lista aparte de los LPs. Copiar correos → pegar en CCO del cliente de
+   correo; Redactar → abre el correo con CCO y asunto ya puestos. */
+let aperturaContacts = null;
+
+async function aperturaOpen() {
+  document.getElementById('campAperturaModal').classList.add('show');
+  if (!aperturaContacts) await aperturaLoad();
+  else aperturaRender();
+}
+function aperturaClose() { document.getElementById('campAperturaModal').classList.remove('show'); }
+
+async function aperturaLoad() {
+  const list = document.getElementById('aperturaList');
+  list.innerHTML = '<div class="db-loading"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
+  const { data, error } = await sb.from('apertura_contacts').select('email, nombre').order('email');
+  if (error) { list.innerHTML = `<div class="camp-empty-mini">Error: ${escapeHtml(error.message)}</div>`; return; }
+  aperturaContacts = data || [];
+  aperturaRender();
+}
+
+function aperturaRender() {
+  const list = document.getElementById('aperturaList');
+  const count = document.getElementById('aperturaCount');
+  if (count) count.textContent = `${aperturaContacts.length} contacto${aperturaContacts.length === 1 ? '' : 's'}`;
+  if (!aperturaContacts.length) {
+    list.innerHTML = `<div class="camp-empty-mini"><i class="fa-solid fa-envelope-open"></i>
+      <p>Sin contactos aún. Pega abajo los correos (vale separarlos por comas, punto y coma o saltos de línea).</p></div>`;
+    return;
+  }
+  list.innerHTML = aperturaContacts.map(c => `<div class="apertura-row">
+    <span class="apertura-mail">${escapeHtml(c.email)}</span>
+    ${c.nombre ? `<span class="apertura-nom">${escapeHtml(c.nombre)}</span>` : ''}
+    <button class="camp-row-act camp-row-del" title="Quitar de la lista" onclick="aperturaRemove('${c.email}')"><i class="fa-solid fa-xmark"></i></button>
+  </div>`).join('');
+}
+
+async function aperturaAdd() {
+  const inp = document.getElementById('aperturaInput');
+  const raw = inp.value.trim();
+  if (!raw) return;
+  // Acepta uno o muchos: separados por coma, punto y coma, espacios o renglones
+  const emails = [...new Set(raw.split(/[\s,;<>"]+/).map(s => s.trim().toLowerCase()).filter(s => s.includes('@') && s.includes('.')))];
+  if (!emails.length) { toast('No encontré correos válidos en el texto'); return; }
+  const { error } = await sb.from('apertura_contacts').upsert(emails.map(e => ({ email: e })), { onConflict: 'email' });
+  if (error) { toast('Error al guardar: ' + error.message); return; }
+  inp.value = '';
+  await aperturaLoad();
+  toast(`${emails.length} contacto${emails.length === 1 ? '' : 's'} en la lista`);
+}
+
+async function aperturaRemove(email) {
+  const { error } = await sb.from('apertura_contacts').delete().eq('email', email);
+  if (error) { toast('Error al borrar: ' + error.message); return; }
+  aperturaContacts = aperturaContacts.filter(c => c.email !== email);
+  aperturaRender();
+}
+
+function aperturaCopy() {
+  if (!aperturaContacts?.length) { toast('No hay contactos'); return; }
+  const s = aperturaContacts.map(c => c.email).join('; ');
+  navigator.clipboard?.writeText(s)
+    .then(() => toast('Correos copiados — pégalos en CCO'))
+    .catch(() => toast('No se pudo copiar'));
+}
+
+function aperturaCompose() {
+  if (!aperturaContacts?.length) { toast('No hay contactos'); return; }
+  const hoy = new Date();
+  const fecha = `${hoy.getDate()} de ${MESES_ES[hoy.getMonth()].toLowerCase()} de ${hoy.getFullYear()}`;
+  // CCO para no exponer la lista entre destinatarios
+  const bcc = aperturaContacts.map(c => c.email).join(',');
+  window.location.href = `mailto:?bcc=${encodeURIComponent(bcc)}&subject=${encodeURIComponent('Apertura de Mercados — ' + fecha)}`;
+}
+
 /* ── Añadir contacto (mini-modal) ── */
 function campAddContactOpen() {
   ['campCNombre', 'campCFull', 'campCEmail', 'campCResp'].forEach(id => { document.getElementById(id).value = ''; });

@@ -2580,6 +2580,15 @@ button,input,select{font-family:var(--font)}
     .camp-lp-desc{flex:1;color:var(--ink,#334)}
     .camp-lp-desc.n0{color:#aab3c0}
     .camp-lp-desc.n3{color:#16a34a;font-weight:500}
+    /* contactos apertura */
+    .apertura-count{font-size:12px;font-weight:400;color:var(--ink-soft,#889);margin-left:6px}
+    #aperturaList{max-height:300px;overflow:auto;border:1px solid var(--line,#e8ecf3);border-radius:8px;margin-bottom:10px}
+    .apertura-row{display:flex;align-items:center;gap:8px;padding:6px 10px;border-top:1px solid #f0f3f8}
+    .apertura-row:first-child{border-top:none}
+    .apertura-mail{flex:1;font-family:var(--mono,monospace);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .apertura-nom{color:var(--ink-soft,#889);font-size:12px;white-space:nowrap}
+    .apertura-addrow{display:flex;gap:8px;align-items:flex-start}
+    .apertura-addrow textarea{flex:1;resize:vertical;min-height:42px}
     /* campaña actual */
     .camp-actual-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;max-width:640px;margin:0 auto 12px}
     .camp-actual-head .camp-actual-note{margin-bottom:0}
@@ -2645,6 +2654,7 @@ button,input,select{font-family:var(--font)}
           <button class="cdd-btn" type="button" onclick="campExportExcel()"><i class="fa-solid fa-file-excel"></i> Exportar Excel</button>
           <button class="cdd-btn" type="button" onclick="campExportYesware()"><i class="fa-solid fa-paper-plane"></i> Exportar Contactos</button>
           <button class="cdd-btn" type="button" id="campSheetsBtn" onclick="campSheetsSync()" title="Reescribe el Google Sheets y trae de vuelta los comentarios del equipo"><i class="fa-solid fa-table-cells"></i> Sincronizar Sheets</button>
+          <button class="cdd-btn" type="button" onclick="aperturaOpen()" title="Destinatarios del correo diario de apertura de mercados"><i class="fa-solid fa-sun"></i> Contactos Apertura</button>
           <button class="cdd-btn camp-btn-danger" type="button" onclick="campDeleteMonth()"><i class="fa-solid fa-trash"></i> Borrar mes</button>
         </div>
         <div class="camp-preview" id="campPreview" style="display:none"></div>
@@ -2696,6 +2706,27 @@ button,input,select{font-family:var(--font)}
         <button class="camp-modal-x" onclick="campLpClose()" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="camp-modal-body" id="campLpBody"></div>
+    </div>
+  </div>
+
+  <!-- Modal: Contactos Apertura (correo diario de mercados) -->
+  <div class="camp-modal-backdrop" id="campAperturaModal" onclick="if(event.target===this)aperturaClose()">
+    <div class="camp-modal">
+      <div class="camp-modal-head">
+        <div class="camp-modal-title"><i class="fa-solid fa-sun"></i> Contactos Apertura <span class="apertura-count" id="aperturaCount"></span></div>
+        <button class="camp-modal-x" onclick="aperturaClose()" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="camp-modal-body">
+        <div id="aperturaList"></div>
+        <div class="apertura-addrow">
+          <textarea id="aperturaInput" class="camp-f-inp" rows="2" placeholder="Agregar correos — uno o varios, separados por coma o renglón"></textarea>
+          <button class="cdd-btn" type="button" onclick="aperturaAdd()"><i class="fa-solid fa-plus"></i> Agregar</button>
+        </div>
+      </div>
+      <div class="camp-modal-foot">
+        <button class="cdd-btn" type="button" onclick="aperturaCopy()"><i class="fa-solid fa-copy"></i> Copiar correos</button>
+        <button class="btn-primary" type="button" onclick="aperturaCompose()"><i class="fa-solid fa-paper-plane"></i> Redactar</button>
+      </div>
     </div>
   </div>
 
