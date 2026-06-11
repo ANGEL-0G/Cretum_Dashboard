@@ -3626,6 +3626,7 @@ async function campSheetsSync() {
     periods.forEach(p => header.push(periodoLabel(p), '', ''));
     const contacts = campContacts.slice().sort((a, b) =>
       (a.nombre_completo || a.email).localeCompare(b.nombre_completo || b.email, 'es'));
+    const vistosPor = new Map();
     const rows = contacts.map(c => {
       let vistos = 0;
       const cells = [];
@@ -3634,14 +3635,20 @@ async function campSheetsSync() {
         if (n >= 1) vistos++;
         cells.push(n === 1 ? '⚡' : '', n === 2 ? '⚡⚡' : '', n === 3 ? '⚡⚡⚡' : '');
       });
+      vistosPor.set(c.email, vistos);
       return [c.email, c.nombre || '', c.nombre_completo || '', c.responsable || '', c.comentarios || '', vistos, ...cells];
     });
     const cancelados = campContacts.filter(c => c.cancelado).map(c => c.email);
+    // Destacados en naranja claro: vieron la campaña todos los meses (o solo uno menos)
+    const umbral = Math.max(1, periods.length - 1);
+    const destacados = contacts
+      .filter(c => !c.cancelado && (vistosPor.get(c.email) || 0) >= umbral)
+      .map(c => c.email);
 
     const r = await authedFetch('/api/sheets', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ header, rows, meses: periods.length, cancelados }),
+      body: JSON.stringify({ header, rows, meses: periods.length, cancelados, destacados }),
     });
     const d = await r.json().catch(() => null);
     if (!r.ok || !d?.ok) throw new Error(d?.error || ('HTTP ' + r.status));

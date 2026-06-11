@@ -49,7 +49,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'No se pudo verificar el rol: ' + err.message });
   }
 
-  const { header, rows, meses, cancelados } = req.body || {};
+  const { header, rows, meses, cancelados, destacados } = req.body || {};
   if (!Array.isArray(header) || !Array.isArray(rows) || !rows.length) {
     return res.status(400).json({ error: 'Payload inválido: faltan header/rows' });
   }
@@ -67,6 +67,7 @@ export default async function handler(req, res) {
       rows,
       meses: meses || 0,
       cancelados: cancelados || [],
+      destacados: destacados || [],
     };
     // text/plain: Apps Script no acepta bien preflight CORS ni JSON puro
     const r = await fetch(webappUrl, {

@@ -41,6 +41,8 @@ function doPost(e) {
     var existing = readExisting_(sh);
     var cancelados = {};
     (p.cancelados || []).forEach(function (em) { cancelados[String(em).toLowerCase()] = true; });
+    var destacados = {};
+    (p.destacados || []).forEach(function (em) { destacados[String(em).toLowerCase()] = true; });
 
     // 2) Merge: si el sheet tiene Comentarios/Responsable, el sheet gana
     //    (es donde el equipo da seguimiento hoy). CANCELÓ se preserva.
@@ -73,12 +75,19 @@ function doPost(e) {
     if (rows.length && nCols > 6) {
       sh.getRange(2, 6, rows.length, nCols - 5).setHorizontalAlignment('center');
     }
-    // Filas canceladas en rojo
-    for (var rI = 0; rI < rows.length; rI++) {
-      var em2 = String(rows[rI][0] || '').toLowerCase().trim();
-      if (cancelados[em2]) {
-        sh.getRange(2 + rI, 1, 1, nCols).setFontColor('#c0392b');
+    // Colores por fila (una sola pasada): cancelados en letra roja,
+    // destacados (los que llevan más meses viendo) en fondo naranja claro
+    if (rows.length) {
+      var bgs = [], fonts = [];
+      for (var rI = 0; rI < rows.length; rI++) {
+        var em2 = String(rows[rI][0] || '').toLowerCase().trim();
+        var bg = destacados[em2] && !cancelados[em2] ? '#fff3e0' : '#ffffff';
+        var fc = cancelados[em2] ? '#c0392b' : '#000000';
+        var bgRow = [], fcRow = [];
+        for (var cI = 0; cI < nCols; cI++) { bgRow.push(bg); fcRow.push(fc); }
+        bgs.push(bgRow); fonts.push(fcRow);
       }
+      sh.getRange(2, 1, rows.length, nCols).setBackgrounds(bgs).setFontColors(fonts);
     }
     sh.setFrozenRows(1);
     sh.setFrozenColumns(1);
