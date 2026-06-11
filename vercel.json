@@ -10,6 +10,7 @@
     { "src": "api/reminder.js",          "use": "@vercel/node" },
     { "src": "api/config.js",            "use": "@vercel/node" },
     { "src": "api/dropbox.js",           "use": "@vercel/node" },
+    { "src": "api/sheets.js",            "use": "@vercel/node" },
     { "src": "api/notify-assignment.js", "use": "@vercel/node" }
   ],
   "routes": [
@@ -17,6 +18,7 @@
     { "src": "/api/reminder",           "dest": "/api/reminder.js" },
     { "src": "/api/config",             "dest": "/api/config.js" },
     { "src": "/api/dropbox",            "dest": "/api/dropbox.js" },
+    { "src": "/api/sheets",             "dest": "/api/sheets.js" },
     { "src": "/api/notify-assignment",  "dest": "/api/notify-assignment.js" },
     { "src": "/app.js",        "dest": "/public/app.js" },
     { "src": "/logo.png",      "dest": "/public/logo.png" },
