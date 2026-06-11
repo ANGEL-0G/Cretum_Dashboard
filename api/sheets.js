@@ -54,16 +54,22 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Payload inválido: faltan header/rows' });
   }
 
+  // Tolera comillas literales y espacios alrededor en las env vars
+  // (mismo criterio que DROPBOX_ROOT_PATH en api/dropbox.js)
+  const clean = (v) => (v || '').trim().replace(/^["']|["']$/g, '');
+  const webappUrl = clean(process.env.SHEETS_WEBAPP_URL);
+  const syncSecret = clean(process.env.SHEETS_SYNC_SECRET);
+
   try {
     const payload = {
-      secret: process.env.SHEETS_SYNC_SECRET,
+      secret: syncSecret,
       header,
       rows,
       meses: meses || 0,
       cancelados: cancelados || [],
     };
     // text/plain: Apps Script no acepta bien preflight CORS ni JSON puro
-    const r = await fetch(process.env.SHEETS_WEBAPP_URL, {
+    const r = await fetch(webappUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(payload),
