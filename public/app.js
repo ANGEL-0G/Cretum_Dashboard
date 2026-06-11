@@ -3608,6 +3608,74 @@ async function campExportExcel() {
   toast(`Exportados ${rows.length} LPs a Excel`);
 }
 
+/* ── Sincronizar con Google Sheets (puente durante la migración) ──
+   Manda la matriz al Apps Script del Sheets (vía /api/sheets, que guarda el
+   secreto). El script reescribe la hoja PERO los Comentarios/Responsable que
+   el equipo haya escrito allá ganan y se traen de vuelta a lp_contacts. */
+async function campSheetsSync() {
+  if (!campContacts.length) { toast('No hay datos para sincronizar'); return; }
+  const btn = document.getElementById('campSheetsBtn');
+  const btnHtml = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sincronizando…'; }
+  try {
+    // Misma matriz que el Exportar Excel
+    const periods = [...new Set(campEngagement.map(e => periodoKey(e.periodo)))].sort();
+    const lvl = new Map();
+    campEngagement.forEach(e => lvl.set(`${e.email}|${periodoKey(e.periodo)}`, e.nivel));
+    const header = ['Email', 'Nombre', 'Nombre Completo (Para Registro)', 'Responsable (s) Registrados', 'Comentarios', 'Meses Vistos'];
+    periods.forEach(p => header.push(periodoLabel(p), '', ''));
+    const contacts = campContacts.slice().sort((a, b) =>
+      (a.nombre_completo || a.email).localeCompare(b.nombre_completo || b.email, 'es'));
+    const rows = contacts.map(c => {
+      let vistos = 0;
+      const cells = [];
+      periods.forEach(p => {
+        const n = lvl.get(`${c.email}|${p}`) || 0;
+        if (n >= 1) vistos++;
+        cells.push(n === 1 ? '⚡' : '', n === 2 ? '⚡⚡' : '', n === 3 ? '⚡⚡⚡' : '');
+      });
+      return [c.email, c.nombre || '', c.nombre_completo || '', c.responsable || '', c.comentarios || '', vistos, ...cells];
+    });
+    const cancelados = campContacts.filter(c => c.cancelado).map(c => c.email);
+
+    const r = await authedFetch('/api/sheets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ header, rows, meses: periods.length, cancelados }),
+    });
+    const d = await r.json().catch(() => null);
+    if (!r.ok || !d?.ok) throw new Error(d?.error || ('HTTP ' + r.status));
+
+    // Trae de vuelta el seguimiento que el equipo escribió en el Sheets
+    const seg = d.seguimiento || {};
+    const cambios = [];
+    for (const c of campContacts) {
+      const s = seg[c.email];
+      if (!s) continue;
+      const nc = (s.comentarios || '').trim() || null;
+      const nr = (s.responsable || '').trim() || null;
+      if ((nc || '') !== (c.comentarios || '') || (nr || '') !== (c.responsable || '')) {
+        cambios.push({ email: c.email, comentarios: nc, responsable: nr });
+      }
+    }
+    if (cambios.length) {
+      const { error } = await sb.from('lp_contacts').upsert(cambios, { onConflict: 'email' });
+      if (error) throw error;
+      cambios.forEach(ch => {
+        const c = campContacts.find(x => x.email === ch.email);
+        if (c) { c.comentarios = ch.comentarios; c.responsable = ch.responsable; }
+      });
+      renderCampaigns();
+    }
+    toast(`Sheets actualizado (${d.filas} filas)${cambios.length ? ` · ${cambios.length} seguimiento${cambios.length === 1 ? '' : 's'} traído${cambios.length === 1 ? '' : 's'} del Sheets` : ''}`);
+  } catch (err) {
+    console.error('[sheets sync]', err);
+    toast('Error al sincronizar: ' + err.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = btnHtml; }
+  }
+}
+
 /* ── Añadir contacto (mini-modal) ── */
 function campAddContactOpen() {
   ['campCNombre', 'campCFull', 'campCEmail', 'campCResp'].forEach(id => { document.getElementById(id).value = ''; });
