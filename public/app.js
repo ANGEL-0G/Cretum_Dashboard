@@ -3088,8 +3088,15 @@ function renderFundTrackerDetail(fundId) {
 
   host.innerHTML = `
     <div class="ft-header">
-      <div class="ft-name">${escapeHtml(f.name)} — ${escapeHtml(f.subtitle)}</div>
-      <div class="ft-sub">${escapeHtml(f.status)} · ${escapeHtml(f.confidentiality)} · Cutoff ${escapeHtml(cutoffPretty)}</div>
+      <div class="ft-header-top">
+        <div>
+          <div class="ft-name">${escapeHtml(f.name)} — ${escapeHtml(f.subtitle)}</div>
+          <div class="ft-sub">${escapeHtml(f.status)} · ${escapeHtml(f.confidentiality)} · Cutoff ${escapeHtml(cutoffPretty)}</div>
+        </div>
+        <button class="ft-export-btn" onclick="exportFundTrackerExcel('${f.id}', this)">
+          <i class="fa-solid fa-file-excel"></i> Descargar Excel
+        </button>
+      </div>
       <div class="ft-stats">
         <div>
           <div class="ft-stat-l">${f.overallTotal2 ? 'Committed (overall)' : 'Invested (overall)'}</div>
@@ -3127,8 +3134,137 @@ function renderFundTrackerDetail(fundId) {
     </div>`;
 }
 
+// ── Export a Excel (ExcelJS, lazy-load) ──
+let _excelJsPromise = null;
+function loadExcelJS() {
+  if (window.ExcelJS) return Promise.resolve();
+  if (_excelJsPromise) return _excelJsPromise;
+  _excelJsPromise = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';
+    s.onload = resolve;
+    s.onerror = () => { _excelJsPromise = null; reject(new Error('No se pudo cargar ExcelJS')); };
+    document.head.appendChild(s);
+  });
+  return _excelJsPromise;
+}
+
+async function exportFundTrackerExcel(fundId, btn) {
+  const f = FUND_TRACKERS[fundId];
+  if (!f || f.placeholder) return;
+  if (btn) { btn.disabled = true; }
+  try {
+    await loadExcelJS();
+    const ORANGE = 'FFE8650D', NAVY = 'FF1F2A44', LIGHT = 'FFFDF1E7', TOTAL_BG = 'FFF5E6D8';
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'Cretum Partners';
+    const ws = wb.addWorksheet('Valuation Overview', { views: [{ showGridLines: false }] });
+
+    const nCols = f.columns.length;
+    ws.columns = f.columns.map(c => ({
+      width: c.key === 'company' ? 38 : (c.type === 'money' ? 20 : 15)
+    }));
+
+    const fmtFor = (type) => ({
+      money: '$#,##0',
+      pct:   '0.0%',
+      moic:  '0.00"x"',
+      int:   '#,##0',
+      num:   '#,##0.00'
+    })[type] || null;
+
+    let r = 1;
+    const titleRow = (text, opts = {}) => {
+      ws.mergeCells(r, 1, r, nCols);
+      const cell = ws.getCell(r, 1);
+      cell.value = text;
+      cell.font = { bold: !!opts.bold, size: opts.size || 11, color: { argb: opts.color || NAVY } };
+      if (opts.fill) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: opts.fill } };
+      r++;
+    };
+
+    titleRow(`${f.name} Tracker`, { bold: true, size: 16 });
+    titleRow(f.status, { size: 10 });
+    titleRow(f.subtitle, { size: 10 });
+    titleRow(`Cutoff: ${f.cutoff}`, { size: 10 });
+    titleRow(f.confidentiality, { bold: true, size: 10, color: 'FFC0392B' });
+    r++;
+
+    const headerRow = () => {
+      f.columns.forEach((c, i) => {
+        const cell = ws.getCell(r, i + 1);
+        cell.value = c.label;
+        cell.font = { bold: true, size: 10, color: { argb: 'FFFFFFFF' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ORANGE } };
+        cell.alignment = { horizontal: i === 0 ? 'left' : 'right', vertical: 'middle', wrapText: true };
+        cell.border = { bottom: { style: 'thin', color: { argb: NAVY } } };
+      });
+      ws.getRow(r).height = 28;
+      r++;
+    };
+
+    const dataRow = (row, stripe) => {
+      f.columns.forEach((c, i) => {
+        const cell = ws.getCell(r, i + 1);
+        cell.value = row[c.key] != null ? row[c.key] : '';
+        const fm = fmtFor(c.type);
+        if (fm) cell.numFmt = fm;
+        cell.font = { size: 10 };
+        cell.alignment = { horizontal: i === 0 ? 'left' : 'right' };
+        if (stripe) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: LIGHT } };
+      });
+      r++;
+    };
+
+    const totalRow = (label, t) => {
+      f.columns.forEach((c, i) => {
+        const cell = ws.getCell(r, i + 1);
+        if (c.key === 'company') cell.value = label;
+        else if (c.key === 'invested') { cell.value = t.invested; cell.numFmt = '$#,##0'; }
+        else if (c.key === 'mtm')      { cell.value = t.mtm;      cell.numFmt = '$#,##0'; }
+        else if (c.key === 'moic')     { cell.value = t.moic;     cell.numFmt = '0.00"x"'; }
+        cell.font = { bold: true, size: 10 };
+        cell.alignment = { horizontal: i === 0 ? 'left' : 'right' };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TOTAL_BG } };
+        cell.border = { top: { style: 'thin', color: { argb: NAVY } } };
+      });
+      r++;
+    };
+
+    const section = (title, rows, totalLabel, total) => {
+      titleRow(title, { bold: true, size: 12, fill: LIGHT });
+      headerRow();
+      rows.forEach((row, idx) => dataRow(row, idx % 2 === 1));
+      if (total) totalRow(totalLabel, total);
+      r++;
+    };
+
+    section('Active Positions', f.active, 'Total - Active', f.activeTotal);
+    if (f.pending && f.pending.length) {
+      section(f.pendingTitle || 'Pending Positions', f.pending, 'Total - Pending', f.pendingTotal);
+    }
+    section('Distributed Positions', f.distributed, null, null);
+    r--;
+    totalRow((f.overallLabel || 'Total - Overall').replace(/—/g, '-'), f.overallTotal);
+    if (f.overallTotal2) totalRow(f.overallTotal2.label.replace(/—/g, '-'), f.overallTotal2);
+
+    const buf = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${f.name.replace(/[^\w]+/g, '_')}_Tracker_${f.cutoff}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  } catch (e) {
+    alert('Error al generar el Excel: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; }
+  }
+}
+
 window.openFundTracker = openFundTracker;
 window.closeFundTracker = closeFundTracker;
+window.exportFundTrackerExcel = exportFundTrackerExcel;
 
 /* ═══════════════════════════════════════════
    CAMPAÑAS (Yesware) — solo-admin

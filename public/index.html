@@ -1476,6 +1476,14 @@ button,input,select{font-family:var(--font)}
 .ft-stats{display:flex;gap:24px;flex-wrap:wrap}
 .ft-stat-l{font-size:10.5px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px}
 .ft-stat-v{font-size:17px;font-weight:600;color:var(--gray-900)}
+.ft-header-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.ft-export-btn{
+  display:inline-flex;align-items:center;gap:8px;border:none;cursor:pointer;
+  background:#1D6F42;color:#fff;font-family:inherit;font-size:12.5px;font-weight:600;
+  padding:9px 16px;border-radius:9px;transition:background .15s;white-space:nowrap;
+}
+.ft-export-btn:hover{background:#175a35}
+.ft-export-btn:disabled{opacity:.6;cursor:wait}
 .ft-empty{
   background:var(--gray-50);border:1px dashed var(--gray-300);border-radius:12px;
   padding:48px 24px;text-align:center;color:var(--gray-500);font-size:14px;
