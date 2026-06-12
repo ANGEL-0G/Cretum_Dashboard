@@ -4052,11 +4052,26 @@ function campExportYesware() {
   const activos = campContacts.filter(c => !c.cancelado);
   const excluidos = campContacts.length - activos.length;
   const list = activos.slice().sort((a, b) => (a.nombre || a.email).localeCompare(b.nombre || b.email, 'es'));
-  const lines = ['email,Nombre'];
-  list.forEach(c => lines.push(esc(c.email) + ',' + esc(c.nombre || '')));
-  const csv = '﻿' + lines.join('\r\n');
-  downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), `yesware_contactos_${new Date().toISOString().slice(0, 10)}.csv`);
-  toast(`Exportados ${list.length} contactos${excluidos ? ` (${excluidos} cancelado${excluidos === 1 ? '' : 's'} excluido${excluidos === 1 ? '' : 's'})` : ''}`);
+  const hoy = new Date().toISOString().slice(0, 10);
+  const toCsv = (rows) => '﻿' + ['email,Nombre', ...rows.map(c => esc(c.email) + ',' + esc(c.nombre || ''))].join('\r\n');
+
+  // Lotes: para subirlos a Yesware espaciados (~1/hora) y no disparar el
+  // antispam de Microsoft (límite 30 correos/minuto por buzón).
+  const nLotes = Math.max(1, +(document.getElementById('campExportLotes')?.value || 1));
+  if (nLotes === 1) {
+    downloadBlob(new Blob([toCsv(list)], { type: 'text/csv;charset=utf-8;' }), `yesware_contactos_${hoy}.csv`);
+  } else {
+    const tam = Math.ceil(list.length / nLotes);
+    for (let i = 0; i < nLotes; i++) {
+      const chunk = list.slice(i * tam, (i + 1) * tam);
+      if (!chunk.length) break;
+      // Pequeño escalonamiento: el navegador bloquea descargas simultáneas
+      setTimeout(() => downloadBlob(
+        new Blob([toCsv(chunk)], { type: 'text/csv;charset=utf-8;' }),
+        `yesware_contactos_${hoy}_lote${i + 1}de${nLotes}.csv`), i * 400);
+    }
+  }
+  toast(`Exportados ${list.length} contactos${nLotes > 1 ? ` en ${nLotes} lotes` : ''}${excluidos ? ` · ${excluidos} cancelado${excluidos === 1 ? '' : 's'} excluido${excluidos === 1 ? '' : 's'}` : ''}`);
 }
 
 /* ── Borrar los datos de un mes (el seleccionado en "Mes del reporte") ── */

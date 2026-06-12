@@ -2588,6 +2588,10 @@ button,input,select{font-family:var(--font)}
     .camp-lp-desc{flex:1;color:var(--ink,#334)}
     .camp-lp-desc.n0{color:#aab3c0}
     .camp-lp-desc.n3{color:#16a34a;font-weight:500}
+    /* export por lotes */
+    .camp-export-grp{display:inline-flex;align-items:stretch}
+    .camp-export-grp .cdd-btn{border-top-right-radius:0;border-bottom-right-radius:0}
+    .camp-export-lotes{border:1px solid var(--line,#d7dde8);border-left:none;border-top-right-radius:8px;border-bottom-right-radius:8px;background:var(--white,#fff);font-size:12px;color:var(--ink,#334);padding:0 6px;cursor:pointer}
     /* contactos apertura */
     .apertura-count{font-size:12px;font-weight:400;color:var(--ink-soft,#889);margin-left:6px}
     #aperturaList{max-height:300px;overflow:auto;border:1px solid var(--line,#e8ecf3);border-radius:8px;margin-bottom:10px}
@@ -2660,7 +2664,15 @@ button,input,select{font-family:var(--font)}
           <button class="cdd-btn" type="button" onclick="campAddContactOpen()"><i class="fa-solid fa-user-plus"></i> Añadir contacto</button>
           <button class="cdd-btn" type="button" onclick="campTemplateOpen()"><i class="fa-solid fa-envelope-open-text"></i> Plantilla del correo</button>
           <button class="cdd-btn" type="button" onclick="campExportExcel()"><i class="fa-solid fa-file-excel"></i> Exportar Excel</button>
-          <button class="cdd-btn" type="button" onclick="campExportYesware()"><i class="fa-solid fa-paper-plane"></i> Exportar Contactos</button>
+          <span class="camp-export-grp" title="En cuántos archivos dividir el export — súbelos a Yesware espaciados ~1 hora para no disparar el antispam de Microsoft">
+            <button class="cdd-btn" type="button" onclick="campExportYesware()"><i class="fa-solid fa-paper-plane"></i> Exportar Contactos</button>
+            <select id="campExportLotes" class="camp-export-lotes">
+              <option value="1">1 archivo</option>
+              <option value="2">2 lotes</option>
+              <option value="4">4 lotes</option>
+              <option value="6">6 lotes</option>
+            </select>
+          </span>
           <button class="cdd-btn" type="button" id="campSheetsBtn" onclick="campSheetsSync()" title="Reescribe el Google Sheets y trae de vuelta los comentarios del equipo"><i class="fa-solid fa-table-cells"></i> Sincronizar Sheets</button>
           <button class="cdd-btn" type="button" onclick="aperturaOpen()" title="Destinatarios del correo diario de apertura de mercados"><i class="fa-solid fa-sun"></i> Contactos Apertura</button>
           <button class="cdd-btn camp-btn-danger" type="button" onclick="campDeleteMonth()"><i class="fa-solid fa-trash"></i> Borrar mes</button>
