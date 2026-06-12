@@ -2993,7 +2993,7 @@ function renderFundTrackerHome() {
            <span><strong>${f.active.length}</strong> activas</span>
            ${f.pending && f.pending.length ? `<span><strong>${f.pending.length}</strong> pendientes</span>` : ''}
            <span><strong>${f.distributed.length}</strong> distribuidas</span>
-           <span class="${moicClass(f.overallTotal.moic)}"><strong>${f.overallTotal.moic.toFixed(2)}x</strong> MOIC overall</span>
+           <span class="${moicClass((f.overallTotal2 || f.overallTotal).moic)}"><strong>${(f.overallTotal2 || f.overallTotal).moic.toFixed(2)}x</strong> MOIC overall</span>
          </div>`;
     return `
       <div class="ft-card${isPh ? ' ft-card-placeholder' : ''}" onclick="openFundTracker('${f.id}')">
@@ -3092,16 +3092,16 @@ function renderFundTrackerDetail(fundId) {
       <div class="ft-sub">${escapeHtml(f.status)} · ${escapeHtml(f.confidentiality)} · Cutoff ${escapeHtml(cutoffPretty)}</div>
       <div class="ft-stats">
         <div>
-          <div class="ft-stat-l">Invested (overall)</div>
-          <div class="ft-stat-v">${fmtTrackerCell(f.overallTotal.invested, 'money')}</div>
+          <div class="ft-stat-l">${f.overallTotal2 ? 'Committed (overall)' : 'Invested (overall)'}</div>
+          <div class="ft-stat-v">${fmtTrackerCell((f.overallTotal2 || f.overallTotal).invested, 'money')}</div>
         </div>
         <div>
           <div class="ft-stat-l">MTM Valuation</div>
-          <div class="ft-stat-v">${fmtTrackerCell(f.overallTotal.mtm, 'money')}</div>
+          <div class="ft-stat-v">${fmtTrackerCell((f.overallTotal2 || f.overallTotal).mtm, 'money')}</div>
         </div>
         <div>
           <div class="ft-stat-l">MOIC overall</div>
-          <div class="ft-stat-v ${moicClass(f.overallTotal.moic)}">${fmtTrackerCell(f.overallTotal.moic, 'moic')}</div>
+          <div class="ft-stat-v ${moicClass((f.overallTotal2 || f.overallTotal).moic)}">${fmtTrackerCell((f.overallTotal2 || f.overallTotal).moic, 'moic')}</div>
         </div>
       </div>
     </div>
