@@ -2946,6 +2946,62 @@ const FUND_TRACKERS = {
   }
 };
 
+/* ── SpaceX (SPCX, pública desde 2026-06-12) — mark en vivo ──
+   El sync de marks (Lun-Vie 15:30) escribe el precio público de SPCX en
+   investments.current_ev_pps / current_ev_b (company_id=27, solo activas).
+   Aquí lo leemos vía Supabase y re-marcamos las filas SpaceX de los trackers:
+   pps y corpVal vivos, mtm = shares × pps, moic = mtm / invested, totales por delta.
+   Al terminar el lock-up las investments quedarán distribuidas (distributed_at)
+   → la query no regresa filas y el tracker vuelve a los valores del Excel oficial. */
+let _spcxLive = null;
+let _spcxFetchStarted = false;
+let _spcxCurrentFund = null;
+const SPCX_ROW_RE = /space exploration|spacex/i;
+
+function fetchSpacexLiveMark() {
+  if (_spcxFetchStarted || !sb) return;
+  _spcxFetchStarted = true;
+  sb.from('investments')
+    .select('current_ev_pps,current_ev_b')
+    .eq('company_id', 27)
+    .is('distributed_at', null)
+    .limit(1)
+    .then(({ data, error }) => {
+      if (error || !data || !data.length || !data[0].current_ev_pps) return;
+      _spcxLive = { pps: data[0].current_ev_pps, evB: data[0].current_ev_b };
+      applySpacexLiveToTrackers();
+      const det = document.getElementById('ftDetail');
+      if (det && det.classList.contains('show') && _spcxCurrentFund) {
+        renderFundTrackerDetail(_spcxCurrentFund);
+      }
+    });
+}
+
+function applySpacexLiveToTrackers() {
+  if (!_spcxLive) return;
+  for (const f of [FUND_TRACKERS.fundIV, FUND_TRACKERS.fundV]) {
+    if (!f || f.placeholder || !f.active) continue;
+    let delta = 0;
+    for (const row of f.active) {
+      if (!SPCX_ROW_RE.test(row.company) || !row.shares) continue;
+      const newMtm = Math.round(row.shares * _spcxLive.pps);
+      delta += newMtm - row.mtm;
+      row.pps = _spcxLive.pps;
+      if (_spcxLive.evB) row.corpVal = _spcxLive.evB;
+      row.mtm = newMtm;
+      if (row.invested) row.moic = newMtm / row.invested;
+    }
+    if (!delta) continue;
+    for (const t of [f.activeTotal, f.overallTotal, f.overallTotal2]) {
+      if (!t || t.mtm == null) continue;
+      t.mtm += delta;
+      if (t.invested) t.moic = t.mtm / t.invested;
+    }
+    f._spcxLiveNote = 'SpaceX @ mercado (SPCX $' +
+      _spcxLive.pps.toLocaleString('en-US', { maximumFractionDigits: 2 }) + ')';
+  }
+}
+
 function fmtTrackerCell(value, type) {
   if (value === null || value === undefined || value === '') return '—';
   if (type === 'money') {
@@ -3016,6 +3072,8 @@ function openFundTracker(fundId) {
   sel.style.display = 'none';
   det.style.display = 'block';
   det.classList.add('show');
+  _spcxCurrentFund = fundId;
+  fetchSpacexLiveMark();
   renderFundTrackerDetail(fundId);
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -3091,7 +3149,7 @@ function renderFundTrackerDetail(fundId) {
       <div class="ft-header-top">
         <div>
           <div class="ft-name">${escapeHtml(f.name)} — ${escapeHtml(f.subtitle)}</div>
-          <div class="ft-sub">${escapeHtml(f.status)} · ${escapeHtml(f.confidentiality)} · Cutoff ${escapeHtml(cutoffPretty)}</div>
+          <div class="ft-sub">${escapeHtml(f.status)} · ${escapeHtml(f.confidentiality)} · Cutoff ${escapeHtml(cutoffPretty)}${f._spcxLiveNote ? ' · ' + escapeHtml(f._spcxLiveNote) : ''}</div>
         </div>
         <button class="ft-export-btn" onclick="exportFundTrackerExcel('${f.id}', this)">
           <i class="fa-solid fa-file-excel"></i> Descargar Excel
