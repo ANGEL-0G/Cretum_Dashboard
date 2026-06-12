@@ -2940,7 +2940,9 @@ const FUND_TRACKERS = {
       { company: 'Groq, Inc. (Distributed)', invested: 5480542, pct: 0.036, mtm: 16470384, moic: 3.0052, corpVal: 14.2,   pps: 68.7, entry: 22.86, shares: 239744, fdso: 206.7 },
       { company: 'Klarna Holding AB',        invested: 436638,  pct: 0.003, mtm: 266292,   moic: 0.6099, corpVal: 5.435,  pps: 13,   entry: 21.32, shares: 20484,  fdso: 418.1 }
     ],
-    overallTotal:     { invested: 151119219, mtm: 261037782, moic: 1.7274 }
+    overallLabel:     'Total — Overall (Invested)',
+    overallTotal:     { invested: 151119219, mtm: 261037782, moic: 1.7274 },
+    overallTotal2:    { label: 'Total — Overall (Commitment)', invested: 293000000, mtm: 402918563, moic: 1.3751 }
   }
 };
 
@@ -3070,7 +3072,8 @@ function renderFundTrackerDetail(fundId) {
 
   const activeBody = f.active.map(renderRow).join('') + renderTotalRow('Total — Active', f.activeTotal);
   const distBody   = f.distributed.map(renderRow).join('');
-  const overallRow = renderTotalRow('Total — Overall', f.overallTotal);
+  const overallRow = renderTotalRow(f.overallLabel || 'Total — Overall', f.overallTotal)
+    + (f.overallTotal2 ? renderTotalRow(f.overallTotal2.label, f.overallTotal2) : '');
 
   const pendingSection = (f.pending && f.pending.length) ? `
     <div class="ft-section">
