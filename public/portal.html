@@ -15,34 +15,37 @@
   /* ───────── LOGIN ───────── */
   #loginView{
     min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;
-    background:linear-gradient(135deg,#0a1929 0%,#0f2e5c 30%,#1a3a6b 60%,#2a4f8f 100%);
-    background-size:300% 300%;animation:bgGradient 22s ease-in-out infinite;
-    position:relative;overflow:hidden;
+    background:#fbfdff;position:relative;overflow:hidden;
   }
-  @keyframes bgGradient{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
-  /* textura de puntos */
+  /* textura de puntos azules muy sutil, difuminada hacia los bordes */
   #loginView::before{
     content:'';position:absolute;inset:0;pointer-events:none;z-index:0;
-    background-image:radial-gradient(rgba(255,255,255,.07) 1px, transparent 1px);
-    background-size:28px 28px;
-    -webkit-mask-image:radial-gradient(ellipse at center, black 25%, transparent 75%);
-    mask-image:radial-gradient(ellipse at center, black 25%, transparent 75%);
+    background-image:radial-gradient(rgba(60,120,220,.10) 1px, transparent 1px);
+    background-size:30px 30px;
+    -webkit-mask-image:radial-gradient(ellipse at center, black 30%, transparent 80%);
+    mask-image:radial-gradient(ellipse at center, black 30%, transparent 80%);
   }
-  /* blobs desenfocados flotando */
-  .blob{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.08),transparent 70%);filter:blur(45px);pointer-events:none}
-  .blob1{width:500px;height:500px;top:-160px;left:-150px;animation:float1 14s ease-in-out infinite}
-  .blob2{width:400px;height:400px;bottom:-130px;right:-110px;background:radial-gradient(circle,rgba(123,168,255,.16),transparent 70%);animation:float2 17s ease-in-out infinite}
-  .blob3{width:300px;height:300px;top:50%;left:50%;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(93,143,245,.18),transparent 70%);animation:float3 12s ease-in-out infinite}
-  @keyframes float1{0%,100%{transform:translate(0,0)}50%{transform:translate(90px,70px)}}
-  @keyframes float2{0%,100%{transform:translate(0,0)}50%{transform:translate(-80px,-50px)}}
-  @keyframes float3{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.28)}}
+  /* orbes azules desenfocados flotando suave (estética tipo Antigravity) */
+  .blob{position:absolute;border-radius:50%;filter:blur(60px);pointer-events:none}
+  .blob1{width:460px;height:460px;top:-120px;left:-110px;background:radial-gradient(circle,rgba(74,140,255,.30),transparent 70%);animation:float1 16s ease-in-out infinite}
+  .blob2{width:380px;height:380px;bottom:-120px;right:-90px;background:radial-gradient(circle,rgba(120,170,255,.28),transparent 70%);animation:float2 19s ease-in-out infinite}
+  .blob3{width:320px;height:320px;top:54%;left:46%;background:radial-gradient(circle,rgba(150,135,255,.22),transparent 70%);animation:float3 14s ease-in-out infinite}
+  /* puntos azules más chicos */
+  .dot{position:absolute;border-radius:50%;filter:blur(20px);pointer-events:none}
+  .dot1{width:100px;height:100px;top:16%;right:16%;background:radial-gradient(circle,rgba(70,130,245,.34),transparent 70%);animation:float2 13s ease-in-out infinite}
+  .dot2{width:64px;height:64px;bottom:20%;left:14%;background:radial-gradient(circle,rgba(90,150,250,.32),transparent 70%);animation:float1 11s ease-in-out infinite}
+  .dot3{width:130px;height:130px;top:28%;left:7%;background:radial-gradient(circle,rgba(120,160,255,.24),transparent 70%);animation:float3 18s ease-in-out infinite}
+  .dot4{width:80px;height:80px;bottom:12%;right:24%;background:radial-gradient(circle,rgba(80,140,250,.30),transparent 70%);animation:float1 15s ease-in-out infinite}
+  @keyframes float1{0%,100%{transform:translate(0,0)}50%{transform:translate(60px,46px)}}
+  @keyframes float2{0%,100%{transform:translate(0,0)}50%{transform:translate(-54px,-36px)}}
+  @keyframes float3{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-30px,28px) scale(1.18)}}
 
   .card{
     position:relative;z-index:2;width:380px;max-width:100%;
-    background:rgba(255,255,255,.97);
-    -webkit-backdrop-filter:blur(20px) saturate(180%);backdrop-filter:blur(20px) saturate(180%);
+    background:rgba(255,255,255,.78);
+    -webkit-backdrop-filter:blur(16px) saturate(160%);backdrop-filter:blur(16px) saturate(160%);
     border-radius:20px;padding:38px 36px 28px;
-    box-shadow:0 30px 70px rgba(0,0,0,.55),0 8px 24px rgba(0,0,0,.22),0 0 0 1px rgba(255,255,255,.4),inset 0 1px 0 rgba(255,255,255,.85);
+    box-shadow:0 24px 60px rgba(30,64,130,.14),0 6px 18px rgba(30,64,130,.08),0 0 0 1px rgba(20,50,100,.05);
     animation:slideUp .5s cubic-bezier(.34,1.4,.64,1);
   }
   @keyframes slideUp{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
@@ -101,6 +104,7 @@
   <!-- Login -->
   <div id="loginView">
     <div class="blob blob1"></div><div class="blob blob2"></div><div class="blob blob3"></div>
+    <div class="dot dot1"></div><div class="dot dot2"></div><div class="dot dot3"></div><div class="dot dot4"></div>
     <div class="card">
       <img src="/logo.png" alt="Cretum Partners" class="logo">
       <div class="sub">Portal de Inversión</div>
