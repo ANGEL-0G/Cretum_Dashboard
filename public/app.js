@@ -1411,7 +1411,7 @@ const ORG_MODULES = {
       iconClass: 'home-ico-dropbox' },
     { view: 'campaigns', icon: 'fa-bolt', title: 'Campañas',
       desc: 'Ranking de interacción de los LPs y la campaña actual del fondo',
-      iconClass: 'home-ico-reports' },
+      iconClass: 'home-ico-campaigns' },
     { view: 'reports', icon: 'fa-chart-pie', title: 'Reportes',
       desc: 'Reportes personalizados por LP — Altareturn + Salesforce',
       iconClass: 'home-ico-reports', disabled: true },
