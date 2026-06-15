@@ -1869,9 +1869,11 @@ function repScore(q, name) {
   return best;
 }
 function repBestMatches(q, limit) {
+  // Inclusión con el matcher corregido (substring + fuzzy solo en 4+ chars);
+  // repScore solo se usa para ORDENAR los que ya pasaron el filtro.
   return repInvestorsAll
+    .filter(i => fuzzyMatch(q, i.name))
     .map(i => ({ i, s: repScore(q, i.name) }))
-    .filter(x => x.s >= 0.5)
     .sort((a, b) => b.s - a.s || a.i.name.localeCompare(b.i.name, 'es'))
     .slice(0, limit || 8)
     .map(x => x.i);
