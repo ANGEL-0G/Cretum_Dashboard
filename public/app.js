@@ -1869,6 +1869,13 @@ function repBestMatches(q, limit) {
     .map(x => x.i);
 }
 
+// Reutilizable en cualquier buscador: coincide por substring O por similitud
+// (tolera errores de tecleo). Sin query → todo coincide.
+function fuzzyMatch(q, text, threshold) {
+  if (!q || !String(q).trim()) return true;
+  return repScore(q, text) >= (threshold != null ? threshold : 0.5);
+}
+
 function repSuggest() {
   const q = (document.getElementById('repSearch').value || '').trim();
   const box = document.getElementById('repSugg');
@@ -2303,7 +2310,7 @@ function getDbFilters() {
 function getFilteredInvestors() {
   const { q, companyId, seriesId } = getDbFilters();
   let filtered = dbInvestors;
-  if (q) filtered = filtered.filter(r => r.name.toLowerCase().includes(q));
+  if (q) filtered = filtered.filter(r => fuzzyMatch(q, r.name));
   if (companyId) filtered = filtered.filter(r => dbInvestorCompanies[r.id]?.has(+companyId));
   if (seriesId)  filtered = filtered.filter(r => dbInvestorSeries[r.id]?.has(+seriesId));
   return filtered;
@@ -4041,9 +4048,9 @@ function renderCampaigns() {
   let contacts = campContacts.slice().sort((a, b) =>
     (a.nombre_completo || a.email).localeCompare(b.nombre_completo || b.email, 'es'));
   if (q) contacts = contacts.filter(c =>
-    (c.nombre_completo || '').toLowerCase().includes(q) ||
-    (c.email || '').toLowerCase().includes(q) ||
-    (c.responsable || '').toLowerCase().includes(q));
+    fuzzyMatch(q, c.nombre_completo || '') ||
+    (c.email || '').toLowerCase().includes(q) ||   // email: literal (la similitud no aplica bien)
+    fuzzyMatch(q, c.responsable || ''));
 
   document.getElementById('campCount').textContent =
     `${contacts.length} LP${contacts.length === 1 ? '' : 's'} · ${periods.length} mes${periods.length === 1 ? '' : 'es'}`;
