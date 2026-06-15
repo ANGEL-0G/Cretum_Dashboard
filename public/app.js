@@ -1877,11 +1877,18 @@ function repBestMatches(q, limit) {
     .map(x => x.i);
 }
 
-// Reutilizable en cualquier buscador: coincide por substring O por similitud
-// (tolera errores de tecleo). Sin query → todo coincide.
+// Reutilizable en cualquier buscador. Substring primero (sin ruido); la
+// tolerancia a errores SOLO se aplica a consultas de ≥4 caracteres con umbral
+// alto, para no inundar la lista con falsos positivos al teclear pocas letras.
 function fuzzyMatch(q, text, threshold) {
-  if (!q || !String(q).trim()) return true;
-  return repScore(q, text) >= (threshold != null ? threshold : 0.5);
+  const qn = repNorm(q), nn = repNorm(text);
+  if (!qn) return true;
+  if (nn.includes(qn)) return true;                 // substring siempre coincide
+  if (qn.length < 4) return false;                  // queries cortas: solo substring
+  const th = threshold != null ? threshold : 0.7;
+  if (repSim(qn, nn) >= th) return true;            // nombre completo parecido
+  return nn.split(' ').some(tok =>                  // o una palabra parecida (longitud similar)
+    Math.abs(tok.length - qn.length) <= 3 && repSim(qn, tok) >= th);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
