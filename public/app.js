@@ -1772,21 +1772,34 @@ const fmtMoney = (n) => {
   return '$' + n.toFixed(0);
 };
 
+// Supabase/PostgREST corta en 1000 filas por request. Paginamos con .range()
+// hasta traer todo: indispensable porque investments ya supera 1000 filas y la
+// agregación por inversionista (posiciones, commitment, actual) saldría incompleta.
+async function sbFetchAll(table, columns) {
+  const PAGE = 1000;
+  let from = 0;
+  const all = [];
+  while (true) {
+    const { data, error } = await sb.from(table).select(columns).range(from, from + PAGE - 1);
+    if (error) throw error;
+    all.push(...data);
+    if (data.length < PAGE) break;
+    from += PAGE;
+  }
+  return all;
+}
+
 async function loadDb() {
   const list = document.getElementById('dbList');
   list.innerHTML = '<div class="db-loading"><i class="fa-solid fa-spinner fa-spin"></i> Cargando datos…</div>';
   try {
-    // Inversionistas + agregados
-    const [{ data: investors, error: e1 },
-           { data: investments, error: e2 },
-           { data: companies, error: e3 },
-           { data: series, error: e4 }] = await Promise.all([
-      sb.from('investors').select('id, name'),
-      sb.from('investments').select('investor_id, company_id, series_id, commitment, commitment_actual'),
-      sb.from('companies').select('id, name, is_public'),
-      sb.from('series').select('id, name'),
+    // Inversionistas + agregados (todas paginadas: ver sbFetchAll)
+    const [investors, investments, companies, series] = await Promise.all([
+      sbFetchAll('investors', 'id, name'),
+      sbFetchAll('investments', 'investor_id, company_id, series_id, commitment, commitment_actual'),
+      sbFetchAll('companies', 'id, name, is_public'),
+      sbFetchAll('series', 'id, name'),
     ]);
-    if (e1) throw e1; if (e2) throw e2; if (e3) throw e3; if (e4) throw e4;
 
     dbSeries = series.sort((a, b) => a.name.localeCompare(b.name));
 
