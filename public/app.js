@@ -2225,6 +2225,16 @@ function cddToggle(id) {
     if (el.id !== id) el.classList.remove('open');
   });
   cdd.classList.toggle('open', !wasOpen);
+  // Al abrir un desplegable con buscador: limpia, muestra todo y enfoca
+  if (!wasOpen) {
+    const si = cdd.querySelector('.cdd-search input');
+    if (si) {
+      const panel = cdd.querySelector('.cdd-panel');
+      si.value = '';
+      if (panel) cddFilterOpts(panel.id, '');
+      setTimeout(() => si.focus(), 40);
+    }
+  }
 }
 
 function cddPick(id, value, label) {
@@ -2242,15 +2252,34 @@ function cddPick(id, value, label) {
 }
 
 function populateFilters() {
-  const buildPanel = (panelId, allLabel, items) => {
+  const buildPanel = (panelId, allLabel, items, ph) => {
     const panel = document.getElementById(panelId);
     if (!panel) return;
-    panel.innerHTML = `<div class="cdd-opt selected" data-value="">${allLabel}</div>` +
-      items.map(it => `<div class="cdd-opt" data-value="${it.id}">${escapeHtml(it.name)}</div>`).join('');
+    panel.innerHTML =
+      `<div class="cdd-search"><i class="fa-solid fa-magnifying-glass"></i>` +
+      `<input type="text" placeholder="${ph}" autocomplete="off" oninput="cddFilterOpts('${panelId}', this.value)"></div>` +
+      `<div class="cdd-opt selected" data-value="">${allLabel}</div>` +
+      items.map(it => `<div class="cdd-opt" data-value="${it.id}">${escapeHtml(it.name)}</div>`).join('') +
+      `<div class="cdd-noopt" data-noopt style="display:none">Sin coincidencias</div>`;
   };
   buildPanel('ddCompanyPanel', 'Todas las empresas',
-    [...dbCompanies].sort((a, b) => a.name.localeCompare(b.name)));
-  buildPanel('ddSeriesPanel', 'Todas las series', dbSeries);
+    [...dbCompanies].sort((a, b) => a.name.localeCompare(b.name)), 'Buscar empresa…');
+  buildPanel('ddSeriesPanel', 'Todas las series', dbSeries, 'Buscar serie…');
+}
+
+// Filtra (difuso) las opciones visibles de un panel de desplegable
+function cddFilterOpts(panelId, q) {
+  const panel = document.getElementById(panelId);
+  if (!panel) return;
+  let visibles = 0;
+  panel.querySelectorAll('.cdd-opt').forEach(opt => {
+    if (!opt.dataset.value) { opt.style.display = ''; return; }  // "Todas…" siempre
+    const ok = fuzzyMatch(q, opt.textContent);
+    opt.style.display = ok ? '' : 'none';
+    if (ok) visibles++;
+  });
+  const noopt = panel.querySelector('[data-noopt]');
+  if (noopt) noopt.style.display = (q && !visibles) ? '' : 'none';
 }
 
 // Delegación: click en una opción o fuera del dropdown

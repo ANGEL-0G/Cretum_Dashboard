@@ -1732,6 +1732,14 @@ button,input,select{font-family:var(--font)}
 .cdd-opt:hover{background:var(--gray-50);padding-left:18px}
 .cdd-opt.selected{background:var(--navy-pale);color:var(--navy);font-weight:500}
 .cdd-opt.selected:hover{background:var(--navy-pale)}
+/* Buscador dentro de un desplegable de filtro */
+.cdd-search{position:sticky;top:0;background:var(--white,#fff);padding:8px;border-bottom:1px solid var(--gray-100,#eef0f5);display:flex;align-items:center;gap:6px;z-index:1}
+.cdd-search i{color:var(--gray-400,#9aa3b5);font-size:11px}
+.cdd-search input{border:1px solid var(--gray-200,#e0e3eb);border-radius:6px;padding:5px 8px;font-size:12.5px;width:100%;outline:none;background:var(--white,#fff);color:var(--gray-900,#1a1f2e)}
+.cdd-search input:focus{border-color:var(--navy)}
+.cdd-noopt{padding:10px 14px;font-size:12px;color:var(--gray-400,#9aa3b5)}
+[data-theme="dark"] .cdd-search{background:#1a1a1a;border-color:#262626}
+[data-theme="dark"] .cdd-search input{background:#0a0a0a;border-color:#2a2a2a;color:#ddd}
 
 [data-theme="dark"] .cdd-btn{background:#0a0a0a;color:var(--gray-700);border-color:#2a2a2a}
 [data-theme="dark"] .cdd.active .cdd-btn{background:var(--navy-pale)}
