@@ -1814,6 +1814,109 @@ function repFecha(d) {
   return `${day} ${['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'][(+m) - 1]} ${y}`;
 }
 
+/* ── Búsqueda difusa (tolera errores de tecleo: "ROSAIRO" → "Rosario") ── */
+let repSuggMatches = [];   // investors mostrados en el dropdown
+let repSuggIdx = -1;       // índice resaltado con teclado
+
+// Normaliza: minúsculas, sin acentos, sin signos
+function repNorm(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+// Distancia de edición (Levenshtein)
+function repLev(a, b) {
+  const m = a.length, n = b.length;
+  if (!m) return n; if (!n) return m;
+  let prev = Array.from({ length: n + 1 }, (_, i) => i);
+  for (let i = 1; i <= m; i++) {
+    const cur = [i];
+    for (let j = 1; j <= n; j++) {
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+    prev = cur;
+  }
+  return prev[n];
+}
+const repSim = (a, b) => (!a || !b) ? 0 : 1 - repLev(a, b) / Math.max(a.length, b.length);
+
+// Puntaje query↔nombre: substring fuerte (>1) o similitud difusa (0..1)
+function repScore(q, name) {
+  const qn = repNorm(q), nn = repNorm(name);
+  if (!qn) return 0;
+  if (nn.includes(qn)) return 2 + qn.length / nn.length;       // coincidencia literal
+  const nameToks = nn.split(' ');
+  const tokBest = (w) => {                                      // mejor match de una palabra
+    let b = 0;
+    for (const tok of nameToks) {
+      b = Math.max(b, repSim(w, tok));
+      if (tok.length > w.length) b = Math.max(b, repSim(w, tok.slice(0, w.length)));
+    }
+    return b;
+  };
+  let best = Math.max(repSim(qn, nn), tokBest(qn));             // query como una sola palabra
+  const qToks = qn.split(' ');
+  if (qToks.length > 1) {                                       // query de varias palabras: promedio
+    best = Math.max(best, qToks.reduce((s, w) => s + tokBest(w), 0) / qToks.length);
+  }
+  return best;
+}
+function repBestMatches(q, limit) {
+  return repInvestorsAll
+    .map(i => ({ i, s: repScore(q, i.name) }))
+    .filter(x => x.s >= 0.5)
+    .sort((a, b) => b.s - a.s || a.i.name.localeCompare(b.i.name, 'es'))
+    .slice(0, limit || 8)
+    .map(x => x.i);
+}
+
+function repSuggest() {
+  const q = (document.getElementById('repSearch').value || '').trim();
+  const box = document.getElementById('repSugg');
+  if (q.length < 2 || !repInvestorsAll.length) { repHideSugg(); return; }
+  repSuggMatches = repBestMatches(q, 8);
+  repSuggIdx = -1;
+  if (!repSuggMatches.length) {
+    box.innerHTML = '<div class="rep-sugg-empty">Sin coincidencias parecidas.</div>';
+    box.style.display = ''; return;
+  }
+  box.innerHTML = repSuggMatches.map((i, idx) => {
+    const n = repInvByInvestor[i.id]?.length || 0;
+    return `<div class="rep-sugg-item" data-idx="${idx}" onmousedown="event.preventDefault()" onclick="repPick(${idx})">
+      <span class="nm">${escapeHtml(i.name)}</span>
+      <span class="pos">${n} posición${n === 1 ? '' : 'es'}</span>
+    </div>`;
+  }).join('');
+  box.style.display = '';
+}
+function repHideSugg() { const b = document.getElementById('repSugg'); if (b) b.style.display = 'none'; }
+function repPick(idx) {
+  const inv = repSuggMatches[idx];
+  if (!inv) return;
+  document.getElementById('repSearch').value = inv.name;
+  repHideSugg();
+  repGenerate();
+}
+function repKey(e) {
+  const box = document.getElementById('repSugg');
+  const open = box && box.style.display !== 'none' && repSuggMatches.length;
+  if (e.key === 'ArrowDown' && open) {
+    e.preventDefault(); repSuggIdx = Math.min(repSuggIdx + 1, repSuggMatches.length - 1); repHighlight();
+  } else if (e.key === 'ArrowUp' && open) {
+    e.preventDefault(); repSuggIdx = Math.max(repSuggIdx - 1, 0); repHighlight();
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (open && repSuggIdx >= 0) repPick(repSuggIdx);
+    else if (open && repSuggMatches.length) repPick(0);
+    else repGenerate();
+  } else if (e.key === 'Escape') {
+    repHideSugg();
+  }
+}
+function repHighlight() {
+  document.querySelectorAll('#repSugg .rep-sugg-item').forEach((el, i) =>
+    el.classList.toggle('on', i === repSuggIdx));
+}
+
 async function loadReports() {
   if (repLoaded) return;
   const hint = document.getElementById('repHint');
@@ -1833,8 +1936,6 @@ async function loadReports() {
     repInvestorsAll = investors
       .filter(i => repInvByInvestor[i.id]?.length)
       .sort((a, b) => a.name.localeCompare(b.name, 'es'));
-    const dl = document.getElementById('repInvestorList');
-    if (dl) dl.innerHTML = repInvestorsAll.map(i => `<option value="${escapeHtml(i.name)}"></option>`).join('');
     repLoaded = true;
     if (hint) hint.textContent = `${repInvestorsAll.length} inversionistas disponibles. Escribe o elige un LP.`;
   } catch (err) {
@@ -1847,9 +1948,12 @@ async function repGenerate() {
   const name = (document.getElementById('repSearch').value || '').trim();
   const hint = document.getElementById('repHint');
   if (!name) return;
-  const inv = repInvestorsAll.find(i => i.name.toLowerCase() === name.toLowerCase())
-    || repInvestorsAll.find(i => i.name.toLowerCase().includes(name.toLowerCase()));
-  if (!inv) { if (hint) hint.textContent = `No encontré "${name}" en la lista de inversionistas.`; return; }
+  let inv = repInvestorsAll.find(i => i.name.toLowerCase() === name.toLowerCase())
+    || repInvestorsAll.find(i => i.name.toLowerCase().includes(name.toLowerCase()))
+    || repBestMatches(name, 1)[0];   // tolera errores de tecleo
+  if (!inv) { if (hint) hint.textContent = `No encontré nada parecido a "${name}".`; return; }
+  document.getElementById('repSearch').value = inv.name;   // refleja el LP resuelto
+  repHideSugg();
 
   const investments = repInvByInvestor[inv.id] || [];
   const ids = investments.map(x => x.id);
