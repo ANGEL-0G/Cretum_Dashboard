@@ -55,14 +55,16 @@ function verifyTokenStr(token, secret) {
   } catch { return null; }
 }
 
-async function isAdmin(req) {
+// Gestión del portal: editores y admins (las tablas tienen RLS is_admin(),
+// pero estas acciones escriben con service role; el gate es esta verificación).
+async function canManage(req) {
   const user = await authenticate(req);
   if (!user) return false;
   try {
     const r = await fetch(`${supabaseUrl()}/rest/v1/profiles?id=eq.${user.id}&select=role`,
       { headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${bearerToken(req)}` } });
     const rows = r.ok ? await r.json() : [];
-    return rows[0]?.role === 'admin';
+    return ['admin', 'editor'].includes(rows[0]?.role);
   } catch { return false; }
 }
 
@@ -110,7 +112,7 @@ export default async function handler(req, res) {
     if (!action.startsWith('admin') && !['save_dashboard', 'delete_dashboard', 'get_dashboard', 'save_user', 'delete_user'].includes(action)) {
       return res.status(400).json({ error: `Acción inválida: ${action}` });
     }
-    if (!(await isAdmin(req))) return res.status(403).json({ error: 'Solo admins' });
+    if (!(await canManage(req))) return res.status(403).json({ error: 'Solo editores o admins' });
 
     if (action === 'get_dashboard') {
       const { data } = await sb.from('portal_dashboards').select('id, slug, title, html').eq('id', req.body.id).maybeSingle();

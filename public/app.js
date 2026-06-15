@@ -1417,7 +1417,7 @@ const ORG_MODULES = {
       iconClass: 'home-ico-reportes' },
     { view: 'portal', icon: 'fa-share-nodes', title: 'Portal de clientes',
       desc: 'Sube dashboards externos y da acceso a clientes con su propio usuario',
-      iconClass: 'home-ico-portal', adminOnly: true },
+      iconClass: 'home-ico-portal', editorOrAdmin: true },
   ],
   mvp: [
     { view: 'db', icon: 'fa-database', title: 'Base de Datos',
@@ -1440,7 +1440,7 @@ const ORG_NAV = {
     { view: 'dropbox', icon: 'fa-dropbox',     label: 'Dropbox', brand: true },
     { view: 'campaigns', icon: 'fa-bolt',      label: 'Campañas' },
     { view: 'reports',   icon: 'fa-chart-pie', label: 'Reportes' },
-    { view: 'portal',    icon: 'fa-share-nodes', label: 'Portal de clientes', adminOnly: true },
+    { view: 'portal',    icon: 'fa-share-nodes', label: 'Portal de clientes', editorOrAdmin: true },
   ],
   mvp: [
     { view: 'home',         icon: 'fa-house',         label: 'Inicio' },
@@ -1531,7 +1531,9 @@ function renderHomeModules() {
   const el = document.getElementById('homeModules');
   if (!el || !currentOrg) return;
   const isAdmin = currentProfile?.role === 'admin';
-  const mods = (ORG_MODULES[currentOrg] || []).filter(m => !m.adminOnly || isAdmin);
+  const isEditorOrAdmin = isAdmin || currentProfile?.role === 'editor';
+  const mods = (ORG_MODULES[currentOrg] || []).filter(m =>
+    (!m.adminOnly || isAdmin) && (!m.editorOrAdmin || isEditorOrAdmin));
   el.innerHTML = mods.map(m => `
     <button class="home-module${m.disabled ? ' disabled' : ''}"${m.disabled ? ' disabled aria-disabled="true"' : ` onclick="switchView('${m.view}')"`}>
       ${m.disabled ? '<span class="home-module-badge">Pronto</span>' : ''}
@@ -1558,7 +1560,9 @@ function renderNavList() {
   const list = document.getElementById('navList');
   if (!list) return;
   const isAdmin = currentProfile?.role === 'admin';
-  const items = (currentOrg ? ORG_NAV[currentOrg] : []).filter(it => !it.adminOnly || isAdmin);
+  const isEditorOrAdmin = isAdmin || currentProfile?.role === 'editor';
+  const items = (currentOrg ? ORG_NAV[currentOrg] : []).filter(it =>
+    (!it.adminOnly || isAdmin) && (!it.editorOrAdmin || isEditorOrAdmin));
   list.innerHTML = items.map(it => `
     <button class="nav-item" data-view="${it.view}" onclick="switchView('${it.view}')">
       <i class="${it.brand ? 'fa-brands' : 'fa-solid'} ${it.icon}"></i>
