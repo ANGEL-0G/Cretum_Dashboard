@@ -1124,6 +1124,8 @@ button,input,select{font-family:var(--font)}
 .home-ico-reports{background:var(--gray-100);color:var(--gray-400)}
 .home-ico-campaigns{background:rgba(234,179,8,.15);color:#eab308}
 [data-theme="dark"] .home-ico-campaigns{background:rgba(234,179,8,.22);color:#f5cb3a}
+.home-ico-reportes{background:rgba(20,184,166,.14);color:#0f9b8e}
+[data-theme="dark"] .home-ico-reportes{background:rgba(20,184,166,.22);color:#2dd4bf}
 .home-ico-trackers{background:rgba(176,125,32,.14);color:var(--amber)}
 [data-org="mvp"] .home-ico-trackers{background:rgba(237,120,36,.14);color:#ED7824}
 [data-theme="dark"] .home-ico-dropbox{background:rgba(0,97,255,.22);color:#5b9aff}
@@ -2783,6 +2785,39 @@ button,input,select{font-family:var(--font)}
         </div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ════════════ REPORTES (por LP, desde las cartas de Altareturn) ════════════ -->
+<style>
+  .rep-controls{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+  .rep-pick{display:flex;flex-direction:column;gap:4px;min-width:280px;flex:1;max-width:420px}
+  .rep-pick label{font-size:12px;color:var(--ink-soft,#778);font-weight:500}
+  .rep-pick input{border:1px solid var(--line,#d7dde8);border-radius:8px;padding:9px 12px;font-size:14px;background:var(--white,#fff);color:var(--ink,#223)}
+  .rep-pick input:focus{outline:none;border-color:var(--navy)}
+  .rep-hint{font-size:12.5px;color:var(--ink-soft,#889);margin-top:2px}
+  #repFrameWrap{border:1px solid var(--line,#e3e8f0);border-radius:10px;overflow:hidden;background:#f0f1f5}
+  #repFrame{width:100%;height:calc(100vh - 240px);min-height:520px;border:0;display:block;background:#fff}
+  .rep-empty{padding:60px 20px;text-align:center;color:var(--ink-soft,#889)}
+  .rep-empty i{font-size:34px;opacity:.4;display:block;margin-bottom:12px}
+</style>
+<div class="page page-db" id="pageReports">
+  <div class="db-toolbar">
+    <div class="db-title-block"><i class="fa-solid fa-chart-pie"></i> Reportes</div>
+  </div>
+  <div class="rep-controls">
+    <div class="rep-pick">
+      <label for="repSearch">Inversionista (LP)</label>
+      <input id="repSearch" list="repInvestorList" placeholder="Escribe o elige un LP…" autocomplete="off" onchange="repGenerate()">
+      <datalist id="repInvestorList"></datalist>
+      <div class="rep-hint" id="repHint">Elige un LP para generar su reporte de distribuciones.</div>
+    </div>
+    <button class="btn-primary" type="button" onclick="repGenerate()"><i class="fa-solid fa-file-lines"></i> Generar reporte</button>
+    <button class="cdd-btn" type="button" id="repPrintBtn" style="display:none" onclick="repPrint()"><i class="fa-solid fa-print"></i> Imprimir / Guardar PDF</button>
+  </div>
+  <div id="repOutput">
+    <div id="repFrameWrap" style="display:none"><iframe id="repFrame" title="Reporte del inversionista"></iframe></div>
+    <div class="rep-empty" id="repPlaceholder"><i class="fa-solid fa-file-invoice-dollar"></i><p>Selecciona un inversionista arriba.</p></div>
   </div>
 </div>
 

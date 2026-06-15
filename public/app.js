@@ -1413,8 +1413,8 @@ const ORG_MODULES = {
       desc: 'Ranking de interacción de los LPs y la campaña actual del fondo',
       iconClass: 'home-ico-campaigns' },
     { view: 'reports', icon: 'fa-chart-pie', title: 'Reportes',
-      desc: 'Reportes personalizados por LP — Altareturn + Salesforce',
-      iconClass: 'home-ico-reports', disabled: true },
+      desc: 'Genera el reporte de distribuciones de un LP desde las cartas de Altareturn',
+      iconClass: 'home-ico-reportes' },
   ],
   mvp: [
     { view: 'db', icon: 'fa-database', title: 'Base de Datos',
@@ -1436,6 +1436,7 @@ const ORG_NAV = {
     { view: 'db',      icon: 'fa-database',    label: 'Base de Datos' },
     { view: 'dropbox', icon: 'fa-dropbox',     label: 'Dropbox', brand: true },
     { view: 'campaigns', icon: 'fa-bolt',      label: 'Campañas' },
+    { view: 'reports',   icon: 'fa-chart-pie', label: 'Reportes' },
   ],
   mvp: [
     { view: 'home',         icon: 'fa-house',         label: 'Inicio' },
@@ -1597,6 +1598,8 @@ function switchView(view, isBack = false) {
   const pageFt = document.getElementById('pageFundTrackers');
   if (pageFt) pageFt.classList.toggle('active', view === 'fundTrackers');
   document.getElementById('pageCampaigns').classList.toggle('active', view === 'campaigns');
+  const pageRep = document.getElementById('pageReports');
+  if (pageRep) pageRep.classList.toggle('active', view === 'reports');
 
   highlightActiveNav();
 
@@ -1609,6 +1612,7 @@ function switchView(view, isBack = false) {
     'dropbox':      'Dropbox',
     'fundTrackers': 'Fund Trackers',
     'campaigns':    'Campañas',
+    'reports':      'Reportes',
   }[view] || '';
   document.getElementById('headerBrandText').textContent =
     view === 'selector' ? 'Cretum · Selector' : (orgPrefix + viewLabel);
@@ -1627,6 +1631,7 @@ function switchView(view, isBack = false) {
   if (view === 'dropbox') openDropbox();
   if (view === 'fundTrackers') renderFundTrackerHome();
   if (view === 'campaigns') loadCampaigns();
+  if (view === 'reports') loadReports();
 
   syncHash();
 }
@@ -1787,6 +1792,256 @@ async function sbFetchAll(table, columns) {
     from += PAGE;
   }
   return all;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   REPORTES — por LP, desde las cartas de Altareturn (investment_distributions)
+   Todo determinístico desde la BD: cero LLM. Template fijo con branding Cretum.
+   ═══════════════════════════════════════════════════════════════════════ */
+let repLoaded = false;
+let repInvestorsAll = [];           // [{id, name}] con ≥1 inversión
+let repInvByInvestor = {};          // investor_id → [investment rows]
+let repCompanyMap = {};             // company_id → name
+let repSeriesMap = {};              // series_id → name
+let repLastDoc = '';                // último HTML generado (para imprimir)
+
+const repUsd = (v) => '$' + Math.round(+v || 0).toLocaleString('en-US');
+const repNum = (v) => (v != null && v !== '') ? Number(v).toLocaleString('en-US') : '—';
+const repMoic = (v) => (v != null && v !== '') ? (Number(v).toFixed(2) + 'x') : '—';
+function repFecha(d) {
+  if (!d) return '—';
+  const [y, m, day] = String(d).slice(0, 10).split('-');
+  return `${day} ${['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'][(+m) - 1]} ${y}`;
+}
+
+async function loadReports() {
+  if (repLoaded) return;
+  const hint = document.getElementById('repHint');
+  if (hint) hint.textContent = 'Cargando inversionistas…';
+  try {
+    const [investors, investments, companies, series] = await Promise.all([
+      sbFetchAll('investors', 'id, name'),
+      sbFetchAll('investments', 'id, investor_id, company_id, series_id, commitment, commitment_actual, shares, entry_pps, current_ev_pps, dpi_moic'),
+      sbFetchAll('companies', 'id, name'),
+      sbFetchAll('series', 'id, name'),
+    ]);
+    companies.forEach(c => { repCompanyMap[c.id] = c.name; });
+    series.forEach(s => { repSeriesMap[s.id] = s.name; });
+    investments.forEach(x => {
+      (repInvByInvestor[x.investor_id] ||= []).push(x);
+    });
+    repInvestorsAll = investors
+      .filter(i => repInvByInvestor[i.id]?.length)
+      .sort((a, b) => a.name.localeCompare(b.name, 'es'));
+    const dl = document.getElementById('repInvestorList');
+    if (dl) dl.innerHTML = repInvestorsAll.map(i => `<option value="${escapeHtml(i.name)}"></option>`).join('');
+    repLoaded = true;
+    if (hint) hint.textContent = `${repInvestorsAll.length} inversionistas disponibles. Escribe o elige un LP.`;
+  } catch (err) {
+    console.error('[reports]', err);
+    if (hint) hint.textContent = 'Error al cargar inversionistas: ' + err.message;
+  }
+}
+
+async function repGenerate() {
+  const name = (document.getElementById('repSearch').value || '').trim();
+  const hint = document.getElementById('repHint');
+  if (!name) return;
+  const inv = repInvestorsAll.find(i => i.name.toLowerCase() === name.toLowerCase())
+    || repInvestorsAll.find(i => i.name.toLowerCase().includes(name.toLowerCase()));
+  if (!inv) { if (hint) hint.textContent = `No encontré "${name}" en la lista de inversionistas.`; return; }
+
+  const investments = repInvByInvestor[inv.id] || [];
+  const ids = investments.map(x => x.id);
+  if (hint) hint.textContent = 'Generando reporte…';
+  try {
+    let dists = [];
+    if (ids.length) {
+      const { data, error } = await sb.from('investment_distributions')
+        .select('investment_id, letter_type, underlying_company, distribution_date, shares_distributed, value_in_kind, cash_proceeds, letter_url')
+        .in('investment_id', ids);
+      if (error) throw error;
+      dists = data || [];
+    }
+    repLastDoc = repBuildDoc(inv, investments, dists);
+    document.getElementById('repFrame').srcdoc = repLastDoc;
+    document.getElementById('repFrameWrap').style.display = '';
+    document.getElementById('repPlaceholder').style.display = 'none';
+    document.getElementById('repPrintBtn').style.display = '';
+    if (hint) hint.textContent = `Reporte de ${inv.name} — ${dists.length} carta${dists.length === 1 ? '' : 's'}.`;
+  } catch (err) {
+    console.error('[reports]', err);
+    if (hint) hint.textContent = 'Error al generar: ' + err.message;
+  }
+}
+
+function repPrint() {
+  const f = document.getElementById('repFrame');
+  if (f && f.contentWindow) { f.contentWindow.focus(); f.contentWindow.print(); }
+}
+
+function repBuildDoc(inv, investments, dists) {
+  // Agrupa distribuciones por investment
+  const byInv = {};
+  dists.forEach(d => { (byInv[d.investment_id] ||= []).push(d); });
+
+  // Totales consolidados
+  let totCommit = 0, totActual = 0, totInKind = 0, totCash = 0;
+  investments.forEach(x => { totCommit += +x.commitment || 0; totActual += +x.commitment_actual || 0; });
+  dists.forEach(d => { totInKind += +d.value_in_kind || 0; totCash += +d.cash_proceeds || 0; });
+  const totDist = totInKind + totCash;
+  const base = totActual > 0 ? totActual : totCommit;
+  const dpi = base > 0 ? (totDist / base) : 0;
+  const fechas = dists.map(d => d.distribution_date).filter(Boolean).sort();
+  const asOf = fechas.length ? fechas[fechas.length - 1] : null;
+
+  // Posiciones (una por investment), ordenadas por compromiso
+  const positions = investments.map(x => {
+    const ds = byInv[x.id] || [];
+    let pInKind = 0, pCash = 0;
+    ds.forEach(d => { pInKind += +d.value_in_kind || 0; pCash += +d.cash_proceeds || 0; });
+    return {
+      company: repCompanyMap[x.company_id] || '—',
+      fund: repSeriesMap[x.series_id] || '—',
+      commitment: +x.commitment || 0,
+      shares: x.shares,
+      entry: x.entry_pps,
+      current: x.current_ev_pps,
+      moic: x.dpi_moic,
+      distrib: pInKind + pCash,
+      nLetters: ds.length,
+    };
+  }).sort((a, b) => b.commitment - a.commitment);
+
+  // Distribuciones agregadas por empresa subyacente recibida
+  const byUnder = {};
+  dists.forEach(d => {
+    const k = (d.underlying_company || '—').replace(/,?\s*(Inc|LLC|Ltd|Corp)\.?$/i, '').trim() || '—';
+    const u = (byUnder[k] ||= { n: 0, shares: 0, inkind: 0, cash: 0 });
+    u.n++; u.shares += +d.shares_distributed || 0; u.inkind += +d.value_in_kind || 0; u.cash += +d.cash_proceeds || 0;
+  });
+  const underRows = Object.entries(byUnder)
+    .map(([k, v]) => ({ name: k, ...v, total: v.inkind + v.cash }))
+    .sort((a, b) => b.total - a.total || b.shares - a.shares);
+
+  // Historial cronológico (más reciente primero)
+  const fundShort = (s) => (s || '—').replace(/^MVP\s+/, '').replace(/\s*LLC,?/, '').replace(/\s*LP$/, '');
+  const invFund = {}; investments.forEach(x => { invFund[x.id] = repSeriesMap[x.series_id] || '—'; });
+  const hist = dists.slice().sort((a, b) => String(b.distribution_date).localeCompare(String(a.distribution_date)));
+
+  const tipoBadge = (t) => t === 'distribution_in_kind'
+    ? '<span class="badge bk">En especie</span>'
+    : '<span class="badge bc">Efectivo</span>';
+
+  const posRows = positions.map(p => `<tr>
+    <td><strong>${escapeHtml(p.company)}</strong><div class="sub">${escapeHtml(p.fund)}</div></td>
+    <td class="num">${repUsd(p.commitment)}</td>
+    <td class="num">${repMoic(p.moic)}</td>
+    <td class="num">${p.shares != null ? repNum(p.shares) : '—'}</td>
+    <td class="num">${p.distrib > 0 ? repUsd(p.distrib) : '—'}</td>
+    <td class="num">${p.nLetters || '—'}</td>
+  </tr>`).join('');
+
+  const underRowsHtml = underRows.map(u => `<tr>
+    <td><strong>${escapeHtml(u.name)}</strong></td>
+    <td class="num">${u.n}</td>
+    <td class="num">${u.shares > 0 ? repNum(Math.round(u.shares)) : '—'}</td>
+    <td class="num">${u.inkind > 0 ? repUsd(u.inkind) : '—'}</td>
+    <td class="num">${u.cash > 0 ? repUsd(u.cash) : '—'}</td>
+    <td class="num"><strong>${repUsd(u.total)}</strong></td>
+  </tr>`).join('');
+
+  const histRows = hist.map(d => {
+    const val = (+d.value_in_kind || 0) + (+d.cash_proceeds || 0);
+    return `<tr>
+      <td class="nowrap">${repFecha(d.distribution_date)}</td>
+      <td>${escapeHtml(fundShort(invFund[d.investment_id]))}</td>
+      <td>${tipoBadge(d.letter_type)}</td>
+      <td>${escapeHtml((d.underlying_company || '—'))}</td>
+      <td class="num">${d.shares_distributed != null ? repNum(Math.round(d.shares_distributed)) : '—'}</td>
+      <td class="num">${val > 0 ? repUsd(val) : '—'}</td>
+      <td class="ctr">${d.letter_url ? `<a href="${escapeHtml(d.letter_url)}" target="_blank" rel="noopener">Ver</a>` : '—'}</td>
+    </tr>`;
+  }).join('');
+
+  const hoy = repFecha(new Date().toISOString());
+  const calledCard = totActual > 0
+    ? `<div class="card"><div class="k">Capital llamado</div><div class="v">${repUsd(totActual)}</div></div>` : '';
+
+  return `<!doctype html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{--navy:#17436b;--navy2:#1f5a8f;--ink:#1a1f2e;--soft:#6b7689;--line:#e4e9f0;--bg:#f5f7fb;
+        --green:#0f9b5a;--greenbg:#e7f6ee;--amber:#b07d20;--amberbg:#fbf3e0;}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,'Segoe UI',Arial,sans-serif;color:var(--ink);background:var(--bg);font-size:13.5px;line-height:1.5}
+  .wrap{max-width:900px;margin:0 auto;padding:24px}
+  .hd{background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;border-radius:14px;padding:26px 28px;margin-bottom:22px}
+  .hd .eye{font-size:10.5px;letter-spacing:2px;opacity:.75;margin-bottom:8px}
+  .hd h1{margin:0 0 4px;font-size:23px;font-weight:500}
+  .hd .meta{font-size:12.5px;opacity:.85;margin-top:8px}
+  h2{font-size:15px;color:var(--navy);font-weight:600;margin:28px 0 10px;padding-bottom:7px;border-bottom:1px solid var(--line)}
+  .cards{display:flex;gap:12px;flex-wrap:wrap;margin:4px 0}
+  .card{flex:1;min-width:150px;background:#fff;border:1px solid var(--line);border-radius:11px;padding:14px 16px}
+  .card .k{font-size:10.5px;letter-spacing:.5px;text-transform:uppercase;color:var(--soft)}
+  .card .v{font-size:21px;font-weight:600;color:var(--navy);margin-top:5px}
+  .card.hl{background:var(--greenbg);border-color:#bfe6cf}
+  .card.hl .v{color:var(--green)}
+  table{width:100%;border-collapse:collapse;margin:8px 0;font-size:12.5px;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  th,td{padding:9px 11px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:var(--navy);color:#fff;font-weight:600;font-size:11px;letter-spacing:.3px}
+  tr:last-child td{border-bottom:none}
+  td.num,th.num{text-align:right;white-space:nowrap}
+  td.ctr,th.ctr{text-align:center}
+  td.nowrap{white-space:nowrap}
+  .sub{font-size:11px;color:var(--soft);margin-top:2px}
+  .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600}
+  .badge.bk{background:var(--amberbg);color:var(--amber)}
+  .badge.bc{background:var(--greenbg);color:var(--green)}
+  tbody tr:nth-child(even) td{background:#fafbfd}
+  a{color:var(--navy2)}
+  .foot{margin-top:26px;padding-top:14px;border-top:1px solid var(--line);font-size:10.5px;color:var(--soft);line-height:1.6}
+  @page{margin:14mm}
+  @media print{body{background:#fff}.wrap{max-width:none;padding:0}.hd{box-shadow:none}}
+</style></head><body><div class="wrap">
+  <div class="hd">
+    <div class="eye">CRETUM PARTNERS · REPORTE DE DISTRIBUCIONES</div>
+    <h1>${escapeHtml(inv.name)}</h1>
+    <div class="meta">Generado: ${hoy}${asOf ? ` &nbsp;·&nbsp; Datos al ${repFecha(asOf)}` : ''} &nbsp;·&nbsp; ${investments.length} posicion${investments.length === 1 ? '' : 'es'} &nbsp;·&nbsp; ${dists.length} carta${dists.length === 1 ? '' : 's'}</div>
+  </div>
+
+  <div class="cards">
+    <div class="card"><div class="k">Compromiso total</div><div class="v">${repUsd(totCommit)}</div></div>
+    ${calledCard}
+    <div class="card hl"><div class="k">Total distribuido</div><div class="v">${repUsd(totDist)}</div></div>
+    <div class="card"><div class="k">DPI ${totActual > 0 ? '(s/ llamado)' : '(s/ compromiso)'}</div><div class="v">${dpi.toFixed(2)}x</div></div>
+  </div>
+  ${totInKind > 0 && totCash > 0 ? `<div class="cards"><div class="card"><div class="k">En especie (acciones)</div><div class="v" style="font-size:17px">${repUsd(totInKind)}</div></div><div class="card"><div class="k">En efectivo</div><div class="v" style="font-size:17px">${repUsd(totCash)}</div></div></div>` : ''}
+
+  <h2>Posiciones</h2>
+  <table>
+    <thead><tr><th>Empresa / Fondo</th><th class="num">Compromiso</th><th class="num">MOIC</th><th class="num">Acciones</th><th class="num">Distribuido</th><th class="num">Cartas</th></tr></thead>
+    <tbody>${posRows || '<tr><td colspan="6">Sin posiciones registradas.</td></tr>'}</tbody>
+  </table>
+
+  ${underRows.length ? `<h2>Distribuciones por empresa recibida</h2>
+  <table>
+    <thead><tr><th>Empresa subyacente</th><th class="num">Cartas</th><th class="num">Acciones</th><th class="num">En especie</th><th class="num">Efectivo</th><th class="num">Total</th></tr></thead>
+    <tbody>${underRowsHtml}</tbody>
+  </table>` : ''}
+
+  ${hist.length ? `<h2>Historial de distribuciones (${hist.length})</h2>
+  <table>
+    <thead><tr><th>Fecha</th><th>Fondo</th><th>Tipo</th><th>Empresa subyacente</th><th class="num">Acciones</th><th class="num">Valor</th><th class="ctr">Carta</th></tr></thead>
+    <tbody>${histRows}</tbody>
+  </table>` : ''}
+
+  <div class="foot">
+    <strong>Notas:</strong> "En especie" = distribución de acciones de la empresa subyacente; "Efectivo" = proceeds en USD. El valor en especie se toma de la carta de Altareturn cuando está disponible; algunas cartas tempranas solo reportan acciones sin valuación, por lo que el total distribuido puede subestimar ligeramente.
+    DPI = total distribuido ÷ ${totActual > 0 ? 'capital llamado' : 'compromiso'}. MOIC por posición según el último dato de la base.
+    <br>Documento interno de Cretum Partners generado desde Cretum Desk — cifras sujetas a verificación. ${hoy}.
+  </div>
+</div></body></html>`;
 }
 
 async function loadDb() {
