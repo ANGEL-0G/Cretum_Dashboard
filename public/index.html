@@ -1126,6 +1126,8 @@ button,input,select{font-family:var(--font)}
 [data-theme="dark"] .home-ico-campaigns{background:rgba(234,179,8,.22);color:#f5cb3a}
 .home-ico-reportes{background:rgba(20,184,166,.14);color:#0f9b8e}
 [data-theme="dark"] .home-ico-reportes{background:rgba(20,184,166,.22);color:#2dd4bf}
+.home-ico-portal{background:rgba(124,58,237,.13);color:#7c3aed}
+[data-theme="dark"] .home-ico-portal{background:rgba(124,58,237,.24);color:#a98bf0}
 .home-ico-trackers{background:rgba(176,125,32,.14);color:var(--amber)}
 [data-org="mvp"] .home-ico-trackers{background:rgba(237,120,36,.14);color:#ED7824}
 [data-theme="dark"] .home-ico-dropbox{background:rgba(0,97,255,.22);color:#5b9aff}
@@ -2837,6 +2839,99 @@ button,input,select{font-family:var(--font)}
   <div id="repOutput">
     <div id="repFrameWrap" style="display:none"><iframe id="repFrame" title="Reporte del inversionista"></iframe></div>
     <div class="rep-empty" id="repPlaceholder"><i class="fa-solid fa-file-invoice-dollar"></i><p>Selecciona un inversionista arriba.</p></div>
+  </div>
+</div>
+
+<!-- ════════════ PORTAL DE CLIENTES (admin) ════════════ -->
+<style>
+  .pt-grid{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start}
+  .pt-col{flex:1;min-width:300px}
+  .pt-col h3{font-size:14px;color:var(--navy);margin:0 0 10px;display:flex;align-items:center;gap:8px;justify-content:space-between}
+  .pt-list{display:flex;flex-direction:column;gap:8px}
+  .pt-item{border:1px solid var(--line,#e3e8f0);border-radius:10px;padding:11px 13px;background:var(--white,#fff)}
+  .pt-item .nm{font-weight:600;font-size:13.5px}
+  .pt-item .sub{font-size:11.5px;color:var(--ink-soft,#889);margin-top:3px;word-break:break-all}
+  .pt-item .acts{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}
+  .pt-badge{font-size:10.5px;padding:2px 8px;border-radius:20px;background:var(--navy-ghost,#eef3fb);color:var(--navy)}
+  .pt-badge.off{background:#fbe6e3;color:#c0392b}
+  .pt-empty{padding:24px;text-align:center;color:var(--ink-soft,#889);font-size:13px}
+  .pt-dash-cks{display:flex;flex-direction:column;gap:6px;max-height:180px;overflow:auto;border:1px solid var(--line,#e8ecf3);border-radius:8px;padding:8px}
+  .pt-dash-cks label{display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer}
+  #ptDashHtml{width:100%;min-height:200px;font-family:var(--mono,monospace);font-size:12px;border:1px solid var(--line,#d7dde8);border-radius:8px;padding:10px;resize:vertical}
+</style>
+<div class="page page-db" id="pagePortal">
+  <div class="db-toolbar">
+    <div class="db-title-block"><i class="fa-solid fa-share-nodes"></i> Portal de clientes</div>
+    <a class="cdd-btn" href="/portal" target="_blank" rel="noopener" style="text-decoration:none"><i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir portal</a>
+  </div>
+  <p style="font-size:13px;color:var(--ink-soft,#778);margin:0 0 16px;max-width:760px">
+    Sube dashboards (HTML) y crea usuarios-cliente con acceso solo a los suyos. Comparte el enlace
+    <strong>cretumdesk.com/portal</strong> + usuario y contraseña. Esta zona es independiente de tu sesión interna.
+  </p>
+  <div class="pt-grid">
+    <div class="pt-col">
+      <h3><span><i class="fa-solid fa-display"></i> Dashboards</span>
+        <button class="btn-primary" type="button" onclick="ptDashOpen()" style="padding:6px 12px;font-size:12.5px"><i class="fa-solid fa-plus"></i> Nuevo</button></h3>
+      <div class="pt-list" id="ptDashList"></div>
+    </div>
+    <div class="pt-col">
+      <h3><span><i class="fa-solid fa-users"></i> Usuarios-cliente</span>
+        <button class="btn-primary" type="button" onclick="ptUserOpen()" style="padding:6px 12px;font-size:12.5px"><i class="fa-solid fa-user-plus"></i> Nuevo</button></h3>
+      <div class="pt-list" id="ptUserList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: dashboard -->
+<div class="camp-modal-backdrop" id="ptDashModal" onclick="if(event.target===this)ptClose('ptDashModal')">
+  <div class="camp-modal camp-modal-wide">
+    <div class="camp-modal-head">
+      <div class="camp-modal-title"><i class="fa-solid fa-display"></i> <span id="ptDashTitle">Nuevo dashboard</span></div>
+      <button class="camp-modal-x" onclick="ptClose('ptDashModal')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="camp-modal-body">
+      <input type="hidden" id="ptDashId">
+      <label class="camp-f-lbl">Título</label>
+      <input id="ptDashTitleInp" class="camp-f-inp" placeholder="Ej. Fund V — Resumen Q2 2026">
+      <label class="camp-f-lbl">Identificador (slug) <span class="camp-opt">se autogenera del título</span></label>
+      <input id="ptDashSlug" class="camp-f-inp" placeholder="fund-v-q2-2026">
+      <label class="camp-f-lbl">HTML del dashboard</label>
+      <textarea id="ptDashHtml" placeholder="Pega aquí el HTML que te pasen tus compañeros…"></textarea>
+      <div class="camp-modal-msg" id="ptDashMsg"></div>
+    </div>
+    <div class="camp-modal-foot">
+      <button class="camp-prev-cancel" onclick="ptClose('ptDashModal')">Cancelar</button>
+      <button class="btn-primary" onclick="ptDashSave()"><i class="fa-solid fa-floppy-disk"></i> Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: usuario -->
+<div class="camp-modal-backdrop" id="ptUserModal" onclick="if(event.target===this)ptClose('ptUserModal')">
+  <div class="camp-modal">
+    <div class="camp-modal-head">
+      <div class="camp-modal-title"><i class="fa-solid fa-user-plus"></i> <span id="ptUserTitle">Nuevo usuario</span></div>
+      <button class="camp-modal-x" onclick="ptClose('ptUserModal')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="camp-modal-body">
+      <input type="hidden" id="ptUserId">
+      <label class="camp-f-lbl">Usuario <span class="camp-req">*</span></label>
+      <input id="ptUserName" class="camp-f-inp" placeholder="cliente_fondo_v" autocapitalize="none">
+      <label class="camp-f-lbl">Nombre legible <span class="camp-opt">opcional</span></label>
+      <input id="ptUserLabel" class="camp-f-inp" placeholder="Familia Pérez">
+      <label class="camp-f-lbl" id="ptUserPwLbl">Contraseña <span class="camp-req">*</span></label>
+      <input id="ptUserPw" class="camp-f-inp" type="text" placeholder="contraseña a compartir">
+      <label class="camp-f-lbl">Dashboards con acceso</label>
+      <div class="pt-dash-cks" id="ptUserDashes"></div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-top:12px;cursor:pointer">
+        <input type="checkbox" id="ptUserActive" checked> Activo
+      </label>
+      <div class="camp-modal-msg" id="ptUserMsg"></div>
+    </div>
+    <div class="camp-modal-foot">
+      <button class="camp-prev-cancel" onclick="ptClose('ptUserModal')">Cancelar</button>
+      <button class="btn-primary" onclick="ptUserSave()"><i class="fa-solid fa-check"></i> Guardar</button>
+    </div>
   </div>
 </div>
 

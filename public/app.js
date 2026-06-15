@@ -1415,6 +1415,9 @@ const ORG_MODULES = {
     { view: 'reports', icon: 'fa-chart-pie', title: 'Reportes',
       desc: 'Genera el reporte de distribuciones de un LP desde las cartas de Altareturn',
       iconClass: 'home-ico-reportes' },
+    { view: 'portal', icon: 'fa-share-nodes', title: 'Portal de clientes',
+      desc: 'Sube dashboards externos y da acceso a clientes con su propio usuario',
+      iconClass: 'home-ico-portal', adminOnly: true },
   ],
   mvp: [
     { view: 'db', icon: 'fa-database', title: 'Base de Datos',
@@ -1437,6 +1440,7 @@ const ORG_NAV = {
     { view: 'dropbox', icon: 'fa-dropbox',     label: 'Dropbox', brand: true },
     { view: 'campaigns', icon: 'fa-bolt',      label: 'Campañas' },
     { view: 'reports',   icon: 'fa-chart-pie', label: 'Reportes' },
+    { view: 'portal',    icon: 'fa-share-nodes', label: 'Portal de clientes', adminOnly: true },
   ],
   mvp: [
     { view: 'home',         icon: 'fa-house',         label: 'Inicio' },
@@ -1600,6 +1604,8 @@ function switchView(view, isBack = false) {
   document.getElementById('pageCampaigns').classList.toggle('active', view === 'campaigns');
   const pageRep = document.getElementById('pageReports');
   if (pageRep) pageRep.classList.toggle('active', view === 'reports');
+  const pagePortal = document.getElementById('pagePortal');
+  if (pagePortal) pagePortal.classList.toggle('active', view === 'portal');
 
   highlightActiveNav();
 
@@ -1613,6 +1619,7 @@ function switchView(view, isBack = false) {
     'fundTrackers': 'Fund Trackers',
     'campaigns':    'Campañas',
     'reports':      'Reportes',
+    'portal':       'Portal de clientes',
   }[view] || '';
   document.getElementById('headerBrandText').textContent =
     view === 'selector' ? 'Cretum · Selector' : (orgPrefix + viewLabel);
@@ -1632,6 +1639,7 @@ function switchView(view, isBack = false) {
   if (view === 'fundTrackers') renderFundTrackerHome();
   if (view === 'campaigns') loadCampaigns();
   if (view === 'reports') loadReports();
+  if (view === 'portal') loadPortalAdmin();
 
   syncHash();
 }
@@ -1874,6 +1882,157 @@ function repBestMatches(q, limit) {
 function fuzzyMatch(q, text, threshold) {
   if (!q || !String(q).trim()) return true;
   return repScore(q, text) >= (threshold != null ? threshold : 0.5);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PORTAL DE CLIENTES (admin) — gestiona dashboards externos y usuarios
+   Todo vía /api/portal (service role server-side). Solo admin llega aquí.
+   ═══════════════════════════════════════════════════════════════════════ */
+let ptDashboards = [], ptUsers = [], ptAccess = [];
+
+async function portalApi(body) {
+  const r = await authedFetch('/api/portal', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
+  return d;
+}
+
+async function loadPortalAdmin() {
+  const dl = document.getElementById('ptDashList'), ul = document.getElementById('ptUserList');
+  if (dl) dl.innerHTML = '<div class="pt-empty"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
+  try {
+    const d = await portalApi({ action: 'admin_list' });
+    ptDashboards = d.dashboards || []; ptUsers = d.users || []; ptAccess = d.access || [];
+    renderPtDashboards(); renderPtUsers();
+  } catch (err) {
+    if (dl) dl.innerHTML = `<div class="pt-empty">Error: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function renderPtDashboards() {
+  const el = document.getElementById('ptDashList');
+  if (!ptDashboards.length) { el.innerHTML = '<div class="pt-empty">Aún no hay dashboards. Crea el primero.</div>'; return; }
+  el.innerHTML = ptDashboards.map(d => `<div class="pt-item">
+    <div class="nm">${escapeHtml(d.title)}</div>
+    <div class="sub">/portal · ${escapeHtml(d.slug)}</div>
+    <div class="acts">
+      <button class="cdd-btn" onclick="ptDashOpen(${d.id})"><i class="fa-solid fa-pen"></i> Editar</button>
+      <button class="cdd-btn camp-btn-danger" onclick="ptDashDelete(${d.id})"><i class="fa-solid fa-trash"></i></button>
+    </div>
+  </div>`).join('');
+}
+
+function renderPtUsers() {
+  const el = document.getElementById('ptUserList');
+  if (!ptUsers.length) { el.innerHTML = '<div class="pt-empty">Aún no hay usuarios-cliente.</div>'; return; }
+  const countFor = (uid) => ptAccess.filter(a => a.user_id === uid).length;
+  el.innerHTML = ptUsers.map(u => {
+    const n = countFor(u.id);
+    return `<div class="pt-item">
+      <div class="nm">${escapeHtml(u.label || u.username)} ${u.active ? '' : '<span class="pt-badge off">inactivo</span>'}</div>
+      <div class="sub">usuario: ${escapeHtml(u.username)} · <span class="pt-badge">${n} dashboard${n === 1 ? '' : 's'}</span></div>
+      <div class="acts">
+        <button class="cdd-btn" onclick="ptUserOpen(${u.id})"><i class="fa-solid fa-pen"></i> Editar</button>
+        <button class="cdd-btn camp-btn-danger" onclick="ptUserDelete(${u.id})"><i class="fa-solid fa-trash"></i></button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function ptClose(id) { document.getElementById(id).classList.remove('show'); }
+const ptSlugify = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+  .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
+function ptDashOpen(id) {
+  const d = id ? ptDashboards.find(x => x.id === id) : null;
+  document.getElementById('ptDashTitle').textContent = d ? 'Editar dashboard' : 'Nuevo dashboard';
+  document.getElementById('ptDashId').value = d ? d.id : '';
+  document.getElementById('ptDashTitleInp').value = d ? d.title : '';
+  document.getElementById('ptDashSlug').value = d ? d.slug : '';
+  document.getElementById('ptDashHtml').value = '';
+  const msg = document.getElementById('ptDashMsg'); msg.textContent = ''; msg.className = 'camp-modal-msg';
+  document.getElementById('ptDashModal').classList.add('show');
+  if (d) {  // trae el HTML actual para editar
+    document.getElementById('ptDashHtml').value = 'Cargando…';
+    portalApi({ action: 'get_dashboard', id: d.id })
+      .then(full => { document.getElementById('ptDashHtml').value = full.html || ''; })
+      .catch(() => { document.getElementById('ptDashHtml').value = ''; });
+  }
+}
+
+async function ptDashSave() {
+  const id = document.getElementById('ptDashId').value;
+  const title = document.getElementById('ptDashTitleInp').value.trim();
+  let slug = document.getElementById('ptDashSlug').value.trim();
+  const html = document.getElementById('ptDashHtml').value;
+  const msg = document.getElementById('ptDashMsg');
+  if (!title) { msg.textContent = 'Pon un título.'; msg.className = 'camp-modal-msg err'; return; }
+  if (!slug) slug = ptSlugify(title);
+  if (!html.trim() && !id) { msg.textContent = 'Pega el HTML del dashboard.'; msg.className = 'camp-modal-msg err'; return; }
+  try {
+    const body = { action: 'save_dashboard', slug, title, html };
+    if (id) body.id = +id;
+    await portalApi(body);
+    ptClose('ptDashModal');
+    toast(id ? 'Dashboard actualizado' : 'Dashboard creado');
+    loadPortalAdmin();
+  } catch (err) { msg.textContent = err.message; msg.className = 'camp-modal-msg err'; }
+}
+
+async function ptDashDelete(id) {
+  const d = ptDashboards.find(x => x.id === id);
+  if (!confirm(`¿Borrar el dashboard "${d?.title}"? Los usuarios perderán acceso.`)) return;
+  try { await portalApi({ action: 'delete_dashboard', id }); toast('Dashboard borrado'); loadPortalAdmin(); }
+  catch (err) { toast('Error: ' + err.message); }
+}
+
+function ptUserOpen(id) {
+  const u = id ? ptUsers.find(x => x.id === id) : null;
+  document.getElementById('ptUserTitle').textContent = u ? 'Editar usuario' : 'Nuevo usuario';
+  document.getElementById('ptUserId').value = u ? u.id : '';
+  document.getElementById('ptUserName').value = u ? u.username : '';
+  document.getElementById('ptUserLabel').value = u ? (u.label || '') : '';
+  document.getElementById('ptUserPw').value = '';
+  document.getElementById('ptUserPwLbl').innerHTML = u
+    ? 'Nueva contraseña <span class="camp-opt">dejar vacío = no cambiar</span>'
+    : 'Contraseña <span class="camp-req">*</span>';
+  document.getElementById('ptUserActive').checked = u ? u.active : true;
+  const mine = new Set(u ? ptAccess.filter(a => a.user_id === u.id).map(a => a.dashboard_id) : []);
+  document.getElementById('ptUserDashes').innerHTML = ptDashboards.length
+    ? ptDashboards.map(d => `<label><input type="checkbox" value="${d.id}" ${mine.has(d.id) ? 'checked' : ''}> ${escapeHtml(d.title)}</label>`).join('')
+    : '<div class="pt-empty" style="padding:8px">Primero crea un dashboard.</div>';
+  const msg = document.getElementById('ptUserMsg'); msg.textContent = ''; msg.className = 'camp-modal-msg';
+  document.getElementById('ptUserModal').classList.add('show');
+}
+
+async function ptUserSave() {
+  const id = document.getElementById('ptUserId').value;
+  const username = document.getElementById('ptUserName').value.trim().toLowerCase();
+  const label = document.getElementById('ptUserLabel').value.trim();
+  const password = document.getElementById('ptUserPw').value;
+  const active = document.getElementById('ptUserActive').checked;
+  const dashboardIds = [...document.querySelectorAll('#ptUserDashes input:checked')].map(c => +c.value);
+  const msg = document.getElementById('ptUserMsg');
+  if (!username) { msg.textContent = 'Pon un usuario.'; msg.className = 'camp-modal-msg err'; return; }
+  if (!id && !password) { msg.textContent = 'La contraseña es obligatoria.'; msg.className = 'camp-modal-msg err'; return; }
+  try {
+    const body = { action: 'save_user', username, label, active, dashboardIds };
+    if (id) body.id = +id;
+    if (password) body.password = password;
+    await portalApi(body);
+    ptClose('ptUserModal');
+    toast(id ? 'Usuario actualizado' : 'Usuario creado');
+    loadPortalAdmin();
+  } catch (err) { msg.textContent = err.message; msg.className = 'camp-modal-msg err'; }
+}
+
+async function ptUserDelete(id) {
+  const u = ptUsers.find(x => x.id === id);
+  if (!confirm(`¿Borrar el usuario "${u?.username}"?`)) return;
+  try { await portalApi({ action: 'delete_user', id }); toast('Usuario borrado'); loadPortalAdmin(); }
+  catch (err) { toast('Error: ' + err.message); }
 }
 
 function repSuggest() {

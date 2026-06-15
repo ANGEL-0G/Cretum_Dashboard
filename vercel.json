@@ -2,6 +2,7 @@
   "version": 2,
   "builds": [
     { "src": "public/index.html",   "use": "@vercel/static" },
+    { "src": "public/portal.html",  "use": "@vercel/static" },
     { "src": "public/app.js",       "use": "@vercel/static" },
     { "src": "public/logo.png",     "use": "@vercel/static" },
     { "src": "public/logo-icon.png", "use": "@vercel/static" },
@@ -11,6 +12,7 @@
     { "src": "api/config.js",            "use": "@vercel/node" },
     { "src": "api/dropbox.js",           "use": "@vercel/node" },
     { "src": "api/sheets.js",            "use": "@vercel/node" },
+    { "src": "api/portal.js",            "use": "@vercel/node" },
     { "src": "api/notify-assignment.js", "use": "@vercel/node" }
   ],
   "routes": [
@@ -19,7 +21,9 @@
     { "src": "/api/config",             "dest": "/api/config.js" },
     { "src": "/api/dropbox",            "dest": "/api/dropbox.js" },
     { "src": "/api/sheets",             "dest": "/api/sheets.js" },
+    { "src": "/api/portal",             "dest": "/api/portal.js" },
     { "src": "/api/notify-assignment",  "dest": "/api/notify-assignment.js" },
+    { "src": "/portal",        "dest": "/public/portal.html" },
     { "src": "/app.js",        "dest": "/public/app.js" },
     { "src": "/logo.png",      "dest": "/public/logo.png" },
     { "src": "/logo-icon.png", "dest": "/public/logo-icon.png" },
