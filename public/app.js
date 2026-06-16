@@ -2711,7 +2711,7 @@ async function openInvestor(id) {
       sb.from('investments')
         .select(`id, entry_ev_b, entry_pps, current_ev_b, current_ev_pps, shares,
                  commitment, commitment_actual, dpi_moic, carry_pct,
-                 start_date, end_date, duration_years, distributed_at,
+                 start_date, end_date, duration_years, distributed_at, last_ca_letter,
                  series(name), companies(id, name, is_public),
                  investment_distributions(distribution_date, letter_type, underlying_company,
                    price_per_share, shares_distributed, cash_proceeds, value_in_kind, letter_url, notes)`)
@@ -2765,6 +2765,7 @@ const POSITION_COLUMNS = [
   { key: 'start_date',        label: 'Inicio',                      default: false },
   { key: 'end_date',          label: 'Fin',                         default: false },
   { key: 'duration_years',    label: 'Duración',                    default: false },
+  { key: 'last_ca_letter',    label: 'Última carta (CA)',           default: true  },
 ];
 let dbPosVisibleCols = loadPosVisibleCols();
 let lastInvestorDetail = null;   // caché para re-render al toggle (evita re-fetch)
@@ -2844,6 +2845,7 @@ function renderPositionsBlock(title, rows) {
       case 'start_date':        return `<td class="muted">${fmt.date(p.start_date)}</td>`;
       case 'end_date':          return `<td class="muted">${fmt.date(p.end_date)}</td>`;
       case 'duration_years':    return `<td class="num muted">${fmt.dur(p.duration_years)}</td>`;
+      case 'last_ca_letter':    return `<td>${p.last_ca_letter ? `<a href="${escapeHtml(p.last_ca_letter)}" target="_blank" rel="noopener"><i class="fa-solid fa-file-pdf"></i> PDF</a>` : dash}</td>`;
       default: return '<td></td>';
     }
   };
