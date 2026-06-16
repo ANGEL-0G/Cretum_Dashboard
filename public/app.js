@@ -3472,7 +3472,8 @@ const FUND_TRACKERS = {
       { company: 'Udemy',                       invested: 960094,   pct: 0.007, mtm: 308052,   moic: 0.3209, corpVal: 1.261,  pps: 9.22,  entry: 28.74, shares: 33406,  fdso: 136.8 },
       { company: 'Figure AI Inc.',              invested: 426634,   pct: 0.003, mtm: 5446374,  moic: 12.7659,corpVal: 34.812, pps: 174,   entry: 13.63, shares: 31301,  fdso: 200.1 }
     ],
-    overallTotal:     { invested: 128568084, mtm: 196438047, moic: 1.5279 }
+    overallTotal:     { invested: 128568084, mtm: 196438047, moic: 1.5279 },
+    overallTotal2:    { label: 'Total — Overall (Commitment)', invested: 154000000, mtm: 196438047, moic: 1.2756 }
   },
   fundV: {
     id: 'fundV',
