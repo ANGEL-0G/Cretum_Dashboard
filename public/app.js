@@ -3494,6 +3494,9 @@ const FUND_TRACKERS = {
       { key: 'fdso',     label: 'Current FDSO (M)', type: 'num' }
     ],
     active: [
+      { company: 'Decart.AI, Inc.',        invested: 25749946, pct: 0.170, mtm: 25749946,   moic: 1.0000,  corpVal: 3.916,  pps: 197.78, entry: 197.78, shares: 130197,    fdso: 19.8   },
+      { company: 'Saronic Technologies',   invested: 20000000, pct: 0.132, mtm: 20000000,   moic: 1.0000,  corpVal: 9.249,  pps: 27.45,  entry: 27.45,  shares: 728730,    fdso: 337    },
+      { company: 'Anthropic PBC',          invested: 18587304, pct: 0.123, mtm: 62330216,   moic: 3.3534,  corpVal: 965,    pps: 589.01, entry: 175.65, shares: 105822,    fdso: 1638.34},
       { company: 'X.AI Corp. (SpaceX)',    invested: 15000870, pct: 0.099, mtm: 53228475,   moic: 3.5484,  corpVal: 1770,   pps: 135,    entry: 38.05,  shares: 394285,    fdso: 11869  },
       { company: 'CHAOS Industries',       invested: 9999962,  pct: 0.066, mtm: 9999962,    moic: 1.0000,  corpVal: 4.446,  pps: 138.94, entry: 138.94, shares: 71975,     fdso: 32     },
       { company: 'Base Power, Inc.',       invested: 9280871,  pct: 0.061, mtm: 9280871,    moic: 1.0000,  corpVal: 4.111,  pps: 120.92, entry: 120.92, shares: 76751,     fdso: 34     },
@@ -3504,27 +3507,22 @@ const FUND_TRACKERS = {
       { company: 'Epirus, Inc.',           invested: 4999998,  pct: 0.033, mtm: 4999998,    moic: 1.0000,  corpVal: 1.011,  pps: 2.77,   entry: 2.77,   shares: 1801996,   fdso: 364.2  },
       { company: 'Radiant Industries',     invested: 4999989,  pct: 0.033, mtm: 4999989,    moic: 1.0000,  corpVal: 1.879,  pps: 42.32,  entry: 42.32,  shares: 118155,    fdso: 44.4   },
       { company: 'Cohere Inc.',            invested: 4999771,  pct: 0.033, mtm: 4999771,    moic: 1.0000,  corpVal: 6.991,  pps: 230.71, entry: 230.71, shares: 21671,     fdso: 30.3   },
-      { company: 'Anthropic PBC',          invested: 3776157,  pct: 0.025, mtm: 28665350,   moic: 7.5911,  corpVal: 965,    pps: 589.01, entry: 77.59,  shares: 48667,     fdso: 1466.4 },
       { company: 'Groq, Inc.',             invested: 2363484,  pct: 0.016, mtm: 7102853,    moic: 3.0052,  corpVal: 14.2,   pps: 68.7,   entry: 22.86,  shares: 103389,    fdso: 206.7  },
       { company: 'Mythic Inc.',            invested: 2000000,  pct: 0.013, mtm: 2000000,    moic: 1.0000,  corpVal: 0.159,  pps: 0.0024, entry: 0.0024, shares: 827061450, fdso: 65930.2},
       { company: 'Epic Games, Inc.',       invested: 1833323,  pct: 0.012, mtm: 2633898,    moic: 1.4367,  corpVal: 30.364, pps: 696.43, entry: 484.75, shares: 3782,      fdso: 43.6   },
       { company: 'Figure AI Inc.',         invested: 1300007,  pct: 0.009, mtm: 18592184,   moic: 14.3016, corpVal: 39.006, pps: 194.93, entry: 13.63,  shares: 95378,     fdso: 200.1  }
     ],
-    activeTotal:      { invested: 84640946,  mtm: 183740013, moic: 2.1708 },
+    activeTotal:      { invested: 145202039, mtm: 263154825, moic: 1.8123 },
     pendingTitle: 'Pending Positions (Q2 2026)',
-    pending: [
-      { company: 'Decart.AI, Inc.',        invested: 25749946, pct: 0.170, mtm: 25749946,   moic: 1.0000,  corpVal: 3.916,  pps: 197.78, entry: 197.78, shares: 130197,    fdso: 19.8   },
-      { company: 'Saronic Technologies',   invested: 20000000, pct: 0.132, mtm: 20000000,   moic: 1.0000,  corpVal: 9.249,  pps: 27.45,  entry: 27.45,  shares: 728730,    fdso: 337    },
-      { company: "Anthropic PBC (Add'l)",  invested: 14811147, pct: 0.098, mtm: 14811147,   moic: 1.0000,  corpVal: 380,    pps: 259.14, entry: 259.14, shares: 57155,     fdso: 1466.4 }
-    ],
-    pendingTotal:     { invested: 60561093,  mtm: 60561093,  moic: 1.0000 },
+    pending: [],
+    pendingTotal:     { invested: 0, mtm: 0, moic: 0 },
     distributed: [
       { company: 'Groq, Inc. (Distributed)', invested: 5480542, pct: 0.036, mtm: 16470384, moic: 3.0052, corpVal: 14.2,   pps: 68.7, entry: 22.86, shares: 239744, fdso: 206.7 },
       { company: 'Klarna Holding AB',        invested: 436638,  pct: 0.003, mtm: 266292,   moic: 0.6099, corpVal: 5.435,  pps: 13,   entry: 21.32, shares: 20484,  fdso: 418.1 }
     ],
     overallLabel:     'Total — Overall (Invested)',
-    overallTotal:     { invested: 151119219, mtm: 261037782, moic: 1.7274 },
-    overallTotal2:    { label: 'Total — Overall (Commitment)', invested: 293000000, mtm: 402918563, moic: 1.3751 }
+    overallTotal:     { invested: 151119219, mtm: 279891501, moic: 1.8521 },
+    overallTotal2:    { label: 'Total — Overall (Commitment)', invested: 293000000, mtm: 421772282, moic: 1.4395 }
   }
 };
 
