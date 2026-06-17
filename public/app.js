@@ -2942,7 +2942,7 @@ async function openInvestor(id) {
   showDetailLoading();
   try {
     const [{ data: contacts }, { data: positions }] = await Promise.all([
-      sb.from('contacts').select('name, email').eq('investor_id', id).order('id'),
+      sb.from('contacts').select('id, name, email').eq('investor_id', id).order('id'),
       sb.from('investments')
         .select(`id, entry_ev_b, entry_pps, current_ev_b, current_ev_pps, shares,
                  commitment, commitment_actual, dpi_moic, carry_pct,
@@ -2969,6 +2969,33 @@ async function saveTitular(id, value) {
   inv.titular = v || null;
   if (lastInvestorDetail?.inv?.id === id) lastInvestorDetail.inv.titular = v || null;
   toast('Titular actualizado');
+}
+
+// Editar nombre/email de un contacto (editor/admin)
+async function contactSave(id, field, el) {
+  const v = (el.value || '').trim();
+  const c = lastInvestorDetail?.contacts?.find(x => x.id === id);
+  if (c && (c[field] || '') === v) return;   // sin cambios
+  const { error } = await sb.from('contacts').update({ [field]: v || null }).eq('id', id);
+  if (error) { toast('Error al guardar contacto: ' + error.message); return; }
+  if (c) c[field] = v || null;
+  // refresca las iniciales del avatar si cambió el nombre
+  if (field === 'name') { const row = document.querySelector(`.db-contact[data-cid="${id}"] .db-contact-av`); if (row) row.textContent = (v || '?').slice(0, 2).toUpperCase(); }
+  toast('Contacto actualizado');
+}
+async function contactAdd(investorId) {
+  const { data, error } = await sb.from('contacts').insert({ investor_id: investorId, name: null, email: null }).select('id').single();
+  if (error) { toast('Error al añadir: ' + error.message); return; }
+  if (lastInvestorDetail?.contacts) lastInvestorDetail.contacts.push({ id: data.id, name: null, email: null });
+  openInvestor(investorId);   // re-render para mostrar la fila editable nueva
+}
+async function contactDelete(id) {
+  if (!confirm('¿Borrar este contacto?')) return;
+  const invId = lastInvestorDetail?.inv?.id;
+  const { error } = await sb.from('contacts').delete().eq('id', id);
+  if (error) { toast('Error al borrar: ' + error.message); return; }
+  toast('Contacto borrado');
+  if (invId) openInvestor(invId);
 }
 
 async function openCompany(id) {
@@ -3189,15 +3216,22 @@ function renderInvestorDetail(inv, contacts, positions) {
       </div>
     </div>
 
-    ${contacts.length ? `
+    ${(contacts.length || canEditTitular) ? `
       <div class="db-section">
         <div class="db-section-h">Contactos</div>
-        ${contacts.map(c => `
+        ${contacts.map(c => canEditTitular ? `
+          <div class="db-contact" data-cid="${c.id}">
+            <div class="db-contact-av">${(c.name || '?').slice(0,2).toUpperCase()}</div>
+            <input class="db-contact-inp nm" value="${escapeHtml(c.name || '')}" placeholder="Nombre" onblur="contactSave(${c.id},'name',this)" onkeydown="if(event.key==='Enter')this.blur()">
+            <input class="db-contact-inp ml" value="${escapeHtml(c.email || '')}" placeholder="correo@dominio.com" onblur="contactSave(${c.id},'email',this)" onkeydown="if(event.key==='Enter')this.blur()">
+            <button class="db-contact-del" title="Borrar contacto" onclick="contactDelete(${c.id})"><i class="fa-solid fa-xmark"></i></button>
+          </div>` : `
           <div class="db-contact">
             <div class="db-contact-av">${(c.name || '?').slice(0,2).toUpperCase()}</div>
             <div class="db-contact-name">${escapeHtml(c.name)}</div>
             <div class="db-contact-mail">${escapeHtml(c.email || '')}</div>
           </div>`).join('')}
+        ${canEditTitular ? `<button class="cdd-btn" style="margin-top:4px" onclick="contactAdd(${inv.id})"><i class="fa-solid fa-user-plus"></i> Añadir contacto</button>` : ''}
       </div>` : ''}
 
     ${(activePositions.length || terminatedPositions.length) ? `
