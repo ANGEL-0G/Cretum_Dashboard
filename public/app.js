@@ -1891,13 +1891,10 @@ function goBack() {
   switchView(prev, true);
 }
 
-/* "Regresar a Menú" desde header: sub-vista → home; home → selector (cambiar empresa). */
+/* "Regresar a Menú": siempre lleva al selector de empresas (botones MVP / Cretum),
+   sin importar la vista. (Antes iba a 'home' desde sub-vistas, igual que la flecha atrás.) */
 function headerBackToMenu() {
-  if (currentView === 'home') {
-    switchView('selector');
-  } else if (currentView !== 'selector') {
-    switchView('home');
-  }
+  if (currentView !== 'selector') switchView('selector');
 }
 
 document.addEventListener('keydown', (e) => {
