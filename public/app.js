@@ -2653,10 +2653,10 @@ function populateFilters() {
   buildPanel('ddCompanyPanel', 'Todas las empresas',
     [...dbCompanies].sort((a, b) => a.name.localeCompare(b.name)), 'Buscar empresa…');
   buildPanel('ddSeriesPanel', 'Todas las series', dbSeries, 'Buscar serie…');
-  // Titulares distintos (el valor es el texto del titular)
-  const titulares = [...new Set(dbInvestors.map(i => (i.titular || '').trim()).filter(Boolean))]
-    .sort((a, b) => a.localeCompare(b, 'es'))
-    .map(t => ({ id: t, name: t }));
+  // Titulares distintos por PERSONA (las cuentas conjuntas "A & B" se separan en A y B)
+  const titSet = new Set();
+  dbInvestors.forEach(i => titularPeople(i.titular).forEach(p => titSet.add(p)));
+  const titulares = [...titSet].sort((a, b) => a.localeCompare(b, 'es')).map(t => ({ id: t, name: t }));
   buildPanel('ddTitularPanel', 'Todos los titulares', titulares, 'Buscar titular…');
 }
 
@@ -2731,13 +2731,18 @@ function getDbFilters() {
   };
 }
 
+// Un titular puede ser conjunto: "Persona A & Persona B" (o "and"/"/"). Devuelve la lista.
+function titularPeople(t) {
+  return String(t || '').split(/\s*(?:&|\band\b|\/)\s*/i).map(s => s.trim()).filter(Boolean);
+}
+
 function getFilteredInvestors() {
   const { q, companyId, seriesId, titular } = getDbFilters();
   let filtered = dbInvestors;
   if (q) filtered = filtered.filter(r => fuzzyMatch(q, r.name) || fuzzyMatch(q, r.titular || ''));
   if (companyId) filtered = filtered.filter(r => dbInvestorCompanies[r.id]?.has(+companyId));
   if (seriesId)  filtered = filtered.filter(r => dbInvestorSeries[r.id]?.has(+seriesId));
-  if (titular)   filtered = filtered.filter(r => (r.titular || '') === titular);
+  if (titular)   filtered = filtered.filter(r => titularPeople(r.titular).includes(titular));
   return filtered;
 }
 
