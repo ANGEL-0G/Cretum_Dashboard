@@ -2109,6 +2109,10 @@ async function portalApi(body) {
 }
 
 async function loadPortalAdmin() {
+  // Enlace "Abrir portal" + texto del URL según la empresa
+  const base = portalOrg === 'mvp' ? '/portal-mvp' : '/portal';
+  const openLink = document.getElementById('ptOpenLink'); if (openLink) openLink.href = base;
+  const urlText = document.getElementById('ptUrlText'); if (urlText) urlText.textContent = 'cretumdesk.com' + base;
   const dl = document.getElementById('ptDashList'), ul = document.getElementById('ptUserList');
   if (dl) dl.innerHTML = '<div class="pt-empty"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
   try {
