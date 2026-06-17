@@ -209,9 +209,13 @@ export default async function handler(req, res) {
       const profileById = {};
       (profiles || []).forEach(p => { profileById[p.id] = p; });
 
-      // Día actual en CDMX (UTC-6, sin horario de verano)
+      // Día y hora actuales en CDMX (UTC-6, sin horario de verano)
       const cdmxNow = new Date(Date.now() - 6 * 3600 * 1000);
       const todayDow = cdmxNow.getUTCDay();
+      const nowHour = cdmxNow.getUTCHours();
+      // Cuando se invoca a una hora concreta (cron horario) respeta reminder_hour;
+      // si se invoca con ?anyhour=1 (o sin disparador horario) ignora la hora.
+      const honorHour = !/[?&]anyhour=1/.test(req.url || '');
 
       const tasks = await getTasks();
       const results = [];
@@ -226,6 +230,11 @@ export default async function handler(req, res) {
           results.push({ user: u.email, skipped: `not their day (today=${todayDow}, want=${profile.reminder_day})` });
           continue;
         }
+        const wantHour = (profile.reminder_hour ?? 9);
+        if (honorHour && wantHour !== nowHour) {
+          results.push({ user: u.email, skipped: `not their hour (now=${nowHour}, want=${wantHour})` });
+          continue;
+        }
         try {
           const r = await sendForUser({
             id: u.id,
@@ -237,7 +246,7 @@ export default async function handler(req, res) {
           results.push({ user: u.email, ok: false, error: err.message });
         }
       }
-      return res.status(200).json({ ok: true, mode: 'cron', sentAt: new Date().toISOString(), todayDow, results });
+      return res.status(200).json({ ok: true, mode: 'cron', sentAt: new Date().toISOString(), todayDow, nowHour, honorHour, results });
     } catch (err) {
       return res.status(500).json({ error: err.message });
     }

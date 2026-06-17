@@ -1,0 +1,23 @@
+name: Resumen semanal (cada hora)
+
+# Dispara el envío del resumen cada hora en punto. El endpoint /api/reminder
+# decide a quién mandarle según su reminder_day + reminder_hour (hora CDMX).
+# Vercel Hobby solo permite cron 1 vez/día, por eso usamos GitHub Actions.
+
+on:
+  schedule:
+    - cron: '0 * * * *'      # cada hora, minuto 0 (UTC). El endpoint convierte a CDMX.
+  workflow_dispatch: {}        # permite dispararlo a mano desde la pestaña Actions
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Llamar al endpoint de recordatorios
+        run: |
+          code=$(curl -sS -o /tmp/out.txt -w "%{http_code}" \
+            "https://cretumdesk.com/api/reminder" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+          echo "HTTP $code"
+          cat /tmp/out.txt
+          test "$code" = "200"

@@ -29,8 +29,5 @@
     { "src": "/logo-icon.png", "dest": "/public/logo-icon.png" },
     { "src": "/logo-mvp.png",  "dest": "/public/logo-mvp.png" },
     { "src": "/(.*)",          "dest": "/public/index.html" }
-  ],
-  "crons": [
-    { "path": "/api/reminder", "schedule": "0 14 * * *" }
   ]
 }
