@@ -2647,12 +2647,17 @@ function populateFilters() {
       `<div class="cdd-search"><i class="fa-solid fa-magnifying-glass"></i>` +
       `<input type="text" placeholder="${ph}" autocomplete="off" oninput="cddFilterOpts('${panelId}', this.value)"></div>` +
       `<div class="cdd-opt selected" data-value="">${allLabel}</div>` +
-      items.map(it => `<div class="cdd-opt" data-value="${it.id}">${escapeHtml(it.name)}</div>`).join('') +
+      items.map(it => `<div class="cdd-opt" data-value="${escapeHtml(String(it.id))}">${escapeHtml(it.name)}</div>`).join('') +
       `<div class="cdd-noopt" data-noopt style="display:none">Sin coincidencias</div>`;
   };
   buildPanel('ddCompanyPanel', 'Todas las empresas',
     [...dbCompanies].sort((a, b) => a.name.localeCompare(b.name)), 'Buscar empresa…');
   buildPanel('ddSeriesPanel', 'Todas las series', dbSeries, 'Buscar serie…');
+  // Titulares distintos (el valor es el texto del titular)
+  const titulares = [...new Set(dbInvestors.map(i => (i.titular || '').trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, 'es'))
+    .map(t => ({ id: t, name: t }));
+  buildPanel('ddTitularPanel', 'Todos los titulares', titulares, 'Buscar titular…');
 }
 
 // Filtra (difuso) las opciones visibles de un panel de desplegable
@@ -2687,6 +2692,7 @@ function clearFilters() {
   document.getElementById('dbSearch').value = '';
   cddPick('ddCompany', '', 'Todas las empresas');
   cddPick('ddSeries', '', 'Todas las series');
+  cddPick('ddTitular', '', 'Todos los titulares');
   renderDbList();
 }
 
@@ -2721,25 +2727,27 @@ function getDbFilters() {
     q: (document.getElementById('dbSearch').value || '').trim().toLowerCase(),
     companyId: document.getElementById('ddCompany')?.dataset.value || '',
     seriesId: document.getElementById('ddSeries')?.dataset.value || '',
+    titular: document.getElementById('ddTitular')?.dataset.value || '',
   };
 }
 
 function getFilteredInvestors() {
-  const { q, companyId, seriesId } = getDbFilters();
+  const { q, companyId, seriesId, titular } = getDbFilters();
   let filtered = dbInvestors;
   if (q) filtered = filtered.filter(r => fuzzyMatch(q, r.name) || fuzzyMatch(q, r.titular || ''));
   if (companyId) filtered = filtered.filter(r => dbInvestorCompanies[r.id]?.has(+companyId));
   if (seriesId)  filtered = filtered.filter(r => dbInvestorSeries[r.id]?.has(+seriesId));
+  if (titular)   filtered = filtered.filter(r => (r.titular || '') === titular);
   return filtered;
 }
 
 function renderDbList() {
-  const { q, companyId, seriesId } = getDbFilters();
+  const { q, companyId, seriesId, titular } = getDbFilters();
   const list = document.getElementById('dbList');
   list.style.display = '';
   document.getElementById('dbDetail').classList.remove('show');
 
-  const anyFilter = !!(q || companyId || seriesId);
+  const anyFilter = !!(q || companyId || seriesId || titular);
   document.getElementById('dbClear').style.display = anyFilter ? '' : 'none';
 
   const filtered = getFilteredInvestors();
