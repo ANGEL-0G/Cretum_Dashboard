@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS portal_dashboards (
   slug        TEXT UNIQUE NOT NULL,
   title       TEXT NOT NULL,
   html        TEXT NOT NULL DEFAULT '',
+  org         TEXT NOT NULL DEFAULT 'cretum',      -- 'cretum' | 'mvp' (portal por empresa)
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -20,8 +21,13 @@ CREATE TABLE IF NOT EXISTS portal_users (
   password_hash  TEXT NOT NULL,                   -- scrypt: salt$hash (hex)
   label          TEXT,
   active         BOOLEAN NOT NULL DEFAULT TRUE,
+  org            TEXT NOT NULL DEFAULT 'cretum',  -- 'cretum' | 'mvp'
   created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Migración para tablas existentes (idempotente)
+ALTER TABLE portal_dashboards ADD COLUMN IF NOT EXISTS org TEXT NOT NULL DEFAULT 'cretum';
+ALTER TABLE portal_users      ADD COLUMN IF NOT EXISTS org TEXT NOT NULL DEFAULT 'cretum';
 
 CREATE TABLE IF NOT EXISTS portal_access (
   user_id       BIGINT NOT NULL REFERENCES portal_users(id) ON DELETE CASCADE,

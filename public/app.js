@@ -1619,6 +1619,9 @@ const ORG_MODULES = {
     { view: 'reports', icon: 'fa-chart-pie', title: 'Reportes',
       desc: 'Genera el reporte de distribuciones de un LP desde las cartas de Altareturn',
       iconClass: 'home-ico-reportes' },
+    { view: 'portal', icon: 'fa-share-nodes', title: 'Portal de clientes',
+      desc: 'Sube dashboards de MVP y da acceso a clientes con su propio usuario',
+      iconClass: 'home-ico-portal', editorOrAdmin: true },
     { view: 'altareturn', icon: 'fa-chart-line', title: 'Altareturn',
       desc: 'Ingesta y consulta de documentos del portafolio MVP',
       iconClass: 'home-ico-reports', disabled: true },
@@ -1639,6 +1642,7 @@ const ORG_NAV = {
     { view: 'db',           icon: 'fa-database',      label: 'Base de Datos' },
     { view: 'fundTrackers', icon: 'fa-chart-column',  label: 'Fund Trackers' },
     { view: 'reports',      icon: 'fa-chart-pie',     label: 'Reportes' },
+    { view: 'portal',       icon: 'fa-share-nodes',   label: 'Portal de clientes', editorOrAdmin: true },
   ],
 };
 
@@ -1835,7 +1839,7 @@ function switchView(view, isBack = false) {
   if (view === 'fundTrackers') renderFundTrackerHome();
   if (view === 'campaigns') loadCampaigns();
   if (view === 'reports') loadReports();
-  if (view === 'portal') loadPortalAdmin();
+  if (view === 'portal') { portalOrg = currentOrg || 'cretum'; loadPortalAdmin(); }
 
   syncHash();
 }
@@ -2092,10 +2096,12 @@ function fuzzyMatch(q, text, threshold) {
    Todo vía /api/portal (service role server-side). Solo admin llega aquí.
    ═══════════════════════════════════════════════════════════════════════ */
 let ptDashboards = [], ptUsers = [], ptAccess = [];
+let portalOrg = 'cretum';   // empresa que se gestiona en el módulo Portal (según currentOrg)
 
 async function portalApi(body) {
   const r = await authedFetch('/api/portal', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ org: portalOrg, ...body }),
   });
   const d = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
@@ -2117,9 +2123,10 @@ async function loadPortalAdmin() {
 function renderPtDashboards() {
   const el = document.getElementById('ptDashList');
   if (!ptDashboards.length) { el.innerHTML = '<div class="pt-empty">Aún no hay dashboards. Crea el primero.</div>'; return; }
+  const base = portalOrg === 'mvp' ? '/portal-mvp' : '/portal';
   el.innerHTML = ptDashboards.map(d => `<div class="pt-item">
     <div class="nm">${escapeHtml(d.title)}</div>
-    <div class="sub">/portal · ${escapeHtml(d.slug)}</div>
+    <div class="sub">${base} · ${escapeHtml(d.slug)}</div>
     <div class="acts">
       <button class="cdd-btn" onclick="ptDashOpen(${d.id})"><i class="fa-solid fa-pen"></i> Editar</button>
       <button class="cdd-btn camp-btn-danger" onclick="ptDashDelete(${d.id})"><i class="fa-solid fa-trash"></i></button>

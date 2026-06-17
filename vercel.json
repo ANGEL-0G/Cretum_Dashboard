@@ -3,6 +3,7 @@
   "builds": [
     { "src": "public/index.html",   "use": "@vercel/static" },
     { "src": "public/portal.html",  "use": "@vercel/static" },
+    { "src": "public/portal-mvp.html", "use": "@vercel/static" },
     { "src": "public/app.js",       "use": "@vercel/static" },
     { "src": "public/logo.png",     "use": "@vercel/static" },
     { "src": "public/logo-icon.png", "use": "@vercel/static" },
@@ -23,6 +24,7 @@
     { "src": "/api/sheets",             "dest": "/api/sheets.js" },
     { "src": "/api/portal",             "dest": "/api/portal.js" },
     { "src": "/api/notify-assignment",  "dest": "/api/notify-assignment.js" },
+    { "src": "/portal-mvp",    "dest": "/public/portal-mvp.html" },
     { "src": "/portal",        "dest": "/public/portal.html" },
     { "src": "/app.js",        "dest": "/public/app.js" },
     { "src": "/logo.png",      "dest": "/public/logo.png" },

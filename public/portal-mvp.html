@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>MVP · Portal</title>
+<style>
+  :root{--navy:#c9651f;--navy-mid:#ED7824;--ink:#1a1f2e;--soft:#6b7689;--line:#efe4d9;--red:#c0392b;--red-bg:#fbe6e3;
+        --gray-200:#ece3d8;--gray-300:#d4c6b4;--gray-400:#a89a86;--font:-apple-system,'Segoe UI',Arial,sans-serif}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{font-family:var(--font);color:var(--ink)}
+
+  /* ───────── LOGIN ───────── */
+  #loginView{
+    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;
+    background:#fffdfb;position:relative;overflow:hidden;
+  }
+  /* textura de puntos cálidos muy sutil, difuminada hacia los bordes */
+  #loginView::before{
+    content:'';position:absolute;inset:0;pointer-events:none;z-index:0;
+    background-image:radial-gradient(rgba(237,120,36,.10) 1px, transparent 1px);
+    background-size:30px 30px;
+    -webkit-mask-image:radial-gradient(ellipse at center, black 30%, transparent 80%);
+    mask-image:radial-gradient(ellipse at center, black 30%, transparent 80%);
+  }
+  /* orbes naranjas/ámbar desenfocados flotando */
+  .blob{position:absolute;border-radius:50%;filter:blur(60px);pointer-events:none}
+  .blob1{width:460px;height:460px;top:-120px;left:-110px;background:radial-gradient(circle,rgba(237,120,36,.30),transparent 70%);animation:float1 16s ease-in-out infinite}
+  .blob2{width:380px;height:380px;bottom:-120px;right:-90px;background:radial-gradient(circle,rgba(245,180,80,.30),transparent 70%);animation:float2 19s ease-in-out infinite}
+  .blob3{width:320px;height:320px;top:54%;left:46%;background:radial-gradient(circle,rgba(248,149,64,.24),transparent 70%);animation:float3 14s ease-in-out infinite}
+  .dot{position:absolute;border-radius:50%;filter:blur(20px);pointer-events:none}
+  .dot1{width:100px;height:100px;top:16%;right:16%;background:radial-gradient(circle,rgba(237,120,36,.34),transparent 70%);animation:float2 13s ease-in-out infinite}
+  .dot2{width:64px;height:64px;bottom:20%;left:14%;background:radial-gradient(circle,rgba(245,180,80,.34),transparent 70%);animation:float1 11s ease-in-out infinite}
+  .dot3{width:130px;height:130px;top:28%;left:7%;background:radial-gradient(circle,rgba(248,149,64,.26),transparent 70%);animation:float3 18s ease-in-out infinite}
+  .dot4{width:80px;height:80px;bottom:12%;right:24%;background:radial-gradient(circle,rgba(237,120,36,.30),transparent 70%);animation:float1 15s ease-in-out infinite}
+  @keyframes float1{0%,100%{transform:translate(0,0)}50%{transform:translate(60px,46px)}}
+  @keyframes float2{0%,100%{transform:translate(0,0)}50%{transform:translate(-54px,-36px)}}
+  @keyframes float3{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-30px,28px) scale(1.18)}}
+
+  .card{
+    position:relative;z-index:2;width:380px;max-width:100%;
+    background:rgba(255,255,255,.80);
+    -webkit-backdrop-filter:blur(16px) saturate(160%);backdrop-filter:blur(16px) saturate(160%);
+    border-radius:20px;padding:38px 36px 28px;
+    box-shadow:0 24px 60px rgba(160,80,20,.16),0 6px 18px rgba(160,80,20,.08),0 0 0 1px rgba(200,100,30,.06);
+    animation:slideUp .5s cubic-bezier(.34,1.4,.64,1);
+  }
+  @keyframes slideUp{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
+  .card::before{content:'';position:absolute;top:0;left:30px;right:30px;height:1px;background:linear-gradient(90deg,transparent,rgba(237,120,36,.45),transparent)}
+  .logo{width:200px;max-width:100%;display:block;margin:2px auto 8px;filter:drop-shadow(0 4px 12px rgba(237,120,36,.16));transition:transform .35s cubic-bezier(.34,1.56,.64,1)}
+  .card:hover .logo{transform:scale(1.04)}
+  .sub{font-size:12.5px;color:var(--gray-400);text-align:center;letter-spacing:1.5px;margin-bottom:26px;text-transform:uppercase}
+  .field{position:relative;margin-bottom:12px}
+  .fi{width:100%;padding:12px 14px;border:1.5px solid var(--gray-200);border-radius:10px;font-size:14px;color:var(--ink);background:#fff;outline:none;transition:border-color .2s,box-shadow .2s;font-family:var(--font)}
+  .fi:hover{border-color:var(--gray-300)}
+  .fi:focus{border-color:var(--navy-mid);box-shadow:0 0 0 3px rgba(237,120,36,.12)}
+  .fi::placeholder{color:var(--gray-300)}
+  .btn{
+    position:relative;overflow:hidden;width:100%;padding:13px 16px;margin-top:8px;
+    background:linear-gradient(135deg,var(--navy) 0%,var(--navy-mid) 100%);border:none;border-radius:10px;color:#fff;
+    font-size:14px;font-weight:500;font-family:var(--font);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    box-shadow:0 8px 20px rgba(237,120,36,.40),inset 0 1px 0 rgba(255,255,255,.18);
+    transition:all .22s cubic-bezier(.4,0,.2,1);
+  }
+  .btn::before{content:'';position:absolute;top:0;left:-120%;width:80%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.32) 50%,transparent);transform:skewX(-25deg);transition:left .7s cubic-bezier(.4,0,.2,1)}
+  .btn:hover::before{left:120%}
+  .btn>span,.btn>i{position:relative;z-index:1}
+  .btn:hover{transform:translateY(-1px);box-shadow:0 12px 28px rgba(237,120,36,.5),inset 0 1px 0 rgba(255,255,255,.22)}
+  .btn:active{transform:translateY(0) scale(.98)}
+  .btn:disabled{opacity:.65;cursor:default}
+  .msg{font-size:12px;color:var(--red);background:var(--red-bg);border-radius:10px;padding:10px 13px;margin-top:14px;display:none;align-items:center;gap:7px}
+  .msg.show{display:flex}
+  .foot{text-align:center;font-size:10.5px;color:var(--gray-300);margin-top:22px;letter-spacing:.3px}
+
+  /* ───────── DASHBOARD ───────── */
+  #app{display:none;height:100%}
+  #frame{width:100%;height:100%;border:0;background:#fff;display:block}
+  .exit{
+    position:fixed;top:16px;right:16px;z-index:10;
+    background:rgba(255,255,255,.04);color:var(--soft);
+    border:1px solid rgba(150,120,90,.28);border-radius:10px;
+    padding:9px 16px;font-size:13px;font-family:var(--font);cursor:pointer;
+    display:flex;align-items:center;gap:7px;
+    -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    transition:all .25s cubic-bezier(.34,1.5,.64,1);
+  }
+  .exit:hover{background:var(--red);border-color:var(--red);color:#fff;transform:scale(1.09);box-shadow:0 8px 22px rgba(192,57,43,.45)}
+  .picker{
+    position:fixed;top:16px;left:16px;z-index:10;
+    background:rgba(255,255,255,.85);color:var(--ink);
+    border:1px solid rgba(150,120,90,.28);border-radius:10px;
+    padding:8px 30px 8px 12px;font-size:13px;font-family:var(--font);cursor:pointer;max-width:60vw;
+    -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);outline:none;
+  }
+</style>
+</head>
+<body>
+  <!-- Login -->
+  <div id="loginView">
+    <div class="blob blob1"></div><div class="blob blob2"></div><div class="blob blob3"></div>
+    <div class="dot dot1"></div><div class="dot dot2"></div><div class="dot dot3"></div><div class="dot dot4"></div>
+    <div class="card">
+      <img src="/logo-mvp.png" alt="MVP" class="logo">
+      <div class="sub">Portal de Inversión</div>
+      <form id="loginForm" onsubmit="return doLogin(event)">
+        <div class="field">
+          <input id="u" class="fi" placeholder="Usuario" autocomplete="username" autocapitalize="none" autocorrect="off" required></div>
+        <div class="field">
+          <input id="p" class="fi" type="password" placeholder="Contraseña" autocomplete="current-password" required></div>
+        <button id="btn" class="btn" type="submit"><span>Entrar</span></button>
+        <div class="msg" id="msg"></div>
+      </form>
+      <div class="foot">© MVP · Cretum Partners</div>
+    </div>
+  </div>
+
+  <!-- App -->
+  <div id="app">
+    <select id="picker" class="picker" onchange="openDash(this.value)" style="display:none"></select>
+    <button class="exit" onclick="logout()">Salir</button>
+    <iframe id="frame" sandbox="allow-scripts allow-popups allow-forms"></iframe>
+  </div>
+
+<script>
+  const ORG = 'mvp';
+  let token = '';
+  let dashboards = [];
+
+  async function api(body) {
+    const r = await fetch('/api/portal', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ org: ORG, ...body }) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
+    return d;
+  }
+
+  async function doLogin(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btn'), msg = document.getElementById('msg');
+    msg.className = 'msg'; btn.disabled = true; btn.querySelector('span').textContent = 'Entrando…';
+    try {
+      const d = await api({ action:'login', username:document.getElementById('u').value, password:document.getElementById('p').value });
+      token = d.token;
+      enterApp(d.dashboards);
+    } catch (err) {
+      msg.innerHTML = '⚠ ' + err.message; msg.className = 'msg show';
+    } finally {
+      btn.disabled = false; btn.querySelector('span').textContent = 'Entrar';
+    }
+    return false;
+  }
+
+  function enterApp(dl) {
+    dashboards = dl || [];
+    document.getElementById('loginView').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    const picker = document.getElementById('picker');
+    if (dashboards.length > 1) {
+      picker.style.display = '';
+      picker.innerHTML = dashboards.map(x => `<option value="${x.slug}">${x.title.replace(/</g,'&lt;')}</option>`).join('');
+    } else {
+      picker.style.display = 'none';
+    }
+    if (dashboards.length) openDash(dashboards[0].slug);
+    else document.getElementById('frame').srcdoc = '<p style="font-family:sans-serif;color:#667;padding:40px;text-align:center">No tienes dashboards asignados todavía.</p>';
+  }
+
+  async function openDash(slug) {
+    try {
+      const d = await api({ action:'view', slug, token });
+      document.getElementById('frame').srcdoc = d.html || '<p style="font-family:sans-serif;padding:40px;text-align:center;color:#667">Dashboard vacío.</p>';
+    } catch (err) {
+      if (String(err.message).includes('expirada')) return logout();
+      document.getElementById('frame').srcdoc = `<p style="font-family:sans-serif;padding:40px;text-align:center;color:#c0392b">${err.message}</p>`;
+    }
+  }
+
+  function logout() {
+    token = '';
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('loginView').style.display = 'flex';
+    document.getElementById('p').value = '';
+    document.getElementById('frame').srcdoc = '';
+  }
+</script>
+</body>
+</html>

@@ -68,6 +68,9 @@ async function canManage(req) {
   } catch { return false; }
 }
 
+// Empresa del portal: 'mvp' o 'cretum' (default). Separa dashboards/clientes por org.
+function reqOrg(req) { return (req.body && req.body.org === 'mvp') ? 'mvp' : 'cretum'; }
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST requerido' });
   const secret = process.env.PORTAL_JWT_SECRET;
@@ -79,29 +82,33 @@ export default async function handler(req, res) {
   try {
     /* ───────── PÚBLICO ───────── */
     if (action === 'login') {
+      const org = reqOrg(req);
       const username = String(req.body.username || '').trim().toLowerCase();
       const password = String(req.body.password || '');
       if (!username || !password) return res.status(400).json({ error: 'Faltan credenciales' });
       const { data: u } = await sb.from('portal_users')
-        .select('id, password_hash, active, label').eq('username', username).maybeSingle();
+        .select('id, password_hash, active, label').eq('username', username).eq('org', org).maybeSingle();
       // Mismo mensaje y trabajo similar exista o no el usuario (anti-enumeración)
       const ok = u && u.active && verifyPassword(password, u.password_hash);
       if (!ok) return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
       const { data: acc } = await sb.from('portal_access')
-        .select('portal_dashboards(slug, title)').eq('user_id', u.id);
+        .select('portal_dashboards(slug, title, org)').eq('user_id', u.id);
       const dashboards = (acc || []).map(a => a.portal_dashboards).filter(Boolean)
+        .filter(d => d.org === org)
+        .map(d => ({ slug: d.slug, title: d.title }))
         .sort((a, b) => a.title.localeCompare(b.title, 'es'));
-      const token = signToken({ uid: u.id, exp: Date.now() + 12 * 3600 * 1000 }, secret);
+      const token = signToken({ uid: u.id, org, exp: Date.now() + 12 * 3600 * 1000 }, secret);
       return res.status(200).json({ token, label: u.label || '', dashboards });
     }
 
     if (action === 'view') {
       const payload = verifyTokenStr(req.body.token, secret);
       if (!payload) return res.status(401).json({ error: 'Sesión expirada — vuelve a entrar' });
+      const org = reqOrg(req);
       const slug = String(req.body.slug || '');
       const { data: dash } = await sb.from('portal_dashboards')
-        .select('id, title, html').eq('slug', slug).maybeSingle();
-      if (!dash) return res.status(404).json({ error: 'Dashboard no encontrado' });
+        .select('id, title, html, org').eq('slug', slug).maybeSingle();
+      if (!dash || dash.org !== org) return res.status(404).json({ error: 'Dashboard no encontrado' });
       const { data: link } = await sb.from('portal_access')
         .select('user_id').eq('user_id', payload.uid).eq('dashboard_id', dash.id).maybeSingle();
       if (!link) return res.status(403).json({ error: 'Sin acceso a este dashboard' });
@@ -114,16 +121,18 @@ export default async function handler(req, res) {
     }
     if (!(await canManage(req))) return res.status(403).json({ error: 'Solo editores o admins' });
 
+    const org = reqOrg(req);
+
     if (action === 'get_dashboard') {
-      const { data } = await sb.from('portal_dashboards').select('id, slug, title, html').eq('id', req.body.id).maybeSingle();
+      const { data } = await sb.from('portal_dashboards').select('id, slug, title, html').eq('id', req.body.id).eq('org', org).maybeSingle();
       if (!data) return res.status(404).json({ error: 'No encontrado' });
       return res.status(200).json(data);
     }
 
     if (action === 'admin_list') {
       const [{ data: dashboards }, { data: users }, { data: access }] = await Promise.all([
-        sb.from('portal_dashboards').select('id, slug, title, updated_at').order('title'),
-        sb.from('portal_users').select('id, username, label, active, created_at').order('username'),
+        sb.from('portal_dashboards').select('id, slug, title, updated_at').eq('org', org).order('title'),
+        sb.from('portal_users').select('id, username, label, active, created_at').eq('org', org).order('username'),
         sb.from('portal_access').select('user_id, dashboard_id'),
       ]);
       return res.status(200).json({ dashboards: dashboards || [], users: users || [], access: access || [] });
@@ -134,19 +143,21 @@ export default async function handler(req, res) {
       const title = String(req.body.title || '').trim();
       const html = String(req.body.html || '');
       if (!slug || !title) return res.status(400).json({ error: 'Falta slug o título' });
-      const row = { slug, title, html, updated_at: new Date().toISOString() };
       if (req.body.id) {
-        const { error } = await sb.from('portal_dashboards').update(row).eq('id', req.body.id);
+        const { error } = await sb.from('portal_dashboards')
+          .update({ slug, title, html, updated_at: new Date().toISOString() })
+          .eq('id', req.body.id).eq('org', org);
         if (error) throw error;
       } else {
-        const { error } = await sb.from('portal_dashboards').insert(row);
+        const { error } = await sb.from('portal_dashboards')
+          .insert({ slug, title, html, org, updated_at: new Date().toISOString() });
         if (error) throw error;
       }
       return res.status(200).json({ ok: true, slug });
     }
 
     if (action === 'delete_dashboard') {
-      const { error } = await sb.from('portal_dashboards').delete().eq('id', req.body.id);
+      const { error } = await sb.from('portal_dashboards').delete().eq('id', req.body.id).eq('org', org);
       if (error) throw error;
       return res.status(200).json({ ok: true });
     }
@@ -158,11 +169,11 @@ export default async function handler(req, res) {
       if (req.body.password) fields.password_hash = hashPassword(req.body.password);
       let userId = req.body.id;
       if (userId) {
-        const { error } = await sb.from('portal_users').update(fields).eq('id', userId);
+        const { error } = await sb.from('portal_users').update(fields).eq('id', userId).eq('org', org);
         if (error) throw error;
       } else {
         if (!req.body.password) return res.status(400).json({ error: 'La contraseña es obligatoria para un usuario nuevo' });
-        const { data, error } = await sb.from('portal_users').insert(fields).select('id').single();
+        const { data, error } = await sb.from('portal_users').insert({ ...fields, org }).select('id').single();
         if (error) throw error;
         userId = data.id;
       }
@@ -179,7 +190,7 @@ export default async function handler(req, res) {
     }
 
     if (action === 'delete_user') {
-      const { error } = await sb.from('portal_users').delete().eq('id', req.body.id);
+      const { error } = await sb.from('portal_users').delete().eq('id', req.body.id).eq('org', org);
       if (error) throw error;
       return res.status(200).json({ ok: true });
     }
