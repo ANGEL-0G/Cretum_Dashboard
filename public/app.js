@@ -1605,9 +1605,6 @@ const ORG_MODULES = {
     { view: 'campaigns', icon: 'fa-bolt', title: 'Campañas',
       desc: 'Ranking de interacción de los LPs y la campaña actual del fondo',
       iconClass: 'home-ico-campaigns' },
-    { view: 'reports', icon: 'fa-chart-pie', title: 'Reportes',
-      desc: 'Genera el reporte de distribuciones de un LP desde las cartas de Altareturn',
-      iconClass: 'home-ico-reportes' },
     { view: 'portal', icon: 'fa-share-nodes', title: 'Portal de clientes',
       desc: 'Sube dashboards externos y da acceso a clientes con su propio usuario',
       iconClass: 'home-ico-portal', editorOrAdmin: true },
@@ -1619,6 +1616,9 @@ const ORG_MODULES = {
     { view: 'fundTrackers', icon: 'fa-chart-column', title: 'MVP Fund Trackers',
       desc: 'Valuación de fondos por empresa subyacente',
       iconClass: 'home-ico-trackers' },
+    { view: 'reports', icon: 'fa-chart-pie', title: 'Reportes',
+      desc: 'Genera el reporte de distribuciones de un LP desde las cartas de Altareturn',
+      iconClass: 'home-ico-reportes' },
     { view: 'altareturn', icon: 'fa-chart-line', title: 'Altareturn',
       desc: 'Ingesta y consulta de documentos del portafolio MVP',
       iconClass: 'home-ico-reports', disabled: true },
@@ -1632,13 +1632,13 @@ const ORG_NAV = {
     { view: 'db',      icon: 'fa-database',    label: 'Base de Datos' },
     { view: 'dropbox', icon: 'fa-dropbox',     label: 'Dropbox', brand: true },
     { view: 'campaigns', icon: 'fa-bolt',      label: 'Campañas' },
-    { view: 'reports',   icon: 'fa-chart-pie', label: 'Reportes' },
     { view: 'portal',    icon: 'fa-share-nodes', label: 'Portal de clientes', editorOrAdmin: true },
   ],
   mvp: [
     { view: 'home',         icon: 'fa-house',         label: 'Inicio' },
     { view: 'db',           icon: 'fa-database',      label: 'Base de Datos' },
     { view: 'fundTrackers', icon: 'fa-chart-column',  label: 'Fund Trackers' },
+    { view: 'reports',      icon: 'fa-chart-pie',     label: 'Reportes' },
   ],
 };
 
@@ -1647,7 +1647,6 @@ const ORG_SOON = {
     { icon: 'fa-solid fa-calendar-days', label: 'Calendario' },
   ],
   mvp: [
-    { icon: 'fa-solid fa-chart-pie',     label: 'Reportes' },
     { icon: 'fa-solid fa-calendar-days', label: 'Calendario' },
   ],
 };
