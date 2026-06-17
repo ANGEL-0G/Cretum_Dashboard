@@ -1920,6 +1920,7 @@ let dbLoaded = false;
 // `locked: true` = siempre visible (no togglable).
 const DB_COLUMNS = [
   { key: 'name',     label: 'Nombre',                 locked: true,  default: true  },
+  { key: 'titular',  label: 'Titular',                                default: true  },
   { key: 'series',   label: 'Serie',                                  default: true  },
   { key: 'amount',   label: 'Compromiso',                             default: true  },
   { key: 'positions',label: 'Posiciones',                             default: false },
@@ -2548,7 +2549,7 @@ async function loadDb() {
   try {
     // Inversionistas + agregados (todas paginadas: ver sbFetchAll)
     const [investors, investments, companies, series] = await Promise.all([
-      sbFetchAll('investors', 'id, name'),
+      sbFetchAll('investors', 'id, name, titular'),
       sbFetchAll('investments', 'investor_id, company_id, series_id, commitment, commitment_actual'),
       sbFetchAll('companies', 'id, name, is_public'),
       sbFetchAll('series', 'id, name'),
@@ -2726,7 +2727,7 @@ function getDbFilters() {
 function getFilteredInvestors() {
   const { q, companyId, seriesId } = getDbFilters();
   let filtered = dbInvestors;
-  if (q) filtered = filtered.filter(r => fuzzyMatch(q, r.name));
+  if (q) filtered = filtered.filter(r => fuzzyMatch(q, r.name) || fuzzyMatch(q, r.titular || ''));
   if (companyId) filtered = filtered.filter(r => dbInvestorCompanies[r.id]?.has(+companyId));
   if (seriesId)  filtered = filtered.filter(r => dbInvestorSeries[r.id]?.has(+seriesId));
   return filtered;
@@ -2751,6 +2752,7 @@ function renderDbList() {
 
   // Headers de la tabla
   const headers = ['<th class="col-name">Nombre</th>'];
+  if (isColVisible('titular'))   headers.push('<th>Titular</th>');
   if (isColVisible('series'))    headers.push('<th>Serie</th>');
   if (isColVisible('company'))   headers.push('<th>Empresa</th>');
   if (isColVisible('positions')) headers.push('<th class="num">Posiciones</th>');
@@ -2761,6 +2763,9 @@ function renderDbList() {
   // Filas
   const rows = filtered.map(i => {
     const cells = [`<td class="col-name">${escapeHtml(i.name)}</td>`];
+    if (isColVisible('titular')) {
+      cells.push(`<td>${i.titular ? escapeHtml(i.titular) : '<span class="db-cell-empty">—</span>'}</td>`);
+    }
     if (isColVisible('series')) {
       const lbl = investorSeriesLabel(i.id, seriesId);
       cells.push(`<td>${lbl === '—' ? '<span class="db-cell-empty">—</span>' : `<span class="db-cell-pill">${escapeHtml(lbl)}</span>`}</td>`);
@@ -2822,6 +2827,7 @@ function downloadBlob(blob, filename) {
 function getExportTable() {
   const { companyId, seriesId } = getDbFilters();
   const cols = [{ key: 'name', label: 'Nombre', type: 'text' }];
+  if (isColVisible('titular'))   cols.push({ key: 'titular',   label: 'Titular',              type: 'text'  });
   if (isColVisible('series'))    cols.push({ key: 'series',    label: 'Serie',                type: 'text'  });
   if (isColVisible('company'))   cols.push({ key: 'company',   label: 'Empresa',              type: 'text'  });
   if (isColVisible('positions')) cols.push({ key: 'positions', label: 'Posiciones',           type: 'num'   });
@@ -2831,6 +2837,7 @@ function getExportTable() {
   const rows = getFilteredInvestors().map(i => cols.map(c => {
     switch (c.key) {
       case 'name':      return i.name;
+      case 'titular':   return i.titular || '';
       case 'series':    return investorSeriesLabel(i.id, seriesId);
       case 'company':   return investorCompanyLabel(i.id, companyId);
       case 'positions': return i.positions;
@@ -2936,6 +2943,19 @@ async function openInvestor(id) {
   } catch (err) {
     document.getElementById('dbDetailContent').innerHTML = `<div class="db-error">Error: ${err.message}</div>`;
   }
+}
+
+// Guarda el "Titular" (a quién pertenece la cuenta) de un inversionista
+async function saveTitular(id, value) {
+  const v = (value || '').trim();
+  const inv = dbInvestors.find(x => x.id === id);
+  if (!inv) return;
+  if ((inv.titular || '') === v) return;   // sin cambios
+  const { error } = await sb.from('investors').update({ titular: v || null }).eq('id', id);
+  if (error) { toast('Error al guardar titular: ' + error.message); return; }
+  inv.titular = v || null;
+  if (lastInvestorDetail?.inv?.id === id) lastInvestorDetail.inv.titular = v || null;
+  toast('Titular actualizado');
 }
 
 async function openCompany(id) {
@@ -3118,6 +3138,7 @@ function renderDistrosBlock(title, rows) {
 
 function renderInvestorDetail(inv, contacts, positions) {
   lastInvestorDetail = { inv, contacts, positions };
+  const canEditTitular = currentProfile?.role === 'admin' || currentProfile?.role === 'editor';
   const totalEv = positions.reduce((s, p) => s + (+p.current_ev_b || 0), 0);
   const DIVERSIFIED_FUND_ID = 10;
   const activePositions = positions.filter(p => !p.distributed_at);
@@ -3142,6 +3163,12 @@ function renderInvestorDetail(inv, contacts, positions) {
     <div class="db-detail-head">
       <div class="db-detail-name">${escapeHtml(inv.name)}</div>
       <div class="db-detail-sub">Inversionista</div>
+      <div class="db-detail-titular">
+        <span class="db-titular-lbl"><i class="fa-solid fa-user-tag"></i> Titular</span>
+        ${canEditTitular
+          ? `<input id="dbTitularInp" class="db-titular-inp" value="${escapeHtml(inv.titular || '')}" placeholder="A quién pertenece la cuenta" autocomplete="off" onkeydown="if(event.key==='Enter')this.blur()" onblur="saveTitular(${inv.id}, this.value)">`
+          : `<span class="db-titular-val">${inv.titular ? escapeHtml(inv.titular) : '—'}</span>`}
+      </div>
       <div class="db-detail-stats">
         <div class="db-stat"><div class="db-stat-l">Posiciones</div><div class="db-stat-v">${inv.positions}</div></div>
         <div class="db-stat"><div class="db-stat-l">Commitment total</div><div class="db-stat-v">${fmtMoney(inv.commitment)}</div></div>
