@@ -1820,6 +1820,7 @@ let repLastDoc = '';                // último HTML generado (para imprimir)
 const repUsd = (v) => '$' + Math.round(+v || 0).toLocaleString('en-US');
 const repNum = (v) => (v != null && v !== '') ? Number(v).toLocaleString('en-US') : '—';
 const repMoic = (v) => (v != null && v !== '') ? (Number(v).toFixed(2) + 'x') : '—';
+const repPps = (v) => (v != null && v !== '') ? '$' + Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—';
 function repFecha(d) {
   if (!d) return '—';
   const [y, m, day] = String(d).slice(0, 10).split('-');
@@ -2191,6 +2192,7 @@ function repBuildDoc(inv, investments, dists) {
       entry: x.entry_pps,
       current: x.current_ev_pps,
       moic: x.dpi_moic,
+      valorActual: (x.shares != null && x.current_ev_pps != null) ? (+x.shares * +x.current_ev_pps) : null,
       distrib: pInKind + pCash,
       nLetters: ds.length,
     };
@@ -2210,7 +2212,14 @@ function repBuildDoc(inv, investments, dists) {
   // Historial cronológico (más reciente primero)
   const fundShort = (s) => (s || '—').replace(/^MVP\s+/, '').replace(/\s*LLC,?/, '').replace(/\s*LP$/, '');
   const invFund = {}; investments.forEach(x => { invFund[x.id] = repSeriesMap[x.series_id] || '—'; });
-  const hist = dists.slice().sort((a, b) => String(b.distribution_date).localeCompare(String(a.distribution_date)));
+  // Agrupadas por fondo (Fondo I, II, III…) y dentro por nombre de oportunidad; cronológico al final
+  const hist = dists.slice().sort((a, b) => {
+    const f = (invFund[a.investment_id] || '').localeCompare(invFund[b.investment_id] || '', 'es');
+    if (f) return f;
+    const u = (a.underlying_company || '').localeCompare(b.underlying_company || '', 'es');
+    if (u) return u;
+    return String(a.distribution_date).localeCompare(String(b.distribution_date));
+  });
 
   const tipoBadge = (t) => t === 'distribution_in_kind'
     ? '<span class="badge bk">En especie</span>'
@@ -2219,10 +2228,11 @@ function repBuildDoc(inv, investments, dists) {
   const posRows = positions.map(p => `<tr>
     <td><strong>${escapeHtml(p.company)}</strong><div class="sub">${escapeHtml(p.fund)}</div></td>
     <td class="num">${repUsd(p.commitment)}</td>
-    <td class="num">${repMoic(p.moic)}</td>
+    <td class="num">${repPps(p.entry)}</td>
+    <td class="num">${repPps(p.current)}</td>
     <td class="num">${p.shares != null ? repNum(p.shares) : '—'}</td>
-    <td class="num">${p.distrib > 0 ? repUsd(p.distrib) : '—'}</td>
-    <td class="num">${p.nLetters || '—'}</td>
+    <td class="num">${p.valorActual != null ? repUsd(p.valorActual) : '—'}</td>
+    <td class="num">${repMoic(p.moic)}</td>
   </tr>`).join('');
 
   const underRowsHtml = underRows.map(u => `<tr>
@@ -2294,7 +2304,7 @@ function repBuildDoc(inv, investments, dists) {
   </div>
 
   <div class="cards">
-    <div class="card"><div class="k">Compromiso total</div><div class="v">${repUsd(totCommit)}</div></div>
+    <div class="card"><div class="k">Account Balance</div><div class="v">${repUsd(totCommit)}</div></div>
     ${calledCard}
     <div class="card hl"><div class="k">Total distribuido</div><div class="v">${repUsd(totDist)}</div></div>
     <div class="card"><div class="k">DPI ${totActual > 0 ? '(s/ llamado)' : '(s/ compromiso)'}</div><div class="v">${dpi.toFixed(2)}x</div></div>
@@ -2303,8 +2313,8 @@ function repBuildDoc(inv, investments, dists) {
 
   <h2>Posiciones</h2>
   <table>
-    <thead><tr><th>Empresa / Fondo</th><th class="num">Compromiso</th><th class="num">MOIC</th><th class="num">Acciones</th><th class="num">Distribuido</th><th class="num">Cartas</th></tr></thead>
-    <tbody>${posRows || '<tr><td colspan="6">Sin posiciones registradas.</td></tr>'}</tbody>
+    <thead><tr><th>Empresa / Fondo</th><th class="num">Compromiso</th><th class="num">PPS Entrada</th><th class="num">PPS Actual</th><th class="num">Acciones</th><th class="num">Valor Actual</th><th class="num">MOIC</th></tr></thead>
+    <tbody>${posRows || '<tr><td colspan="7">Sin posiciones registradas.</td></tr>'}</tbody>
   </table>
 
   ${underRows.length ? `<h2>Distribuciones por empresa recibida</h2>
@@ -3916,6 +3926,7 @@ window.exportFundTrackerExcel = exportFundTrackerExcel;
 ═══════════════════════════════════════════ */
 let campaignsLoaded = false;
 let campContacts = [];          // [{email, nombre, nombre_completo, responsable, comentarios}]
+let campEditingEmail = null;    // email del contacto en edición (null = modo "añadir")
 let campEngagement = [];        // [{email, periodo, nivel, ...}]
 let campPending = null;         // upload pendiente de confirmar
 
@@ -4291,6 +4302,7 @@ function renderCampaigns() {
     return `<tr class="${c.cancelado ? 'camp-row-cancel' : ''}">
       <td class="camp-name">
         <span class="camp-row-acts">
+          <button class="camp-row-act" title="Editar contacto" onclick="campEditContactOpen('${c.email}')"><i class="fa-solid fa-pen"></i></button>
           <button class="camp-row-act" title="${c.cancelado ? 'Reactivar (quitar cancelado)' : 'Marcar como cancelado'}" onclick="campToggleCancel('${c.email}')"><i class="fa-solid ${c.cancelado ? 'fa-rotate-left' : 'fa-ban'}"></i></button>
           <button class="camp-row-act camp-row-del" title="Borrar contacto" onclick="campDeleteContact('${c.email}')"><i class="fa-solid fa-xmark"></i></button>
         </span>
@@ -4594,31 +4606,67 @@ function aperturaCompose() {
   window.location.href = `mailto:?bcc=${encodeURIComponent(bcc)}&subject=${encodeURIComponent('Apertura de Mercados — ' + fecha)}`;
 }
 
-/* ── Añadir contacto (mini-modal) ── */
+/* ── Añadir / Editar contacto (mini-modal, modo dual) ── */
 function campAddContactOpen() {
-  ['campCNombre', 'campCFull', 'campCEmail', 'campCResp'].forEach(id => { document.getElementById(id).value = ''; });
+  campEditingEmail = null;
+  ['campCNombre', 'campCFull', 'campCEmail', 'campCResp', 'campCComent'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const em = document.getElementById('campCEmail'); em.disabled = false;
+  document.getElementById('campCEmailHint').style.display = 'none';
+  document.getElementById('campCTitle').innerHTML = '<i class="fa-solid fa-user-plus"></i> Añadir contacto';
+  document.getElementById('campCSaveBtn').innerHTML = '<i class="fa-solid fa-check"></i> Guardar contacto';
   const msg = document.getElementById('campCMsg'); msg.textContent = ''; msg.className = 'camp-modal-msg';
   document.getElementById('campContactModal').classList.add('show');
   setTimeout(() => document.getElementById('campCNombre').focus(), 60);
 }
-function campAddContactClose() { document.getElementById('campContactModal').classList.remove('show'); }
+
+function campEditContactOpen(email) {
+  const c = campContacts.find(x => x.email === email);
+  if (!c) return;
+  campEditingEmail = email;
+  document.getElementById('campCNombre').value = c.nombre || '';
+  document.getElementById('campCFull').value   = c.nombre_completo || '';
+  const em = document.getElementById('campCEmail'); em.value = c.email; em.disabled = true;
+  document.getElementById('campCEmailHint').style.display = '';
+  document.getElementById('campCResp').value   = c.responsable || '';
+  document.getElementById('campCComent').value = c.comentarios || '';
+  document.getElementById('campCTitle').innerHTML = '<i class="fa-solid fa-user-pen"></i> Editar contacto';
+  document.getElementById('campCSaveBtn').innerHTML = '<i class="fa-solid fa-check"></i> Guardar cambios';
+  const msg = document.getElementById('campCMsg'); msg.textContent = ''; msg.className = 'camp-modal-msg';
+  document.getElementById('campContactModal').classList.add('show');
+  setTimeout(() => document.getElementById('campCNombre').focus(), 60);
+}
+
+function campAddContactClose() { document.getElementById('campContactModal').classList.remove('show'); campEditingEmail = null; }
 
 async function campAddContactSave() {
   const nombre = document.getElementById('campCNombre').value.trim();
   const full   = document.getElementById('campCFull').value.trim();
   const email  = document.getElementById('campCEmail').value.trim().toLowerCase();
   const resp   = document.getElementById('campCResp').value.trim();
+  const coment = document.getElementById('campCComent').value.trim();
   const msg    = document.getElementById('campCMsg');
   const fail = (t) => { msg.textContent = t; msg.className = 'camp-modal-msg err'; };
-  if (!nombre || !email) return fail('Nombre y email son obligatorios.');
-  if (!email.includes('@')) return fail('El email no parece válido.');
-  const dup = campContacts.find(c => c.email === email);
-  if (dup) return fail(`Ya existe: ${dup.nombre_completo || dup.nombre || email}.`);
-  const { error } = await sb.from('lp_contacts').insert({
-    email, nombre, nombre_completo: full || nombre, responsable: resp || null, comentarios: null,
-  });
-  if (error) return fail('Error al guardar: ' + error.message);
-  toast(`Contacto añadido: ${nombre}`);
+  if (!nombre) return fail('El nombre es obligatorio.');
+
+  if (campEditingEmail) {
+    // ── EDITAR: el email es la llave del histórico, no se cambia aquí ──
+    const { error } = await sb.from('lp_contacts').update({
+      nombre, nombre_completo: full || nombre, responsable: resp || null, comentarios: coment || null,
+    }).eq('email', campEditingEmail);
+    if (error) return fail('Error al guardar: ' + error.message);
+    toast(`Contacto actualizado: ${nombre}`);
+  } else {
+    // ── AÑADIR ──
+    if (!email) return fail('Nombre y email son obligatorios.');
+    if (!email.includes('@')) return fail('El email no parece válido.');
+    const dup = campContacts.find(c => c.email === email);
+    if (dup) return fail(`Ya existe: ${dup.nombre_completo || dup.nombre || email}.`);
+    const { error } = await sb.from('lp_contacts').insert({
+      email, nombre, nombre_completo: full || nombre, responsable: resp || null, comentarios: coment || null,
+    });
+    if (error) return fail('Error al guardar: ' + error.message);
+    toast(`Contacto añadido: ${nombre}`);
+  }
   campAddContactClose();
   campaignsLoaded = false;
   await loadCampaigns();

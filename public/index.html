@@ -2545,6 +2545,7 @@ button,input,select{font-family:var(--font)}
     .camp-f-inp:focus{border-color:var(--navy);outline:none;box-shadow:0 0 0 3px var(--navy-pale)}
     .camp-req{color:#c0392b}
     .camp-opt{color:var(--ink-soft,#aab);font-weight:400}
+    .camp-f-hint{font-size:11.5px;color:var(--ink-soft,#8893a5);margin:5px 2px 0;line-height:1.4}
     .camp-modal-msg{margin-top:12px;font-size:13px;min-height:18px}
     .camp-modal-msg.err{color:#c0392b}
     .camp-tpl-grid{display:grid;grid-template-columns:300px 1fr;gap:20px}
@@ -2711,7 +2712,7 @@ button,input,select{font-family:var(--font)}
   <div class="camp-modal-backdrop" id="campContactModal" onclick="if(event.target===this)campAddContactClose()">
     <div class="camp-modal">
       <div class="camp-modal-head">
-        <div class="camp-modal-title"><i class="fa-solid fa-user-plus"></i> Añadir contacto</div>
+        <div class="camp-modal-title" id="campCTitle"><i class="fa-solid fa-user-plus"></i> Añadir contacto</div>
         <button class="camp-modal-x" onclick="campAddContactClose()" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="camp-modal-body">
@@ -2721,13 +2722,16 @@ button,input,select{font-family:var(--font)}
         <input id="campCFull" class="camp-f-inp" placeholder="Nombre y apellidos (para la matriz)" autocomplete="off">
         <label class="camp-f-lbl">Email <span class="camp-req">*</span></label>
         <input id="campCEmail" class="camp-f-inp" type="email" placeholder="correo@dominio.com" autocomplete="off">
+        <div class="camp-f-hint" id="campCEmailHint" style="display:none">El email es la llave del histórico — no se edita aquí. Si necesitas cambiarlo, borra y vuelve a crear el contacto.</div>
         <label class="camp-f-lbl">Responsable <span class="camp-opt">opcional</span></label>
         <input id="campCResp" class="camp-f-inp" placeholder="Quién le da seguimiento" autocomplete="off">
+        <label class="camp-f-lbl">Comentarios <span class="camp-opt">opcional</span></label>
+        <textarea id="campCComent" class="camp-f-inp" rows="2" placeholder="Notas de seguimiento" autocomplete="off"></textarea>
         <div class="camp-modal-msg" id="campCMsg"></div>
       </div>
       <div class="camp-modal-foot">
         <button class="camp-prev-cancel" onclick="campAddContactClose()">Cancelar</button>
-        <button class="btn-primary" onclick="campAddContactSave()"><i class="fa-solid fa-check"></i> Guardar contacto</button>
+        <button class="btn-primary" id="campCSaveBtn" onclick="campAddContactSave()"><i class="fa-solid fa-check"></i> Guardar contacto</button>
       </div>
     </div>
   </div>
