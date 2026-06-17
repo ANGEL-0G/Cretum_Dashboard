@@ -2198,6 +2198,11 @@ function repBuildDoc(inv, investments, dists) {
     };
   }).sort((a, b) => b.commitment - a.commitment);
 
+  // MOIC consolidado: promedio ponderado por compromiso (consistente con la columna MOIC por posición)
+  let moicW = 0, moicBase = 0;
+  positions.forEach(p => { if (p.moic != null && p.moic !== '' && p.commitment > 0) { moicBase += p.commitment; moicW += p.commitment * (+p.moic); } });
+  const portMoic = moicBase > 0 ? moicW / moicBase : 0;
+
   // Distribuciones agregadas por empresa subyacente recibida
   const byUnder = {};
   dists.forEach(d => {
@@ -2259,7 +2264,7 @@ function repBuildDoc(inv, investments, dists) {
 
   const hoy = repFecha(new Date().toISOString());
   const calledCard = totActual > 0
-    ? `<div class="card"><div class="k">Capital llamado</div><div class="v">${repUsd(totActual)}</div></div>` : '';
+    ? `<div class="card"><div class="k">Account Balance</div><div class="v">${repUsd(totActual)}</div></div>` : '';
 
   return `<!doctype html><html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -2300,14 +2305,14 @@ function repBuildDoc(inv, investments, dists) {
   <div class="hd">
     <div class="eye">CRETUM PARTNERS · REPORTE DE DISTRIBUCIONES</div>
     <h1>${escapeHtml(inv.name)}</h1>
-    <div class="meta">Generado: ${hoy}${asOf ? ` &nbsp;·&nbsp; Datos al ${repFecha(asOf)}` : ''} &nbsp;·&nbsp; ${investments.length} posicion${investments.length === 1 ? '' : 'es'} &nbsp;·&nbsp; ${dists.length} carta${dists.length === 1 ? '' : 's'}</div>
+    <div class="meta">Generado: ${hoy}${asOf ? ` &nbsp;·&nbsp; Datos al ${repFecha(asOf)}` : ''} &nbsp;·&nbsp; ${investments.length} posicion${investments.length === 1 ? '' : 'es'}</div>
   </div>
 
   <div class="cards">
-    <div class="card"><div class="k">Account Balance</div><div class="v">${repUsd(totCommit)}</div></div>
+    <div class="card"><div class="k">Compromiso total</div><div class="v">${repUsd(totCommit)}</div></div>
     ${calledCard}
     <div class="card hl"><div class="k">Total distribuido</div><div class="v">${repUsd(totDist)}</div></div>
-    <div class="card"><div class="k">DPI ${totActual > 0 ? '(s/ llamado)' : '(s/ compromiso)'}</div><div class="v">${dpi.toFixed(2)}x</div></div>
+    <div class="card"><div class="k">MOIC</div><div class="v">${portMoic.toFixed(2)}x</div></div>
   </div>
   ${totInKind > 0 && totCash > 0 ? `<div class="cards"><div class="card"><div class="k">En especie (acciones)</div><div class="v" style="font-size:17px">${repUsd(totInKind)}</div></div><div class="card"><div class="k">En efectivo</div><div class="v" style="font-size:17px">${repUsd(totCash)}</div></div></div>` : ''}
 
@@ -2331,7 +2336,7 @@ function repBuildDoc(inv, investments, dists) {
 
   <div class="foot">
     <strong>Notas:</strong> "En especie" = distribución de acciones de la empresa subyacente; "Efectivo" = proceeds en USD. El valor en especie se toma de la carta de Altareturn cuando está disponible; algunas cartas tempranas solo reportan acciones sin valuación, por lo que el total distribuido puede subestimar ligeramente.
-    DPI = total distribuido ÷ ${totActual > 0 ? 'capital llamado' : 'compromiso'}. MOIC por posición según el último dato de la base.
+    MOIC consolidado = promedio ponderado por compromiso; por posición, según el último dato de la base.
     <br>Documento interno de Cretum Partners generado desde Cretum Desk — cifras sujetas a verificación. ${hoy}.
   </div>
 </div></body></html>`;
