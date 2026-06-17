@@ -52,6 +52,8 @@ async function loadAllProfiles() {
 
 async function enterApp(user) {
   currentUser = user.id;
+  mfaMarkActive(user.id);   // renueva la confianza de 2FA y arranca el rastreo de inactividad
+  mfaHookActivity();
   currentProfile = await loadProfile(user.id);
   await loadAllProfiles();
   document.getElementById('headerAv').textContent = currentProfile.initials || '—';
@@ -126,8 +128,8 @@ async function doLogin() {
     console.error('[login]', error);
     return;
   }
-  // 2FA: si la cuenta tiene un factor verificado, pide el código antes de entrar
-  if (await mfaRequiresChallenge()) {
+  // 2FA: pide el código solo si la confianza por inactividad expiró
+  if (await mfaGateNeeded(data.user.id)) {
     const ok = await mfaPromptLogin();
     if (!ok) { await sb.auth.signOut(); return; }   // canceló → no entra
   }
@@ -192,12 +194,43 @@ async function authedFetch(url, opts = {}) {
 let mfaLoginResolve = null;     // resolver de la promesa del reto de login
 let mfaEnrollData = null;       // { factorId } durante el enrolamiento
 
-// ¿La sesión tiene un factor verificado pendiente de elevar a aal2?
-async function mfaRequiresChallenge() {
+// Ventana de "confianza": tras verificar, no se vuelve a pedir el código
+// mientras haya actividad; se exige de nuevo tras este tiempo de INACTIVIDAD.
+const MFA_TRUST_MS = 2 * 60 * 60 * 1000;   // 2 horas
+function mfaMarkActive(uid) {
+  try { localStorage.setItem('cretum_mfa_active', JSON.stringify({ uid, ts: Date.now() })); } catch (_) {}
+}
+function mfaTrusted(uid) {
   try {
-    const { data } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
-    return !!data && data.nextLevel === 'aal2' && data.currentLevel !== 'aal2';
-  } catch (e) { console.warn('[mfa] aal check', e?.message); return false; }
+    const o = JSON.parse(localStorage.getItem('cretum_mfa_active') || 'null');
+    return !!o && o.uid === uid && (Date.now() - o.ts) < MFA_TRUST_MS;
+  } catch (_) { return false; }
+}
+// Actualiza el "último activo" con la interacción del usuario (throttle 30s)
+let mfaActivityHooked = false;
+function mfaHookActivity() {
+  if (mfaActivityHooked) return;
+  mfaActivityHooked = true;
+  let last = 0;
+  const bump = () => {
+    if (!currentUser) return;
+    const now = Date.now();
+    if (now - last > 30000) { last = now; mfaMarkActive(currentUser); }
+  };
+  ['click', 'keydown', 'mousemove', 'scroll', 'touchstart', 'visibilitychange']
+    .forEach(ev => window.addEventListener(ev, bump, { passive: true }));
+}
+
+// ¿Hay que pedir el código? Solo si la cuenta tiene 2FA activo y se acabó la confianza.
+async function mfaGateNeeded(userId) {
+  let hasFactor = false;
+  try {
+    const { data } = await sb.auth.mfa.listFactors();
+    hasFactor = !!(data?.totp || []).find(f => f.status === 'verified');
+  } catch (e) { console.warn('[mfa] listFactors', e?.message); }
+  if (!hasFactor) return false;          // sin 2FA → nunca pide
+  if (mfaTrusted(userId)) return false;  // sesión activa reciente → confía, no pide
+  return true;                            // 2FA activo + expiró la confianza → pide código
 }
 
 // ── Reto en el login: pide el código de 6 dígitos ──
@@ -342,8 +375,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     await initSupabase();
     const { data } = await sb.auth.getSession();
     if (data?.session?.user) {
-      // 2FA: sesión guardada en aal1 con factor verificado → exige el código
-      if (await mfaRequiresChallenge()) {
+      // 2FA: exige el código solo si la confianza por inactividad expiró
+      if (await mfaGateNeeded(data.session.user.id)) {
         const ok = await mfaPromptLogin();
         if (!ok) { await sb.auth.signOut(); return; }  // queda en la pantalla de login
       }
