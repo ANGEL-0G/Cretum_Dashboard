@@ -278,7 +278,8 @@ async function mfaStartEnroll() {
     for (const f of (existing?.all || [])) {
       if (f.status !== 'verified') { try { await sb.auth.mfa.unenroll({ factorId: f.id }); } catch (_) {} }
     }
-    const { data, error } = await sb.auth.mfa.enroll({ factorType: 'totp', friendlyName: 'Cretum-' + Date.now() });
+    // issuer = nombre que muestra la app de autenticación (sin esto saldría el host, ej. localhost:3000)
+    const { data, error } = await sb.auth.mfa.enroll({ factorType: 'totp', issuer: 'CretumDesk', friendlyName: 'Cretum-' + Date.now() });
     if (error) throw error;
     mfaEnrollData = { factorId: data.id };
     const qr = data.totp.qr_code || '';
