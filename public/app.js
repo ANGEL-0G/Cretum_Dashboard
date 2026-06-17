@@ -126,6 +126,11 @@ async function doLogin() {
     console.error('[login]', error);
     return;
   }
+  // 2FA: si la cuenta tiene un factor verificado, pide el código antes de entrar
+  if (await mfaRequiresChallenge()) {
+    const ok = await mfaPromptLogin();
+    if (!ok) { await sb.auth.signOut(); return; }   // canceló → no entra
+  }
   err.classList.remove('show');
   document.getElementById('loginPass').value = '';
   await enterApp(data.user);
@@ -181,12 +186,166 @@ async function authedFetch(url, opts = {}) {
   return r;
 }
 
+/* ═══════════════════════════════════════════
+   2FA / MFA (TOTP) — verificación en dos pasos
+═══════════════════════════════════════════ */
+let mfaLoginResolve = null;     // resolver de la promesa del reto de login
+let mfaEnrollData = null;       // { factorId } durante el enrolamiento
+
+// ¿La sesión tiene un factor verificado pendiente de elevar a aal2?
+async function mfaRequiresChallenge() {
+  try {
+    const { data } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+    return !!data && data.nextLevel === 'aal2' && data.currentLevel !== 'aal2';
+  } catch (e) { console.warn('[mfa] aal check', e?.message); return false; }
+}
+
+// ── Reto en el login: pide el código de 6 dígitos ──
+function mfaPromptLogin() {
+  return new Promise((resolve) => {
+    mfaLoginResolve = resolve;
+    document.getElementById('mfaLoginCode').value = '';
+    const msg = document.getElementById('mfaLoginMsg'); msg.textContent = ''; msg.className = 'camp-modal-msg';
+    document.getElementById('mfaLoginModal').classList.add('show');
+    setTimeout(() => document.getElementById('mfaLoginCode').focus(), 60);
+  });
+}
+async function mfaLoginVerify() {
+  const code = (document.getElementById('mfaLoginCode').value || '').trim();
+  const msg = document.getElementById('mfaLoginMsg');
+  const btn = document.getElementById('mfaLoginBtn');
+  if (!/^\d{6}$/.test(code)) { msg.textContent = 'Ingresa los 6 dígitos.'; msg.className = 'camp-modal-msg err'; return; }
+  btn.disabled = true;
+  try {
+    const { data: f } = await sb.auth.mfa.listFactors();
+    const totp = (f?.totp || [])[0];
+    if (!totp) throw new Error('No hay factor configurado');
+    const { data: ch, error: e1 } = await sb.auth.mfa.challenge({ factorId: totp.id });
+    if (e1) throw e1;
+    const { error: e2 } = await sb.auth.mfa.verify({ factorId: totp.id, challengeId: ch.id, code });
+    if (e2) throw e2;
+    document.getElementById('mfaLoginModal').classList.remove('show');
+    btn.disabled = false;
+    if (mfaLoginResolve) { mfaLoginResolve(true); mfaLoginResolve = null; }
+  } catch (err) {
+    btn.disabled = false;
+    msg.textContent = /invalid|incorrect|expired/i.test(err.message || '') ? 'Código incorrecto o expirado, intenta de nuevo.' : ('Error: ' + err.message);
+    msg.className = 'camp-modal-msg err';
+  }
+}
+function mfaLoginCancel() {
+  document.getElementById('mfaLoginModal').classList.remove('show');
+  if (mfaLoginResolve) { mfaLoginResolve(false); mfaLoginResolve = null; }
+}
+
+// ── Gestión desde el perfil: enrolar / desactivar ──
+function mfaRender(html) { document.getElementById('mfaBody').innerHTML = html; }
+async function mfaOpen() {
+  document.getElementById('settingsPop')?.classList.remove('show');
+  document.getElementById('headerUserBtn')?.classList.remove('open');
+  document.getElementById('mfaModal').classList.add('show');
+  mfaRender('<div class="mfa-loading">Cargando…</div>');
+  await mfaRefresh();
+}
+function mfaClose() { document.getElementById('mfaModal').classList.remove('show'); mfaEnrollData = null; }
+
+async function mfaRefresh() {
+  try {
+    const { data, error } = await sb.auth.mfa.listFactors();
+    if (error) throw error;
+    const verified = (data?.totp || []).find(f => f.status === 'verified');
+    if (verified) {
+      mfaRender(`
+        <div class="mfa-status on"><i class="fa-solid fa-circle-check"></i> 2FA activo</div>
+        <p class="mfa-p">Tu cuenta pide un código de tu app de autenticación cada vez que inicias sesión.</p>
+        <button class="camp-prev-cancel mfa-danger" onclick="mfaDisable('${verified.id}')"><i class="fa-solid fa-shield-halved"></i> Desactivar 2FA</button>`);
+    } else {
+      mfaRender(`
+        <div class="mfa-status off"><i class="fa-solid fa-shield-halved"></i> 2FA desactivado</div>
+        <p class="mfa-p">Suma una capa extra de seguridad: además de tu contraseña, un código de 6 dígitos desde tu celular (Google Authenticator, Authy o Microsoft Authenticator).</p>
+        <button class="btn-primary" onclick="mfaStartEnroll()"><i class="fa-solid fa-plus"></i> Activar 2FA</button>`);
+    }
+  } catch (e) {
+    mfaRender(`<div class="mfa-status off">Error: ${escapeHtml(e.message)}</div>`);
+  }
+}
+
+async function mfaStartEnroll() {
+  mfaRender('<div class="mfa-loading">Generando código…</div>');
+  try {
+    // Limpia enrolamientos previos sin verificar (evita topar el límite de factores)
+    const { data: existing } = await sb.auth.mfa.listFactors();
+    for (const f of (existing?.all || [])) {
+      if (f.status !== 'verified') { try { await sb.auth.mfa.unenroll({ factorId: f.id }); } catch (_) {} }
+    }
+    const { data, error } = await sb.auth.mfa.enroll({ factorType: 'totp', friendlyName: 'Cretum-' + Date.now() });
+    if (error) throw error;
+    mfaEnrollData = { factorId: data.id };
+    const qr = data.totp.qr_code || '';
+    const secret = data.totp.secret || '';
+    const qrHtml = qr.trim().startsWith('<svg') ? qr : `<img src="${escapeHtml(qr)}" alt="QR 2FA">`;
+    mfaRender(`
+      <p class="mfa-p"><strong>1.</strong> Escanea este código con tu app de autenticación:</p>
+      <div class="mfa-qr">${qrHtml}</div>
+      <p class="mfa-p mfa-secret">¿No puedes escanear? Ingresa esta clave a mano:<br><code>${escapeHtml(secret)}</code></p>
+      <label class="camp-f-lbl"><strong>2.</strong> Escribe el código de 6 dígitos que muestra la app</label>
+      <input id="mfaEnrollCode" class="camp-f-inp" inputmode="numeric" maxlength="6" placeholder="000000" onkeydown="if(event.key==='Enter')mfaConfirmEnroll()">
+      <div class="camp-modal-msg" id="mfaEnrollMsg"></div>
+      <div class="mfa-actions">
+        <button class="camp-prev-cancel" onclick="mfaCancelEnroll()">Cancelar</button>
+        <button class="btn-primary" id="mfaEnrollBtn" onclick="mfaConfirmEnroll()"><i class="fa-solid fa-check"></i> Confirmar</button>
+      </div>`);
+    setTimeout(() => document.getElementById('mfaEnrollCode')?.focus(), 60);
+  } catch (e) {
+    mfaRender(`<div class="mfa-status off">Error: ${escapeHtml(e.message)}</div><button class="btn-primary" onclick="mfaRefresh()">Volver</button>`);
+  }
+}
+async function mfaConfirmEnroll() {
+  const code = (document.getElementById('mfaEnrollCode').value || '').trim();
+  const msg = document.getElementById('mfaEnrollMsg');
+  const btn = document.getElementById('mfaEnrollBtn');
+  if (!/^\d{6}$/.test(code)) { msg.textContent = 'Ingresa los 6 dígitos.'; msg.className = 'camp-modal-msg err'; return; }
+  if (!mfaEnrollData) return;
+  btn.disabled = true;
+  try {
+    const { data: ch, error: e1 } = await sb.auth.mfa.challenge({ factorId: mfaEnrollData.factorId });
+    if (e1) throw e1;
+    const { error: e2 } = await sb.auth.mfa.verify({ factorId: mfaEnrollData.factorId, challengeId: ch.id, code });
+    if (e2) throw e2;
+    mfaEnrollData = null;
+    toast('2FA activado correctamente');
+    await mfaRefresh();
+  } catch (err) {
+    btn.disabled = false;
+    msg.textContent = /invalid|incorrect|expired/i.test(err.message || '') ? 'Código incorrecto o expirado, intenta de nuevo.' : ('Error: ' + err.message);
+    msg.className = 'camp-modal-msg err';
+  }
+}
+async function mfaCancelEnroll() {
+  if (mfaEnrollData) { try { await sb.auth.mfa.unenroll({ factorId: mfaEnrollData.factorId }); } catch (_) {} mfaEnrollData = null; }
+  await mfaRefresh();
+}
+async function mfaDisable(factorId) {
+  if (!confirm('¿Desactivar la verificación en dos pasos?\nTu cuenta quedará protegida solo con contraseña.')) return;
+  try {
+    const { error } = await sb.auth.mfa.unenroll({ factorId });
+    if (error) throw error;
+    toast('2FA desactivado');
+    await mfaRefresh();
+  } catch (e) { toast('Error: ' + e.message); }
+}
+
 // Boot: init Supabase y revisa si hay sesión activa
 window.addEventListener('DOMContentLoaded', async () => {
   try {
     await initSupabase();
     const { data } = await sb.auth.getSession();
     if (data?.session?.user) {
+      // 2FA: sesión guardada en aal1 con factor verificado → exige el código
+      if (await mfaRequiresChallenge()) {
+        const ok = await mfaPromptLogin();
+        if (!ok) { await sb.auth.signOut(); return; }  // queda en la pantalla de login
+      }
       await enterApp(data.session.user);
     }
   } catch (e) {

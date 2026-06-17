@@ -2137,6 +2137,24 @@ button,input,select{font-family:var(--font)}
   </div>
 </div>
 
+<!-- Modal: Reto de 2FA en el login (código de 6 dígitos) — FUERA de #app para que se muestre en el login -->
+<div class="camp-modal-backdrop" id="mfaLoginModal">
+  <div class="camp-modal">
+    <div class="camp-modal-head">
+      <div class="camp-modal-title"><i class="fa-solid fa-shield-halved"></i> Código de verificación</div>
+    </div>
+    <div class="camp-modal-body">
+      <label class="camp-f-lbl">Ingresa el código de 6 dígitos de tu app de autenticación</label>
+      <input id="mfaLoginCode" class="camp-f-inp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" onkeydown="if(event.key==='Enter')mfaLoginVerify()">
+      <div class="camp-modal-msg" id="mfaLoginMsg"></div>
+    </div>
+    <div class="camp-modal-foot">
+      <button class="camp-prev-cancel" onclick="mfaLoginCancel()">Cancelar</button>
+      <button class="btn-primary" id="mfaLoginBtn" onclick="mfaLoginVerify()"><i class="fa-solid fa-check"></i> Verificar</button>
+    </div>
+  </div>
+</div>
+
 <!-- APP -->
 <div id="app">
   <!-- Nav backdrop + drawer -->
@@ -2244,6 +2262,14 @@ button,input,select{font-family:var(--font)}
       <div style="flex:1;text-align:left">
         <div class="settings-row-lbl">Enviar resumen ahora</div>
         <div class="settings-row-sub">Recibe el resumen semanal por email al instante</div>
+      </div>
+    </button>
+    <div class="settings-sep"></div>
+    <button class="settings-action" id="mfaBtn" onclick="mfaOpen()">
+      <i class="fa-solid fa-shield-halved"></i>
+      <div style="flex:1;text-align:left">
+        <div class="settings-row-lbl">Verificación en dos pasos (2FA)</div>
+        <div class="settings-row-sub">Protege tu cuenta con un código de tu celular</div>
       </div>
     </button>
     <div class="settings-sep"></div>
@@ -2546,6 +2572,18 @@ button,input,select{font-family:var(--font)}
     .camp-req{color:#c0392b}
     .camp-opt{color:var(--ink-soft,#aab);font-weight:400}
     .camp-f-hint{font-size:11.5px;color:var(--ink-soft,#8893a5);margin:5px 2px 0;line-height:1.4}
+    /* 2FA modal */
+    .mfa-status{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600;margin-bottom:4px}
+    .mfa-status.on{color:#0f9b5a}
+    .mfa-status.off{color:var(--ink-soft,#6b7689)}
+    .mfa-p{font-size:13px;color:var(--ink-soft,#56607a);line-height:1.5;margin:8px 0}
+    .mfa-secret code{display:inline-block;margin-top:4px;font-size:13px;background:#f1f4f9;padding:5px 9px;border-radius:6px;letter-spacing:1px;word-break:break-all;color:#1a1f2e}
+    .mfa-qr{background:#fff;border:1px solid #e4e9f0;border-radius:10px;padding:12px;width:198px;margin:8px auto;text-align:center}
+    .mfa-qr svg,.mfa-qr img{width:100%;height:auto;display:block}
+    .mfa-loading{padding:24px;text-align:center;color:var(--ink-soft,#6b7689)}
+    .mfa-actions{display:flex;gap:8px;margin-top:14px}
+    .mfa-danger{color:#c0392b;border-color:#f0c7c1}
+    #mfaLoginCode,#mfaEnrollCode{font-size:22px;letter-spacing:6px;text-align:center;font-weight:600}
     .camp-modal-msg{margin-top:12px;font-size:13px;min-height:18px}
     .camp-modal-msg.err{color:#c0392b}
     .camp-tpl-grid{display:grid;grid-template-columns:300px 1fr;gap:20px}
@@ -2733,6 +2771,17 @@ button,input,select{font-family:var(--font)}
         <button class="camp-prev-cancel" onclick="campAddContactClose()">Cancelar</button>
         <button class="btn-primary" id="campCSaveBtn" onclick="campAddContactSave()"><i class="fa-solid fa-check"></i> Guardar contacto</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Modal: Gestión de 2FA (enrolar / desactivar) -->
+  <div class="camp-modal-backdrop" id="mfaModal" onclick="if(event.target===this)mfaClose()">
+    <div class="camp-modal">
+      <div class="camp-modal-head">
+        <div class="camp-modal-title"><i class="fa-solid fa-shield-halved"></i> Verificación en dos pasos</div>
+        <button class="camp-modal-x" onclick="mfaClose()" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="camp-modal-body" id="mfaBody"></div>
     </div>
   </div>
 
