@@ -2936,6 +2936,244 @@ async function exportPDF(cols, rows) {
   toast(`Exportadas ${rows.length} filas a PDF`);
 }
 
+/* ═══════════════════════════════════════════
+   EXPORT ENRIQUECIDO — detalle de UN inversionista (posiciones + cartas)
+   Usa los datos ya cargados en lastInvestorDetail; no re-consulta.
+═══════════════════════════════════════════ */
+
+// Reúne y calcula todos los datos del inversionista abierto, listos para exportar.
+function buildInvestorExport() {
+  const d = lastInvestorDetail;
+  if (!d || !d.inv) return null;
+  const { inv, contacts, positions } = d;
+
+  const pos = (positions || []).map(p => {
+    const dists = p.investment_distributions || [];
+    let inkind = 0, cash = 0;
+    dists.forEach(x => { inkind += +x.value_in_kind || 0; cash += +x.cash_proceeds || 0; });
+    const num = (v) => (v != null && v !== '') ? +v : null;
+    const shares = num(p.shares);
+    const base = (+p.commitment_actual || +p.commitment || 0);
+    return {
+      company: p.companies?.name || '—',
+      series: p.series?.name || '—',
+      estado: p.distributed_at ? 'Terminada' : 'Activa',
+      commitment: +p.commitment || 0,
+      commitment_actual: +p.commitment_actual || 0,
+      carry: num(p.carry_pct),
+      shares,
+      entry_ev_b: num(p.entry_ev_b),
+      entry_pps: num(p.entry_pps),
+      current_ev_b: num(p.current_ev_b),
+      current_pps: num(p.current_ev_pps),
+      all_in_pps: (shares && base) ? base / shares : null,
+      moic: num(p.dpi_moic),
+      valor_actual: (shares != null && num(p.current_ev_pps) != null) ? shares * (+p.current_ev_pps) : null,
+      distribuido: inkind + cash,
+      n_cartas: dists.length,
+      inicio: p.start_date || '',
+      fin: p.end_date || '',
+      duracion: num(p.duration_years),
+      carta_ca: p.last_ca_letter || '',
+      _dists: dists,
+    };
+  }).sort((a, b) => b.commitment - a.commitment);
+
+  // Cartas (todas las distribuciones, aplanadas con su posición)
+  const letters = [];
+  pos.forEach(p => {
+    (p._dists || []).forEach(x => {
+      const val = (+x.value_in_kind || 0) + (+x.cash_proceeds || 0);
+      const num = (v) => (v != null && v !== '') ? +v : null;
+      letters.push({
+        company: p.company, series: p.series,
+        fecha: x.distribution_date || '',
+        tipo: x.letter_type === 'distribution_cash' ? 'Efectivo' : 'En especie',
+        subyacente: x.underlying_company || '',
+        shares: num(x.shares_distributed),
+        pps: num(x.price_per_share),
+        cash: num(x.cash_proceeds),
+        especie: num(x.value_in_kind),
+        total: val || null,
+        carta: x.letter_url || '',
+        notas: x.notes || '',
+      });
+    });
+  });
+  letters.sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+
+  // Totales
+  const totCommit = pos.reduce((s, p) => s + p.commitment, 0);
+  const totActual = pos.reduce((s, p) => s + p.commitment_actual, 0);
+  const totDist = pos.reduce((s, p) => s + p.distribuido, 0);
+  let moicW = 0, moicBase = 0;
+  pos.forEach(p => { if (p.moic != null && p.commitment > 0) { moicBase += p.commitment; moicW += p.commitment * p.moic; } });
+  const portMoic = moicBase > 0 ? moicW / moicBase : 0;
+  const base = totActual > 0 ? totActual : totCommit;
+  const dpi = base > 0 ? totDist / base : 0;
+
+  return { inv, contacts: contacts || [], pos, letters, totals: { totCommit, totActual, totDist, portMoic, dpi } };
+}
+
+// Nombre de archivo seguro a partir del nombre del inversionista
+function invExportFilename(inv) {
+  const safe = String(inv.name || 'inversionista')
+    .replace(/[^\w\sáéíóúñÁÉÍÓÚÑ-]/gi, '').trim().replace(/\s+/g, '_').slice(0, 40) || 'inversionista';
+  return `cretum_${safe}_${new Date().toISOString().slice(0, 10)}`;
+}
+
+// Construye una hoja con anchos + formatos numéricos por columna + autofiltro.
+function sheetWithFormats(headers, rows, meta) {
+  const aoa = [headers, ...rows.map(r => r.map(v => v == null ? '' : v))];
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = meta.map((m, i) => ({ wch: m.w || Math.max(String(headers[i]).length + 2, 12) }));
+  ws['!autofilter'] = { ref: ws['!ref'] };
+  ws['!freeze'] = { xSplit: 0, ySplit: 1 };
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  for (let c = 0; c < meta.length; c++) {
+    const z = meta[c] && meta[c].z;
+    if (!z) continue;
+    for (let r = 1; r <= range.e.r; r++) {
+      const cell = ws[XLSX.utils.encode_cell({ r, c })];
+      if (cell && typeof cell.v === 'number') { cell.t = 'n'; cell.z = z; }
+    }
+  }
+  return ws;
+}
+
+async function exportInvestorXlsx() {
+  const data = buildInvestorExport();
+  if (!data) { toast('Abre un inversionista primero'); return; }
+  try {
+    await loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
+    const wb = XLSX.utils.book_new();
+    const Z = { money: '"$"#,##0', money2: '"$"#,##0.00', pct: '0.00%', moic: '0.00"x"', evb: '"$"0.00"B"', sh: '#,##0', dur: '0.00" yrs"' };
+
+    // ── Hoja Resumen ──
+    const t = data.totals;
+    const resumen = [
+      ['Inversionista', data.inv.name],
+      ['Titular', data.inv.titular || '—'],
+      ['Posiciones', data.pos.length],
+      [],
+      ['Compromiso total', t.totCommit],
+      ['Compromiso ejecutado', t.totActual],
+      ['Total distribuido', t.totDist],
+      ['MOIC (ponderado)', t.portMoic],
+      ['DPI', t.dpi],
+      [],
+      ['Contactos', ''],
+    ];
+    data.contacts.forEach(c => resumen.push([c.name || '—', c.email || '']));
+    const wsR = XLSX.utils.aoa_to_sheet(resumen);
+    wsR['!cols'] = [{ wch: 24 }, { wch: 44 }];
+    const fmtCell = (ws, addr, z) => { const c = ws[addr]; if (c && typeof c.v === 'number') { c.t = 'n'; c.z = z; } };
+    fmtCell(wsR, 'B5', Z.money); fmtCell(wsR, 'B6', Z.money); fmtCell(wsR, 'B7', Z.money);
+    fmtCell(wsR, 'B8', Z.moic); fmtCell(wsR, 'B9', Z.moic);
+    XLSX.utils.book_append_sheet(wb, wsR, 'Resumen');
+
+    // ── Hoja Posiciones ──
+    const posHead = ['Empresa', 'Series', 'Estado', 'Compromiso', 'Comp. ejecutado', 'Carry', 'Acciones', 'Entry EV', 'Entry PPS', 'Current EV', 'Current PPS', 'All-in PPS', 'MOIC', 'Valor actual', 'Distribuido', '# Cartas', 'Inicio', 'Fin', 'Duración', 'Última carta (CA)'];
+    const posRows = data.pos.map(p => [p.company, p.series, p.estado, p.commitment, p.commitment_actual, p.carry, p.shares, p.entry_ev_b, p.entry_pps, p.current_ev_b, p.current_pps, p.all_in_pps, p.moic, p.valor_actual, p.distribuido, p.n_cartas, p.inicio, p.fin, p.duracion, p.carta_ca]);
+    const posMeta = [{ w: 26 }, { w: 16 }, { w: 11 }, { w: 15, z: Z.money }, { w: 15, z: Z.money }, { w: 9, z: Z.pct }, { w: 13, z: Z.sh }, { w: 11, z: Z.evb }, { w: 11, z: Z.money2 }, { w: 11, z: Z.evb }, { w: 12, z: Z.money2 }, { w: 12, z: Z.money2 }, { w: 9, z: Z.moic }, { w: 15, z: Z.money }, { w: 15, z: Z.money }, { w: 9, z: Z.sh }, { w: 12 }, { w: 12 }, { w: 11, z: Z.dur }, { w: 42 }];
+    XLSX.utils.book_append_sheet(wb, sheetWithFormats(posHead, posRows, posMeta), 'Posiciones');
+
+    // ── Hoja Distribuciones (cartas) ──
+    if (data.letters.length) {
+      const lHead = ['Empresa', 'Series', 'Fecha', 'Tipo', 'Empresa subyacente', 'Acciones', 'PPS', 'Efectivo', 'En especie', 'Total', 'Carta', 'Notas'];
+      const lRows = data.letters.map(x => [x.company, x.series, x.fecha, x.tipo, x.subyacente, x.shares, x.pps, x.cash, x.especie, x.total, x.carta, x.notas]);
+      const lMeta = [{ w: 24 }, { w: 16 }, { w: 12 }, { w: 11 }, { w: 24 }, { w: 13, z: Z.sh }, { w: 11, z: Z.money2 }, { w: 14, z: Z.money }, { w: 14, z: Z.money }, { w: 14, z: Z.money }, { w: 42 }, { w: 30 }];
+      XLSX.utils.book_append_sheet(wb, sheetWithFormats(lHead, lRows, lMeta), 'Distribuciones');
+    }
+
+    XLSX.writeFile(wb, invExportFilename(data.inv) + '.xlsx');
+    toast(`Excel: ${data.pos.length} posiciones · ${data.letters.length} cartas`);
+  } catch (e) {
+    console.error('[export inv xlsx]', e);
+    toast('Error al exportar: ' + e.message);
+  }
+}
+
+async function exportInvestorPdf() {
+  const data = buildInvestorExport();
+  if (!data) { toast('Abre un inversionista primero'); return; }
+  try {
+    await loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
+    await loadScript('https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js');
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+    const navy = [26, 58, 107];
+    const M = 32;
+    let y = 42;
+
+    doc.setFontSize(8.5); doc.setTextColor(150);
+    doc.text('CRETUM PARTNERS · REPORTE DE INVERSIONISTA', M, y); y += 20;
+    doc.setFontSize(18); doc.setTextColor(navy[0], navy[1], navy[2]);
+    doc.text(data.inv.name, M, y); y += 16;
+    doc.setFontSize(9.5); doc.setTextColor(110);
+    const sub = [];
+    if (data.inv.titular) sub.push('Titular: ' + data.inv.titular);
+    sub.push(data.pos.length + ' posiciones');
+    sub.push('Generado ' + new Date().toLocaleDateString('es-MX'));
+    doc.text(sub.join('   ·   '), M, y); y += 16;
+
+    const t = data.totals;
+    doc.setFontSize(10); doc.setTextColor(60);
+    doc.text(`Compromiso: ${fmtMoney(t.totCommit)}     Ejecutado: ${fmtMoney(t.totActual)}     Distribuido: ${fmtMoney(t.totDist)}     MOIC: ${t.portMoic.toFixed(2)}x     DPI: ${t.dpi.toFixed(2)}x`, M, y); y += 10;
+
+    const money = (v) => v == null ? '' : fmtMoney(v);
+    const pps = (v) => v == null ? '' : '$' + (+v).toFixed(2);
+    const sh = (v) => v == null ? '' : Number(v).toLocaleString('en-US');
+
+    doc.autoTable({
+      startY: y + 8,
+      margin: { left: M, right: M },
+      head: [['Empresa', 'Series', 'Estado', 'Compromiso', 'Carry', 'Acciones', 'Entry PPS', 'Current PPS', 'All-in PPS', 'MOIC', 'Valor actual', 'Distribuido', 'Cartas']],
+      body: data.pos.map(p => [p.company, p.series, p.estado, money(p.commitment), (p.carry != null ? (p.carry * 100).toFixed(1) + '%' : ''), sh(p.shares), pps(p.entry_pps), pps(p.current_pps), pps(p.all_in_pps), (p.moic != null ? p.moic.toFixed(2) + 'x' : ''), money(p.valor_actual), money(p.distribuido), p.n_cartas || '']),
+      styles: { fontSize: 7.5, cellPadding: 3, overflow: 'linebreak' },
+      headStyles: { fillColor: navy, textColor: 255, fontSize: 7.5 },
+      alternateRowStyles: { fillColor: [244, 247, 252] },
+      columnStyles: { 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' }, 7: { halign: 'right' }, 8: { halign: 'right' }, 9: { halign: 'right' }, 10: { halign: 'right' }, 11: { halign: 'right' }, 12: { halign: 'right' } },
+    });
+
+    if (data.letters.length) {
+      const ly = doc.lastAutoTable.finalY + 24;
+      doc.setFontSize(12); doc.setTextColor(navy[0], navy[1], navy[2]);
+      doc.text('Distribuciones (cartas)', M, ly);
+      doc.autoTable({
+        startY: ly + 8,
+        margin: { left: M, right: M },
+        head: [['Empresa', 'Fecha', 'Tipo', 'Empresa subyacente', 'Acciones', 'PPS', 'Efectivo', 'En especie', 'Total', 'Carta']],
+        body: data.letters.map(x => [x.company, x.fecha, x.tipo, x.subyacente, sh(x.shares), pps(x.pps), money(x.cash), money(x.especie), money(x.total), (x.carta ? 'Ver' : '')]),
+        styles: { fontSize: 7.5, cellPadding: 3, overflow: 'linebreak' },
+        headStyles: { fillColor: navy, textColor: 255, fontSize: 7.5 },
+        alternateRowStyles: { fillColor: [244, 247, 252] },
+        columnStyles: { 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' }, 7: { halign: 'right' }, 8: { halign: 'right' }, 9: { halign: 'center', textColor: navy } },
+        didDrawCell: (hk) => {
+          if (hk.section === 'body' && hk.column.index === 9) {
+            const row = data.letters[hk.row.index];
+            if (row && row.carta) doc.link(hk.cell.x, hk.cell.y, hk.cell.width, hk.cell.height, { url: row.carta });
+          }
+        },
+      });
+    }
+
+    // Pie con fecha en cada página
+    const pages = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pages; i++) {
+      doc.setPage(i);
+      doc.setFontSize(7.5); doc.setTextColor(160);
+      doc.text(`Cretum Desk · documento interno · ${new Date().toLocaleDateString('es-MX')} · pág. ${i}/${pages}`, M, doc.internal.pageSize.getHeight() - 16);
+    }
+
+    doc.save(invExportFilename(data.inv) + '.pdf');
+    toast('PDF generado');
+  } catch (e) {
+    console.error('[export inv pdf]', e);
+    toast('Error al generar PDF: ' + e.message);
+  }
+}
+
 async function openInvestor(id) {
   const inv = dbInvestors.find(x => x.id === id);
   if (!inv) return;
@@ -3201,8 +3439,16 @@ function renderInvestorDetail(inv, contacts, positions) {
   distrosFund.sort(sortDesc);
   const html = `
     <div class="db-detail-head">
-      <div class="db-detail-name">${escapeHtml(inv.name)}</div>
-      <div class="db-detail-sub">Inversionista</div>
+      <div class="db-detail-topbar">
+        <div>
+          <div class="db-detail-name">${escapeHtml(inv.name)}</div>
+          <div class="db-detail-sub">Inversionista</div>
+        </div>
+        <div class="db-detail-export">
+          <button class="dbx-btn" onclick="exportInvestorXlsx()" title="Exportar todo su detalle a Excel"><i class="fa-solid fa-file-excel"></i> Excel</button>
+          <button class="dbx-btn pdf" onclick="exportInvestorPdf()" title="Exportar todo su detalle a PDF"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+        </div>
+      </div>
       <div class="db-detail-titular">
         <span class="db-titular-lbl"><i class="fa-solid fa-user-tag"></i> Titular</span>
         ${canEditTitular
