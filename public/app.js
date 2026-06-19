@@ -3398,12 +3398,8 @@ function renderPositionsBlock(title, rows) {
   };
 
   const visible = POSITION_COLUMNS.filter(c => isPosColVisible(c.key));
-  const headers = visible.map(c => `<th class="${numericKeys.has(c.key) ? 'num' : ''}">${escapeHtml(c.label)}</th>`).join('')
-    + '<th class="pos-exp-th">Exportar</th>';
-  const body = rows.map(p => `<tr>${visible.map(c => cellFor(p, c.key)).join('')}<td class="pos-exp-td">
-      <button class="pos-exp-btn xls" title="Exportar esta oportunidad a Excel" onclick="exportInvestorXlsx(${p.id})"><i class="fa-solid fa-file-excel"></i></button>
-      <button class="pos-exp-btn pdf" title="Exportar esta oportunidad a PDF" onclick="exportInvestorPdf(${p.id})"><i class="fa-solid fa-file-pdf"></i></button>
-    </td></tr>`).join('');
+  const headers = visible.map(c => `<th class="${numericKeys.has(c.key) ? 'num' : ''}">${escapeHtml(c.label)}</th>`).join('');
+  const body = rows.map(p => `<tr>${visible.map(c => cellFor(p, c.key)).join('')}</tr>`).join('');
 
   return `
     <div class="db-section">
