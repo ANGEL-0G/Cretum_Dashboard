@@ -3025,6 +3025,17 @@ function invExportFilename(inv, extra) {
   return parts.join('_') + '_' + new Date().toISOString().slice(0, 10);
 }
 
+// Quita las columnas que están vacías en TODAS las filas (evita huecos feos).
+function dropEmptyCols(headers, rows, meta) {
+  const keep = headers.map((_, c) => rows.some(r => { const v = r[c]; return v != null && v !== ''; }));
+  if (!keep.some(Boolean)) keep[0] = true;   // conserva al menos una
+  return {
+    headers: headers.filter((_, c) => keep[c]),
+    rows: rows.map(r => r.filter((_, c) => keep[c])),
+    meta: meta.filter((_, c) => keep[c]),
+  };
+}
+
 // Construye una hoja con anchos + formatos numéricos por columna + autofiltro.
 function sheetWithFormats(headers, rows, meta) {
   const aoa = [headers, ...rows.map(r => r.map(v => v == null ? '' : v))];
@@ -3080,21 +3091,25 @@ async function exportInvestorXlsx(posId) {
     const fmtRow = (i, z) => { const c = wsR[XLSX.utils.encode_cell({ r: i, c: 1 })]; if (c && typeof c.v === 'number') { c.t = 'n'; c.z = z; } };
     fmtRow(numStart, Z.money); fmtRow(numStart + 1, Z.money); fmtRow(numStart + 2, Z.money);
     fmtRow(numStart + 3, Z.moic); fmtRow(numStart + 4, Z.moic);
-    XLSX.utils.book_append_sheet(wb, wsR, 'Resumen');
 
-    // ── Hoja Posiciones ──
+    // ── Hoja Posiciones (PRIMERA: la hoja rica abre por defecto) ──
     const posHead = ['Empresa', 'Series', 'Estado', 'Compromiso', 'Comp. ejecutado', 'Carry', 'Acciones', 'Entry EV', 'Entry PPS', 'Current EV', 'Current PPS', 'All-in PPS', 'MOIC', 'Valor actual', 'Distribuido', '# Cartas', 'Inicio', 'Fin', 'Duración', 'Última carta (CA)'];
     const posRows = data.pos.map(p => [p.company, p.series, p.estado, p.commitment, p.commitment_actual, p.carry, p.shares, p.entry_ev_b, p.entry_pps, p.current_ev_b, p.current_pps, p.all_in_pps, p.moic, p.valor_actual, p.distribuido, p.n_cartas, p.inicio, p.fin, p.duracion, p.carta_ca]);
     const posMeta = [{ w: 26 }, { w: 16 }, { w: 11 }, { w: 15, z: Z.money }, { w: 15, z: Z.money }, { w: 9, z: Z.pct }, { w: 13, z: Z.sh }, { w: 11, z: Z.evb }, { w: 11, z: Z.money2 }, { w: 11, z: Z.evb }, { w: 12, z: Z.money2 }, { w: 12, z: Z.money2 }, { w: 9, z: Z.moic }, { w: 15, z: Z.money }, { w: 15, z: Z.money }, { w: 9, z: Z.sh }, { w: 12 }, { w: 12 }, { w: 11, z: Z.dur }, { w: 42 }];
-    XLSX.utils.book_append_sheet(wb, sheetWithFormats(posHead, posRows, posMeta), 'Posiciones');
+    const P = dropEmptyCols(posHead, posRows, posMeta);
+    XLSX.utils.book_append_sheet(wb, sheetWithFormats(P.headers, P.rows, P.meta), 'Posiciones');
 
     // ── Hoja Distribuciones (cartas) ──
     if (data.letters.length) {
       const lHead = ['Empresa', 'Series', 'Fecha', 'Tipo', 'Empresa subyacente', 'Acciones', 'PPS', 'Efectivo', 'En especie', 'Total', 'Carta', 'Notas'];
       const lRows = data.letters.map(x => [x.company, x.series, x.fecha, x.tipo, x.subyacente, x.shares, x.pps, x.cash, x.especie, x.total, x.carta, x.notas]);
       const lMeta = [{ w: 24 }, { w: 16 }, { w: 12 }, { w: 11 }, { w: 24 }, { w: 13, z: Z.sh }, { w: 11, z: Z.money2 }, { w: 14, z: Z.money }, { w: 14, z: Z.money }, { w: 14, z: Z.money }, { w: 42 }, { w: 30 }];
-      XLSX.utils.book_append_sheet(wb, sheetWithFormats(lHead, lRows, lMeta), 'Distribuciones');
+      const L = dropEmptyCols(lHead, lRows, lMeta);
+      XLSX.utils.book_append_sheet(wb, sheetWithFormats(L.headers, L.rows, L.meta), 'Distribuciones');
     }
+
+    // Resumen al final (overview)
+    XLSX.utils.book_append_sheet(wb, wsR, 'Resumen');
 
     XLSX.writeFile(wb, invExportFilename(data.inv, extra) + '.xlsx');
     toast(single ? `Excel: ${extra}` : `Excel: ${data.pos.length} posiciones · ${data.letters.length} cartas`);
