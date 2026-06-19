@@ -2942,12 +2942,14 @@ async function exportPDF(cols, rows) {
 ═══════════════════════════════════════════ */
 
 // Reúne y calcula todos los datos del inversionista abierto, listos para exportar.
-function buildInvestorExport() {
+function buildInvestorExport(posId) {
   const d = lastInvestorDetail;
   if (!d || !d.inv) return null;
-  const { inv, contacts, positions } = d;
+  const { inv, contacts } = d;
+  let positions = d.positions || [];
+  if (posId != null) positions = positions.filter(p => p.id === posId);
 
-  const pos = (positions || []).map(p => {
+  const pos = positions.map(p => {
     const dists = p.investment_distributions || [];
     let inkind = 0, cash = 0;
     dists.forEach(x => { inkind += +x.value_in_kind || 0; cash += +x.cash_proceeds || 0; });
@@ -3015,11 +3017,12 @@ function buildInvestorExport() {
   return { inv, contacts: contacts || [], pos, letters, totals: { totCommit, totActual, totDist, portMoic, dpi } };
 }
 
-// Nombre de archivo seguro a partir del nombre del inversionista
-function invExportFilename(inv) {
-  const safe = String(inv.name || 'inversionista')
-    .replace(/[^\w\sáéíóúñÁÉÍÓÚÑ-]/gi, '').trim().replace(/\s+/g, '_').slice(0, 40) || 'inversionista';
-  return `cretum_${safe}_${new Date().toISOString().slice(0, 10)}`;
+// Nombre de archivo seguro a partir del nombre del inversionista (+ etiqueta opcional)
+function invExportFilename(inv, extra) {
+  const clean = (s) => String(s || '').replace(/[^\w\sáéíóúñÁÉÍÓÚÑ-]/gi, '').trim().replace(/\s+/g, '_').slice(0, 40);
+  const parts = ['cretum', clean(inv.name) || 'inversionista'];
+  if (extra) { const e = clean(extra); if (e) parts.push(e); }
+  return parts.join('_') + '_' + new Date().toISOString().slice(0, 10);
 }
 
 // Construye una hoja con anchos + formatos numéricos por columna + autofiltro.
@@ -3041,9 +3044,12 @@ function sheetWithFormats(headers, rows, meta) {
   return ws;
 }
 
-async function exportInvestorXlsx() {
-  const data = buildInvestorExport();
+async function exportInvestorXlsx(posId) {
+  const data = buildInvestorExport(posId);
   if (!data) { toast('Abre un inversionista primero'); return; }
+  if (posId != null && !data.pos.length) { toast('No encontré esa posición'); return; }
+  const single = posId != null;
+  const extra = single && data.pos[0] ? data.pos[0].company : '';
   try {
     await loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
     const wb = XLSX.utils.book_new();
@@ -3054,8 +3060,12 @@ async function exportInvestorXlsx() {
     const resumen = [
       ['Inversionista', data.inv.name],
       ['Titular', data.inv.titular || '—'],
-      ['Posiciones', data.pos.length],
-      [],
+    ];
+    if (single && data.pos[0]) resumen.push(['Oportunidad', `${data.pos[0].company} · ${data.pos[0].series}`]);
+    resumen.push(['Posiciones', data.pos.length], []);
+    // Bloque numérico: registro el índice de fila donde empieza para formatear sin hardcodear.
+    const numStart = resumen.length;   // fila 0-based del primer numérico
+    resumen.push(
       ['Compromiso total', t.totCommit],
       ['Compromiso ejecutado', t.totActual],
       ['Total distribuido', t.totDist],
@@ -3063,13 +3073,13 @@ async function exportInvestorXlsx() {
       ['DPI', t.dpi],
       [],
       ['Contactos', ''],
-    ];
+    );
     data.contacts.forEach(c => resumen.push([c.name || '—', c.email || '']));
     const wsR = XLSX.utils.aoa_to_sheet(resumen);
     wsR['!cols'] = [{ wch: 24 }, { wch: 44 }];
-    const fmtCell = (ws, addr, z) => { const c = ws[addr]; if (c && typeof c.v === 'number') { c.t = 'n'; c.z = z; } };
-    fmtCell(wsR, 'B5', Z.money); fmtCell(wsR, 'B6', Z.money); fmtCell(wsR, 'B7', Z.money);
-    fmtCell(wsR, 'B8', Z.moic); fmtCell(wsR, 'B9', Z.moic);
+    const fmtRow = (i, z) => { const c = wsR[XLSX.utils.encode_cell({ r: i, c: 1 })]; if (c && typeof c.v === 'number') { c.t = 'n'; c.z = z; } };
+    fmtRow(numStart, Z.money); fmtRow(numStart + 1, Z.money); fmtRow(numStart + 2, Z.money);
+    fmtRow(numStart + 3, Z.moic); fmtRow(numStart + 4, Z.moic);
     XLSX.utils.book_append_sheet(wb, wsR, 'Resumen');
 
     // ── Hoja Posiciones ──
@@ -3086,17 +3096,20 @@ async function exportInvestorXlsx() {
       XLSX.utils.book_append_sheet(wb, sheetWithFormats(lHead, lRows, lMeta), 'Distribuciones');
     }
 
-    XLSX.writeFile(wb, invExportFilename(data.inv) + '.xlsx');
-    toast(`Excel: ${data.pos.length} posiciones · ${data.letters.length} cartas`);
+    XLSX.writeFile(wb, invExportFilename(data.inv, extra) + '.xlsx');
+    toast(single ? `Excel: ${extra}` : `Excel: ${data.pos.length} posiciones · ${data.letters.length} cartas`);
   } catch (e) {
     console.error('[export inv xlsx]', e);
     toast('Error al exportar: ' + e.message);
   }
 }
 
-async function exportInvestorPdf() {
-  const data = buildInvestorExport();
+async function exportInvestorPdf(posId) {
+  const data = buildInvestorExport(posId);
   if (!data) { toast('Abre un inversionista primero'); return; }
+  if (posId != null && !data.pos.length) { toast('No encontré esa posición'); return; }
+  const single = posId != null;
+  const extra = single && data.pos[0] ? data.pos[0].company : '';
   try {
     await loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
     await loadScript('https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js');
@@ -3107,13 +3120,14 @@ async function exportInvestorPdf() {
     let y = 42;
 
     doc.setFontSize(8.5); doc.setTextColor(150);
-    doc.text('CRETUM PARTNERS · REPORTE DE INVERSIONISTA', M, y); y += 20;
+    doc.text(single ? 'CRETUM PARTNERS · REPORTE DE OPORTUNIDAD' : 'CRETUM PARTNERS · REPORTE DE INVERSIONISTA', M, y); y += 20;
     doc.setFontSize(18); doc.setTextColor(navy[0], navy[1], navy[2]);
     doc.text(data.inv.name, M, y); y += 16;
     doc.setFontSize(9.5); doc.setTextColor(110);
     const sub = [];
     if (data.inv.titular) sub.push('Titular: ' + data.inv.titular);
-    sub.push(data.pos.length + ' posiciones');
+    if (single && data.pos[0]) sub.push('Oportunidad: ' + data.pos[0].company + ' · ' + data.pos[0].series);
+    else sub.push(data.pos.length + ' posiciones');
     sub.push('Generado ' + new Date().toLocaleDateString('es-MX'));
     doc.text(sub.join('   ·   '), M, y); y += 16;
 
@@ -3166,8 +3180,8 @@ async function exportInvestorPdf() {
       doc.text(`Cretum Desk · documento interno · ${new Date().toLocaleDateString('es-MX')} · pág. ${i}/${pages}`, M, doc.internal.pageSize.getHeight() - 16);
     }
 
-    doc.save(invExportFilename(data.inv) + '.pdf');
-    toast('PDF generado');
+    doc.save(invExportFilename(data.inv, extra) + '.pdf');
+    toast(single ? `PDF: ${extra}` : 'PDF generado');
   } catch (e) {
     console.error('[export inv pdf]', e);
     toast('Error al generar PDF: ' + e.message);
@@ -3254,12 +3268,17 @@ async function openCompany(id) {
 function showDetailLoading() {
   document.getElementById('dbList').style.display = 'none';
   document.getElementById('dbDetail').classList.add('show');
+  // El export de la barra exporta TODA la lista; dentro de un detalle no aplica.
+  const tbExport = document.getElementById('ddExport');
+  if (tbExport) tbExport.style.display = 'none';
   document.getElementById('dbDetailContent').innerHTML = '<div class="db-loading"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
 }
 
 function closeDetail() {
   document.getElementById('dbDetail').classList.remove('show');
   document.getElementById('dbList').style.display = '';
+  const tbExport = document.getElementById('ddExport');
+  if (tbExport) tbExport.style.display = '';
 }
 
 /* ─── Selector de columnas del detalle del inversionista ─── */
@@ -3364,8 +3383,12 @@ function renderPositionsBlock(title, rows) {
   };
 
   const visible = POSITION_COLUMNS.filter(c => isPosColVisible(c.key));
-  const headers = visible.map(c => `<th class="${numericKeys.has(c.key) ? 'num' : ''}">${escapeHtml(c.label)}</th>`).join('');
-  const body = rows.map(p => `<tr>${visible.map(c => cellFor(p, c.key)).join('')}</tr>`).join('');
+  const headers = visible.map(c => `<th class="${numericKeys.has(c.key) ? 'num' : ''}">${escapeHtml(c.label)}</th>`).join('')
+    + '<th class="pos-exp-th">Exportar</th>';
+  const body = rows.map(p => `<tr>${visible.map(c => cellFor(p, c.key)).join('')}<td class="pos-exp-td">
+      <button class="pos-exp-btn xls" title="Exportar esta oportunidad a Excel" onclick="exportInvestorXlsx(${p.id})"><i class="fa-solid fa-file-excel"></i></button>
+      <button class="pos-exp-btn pdf" title="Exportar esta oportunidad a PDF" onclick="exportInvestorPdf(${p.id})"><i class="fa-solid fa-file-pdf"></i></button>
+    </td></tr>`).join('');
 
   return `
     <div class="db-section">
