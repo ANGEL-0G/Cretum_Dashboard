@@ -3714,6 +3714,97 @@ function renderDistrosBlock(title, rows) {
     </div>`;
 }
 
+// ── Vista 360 del LP: temas, lock-ups SpaceX, métricas ──
+function companyTheme(name) {
+  const n = (name || '').toLowerCase();
+  if (/space|spacex|x\.ai|capella|hawkeye/.test(n)) return 'Espacio & Satélites';
+  if (/saronic|chaos|second front|epirus|mach|anduril|palantir/.test(n)) return 'Defensa';
+  if (/anthropic|cohere|groq|mythic|decart|figure|agility|openai/.test(n)) return 'IA & Robótica';
+  if (/base power|radiant/.test(n)) return 'Energía';
+  if (/klarna|kraken|payward|revolut|bolt|quantstamp|coinbase|amaze/.test(n)) return 'Fintech & Cripto';
+  if (/lime|neutron|lyft|turo|kodiak|transfix|forto|platform science|instacart|maplebear|rappi/.test(n)) return 'Movilidad & Logística';
+  if (/epic|automattic|asana|patreon|udemy|rapidsos|bluevoyant|cohesity|trusted|wefox|job and talent|jobandtalent|loft|pinterest|spotify|airbnb|draftkings/.test(n)) return 'Software & Consumo';
+  return 'Otros';
+}
+const SPX_LOCKUP_B = [
+  { date: '2026-07-31', pct: '20%', label: '1er cliff (tras Q2 2026)' },
+  { date: '2026-08-21', pct: '7%',  label: 'Día 70' },
+  { date: '2026-09-10', pct: '7%',  label: 'Día 90' },
+  { date: '2026-09-25', pct: '7%',  label: 'Día 105' },
+  { date: '2026-10-10', pct: '7%',  label: 'Día 120' },
+  { date: '2026-10-25', pct: '7%',  label: 'Día 135' },
+  { date: '2026-11-15', pct: '28%', label: '2º cliff (tras Q3 2026)' },
+  { date: '2026-12-09', pct: 'Remanente', label: 'Día 180 — expiración total' },
+];
+const SPX_LOCKUP_A_EXT = [
+  { date: '2027-02-15', pct: '20%', label: 'Lock-up extendido (tras Q4 2026)' },
+  { date: '2027-03-19', pct: '10%', label: 'Día 280' },
+  { date: '2027-05-15', pct: '20%', label: 'Tras Q1 2027' },
+  { date: '2027-05-18', pct: '10%', label: 'Día 340' },
+  { date: '2027-06-13', pct: '20%', label: 'Día 366' },
+  { date: '2027-08-15', pct: '20%', label: 'Tras Q2 2027 — liberación final' },
+];
+function spxStructures(seriesName) {
+  const s = seriesName || '';
+  if (/All-Star Fund IV|Fund IV/i.test(s)) return ['A', 'B'];
+  if (/22K|22J/i.test(s)) return ['A'];
+  return ['B'];
+}
+function fmtEventDate(d) {
+  try { return new Date(d + 'T00:00:00').toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' }); }
+  catch (e) { return d; }
+}
+let _lp360 = null;
+function buildLp360(positions) {
+  const num = v => (Number(v) || 0);
+  const active = positions.filter(p => !p.distributed_at);
+  const committedActive = active.reduce((a, p) => a + num(p.commitment), 0);
+  const navActive = active.reduce((a, p) => a + (num(p.commitment_actual) || num(p.commitment)), 0);
+  const moic = committedActive ? navActive / committedActive : 0;
+  const committedTotal = positions.reduce((a, p) => a + num(p.commitment), 0);
+  let distrib = 0;
+  positions.forEach(p => (p.investment_distributions || []).forEach(d => { distrib += num(d.value_in_kind) + num(d.cash_proceeds); }));
+  const dpi = committedTotal ? distrib / committedTotal : 0;
+  const byCo = {}, byTheme = {};
+  active.forEach(p => {
+    const isFund = p.companies?.id === 10;
+    const val = num(p.commitment_actual) || num(p.commitment);
+    const label = isFund ? (p.series?.name || 'Fondo').replace('MVP ', '') : (p.companies?.name || '—');
+    byCo[label] = (byCo[label] || 0) + val;
+    const theme = isFund ? 'Fondos All-Star' : companyTheme(p.companies?.name);
+    byTheme[theme] = (byTheme[theme] || 0) + val;
+  });
+  const companyExp = Object.entries(byCo).sort((a, b) => b[1] - a[1]);
+  const themeExp = Object.entries(byTheme).sort((a, b) => b[1] - a[1]);
+  const spxPos = active.filter(p => p.companies?.id === 27 || /All-Star Fund (IV|V)/i.test(p.series?.name || ''));
+  let events = [];
+  if (spxPos.length) {
+    const structs = new Set();
+    spxPos.forEach(p => spxStructures(p.series?.name).forEach(x => structs.add(x)));
+    const today = new Date().toISOString().slice(0, 10);
+    events = SPX_LOCKUP_B.filter(e => e.date >= today).map(e => ({ ...e, tag: '' }));
+    if (structs.has('A')) events = events.concat(SPX_LOCKUP_A_EXT.filter(e => e.date >= today).map(e => ({ ...e, tag: 'porción extendida' })));
+    events.sort((a, b) => a.date.localeCompare(b.date));
+    events = events.slice(0, 6);
+  }
+  _lp360 = { companyExp, themeExp };
+  return { moic, distrib, dpi, nActive: active.length, companyExp, themeExp, events, hasSpx: spxPos.length > 0 };
+}
+async function draw360Theme() {
+  const cv = document.getElementById('lpThemeChart');
+  if (!cv || !_lp360 || !_lp360.themeExp.length) return;
+  try { await loadScript('https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js'); } catch (e) { return; }
+  const labels = _lp360.themeExp.map(t => t[0]);
+  const data = _lp360.themeExp.map(t => t[1]);
+  const colors = ['#e8650d', '#1a3a6b', '#0f9b5a', '#9b59b6', '#e1b12c', '#3b65b0', '#c0392b', '#16a085'];
+  if (cv._chart) cv._chart.destroy();
+  cv._chart = new Chart(cv.getContext('2d'), {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data, backgroundColor: colors.slice(0, labels.length), borderWidth: 2, borderColor: '#fff' }] },
+    options: { responsive: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10, usePointStyle: true } } }, cutout: '60%' }
+  });
+}
+
 function renderInvestorDetail(inv, contacts, positions) {
   lastInvestorDetail = { inv, contacts, positions };
   const canEditTitular = currentProfile?.role === 'admin' || currentProfile?.role === 'editor';
@@ -3737,6 +3828,35 @@ function renderInvestorDetail(inv, contacts, positions) {
   const sortDesc = (a, b) => (b.distribution_date || '').localeCompare(a.distribution_date || '');
   distrosSpv.sort(sortDesc);
   distrosFund.sort(sortDesc);
+  const _lp = buildLp360(positions);
+  const _lpkpi = (l, v, c) => `<div class="lp-kpi"><div class="lp-kpi-l">${l}</div><div class="lp-kpi-v ${c || ''}">${v}</div></div>`;
+  const lpKpis = `<div class="lp-kpis">
+    ${_lpkpi('MOIC', _lp.moic.toFixed(2) + 'x', moicClass(_lp.moic))}
+    ${_lpkpi('Distribuido a la fecha', fmtUsdShort(_lp.distrib))}
+    ${_lpkpi('DPI', _lp.dpi.toFixed(2) + 'x')}
+    ${_lpkpi('Posiciones activas', String(_lp.nActive))}
+  </div>`;
+  const _maxCo = _lp.companyExp.length ? _lp.companyExp[0][1] : 1;
+  const exposicion = _lp.companyExp.length ? `<div class="db-section">
+    <div class="db-section-h">Exposición del portafolio</div>
+    <div class="lp-expo">
+      <div class="lp-expo-bars">
+        <div class="lp-expo-sub">Por empresa / fondo · NAV activo</div>
+        ${_lp.companyExp.slice(0, 8).map(([nm, v]) => `<div class="lp-bar-row"><span class="lp-bar-name" title="${escapeHtml(nm)}">${escapeHtml(nm)}</span><div class="lp-bar"><div class="lp-bar-fill" style="width:${(v / _maxCo * 100).toFixed(1)}%"></div></div><span class="lp-bar-val">${fmtUsdShort(v)}</span></div>`).join('')}
+      </div>
+      <div class="lp-expo-donut">
+        <div class="lp-expo-sub">Por tema</div>
+        <canvas id="lpThemeChart" width="240" height="240"></canvas>
+      </div>
+    </div>
+  </div>` : '';
+  const eventos = (_lp.hasSpx && _lp.events.length) ? `<div class="db-section">
+    <div class="db-section-h">Próximos eventos · Lock-up SpaceX (estimado)</div>
+    <div class="lp-events">
+      ${_lp.events.map(e => `<div class="lp-event"><div class="lp-event-date">${fmtEventDate(e.date)}</div><div class="lp-event-body"><span class="lp-event-pct">${escapeHtml(e.pct)}</span> &middot; ${escapeHtml(e.label)}${e.tag ? ` <span class="lp-event-tag">${escapeHtml(e.tag)}</span>` : ''}</div></div>`).join('')}
+    </div>
+    <div class="lp-events-note">Estimado con base en el S-1 de SpaceX (IPO 12-jun-2026); el prospecto final es la autoridad.</div>
+  </div>` : '';
   const html = `
     <div class="db-detail-head">
       <div class="db-detail-topbar">
@@ -3761,6 +3881,8 @@ function renderInvestorDetail(inv, contacts, positions) {
         <div class="db-stat"><div class="db-stat-l">Commitment actual</div><div class="db-stat-v">${fmtMoney(inv.actual)}</div></div>
       </div>
     </div>
+
+    ${lpKpis}
 
     ${(contacts.length || canEditTitular) ? `
       <div class="db-section">
@@ -3793,6 +3915,8 @@ function renderInvestorDetail(inv, contacts, positions) {
         </div>
       </div>` : ''}
 
+    ${exposicion}
+    ${eventos}
     ${renderPositionsBlock('Posiciones activas', activePositions)}
     ${renderPositionsBlock('Posiciones terminadas', terminatedPositions)}
 
@@ -3800,6 +3924,7 @@ function renderInvestorDetail(inv, contacts, positions) {
     ${renderDistrosBlock('Distribuciones · Fondos MVP', distrosFund)}`;
   document.getElementById('dbDetailContent').innerHTML = html;
   renderPosColumnPicker();   // pobla el panel después de que el DOM existe
+  draw360Theme();
 }
 
 function renderCompanyDetail(co, positions) {
