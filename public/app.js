@@ -3777,18 +3777,25 @@ function buildLp360(positions) {
   const companyExp = Object.entries(byCo).sort((a, b) => b[1] - a[1]);
   const themeExp = Object.entries(byTheme).sort((a, b) => b[1] - a[1]);
   const spxPos = active.filter(p => p.companies?.id === 27 || /All-Star Fund (IV|V)/i.test(p.series?.name || ''));
-  let events = [];
+  let lockup = null;
   if (spxPos.length) {
-    const structs = new Set();
-    spxPos.forEach(p => spxStructures(p.series?.name).forEach(x => structs.add(x)));
+    const by = { A: [], B: [] };
+    spxPos.forEach(p => {
+      const sname = p.series?.name || '';
+      const short = /Fund IV/i.test(sname) ? 'Fund IV' : /Fund V/i.test(sname) ? 'Fund V'
+        : /22K/i.test(sname) ? 'Serie 22K' : /22J/i.test(sname) ? 'Serie 22J'
+        : (sname.replace('MVP Opportunity Fund VI LLC, ', '').replace('MVP ', '') || 'SpaceX directo');
+      spxStructures(sname).forEach(st => { if (!by[st].includes(short)) by[st].push(short); });
+    });
     const today = new Date().toISOString().slice(0, 10);
-    events = SPX_LOCKUP_B.filter(e => e.date >= today).map(e => ({ ...e, tag: '' }));
-    if (structs.has('A')) events = events.concat(SPX_LOCKUP_A_EXT.filter(e => e.date >= today).map(e => ({ ...e, tag: 'porción extendida' })));
-    events.sort((a, b) => a.date.localeCompare(b.date));
-    events = events.slice(0, 6);
+    const nextB = SPX_LOCKUP_B.find(e => e.date >= today);
+    const blocks = [];
+    if (by.B.length) blocks.push({ scope: by.B.join(' · '), summary: 'Liberación escalonada y ligada a desempeño dentro de la ventana de 180 días. Expira por completo ~9 dic 2026.' });
+    if (by.A.length) blocks.push({ scope: by.A.join(' · '), summary: 'Una porción sigue un lock-up extendido (en parcialidades) hasta ~13-14 meses post-IPO; liberación final ~ago 2027.' });
+    lockup = { blocks, next: nextB || null };
   }
   _lp360 = { companyExp, themeExp };
-  return { moic, distrib, dpi, nActive: active.length, companyExp, themeExp, events, hasSpx: spxPos.length > 0 };
+  return { moic, distrib, dpi, nActive: active.length, companyExp, themeExp, lockup, hasSpx: spxPos.length > 0 };
 }
 async function draw360Theme() {
   const cv = document.getElementById('lpThemeChart');
@@ -3850,11 +3857,10 @@ function renderInvestorDetail(inv, contacts, positions) {
       </div>
     </div>
   </div>` : '';
-  const eventos = (_lp.hasSpx && _lp.events.length) ? `<div class="db-section">
-    <div class="db-section-h">Próximos eventos · Lock-up SpaceX (estimado)</div>
-    <div class="lp-events">
-      ${_lp.events.map(e => `<div class="lp-event"><div class="lp-event-date">${fmtEventDate(e.date)}</div><div class="lp-event-body"><span class="lp-event-pct">${escapeHtml(e.pct)}</span> &middot; ${escapeHtml(e.label)}${e.tag ? ` <span class="lp-event-tag">${escapeHtml(e.tag)}</span>` : ''}</div></div>`).join('')}
-    </div>
+  const eventos = (_lp.hasSpx && _lp.lockup) ? `<div class="db-section">
+    <div class="db-section-h">Lock-up SpaceX · liquidez estimada</div>
+    ${_lp.lockup.next ? `<div class="lp-lock-next"><i class="fa-solid fa-unlock"></i> Próxima liberación estimada: <b>${fmtEventDate(_lp.lockup.next.date)}</b> &middot; ${escapeHtml(_lp.lockup.next.pct)} de la posición</div>` : ''}
+    ${_lp.lockup.blocks.map(b => `<div class="lp-lock-block"><div class="lp-lock-scope">${escapeHtml(b.scope)}</div><div class="lp-lock-sum">${escapeHtml(b.summary)}</div></div>`).join('')}
     <div class="lp-events-note">Estimado con base en el S-1 de SpaceX (IPO 12-jun-2026); el prospecto final es la autoridad.</div>
   </div>` : '';
   const html = `
