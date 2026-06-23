@@ -4298,25 +4298,118 @@ const FUND_TRACKERS = {
     overallTotal2:    { label: 'Total — Overall (Commitment)', invested: 293000000, mtm: 421772282, moic: 1.4395 },
     // Descripciones por empresa (pestaña "Empresas"). Valuación entrada = actual ÷ MOIC.
     descriptions: {
-      'Decart.AI, Inc.':       'IA generativa en tiempo real: modelos de video y "world models" interactivos.',
-      'Saronic Technologies':  'Embarcaciones marítimas autónomas no tripuladas para defensa naval.',
-      'Anthropic PBC':         'Laboratorio de inteligencia artificial, creador de los modelos Claude; enfoque en IA segura.',
-      'X.AI Corp. (SpaceX)':   'Exposición a SpaceX: cohetes reutilizables (Falcon/Starship) e internet satelital Starlink.',
-      'CHAOS Industries':      'Tecnología de defensa: sistemas avanzados de sensado y detección electrónica.',
-      'Base Power, Inc.':      'Energía residencial: baterías de respaldo para el hogar y servicios a la red eléctrica.',
-      'Second Front Systems':  'Plataforma de software (Game Warden) para desplegar apps comerciales de forma segura en defensa y gobierno.',
-      'Payward (Kraken)':      'Operador del exchange global de criptomonedas Kraken.',
-      'Agility Robotics':      'Robots humanoides bípedos (Digit) para logística y almacenes.',
-      'Kodiak Robotics':       'Camiones de carga autónomos para transporte de larga distancia.',
-      'Epirus, Inc.':          'Defensa: sistemas de energía dirigida (microondas de alta potencia) anti-drones.',
-      'Radiant Industries':    'Microreactores nucleares portátiles para energía limpia desplegable.',
-      'Cohere Inc.':           'IA empresarial: modelos de lenguaje (LLM) y búsqueda para empresas.',
-      'Groq, Inc.':            'Chips de inferencia de IA de ultra baja latencia (LPU).',
-      'Mythic Inc.':           'Chips de cómputo analógico para IA en el borde (edge).',
-      'Epic Games, Inc.':      'Videojuegos (Fortnite) y motor gráfico Unreal Engine.',
-      'Figure AI Inc.':        'Robots humanoides de propósito general (Figure).',
-      'Groq, Inc. (Distributed)': 'Chips de inferencia de IA de ultra baja latencia (LPU). (Posición distribuida.)',
-      'Klarna Holding AB':     'Fintech de pagos "compra ahora, paga después" (BNPL). (Posición distribuida.)'
+      'Decart.AI, Inc.': [
+        'Laboratorio de IA generativa en tiempo real: genera video y "mundos" interactivos cuadro a cuadro a partir de texto o de una cámara en vivo.',
+        'Su modelo Oasis crea entornos jugables y navegables sin un motor de videojuego tradicional — la IA "imagina" cada fotograma.',
+        'Apuesta a ser la infraestructura de experiencias inmersivas generadas por IA (gaming, media, simulación, publicidad).',
+        'Ronda reciente: entrada ≈ valuación actual; posición de etapa temprana con alto potencial.'
+      ],
+      'Saronic Technologies': [
+        'Diseña y fabrica embarcaciones de superficie autónomas (drones marinos no tripulados) para defensa naval.',
+        'Producción a escala de buques asequibles y "sacrificables" para vigilancia, patrullaje y misiones de la Marina de EE.UU.',
+        'Beneficiaria directa de la prioridad del Pentágono por masa autónoma de bajo costo (programa Replicator).',
+        'Defense-tech de crecimiento explosivo, respaldada por fondos de primer nivel.'
+      ],
+      'Anthropic PBC': [
+        'Laboratorio líder de IA y creador de la familia de modelos Claude; constituida como Public Benefit Corporation.',
+        'Enfoque central en seguridad, alineación e interpretabilidad ("Constitutional AI") — su diferenciador frente a los rivales.',
+        'Ingresos creciendo muy rápido vía API y productos empresariales; competidor directo de OpenAI.',
+        'Posición estrella del fondo: ~3.35x MOIC, valuación de ~$288B (entrada) a $965B.'
+      ],
+      'X.AI Corp. (SpaceX)': [
+        'Exposición a SpaceX: líder mundial indiscutible en lanzamientos orbitales con cohetes reutilizables (Falcon 9, Starship).',
+        'Starlink, su constelación de internet satelital, ya es la más grande del mundo y genera flujo de caja creciente.',
+        'Cotiza públicamente desde junio 2026 (ticker SPCX): la valuación actual se re-marca con el precio de mercado en vivo.',
+        'Una de las posiciones más grandes y ahora líquidas del fondo (~4.3x MOIC).'
+      ],
+      'CHAOS Industries': [
+        'Tecnología de defensa: sistemas avanzados de sensado, radar y comunicaciones de radiofrecuencia de nueva generación.',
+        'Plataformas para misiones críticas (detección, vigilancia, defensa electrónica) frente a amenazas modernas.',
+        'Aprovecha el fuerte aumento de presupuesto y la modernización electrónica del sector defensa.',
+        'Entrada reciente (1.0x), valuación ≈ $4.45B.'
+      ],
+      'Base Power, Inc.': [
+        'Energía residencial: instala baterías de respaldo en los hogares y las opera en conjunto como una "central eléctrica virtual".',
+        'Modelo de doble valor: respaldo y ahorro para el usuario + venta de servicios a la red (aplanar picos de demanda).',
+        'Crecimiento acelerado en Texas; ataca la fragilidad de la red y la demanda eléctrica disparada por la IA y los autos eléctricos.',
+        'Entrada reciente (1.0x), ≈ $4.11B.'
+      ],
+      'Second Front Systems': [
+        'Plataforma SaaS (Game Warden) que permite desplegar software comercial dentro de entornos clasificados de defensa, de forma segura y acreditada.',
+        'Elimina el mayor cuello de botella del gobierno: la lenta acreditación de seguridad (ATO), pasando de meses a días.',
+        'Acelera el "time-to-mission" de contratistas y agencias del Departamento de Defensa de EE.UU.',
+        'Posición temprana marcada cerca del costo de inversión.'
+      ],
+      'Payward (Kraken)': [
+        'Opera Kraken, uno de los exchanges de criptomonedas más antiguos, regulados y confiables del mundo.',
+        'Ingresos diversificados: trading, staking, custodia y servicios institucionales.',
+        'Beneficiaria del ciclo alcista cripto y de mayor claridad regulatoria; candidata a salir a bolsa.',
+        '~1.34x MOIC; valuación de ≈ $14.9B (entrada) a $20B.'
+      ],
+      'Agility Robotics': [
+        'Fabrica Digit, un robot humanoide bípedo diseñado para logística y almacenes.',
+        'Pilotos comerciales con grandes operadores; especializado en mover totes y cajas en espacios pensados para humanos.',
+        'Apuesta a la escasez estructural de mano de obra y a la automatización del trabajo físico.',
+        'Entrada reciente, ≈ $1.86B.'
+      ],
+      'Kodiak Robotics': [
+        'Desarrolla el "Kodiak Driver", sistema de conducción autónoma para camiones de carga de larga distancia.',
+        'Despliegues comerciales en rutas de Texas y una variante para defensa/terreno off-road.',
+        'Ataca la escasez crónica de operadores y la eficiencia del transporte de mercancías.',
+        '~3.19x MOIC; de ≈ $500M a $1.6B.'
+      ],
+      'Epirus, Inc.': [
+        'Defensa: sistemas de energía dirigida por microondas de alta potencia (línea "Leonidas") para neutralizar enjambres de drones.',
+        'Tecnología de estado sólido, escalable y con costo casi nulo por disparo (vs. misiles costosos).',
+        'Demanda creciente: los drones se han vuelto la amenaza dominante en los conflictos modernos.',
+        'Entrada reciente, ≈ $1.01B.'
+      ],
+      'Radiant Industries': [
+        'Desarrolla microreactores nucleares portátiles ("Kaleidos") que caben en un contenedor de transporte.',
+        'Energía limpia, segura y desplegable para bases militares remotas, zonas de desastre y data centers.',
+        'Surfea dos olas a la vez: el apetito energético de la IA y la descarbonización.',
+        'Entrada reciente, ≈ $1.88B.'
+      ],
+      'Cohere Inc.': [
+        'IA empresarial: modelos de lenguaje (Command) y de búsqueda/embeddings (Rerank) enfocados 100% en empresas.',
+        'Énfasis en privacidad, despliegue on-premise y casos de uso B2B — no compite por el consumidor masivo.',
+        'Alternativa neutral para corporativos que no quieren depender de OpenAI o Anthropic.',
+        'Entrada reciente, ≈ $6.99B.'
+      ],
+      'Groq, Inc.': [
+        'Diseña la LPU, un chip de inferencia de IA con latencia ultra baja y velocidad de generación de tokens líder en la industria.',
+        'Ofrece GroqCloud y acuerdos de gran escala (incl. la transacción con Nvidia reflejada en las cartas del fondo).',
+        'Ataca el cuello de botella de la inferencia (correr modelos), no el entrenamiento — el costo dominante de la IA en producción.',
+        '~3.0x MOIC; de ≈ $4.73B a $14.2B (incluye la porción ya distribuida).'
+      ],
+      'Mythic Inc.': [
+        'Chips de cómputo analógico-en-memoria para IA en el borde (edge), de muy bajo consumo.',
+        'Ejecuta la inferencia sin mover datos constantemente a la memoria, reduciendo drásticamente el gasto energético.',
+        'Nicho técnico diferenciado para dispositivos donde la batería y el calor importan.',
+        'Entrada cercana al costo (1.0x).'
+      ],
+      'Epic Games, Inc.': [
+        'Creador de Fortnite y de Unreal Engine, el motor gráfico estándar de videojuegos, cine y simulación.',
+        'Ecosistema completo: Epic Games Store, herramientas de creación y su visión de "metaverso".',
+        'Marca icónica con ingresos masivos; sus litigios antimonopolio (vs. Apple/Google) podrían abrirle el mercado de las app stores.',
+        '~1.44x MOIC; de ≈ $21.1B a $30.4B.'
+      ],
+      'Figure AI Inc.': [
+        'Desarrolla robots humanoides de propósito general (Figure 02/03) con su propia pila de IA para visión y control.',
+        'Pilotos industriales (p. ej. con BMW) y alianzas de IA; integra modelos de lenguaje para entender y ejecutar tareas.',
+        'Una de las apuestas más codiciadas en robótica humanoide — su valuación se ha disparado entre rondas.',
+        'La posición de mayor múltiplo del fondo: ~14.3x MOIC, de ≈ $2.73B a $39B.'
+      ],
+      'Groq, Inc. (Distributed)': [
+        'Misma compañía que Groq: chips de inferencia de IA de ultra baja latencia (LPU) y GroqCloud.',
+        'Esta porción ya fue distribuida a los inversionistas (realizada), reflejando la fuerte apreciación de Groq.',
+        'Marcada a ~3.0x MOIC al momento de la distribución.'
+      ],
+      'Klarna Holding AB': [
+        'Fintech sueca de pagos "compra ahora, paga después" (BNPL) con decenas de millones de usuarios globales.',
+        'Diversificándose hacia banca, tarjeta y compras asistidas por IA; preparó su salida a bolsa.',
+        'Posición distribuida: el fondo entró en una valuación alta y se marcó a la baja (down-round), con MOIC por debajo de 1x.'
+      ]
     }
   }
 };
@@ -4547,7 +4640,8 @@ function renderFundTrackerDetail(fundId) {
     const cards = allCos.map(r => {
       const cur = r.corpVal;
       const entry = (r.moic && r.moic > 0) ? cur / r.moic : cur;
-      const desc = f.descriptions[r.company] || '';
+      const desc = f.descriptions[r.company];
+      const bullets = Array.isArray(desc) ? desc : (desc ? [desc] : []);
       return `
         <div class="ft-co-card">
           <div class="ft-co-name">${escapeHtml(r.company)}</div>
@@ -4562,7 +4656,7 @@ function renderFundTrackerDetail(fundId) {
               <span class="ft-co-vv ft-co-vv-now">${fmtBil(cur)}</span>
             </div>
           </div>
-          ${desc ? `<div class="ft-co-desc">${escapeHtml(desc)}</div>` : ''}
+          ${bullets.length ? `<ul class="ft-co-desc">${bullets.map(b => `<li>${escapeHtml(b)}</li>`).join('')}</ul>` : ''}
         </div>`;
     }).join('');
     tabsBar = `
