@@ -4296,6 +4296,28 @@ const FUND_TRACKERS = {
     overallLabel:     'Total — Overall (Invested)',
     overallTotal:     { invested: 151119219, mtm: 279891501, moic: 1.8521 },
     overallTotal2:    { label: 'Total — Overall (Commitment)', invested: 293000000, mtm: 421772282, moic: 1.4395 },
+    // Dominio para el logo (Clearbit). Fallback a monograma si no carga.
+    logos: {
+      'Decart.AI, Inc.':          'decart.ai',
+      'Saronic Technologies':     'saronic.com',
+      'Anthropic PBC':            'anthropic.com',
+      'X.AI Corp. (SpaceX)':      'spacex.com',
+      'CHAOS Industries':         'chaosindustries.com',
+      'Base Power, Inc.':         'basepowercompany.com',
+      'Second Front Systems':     'secondfront.com',
+      'Payward (Kraken)':         'kraken.com',
+      'Agility Robotics':         'agilityrobotics.com',
+      'Kodiak Robotics':          'kodiak.ai',
+      'Epirus, Inc.':             'epirusinc.com',
+      'Radiant Industries':       'radiantnuclear.com',
+      'Cohere Inc.':              'cohere.com',
+      'Groq, Inc.':               'groq.com',
+      'Mythic Inc.':              'mythic.ai',
+      'Epic Games, Inc.':         'epicgames.com',
+      'Figure AI Inc.':           'figure.ai',
+      'Groq, Inc. (Distributed)': 'groq.com',
+      'Klarna Holding AB':        'klarna.com'
+    },
     // Descripciones por empresa (pestaña "Empresas"). Valuación entrada = actual ÷ MOIC.
     descriptions: {
       'Decart.AI, Inc.': [
@@ -4642,9 +4664,19 @@ function renderFundTrackerDetail(fundId) {
       const entry = (r.moic && r.moic > 0) ? cur / r.moic : cur;
       const desc = f.descriptions[r.company];
       const bullets = Array.isArray(desc) ? desc : (desc ? [desc] : []);
+      const domain = (f.logos || {})[r.company];
+      const logoHtml = domain
+        ? `<div class="ft-co-logo"><span class="ft-co-mono">${escapeHtml(coInitials(r.company))}</span>` +
+          `<img class="ft-co-logo-img" alt="" loading="lazy" ` +
+          `src="https://www.google.com/s2/favicons?sz=128&amp;domain=${domain}" ` +
+          `onerror="if(!this.dataset.fb){this.dataset.fb=1;this.src='https://icons.duckduckgo.com/ip3/${domain}.ico';}else{this.remove();}"></div>`
+        : `<div class="ft-co-logo"><span class="ft-co-mono">${escapeHtml(coInitials(r.company))}</span></div>`;
       return `
         <div class="ft-co-card">
-          <div class="ft-co-name">${escapeHtml(r.company)}</div>
+          <div class="ft-co-head">
+            ${logoHtml}
+            <div class="ft-co-name">${escapeHtml(r.company)}</div>
+          </div>
           <div class="ft-co-vals">
             <div class="ft-co-val">
               <span class="ft-co-vl">Valuación de entrada</span>
@@ -4717,6 +4749,19 @@ function fmtBil(v) {
   if (v < 10)  return '$' + v.toFixed(2) + 'B';
   if (v < 100) return '$' + v.toFixed(1) + 'B';
   return '$' + Math.round(v).toLocaleString('en-US') + 'B';
+}
+
+// Iniciales para el monograma de fallback del logo
+function coInitials(name) {
+  let n = String(name || '');
+  const paren = n.match(/\(([^)]+)\)/);          // ej. "(SpaceX)" → SpaceX
+  if (paren) n = paren[1];
+  n = n.replace(/[().,]/g, ' ');
+  const stop = new Set(['inc', 'corp', 'llc', 'lp', 'pbc', 'ab', 'sa', 'cv', 'technologies', 'industries', 'systems', 'holding', 'holdings', 'robotics', 'distributed', 'the']);
+  const words = n.split(/\s+/).filter(w => w && !stop.has(w.toLowerCase()));
+  if (!words.length) return 'MVP';
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return (words[0][0] + words[1][0]).toUpperCase();
 }
 
 // ── Export a Excel (ExcelJS, lazy-load) ──
