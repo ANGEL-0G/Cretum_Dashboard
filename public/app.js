@@ -4322,120 +4322,141 @@ const FUND_TRACKERS = {
     logoOverrides: {
       'CHAOS Industries': '/chaos-industries.png'
     },
-    // Descripciones por empresa (pestaña "Empresas"). Valuación entrada = actual ÷ MOIC.
-    descriptions: {
-      'Decart.AI, Inc.': [
-        'Laboratorio de IA generativa en tiempo real: genera video y "mundos" interactivos cuadro a cuadro a partir de texto o de una cámara en vivo.',
-        'Su modelo Oasis crea entornos jugables y navegables sin un motor de videojuego tradicional — la IA "imagina" cada fotograma.',
-        'Apuesta a ser la infraestructura de experiencias inmersivas generadas por IA (gaming, media, simulación, publicidad).',
-        'Ronda reciente: entrada ≈ valuación actual; posición de etapa temprana con alto potencial.'
-      ],
-      'Saronic Technologies': [
-        'Diseña y fabrica embarcaciones de superficie autónomas (drones marinos no tripulados) para defensa naval.',
-        'Producción a escala de buques asequibles y "sacrificables" para vigilancia, patrullaje y misiones de la Marina de EE.UU.',
-        'Beneficiaria directa de la prioridad del Pentágono por masa autónoma de bajo costo (programa Replicator).',
-        'Defense-tech de crecimiento explosivo, respaldada por fondos de primer nivel.'
-      ],
-      'Anthropic PBC': [
-        'Laboratorio líder de IA y creador de la familia de modelos Claude; constituida como Public Benefit Corporation.',
-        'Enfoque central en seguridad, alineación e interpretabilidad ("Constitutional AI") — su diferenciador frente a los rivales.',
-        'Ingresos creciendo muy rápido vía API y productos empresariales; competidor directo de OpenAI.',
-        'Posición estrella del fondo: ~3.35x MOIC, valuación de ~$288B (entrada) a $965B.'
-      ],
-      'X.AI Corp. (SpaceX)': [
-        'Exposición a SpaceX: líder mundial indiscutible en lanzamientos orbitales con cohetes reutilizables (Falcon 9, Starship).',
-        'Starlink, su constelación de internet satelital, ya es la más grande del mundo y genera flujo de caja creciente.',
-        'Cotiza públicamente desde junio 2026 (ticker SPCX): la valuación actual se re-marca con el precio de mercado en vivo.',
-        'Una de las posiciones más grandes y ahora líquidas del fondo (~4.3x MOIC).'
-      ],
-      'CHAOS Industries': [
-        'Tecnología de defensa: sistemas avanzados de sensado, radar y comunicaciones de radiofrecuencia de nueva generación.',
-        'Plataformas para misiones críticas (detección, vigilancia, defensa electrónica) frente a amenazas modernas.',
-        'Aprovecha el fuerte aumento de presupuesto y la modernización electrónica del sector defensa.',
-        'Entrada reciente (1.0x), valuación ≈ $4.45B.'
-      ],
-      'Base Power, Inc.': [
-        'Energía residencial: instala baterías de respaldo en los hogares y las opera en conjunto como una "central eléctrica virtual".',
-        'Modelo de doble valor: respaldo y ahorro para el usuario + venta de servicios a la red (aplanar picos de demanda).',
-        'Crecimiento acelerado en Texas; ataca la fragilidad de la red y la demanda eléctrica disparada por la IA y los autos eléctricos.',
-        'Entrada reciente (1.0x), ≈ $4.11B.'
-      ],
-      'Second Front Systems': [
-        'Plataforma SaaS (Game Warden) que permite desplegar software comercial dentro de entornos clasificados de defensa, de forma segura y acreditada.',
-        'Elimina el mayor cuello de botella del gobierno: la lenta acreditación de seguridad (ATO), pasando de meses a días.',
-        'Acelera el "time-to-mission" de contratistas y agencias del Departamento de Defensa de EE.UU.',
-        'Posición temprana marcada cerca del costo de inversión.'
-      ],
-      'Payward (Kraken)': [
-        'Opera Kraken, uno de los exchanges de criptomonedas más antiguos, regulados y confiables del mundo.',
-        'Ingresos diversificados: trading, staking, custodia y servicios institucionales.',
-        'Beneficiaria del ciclo alcista cripto y de mayor claridad regulatoria; candidata a salir a bolsa.',
-        '~1.34x MOIC; valuación de ≈ $14.9B (entrada) a $20B.'
-      ],
-      'Agility Robotics': [
-        'Fabrica Digit, un robot humanoide bípedo diseñado para logística y almacenes.',
-        'Pilotos comerciales con grandes operadores; especializado en mover totes y cajas en espacios pensados para humanos.',
-        'Apuesta a la escasez estructural de mano de obra y a la automatización del trabajo físico.',
-        'Entrada reciente, ≈ $1.86B.'
-      ],
-      'Kodiak Robotics': [
-        'Desarrolla el "Kodiak Driver", sistema de conducción autónoma para camiones de carga de larga distancia.',
-        'Despliegues comerciales en rutas de Texas y una variante para defensa/terreno off-road.',
-        'Ataca la escasez crónica de operadores y la eficiencia del transporte de mercancías.',
-        '~3.19x MOIC; de ≈ $500M a $1.6B.'
-      ],
-      'Epirus, Inc.': [
-        'Defensa: sistemas de energía dirigida por microondas de alta potencia (línea "Leonidas") para neutralizar enjambres de drones.',
-        'Tecnología de estado sólido, escalable y con costo casi nulo por disparo (vs. misiles costosos).',
-        'Demanda creciente: los drones se han vuelto la amenaza dominante en los conflictos modernos.',
-        'Entrada reciente, ≈ $1.01B.'
-      ],
-      'Radiant Industries': [
-        'Desarrolla microreactores nucleares portátiles ("Kaleidos") que caben en un contenedor de transporte.',
-        'Energía limpia, segura y desplegable para bases militares remotas, zonas de desastre y data centers.',
-        'Surfea dos olas a la vez: el apetito energético de la IA y la descarbonización.',
-        'Entrada reciente, ≈ $1.88B.'
-      ],
-      'Cohere Inc.': [
-        'IA empresarial: modelos de lenguaje (Command) y de búsqueda/embeddings (Rerank) enfocados 100% en empresas.',
-        'Énfasis en privacidad, despliegue on-premise y casos de uso B2B — no compite por el consumidor masivo.',
-        'Alternativa neutral para corporativos que no quieren depender de OpenAI o Anthropic.',
-        'Entrada reciente, ≈ $6.99B.'
-      ],
-      'Groq, Inc.': [
-        'Diseña la LPU, un chip de inferencia de IA con latencia ultra baja y velocidad de generación de tokens líder en la industria.',
-        'Ofrece GroqCloud y acuerdos de gran escala (incl. la transacción con Nvidia reflejada en las cartas del fondo).',
-        'Ataca el cuello de botella de la inferencia (correr modelos), no el entrenamiento — el costo dominante de la IA en producción.',
-        '~3.0x MOIC; de ≈ $4.73B a $14.2B (incluye la porción ya distribuida).'
-      ],
-      'Mythic Inc.': [
-        'Chips de cómputo analógico-en-memoria para IA en el borde (edge), de muy bajo consumo.',
-        'Ejecuta la inferencia sin mover datos constantemente a la memoria, reduciendo drásticamente el gasto energético.',
-        'Nicho técnico diferenciado para dispositivos donde la batería y el calor importan.',
-        'Entrada cercana al costo (1.0x).'
-      ],
-      'Epic Games, Inc.': [
-        'Creador de Fortnite y de Unreal Engine, el motor gráfico estándar de videojuegos, cine y simulación.',
-        'Ecosistema completo: Epic Games Store, herramientas de creación y su visión de "metaverso".',
-        'Marca icónica con ingresos masivos; sus litigios antimonopolio (vs. Apple/Google) podrían abrirle el mercado de las app stores.',
-        '~1.44x MOIC; de ≈ $21.1B a $30.4B.'
-      ],
-      'Figure AI Inc.': [
-        'Desarrolla robots humanoides de propósito general (Figure 02/03) con su propia pila de IA para visión y control.',
-        'Pilotos industriales (p. ej. con BMW) y alianzas de IA; integra modelos de lenguaje para entender y ejecutar tareas.',
-        'Una de las apuestas más codiciadas en robótica humanoide — su valuación se ha disparado entre rondas.',
-        'La posición de mayor múltiplo del fondo: ~14.3x MOIC, de ≈ $2.73B a $39B.'
-      ],
-      'Groq, Inc. (Distributed)': [
-        'Misma compañía que Groq: chips de inferencia de IA de ultra baja latencia (LPU) y GroqCloud.',
-        'Esta porción ya fue distribuida a los inversionistas (realizada), reflejando la fuerte apreciación de Groq.',
-        'Marcada a ~3.0x MOIC al momento de la distribución.'
-      ],
-      'Klarna Holding AB': [
-        'Fintech sueca de pagos "compra ahora, paga después" (BNPL) con decenas de millones de usuarios globales.',
-        'Diversificándose hacia banca, tarjeta y compras asistidas por IA; preparó su salida a bolsa.',
-        'Posición distribuida: el fondo entró en una valuación alta y se marcó a la baja (down-round), con MOIC por debajo de 1x.'
-      ]
+    // Info enriquecida por empresa (pestaña "Empresas").
+    companyInfo: {
+      'Decart.AI, Inc.': {
+        category:'IA generativa en tiempo real', stage:'Etapa temprana',
+        tagline:'Genera video y mundos interactivos cuadro a cuadro, a partir de texto o de una cámara en vivo — sin motor de videojuego.',
+        product:{name:'Oasis', desc:'Entornos jugables y navegables donde la IA "imagina" cada fotograma.'},
+        markets:['Gaming','Media','Simulación','Publicidad'],
+        thesis:'Apuesta por ser la infraestructura de experiencias inmersivas generadas por IA. Posición temprana con alto potencial de revaluación.'
+      },
+      'Saronic Technologies': {
+        category:'Defensa · drones marítimos', stage:'Crecimiento',
+        tagline:'Diseña y fabrica embarcaciones de superficie autónomas (no tripuladas) para defensa naval, producidas a escala.',
+        product:{name:'Buques autónomos', desc:'Naves asequibles y "sacrificables" para vigilancia, patrullaje y misiones navales.'},
+        markets:['Defensa','Naval','Autonomía','Gobierno'],
+        thesis:'Beneficiaria directa de la prioridad del Pentágono por masa autónoma de bajo costo (programa Replicator). Defense-tech de crecimiento explosivo.'
+      },
+      'Anthropic PBC': {
+        category:'IA · modelos fundacionales', stage:'Crecimiento',
+        tagline:'Laboratorio líder de IA y creador de la familia de modelos Claude; constituida como Public Benefit Corporation.',
+        product:{name:'Claude', desc:'Familia de modelos de lenguaje con enfoque en seguridad ("Constitutional AI").'},
+        markets:['Empresas','API','Desarrolladores','Consumo'],
+        thesis:'Posición estrella del fondo. Ingresos creciendo muy rápido; competidor directo de OpenAI con un diferenciador claro en seguridad y alineación.'
+      },
+      'X.AI Corp. (SpaceX)': {
+        category:'Espacio · satélites', stage:'Pública (SPCX)',
+        tagline:'Exposición a SpaceX: líder mundial en lanzamientos orbitales con cohetes reutilizables e internet satelital Starlink.',
+        product:{name:'Falcon/Starship · Starlink', desc:'Cohetes reutilizables y la mayor constelación de internet satelital del mundo.'},
+        markets:['Lanzamientos','Internet satelital','Defensa','Gobierno'],
+        thesis:'Cotiza públicamente desde jun-2026 (SPCX); valuación re-marcada al precio de mercado en vivo. De las posiciones más grandes y líquidas del fondo.'
+      },
+      'CHAOS Industries': {
+        category:'Defensa · sensado', stage:'Crecimiento',
+        tagline:'Sistemas avanzados de sensado, radar y comunicaciones de radiofrecuencia de nueva generación para misiones críticas.',
+        product:{name:'Plataformas RF / radar', desc:'Detección, vigilancia y defensa electrónica frente a amenazas modernas.'},
+        markets:['Defensa','Radar','Comunicaciones','Gobierno'],
+        thesis:'Aprovecha el fuerte aumento de presupuesto y la modernización electrónica del sector defensa.'
+      },
+      'Base Power, Inc.': {
+        category:'Energía residencial', stage:'Crecimiento',
+        tagline:'Instala baterías de respaldo en los hogares y las opera en conjunto como una "central eléctrica virtual".',
+        product:{name:'Batería + servicios de red', desc:'Respaldo y ahorro para el hogar, más venta de servicios a la red (aplanar picos de demanda).'},
+        markets:['Energía','Residencial','Red eléctrica','Texas'],
+        thesis:'Ataca la fragilidad de la red y la demanda eléctrica disparada por la IA y los autos eléctricos. Crecimiento acelerado en Texas.'
+      },
+      'Second Front Systems': {
+        category:'Software de defensa', stage:'Etapa temprana',
+        tagline:'Plataforma SaaS que permite desplegar software comercial dentro de entornos clasificados de defensa, de forma segura y acreditada.',
+        product:{name:'Game Warden', desc:'Elimina el cuello de botella de acreditación de seguridad (ATO), pasando de meses a días.'},
+        markets:['Defensa','SaaS','Gobierno','Cloud'],
+        thesis:'Acelera el "time-to-mission" de contratistas y agencias del DoD de EE.UU. Posición temprana marcada cerca del costo.'
+      },
+      'Payward (Kraken)': {
+        category:'Cripto · exchange', stage:'Crecimiento',
+        tagline:'Opera Kraken, uno de los exchanges de criptomonedas más antiguos, regulados y confiables del mundo.',
+        product:{name:'Kraken', desc:'Trading, staking, custodia y servicios institucionales de cripto.'},
+        markets:['Cripto','Trading','Custodia','Institucional'],
+        thesis:'Beneficiaria del ciclo alcista cripto y de mayor claridad regulatoria; candidata a salir a bolsa.'
+      },
+      'Agility Robotics': {
+        category:'Robótica humanoide', stage:'Etapa temprana',
+        tagline:'Fabrica Digit, un robot humanoide bípedo diseñado para logística y almacenes.',
+        product:{name:'Digit', desc:'Humanoide que mueve totes y cajas en espacios diseñados para personas.'},
+        markets:['Logística','Almacenes','Robótica','Automatización'],
+        thesis:'Apuesta a la escasez estructural de mano de obra y a la automatización del trabajo físico.'
+      },
+      'Kodiak Robotics': {
+        category:'Conducción autónoma', stage:'Crecimiento',
+        tagline:'Desarrolla el "Kodiak Driver", sistema de conducción autónoma para camiones de carga de larga distancia.',
+        product:{name:'Kodiak Driver', desc:'Autonomía para trucking de larga distancia y una variante para defensa / terreno off-road.'},
+        markets:['Trucking','Logística','Defensa','Autonomía'],
+        thesis:'Ataca la escasez crónica de operadores y la eficiencia del transporte de mercancías.'
+      },
+      'Epirus, Inc.': {
+        category:'Defensa · energía dirigida', stage:'Crecimiento',
+        tagline:'Sistemas de energía dirigida por microondas de alta potencia para neutralizar enjambres de drones.',
+        product:{name:'Leonidas', desc:'Microondas de estado sólido, escalables y con costo casi nulo por disparo.'},
+        markets:['Defensa','Anti-drones','Energía dirigida','Gobierno'],
+        thesis:'Los drones se han vuelto la amenaza dominante en los conflictos modernos; demanda creciente por contramedidas asequibles.'
+      },
+      'Radiant Industries': {
+        category:'Energía · nuclear', stage:'Etapa temprana',
+        tagline:'Desarrolla microreactores nucleares portátiles que caben en un contenedor de transporte.',
+        product:{name:'Kaleidos', desc:'Energía limpia y desplegable para bases remotas, zonas de desastre y data centers.'},
+        markets:['Energía','Nuclear','Data centers','Defensa'],
+        thesis:'Surfea dos olas a la vez: el apetito energético de la IA y la descarbonización.'
+      },
+      'Cohere Inc.': {
+        category:'IA empresarial', stage:'Crecimiento',
+        tagline:'Modelos de lenguaje (Command) y de búsqueda/embeddings (Rerank) enfocados 100% en empresas.',
+        product:{name:'Command / Rerank', desc:'LLM y búsqueda con énfasis en privacidad y despliegue on-premise.'},
+        markets:['Empresas','B2B','Búsqueda','On-premise'],
+        thesis:'Alternativa neutral para corporativos que no quieren depender de OpenAI o Anthropic.'
+      },
+      'Groq, Inc.': {
+        category:'Semiconductores · IA', stage:'Crecimiento',
+        tagline:'Diseña la LPU, un chip de inferencia de IA con latencia ultra baja y velocidad de generación de tokens líder en la industria.',
+        product:{name:'LPU / GroqCloud', desc:'Inferencia de IA de altísima velocidad; acuerdos de gran escala (incl. la transacción con Nvidia).'},
+        markets:['Semiconductores','Inferencia','Cloud','IA'],
+        thesis:'Ataca el cuello de botella de la inferencia —el costo dominante de la IA en producción— no el entrenamiento.'
+      },
+      'Mythic Inc.': {
+        category:'Semiconductores · edge', stage:'Etapa temprana',
+        tagline:'Chips de cómputo analógico-en-memoria para IA en el borde (edge), de muy bajo consumo.',
+        product:{name:'Procesador analógico', desc:'Ejecuta inferencia sin mover datos constantemente a memoria, reduciendo drásticamente la energía.'},
+        markets:['Edge','Semiconductores','IoT','Bajo consumo'],
+        thesis:'Nicho técnico diferenciado para dispositivos donde la batería y el calor importan.'
+      },
+      'Epic Games, Inc.': {
+        category:'Gaming · software', stage:'Crecimiento',
+        tagline:'Creador de Fortnite y de Unreal Engine, el motor gráfico estándar de videojuegos, cine y simulación.',
+        product:{name:'Fortnite · Unreal Engine', desc:'Ecosistema de juego, herramientas de creación, tienda propia y visión de "metaverso".'},
+        markets:['Gaming','Motor 3D','App stores','Metaverso'],
+        thesis:'Marca icónica con ingresos masivos; sus litigios antimonopolio (vs. Apple/Google) podrían abrirle el mercado de las app stores.'
+      },
+      'Figure AI Inc.': {
+        category:'Robótica humanoide', stage:'Crecimiento',
+        tagline:'Desarrolla robots humanoides de propósito general (Figure 02/03) con su propia pila de IA para visión y control.',
+        product:{name:'Figure 02 / 03', desc:'Humanoides con IA propia; integra modelos de lenguaje para entender y ejecutar tareas.'},
+        markets:['Robótica','Industrial','IA','Logística'],
+        thesis:'La posición de mayor múltiplo del fondo. Una de las apuestas más codiciadas en humanoides; pilotos industriales (p. ej. con BMW).'
+      },
+      'Groq, Inc. (Distributed)': {
+        category:'Semiconductores · IA', stage:'Distribuida',
+        tagline:'Misma compañía que Groq (LPU y GroqCloud); esta porción ya fue distribuida a los inversionistas.',
+        product:{name:'LPU / GroqCloud', desc:'Inferencia de IA de altísima velocidad.'},
+        markets:['Semiconductores','Inferencia','Cloud','IA'],
+        thesis:'Porción realizada que refleja la fuerte apreciación de Groq; marcada a su MOIC al momento de la distribución.'
+      },
+      'Klarna Holding AB': {
+        category:'Fintech · pagos', stage:'Distribuida',
+        tagline:'Fintech sueca de "compra ahora, paga después" (BNPL) con decenas de millones de usuarios globales.',
+        product:{name:'Klarna BNPL', desc:'Pagos diferidos, banca, tarjeta y compras asistidas por IA.'},
+        markets:['Fintech','Pagos','BNPL','Banca'],
+        thesis:'Posición distribuida: el fondo entró en una valuación alta y se marcó a la baja (down-round), con MOIC por debajo de 1x.'
+      }
     }
   }
 };
@@ -4661,13 +4682,20 @@ function renderFundTrackerDetail(fundId) {
 
   // Pestaña "Empresas": valuación entrada (= actual ÷ MOIC) → actual, + descripción
   let tabsBar = '', companiesPanel = '';
-  if (f.descriptions) {
+  if (f.companyInfo) {
     const allCos = [...f.active, ...(f.distributed || [])];
+    const sec = (icon, title, body) =>
+      `<div class="ft-co-sec"><div class="ft-co-sec-ico"><i class="fa-solid ${icon}"></i></div>` +
+      `<div class="ft-co-sec-body"><div class="ft-co-sec-h">${escapeHtml(title)}</div>${body}</div></div>`;
     const cards = allCos.map(r => {
       const cur = r.corpVal;
-      const entry = (r.moic && r.moic > 0) ? cur / r.moic : cur;
-      const desc = f.descriptions[r.company];
-      const bullets = Array.isArray(desc) ? desc : (desc ? [desc] : []);
+      const moic = (r.moic && r.moic > 0) ? r.moic : 1;
+      const entry = cur / moic;
+      const info = (f.companyInfo || {})[r.company] || {};
+      let valNote;
+      if (Math.abs(moic - 1) < 0.02) valNote = 'Sin cambio: entrada en la ronda más reciente — marca fresca, no estancamiento.';
+      else if (moic > 1) valNote = `Apreciación de ${moic.toFixed(2)}x desde la entrada.`;
+      else valNote = `Marca a la baja respecto a la entrada (down-round · ${moic.toFixed(2)}x).`;
       const override = (f.logoOverrides || {})[r.company];
       const domain = (f.logos || {})[r.company];
       const mono = `<span class="ft-co-mono">${escapeHtml(coInitials(r.company))}</span>`;
@@ -4682,24 +4710,36 @@ function renderFundTrackerDetail(fundId) {
       } else {
         logoHtml = `<div class="ft-co-logo">${mono}</div>`;
       }
+      const tags = [
+        info.category ? `<span class="ft-co-tag ft-co-tag-cat">${escapeHtml(info.category)}</span>` : '',
+        info.stage ? `<span class="ft-co-tag ft-co-tag-stage">${escapeHtml(info.stage)}</span>` : ''
+      ].join('');
+      const hasDetail = info.product || info.markets || info.thesis;
       return `
         <div class="ft-co-card">
           <div class="ft-co-head">
             ${logoHtml}
-            <div class="ft-co-name">${escapeHtml(r.company)}</div>
+            <div class="ft-co-headtext">
+              <div class="ft-co-name">${escapeHtml(r.company)}</div>
+              ${tags ? `<div class="ft-co-tags">${tags}</div>` : ''}
+            </div>
           </div>
+          ${info.tagline ? `<p class="ft-co-tagline">${escapeHtml(info.tagline)}</p>` : ''}
           <div class="ft-co-vals">
-            <div class="ft-co-val">
-              <span class="ft-co-vl">Valuación de entrada</span>
+            <div class="ft-co-valbox">
+              <span class="ft-co-vl">Entrada</span>
               <span class="ft-co-vv">${fmtBil(entry)}</span>
             </div>
-            <div class="ft-co-arrow"><i class="fa-solid fa-arrow-right-long"></i></div>
-            <div class="ft-co-val">
+            <div class="ft-co-valbox">
               <span class="ft-co-vl">Valuación actual</span>
               <span class="ft-co-vv ft-co-vv-now">${fmtBil(cur)}</span>
             </div>
           </div>
-          ${bullets.length ? `<ul class="ft-co-desc">${bullets.map(b => `<li>${escapeHtml(b)}</li>`).join('')}</ul>` : ''}
+          <div class="ft-co-vnote"><i class="fa-solid fa-circle-info"></i> ${escapeHtml(valNote)}</div>
+          ${hasDetail ? `<hr class="ft-co-div">` : ''}
+          ${info.product ? sec('fa-cube', 'Producto · ' + info.product.name, `<div class="ft-co-sec-t">${escapeHtml(info.product.desc)}</div>`) : ''}
+          ${info.markets ? sec('fa-globe', 'Mercado objetivo', `<div class="ft-co-chips">${info.markets.map(m => `<span class="ft-co-chip">${escapeHtml(m)}</span>`).join('')}</div>`) : ''}
+          ${info.thesis ? sec('fa-arrow-trend-up', 'Tesis de inversión', `<div class="ft-co-sec-t">${escapeHtml(info.thesis)}</div>`) : ''}
         </div>`;
     }).join('');
     tabsBar = `
