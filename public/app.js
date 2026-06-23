@@ -4919,57 +4919,197 @@ function exportCompaniesHTML(fundId, btn) {
   setTimeout(() => URL.revokeObjectURL(url), 3000);
 }
 
-// Lazy-load html2pdf.js (html2canvas + jsPDF)
-let _html2pdfPromise = null;
-function loadHtml2Pdf() {
-  if (window.html2pdf) return Promise.resolve();
-  if (_html2pdfPromise) return _html2pdfPromise;
-  _html2pdfPromise = new Promise((resolve, reject) => {
+// Lazy-load jsPDF (UMD)
+let _jspdfPromise = null;
+function loadJsPDF() {
+  if (window.jspdf && window.jspdf.jsPDF) return Promise.resolve();
+  if (_jspdfPromise) return _jspdfPromise;
+  _jspdfPromise = new Promise((resolve, reject) => {
     const s = document.createElement('script');
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
     s.onload = resolve;
-    s.onerror = () => { _html2pdfPromise = null; reject(new Error('No se pudo cargar html2pdf')); };
+    s.onerror = () => { _jspdfPromise = null; reject(new Error('No se pudo cargar jsPDF')); };
     document.head.appendChild(s);
   });
-  return _html2pdfPromise;
+  return _jspdfPromise;
+}
+
+// Carga una imagen (proxy same-origin) como dataURL + dims + formato
+function loadImgData(url) {
+  return fetch(url).then(r => { if (!r.ok) throw new Error('img'); return r.blob(); }).then(blob => {
+    const fmt = blob.type.includes('jpeg') ? 'JPEG' : (blob.type.includes('png') ? 'PNG' : null);
+    if (!fmt) throw new Error('fmt');
+    return new Promise((res, rej) => {
+      const fr = new FileReader();
+      fr.onload = () => {
+        const data = fr.result, im = new Image();
+        im.onload = () => res({ data, fmt, w: im.naturalWidth || 1, h: im.naturalHeight || 1 });
+        im.onerror = () => res({ data, fmt, w: 1, h: 1 });
+        im.src = data;
+      };
+      fr.onerror = rej; fr.readAsDataURL(blob);
+    });
+  });
+}
+
+// jsPDF usa fuentes WinAnsi: reemplaza tipografía que no soporta
+function _san(t) {
+  return String(t == null ? '' : t).replace(/[—–]/g, '-').replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
 }
 
 async function exportCompaniesPDF(fundId, btn) {
   const f = FUND_TRACKERS[fundId]; if (!f || !f.companyInfo) return;
   if (btn) { btn.disabled = true; }
   try {
-    await loadHtml2Pdf();
+    await loadJsPDF();
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+    const PW = 210, PH = 297, M = 12, CW = PW - 2 * M;
+    const ORANGE = [232,101,13], NAVY = [26,31,46], BODY = [61,69,89], GRAY = [107,117,137],
+          MUTED = [154,163,181], BOX = [243,244,247], BORDER = [221,225,236], CHIP = [238,240,245], PALE = [252,238,224];
+    const lh = pt => pt * 0.40;
+    const T = (t, x, y, o) => doc.text(_san(t), x, y, o);
+    const split = (t, w) => doc.splitTextToSize(_san(t), w);
+
+    const seen = new Set();
+    const cos = [...f.active, ...(f.distributed || [])].filter(r => {
+      const b = (r.company || '').replace(/\s*\((?:Distributed|X)\)\s*$/i, '').trim();
+      if (seen.has(b)) return false; seen.add(b); return true;
+    });
+    const logos = {};
+    await Promise.all(cos.map(async r => {
+      const ov0 = (f.logoOverrides || {})[r.company], domain = (f.logos || {})[r.company];
+      let url = null;
+      if (ov0) url = /^https?:/i.test(ov0) ? ov0 : (location.origin + ov0);
+      else if (domain) url = '/api/logo?u=' + encodeURIComponent('https://www.google.com/s2/favicons?sz=128&domain=' + domain);
+      if (!url) return;
+      try { logos[r.company] = await loadImgData(url); } catch (e) { /* sin logo -> monograma */ }
+    }));
     const cutoffPretty = new Date(f.cutoff + 'T00:00:00').toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
-    const wrap = document.createElement('div');
-    wrap.id = 'pdfwrap';
-    // En (0,0) detrás de la página (no fuera de pantalla) para que html2canvas capture bien.
-    wrap.style.cssText = 'position:absolute;left:0;top:0;width:820px;background:#f8f9fc;padding:24px;z-index:-1;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif';
-    // Overrides solo-PDF: html2canvas no soporta bien CSS grid → usar inline-block/flex.
-    const ovCss = `
-      #pdfwrap .ft-co-grid{display:block;font-size:0}
-      #pdfwrap .ft-co-card{display:inline-block;width:374px;vertical-align:top;margin:0 0 16px 0;font-size:14px}
-      #pdfwrap .ft-co-card:nth-child(odd){margin-right:16px}
-      #pdfwrap .ft-co-vals{display:flex;gap:12px}
-      #pdfwrap .ft-co-valbox{flex:1}`;
-    wrap.innerHTML =
-      `<style>${ovCss}</style>` +
-      `<div style="font-size:22px;font-weight:700;color:var(--navy);margin-bottom:4px">${escapeHtml(f.name)} — Empresas</div>` +
-      `<div style="font-size:12px;color:var(--gray-500);margin-bottom:16px">${escapeHtml(f.status)} · ${escapeHtml(f.confidentiality)} · Cutoff ${escapeHtml(cutoffPretty)}</div>` +
-      `<div class="ft-co-grid">${ftCompanyCards(f, { proxyLogos: true })}</div>`;
-    document.body.appendChild(wrap);
-    // esperar a que carguen (o fallen) los logos antes de renderizar
-    await Promise.all([...wrap.querySelectorAll('img')].map(img =>
-      img.complete ? Promise.resolve() : new Promise(res => { img.onload = img.onerror = res; })));
-    await new Promise(r => setTimeout(r, 200));
-    await html2pdf().set({
-      margin: [8, 8, 8, 8],
-      filename: `${f.name.replace(/[^a-z0-9]+/gi, '_')}_Empresas.pdf`,
-      image: { type: 'jpeg', quality: 0.96 },
-      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#f8f9fc', logging: false, scrollX: 0, scrollY: 0, windowWidth: 900 },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-      pagebreak: { mode: ['css', 'legacy'], avoid: '.ft-co-card' }
-    }).from(wrap).save();
-    wrap.remove();
+
+    function card(r, yTop, draw) {
+      const info = (f.companyInfo || {})[r.company] || {};
+      const dn = info.displayName || r.company;
+      const cur = r.corpVal, moic = (r.moic && r.moic > 0) ? r.moic : 1, entry = cur / moic;
+      let note;
+      if (Math.abs(moic - 1) < 0.02) note = 'Sin cambio: entrada en la ronda mas reciente, marca fresca.';
+      else if (moic > 1) note = 'Apreciacion de ' + moic.toFixed(2) + 'x desde la entrada.';
+      else note = 'Marca a la baja respecto a la entrada (down-round, ' + moic.toFixed(2) + 'x).';
+      const pad = 6, ix = M + pad, iw = CW - 2 * pad;
+      let cy = yTop + pad;
+
+      const logoS = 13;
+      if (draw) {
+        const lg = logos[r.company];
+        if (lg) {
+          let dw = logoS, dh = logoS;
+          if (lg.w >= lg.h) dh = logoS * lg.h / lg.w; else dw = logoS * lg.w / lg.h;
+          doc.setDrawColor.apply(doc, BORDER); doc.setFillColor(255,255,255);
+          doc.roundedRect(ix, cy, logoS, logoS, 2.5, 2.5, 'FD');
+          try { doc.addImage(lg.data, lg.fmt, ix + (logoS - dw)/2, cy + (logoS - dh)/2, dw, dh); } catch (e) {}
+        } else {
+          doc.setFillColor.apply(doc, PALE); doc.roundedRect(ix, cy, logoS, logoS, 2.5, 2.5, 'F');
+          doc.setTextColor.apply(doc, ORANGE); doc.setFont('helvetica','bold'); doc.setFontSize(13);
+          T(coInitials(dn), ix + logoS/2, cy + logoS/2 + 1.6, { align: 'center' });
+        }
+      }
+      const nx = ix + logoS + 4, nw = iw - logoS - 4;
+      doc.setFont('helvetica','bold'); doc.setFontSize(12);
+      const nameLines = split(dn, nw);
+      if (draw) { doc.setTextColor.apply(doc, NAVY); nameLines.forEach((ln,i) => T(ln, nx, cy + 3.5 + i*lh(12))); }
+      let hcy = cy + 3.5 + nameLines.length * lh(12);
+      const tagParts = [];
+      if (info.category) tagParts.push([info.category, ORANGE]);
+      if (info.stage) tagParts.push([info.stage, GRAY]);
+      if (tagParts.length) {
+        if (draw) {
+          doc.setFont('helvetica','bold'); doc.setFontSize(8); let tx = nx;
+          tagParts.forEach((tp,i) => {
+            if (i) { doc.setTextColor.apply(doc, MUTED); T('|', tx, hcy + 2); tx += 2.6; }
+            doc.setTextColor.apply(doc, tp[1]); T(tp[0], tx, hcy + 2);
+            tx += doc.getTextWidth(_san(tp[0])) + 2.6;
+          });
+        }
+        hcy += 4;
+      }
+      cy = cy + Math.max(logoS, hcy - cy) + 3;
+
+      if (info.tagline) {
+        doc.setFont('helvetica','normal'); doc.setFontSize(9.5);
+        const tl = split(info.tagline, iw);
+        if (draw) { doc.setTextColor.apply(doc, BODY); tl.forEach((ln,i) => T(ln, ix, cy + 3 + i*lh(9.5))); }
+        cy += tl.length * lh(9.5) + 4;
+      }
+
+      const boxH = 14, gap = 4, bw = (iw - gap) / 2;
+      if (draw) {
+        [['Entrada', fmtBil(entry), NAVY, ix], ['Valuacion actual', fmtBil(cur), ORANGE, ix + bw + gap]].forEach(b => {
+          doc.setFillColor.apply(doc, BOX); doc.roundedRect(b[3], cy, bw, boxH, 2.5, 2.5, 'F');
+          doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor.apply(doc, GRAY);
+          T(b[0].toUpperCase(), b[3] + 4, cy + 5);
+          doc.setFontSize(15); doc.setTextColor.apply(doc, b[2]);
+          T(b[1], b[3] + 4, cy + 11.5);
+        });
+      }
+      cy += boxH + 4;
+
+      doc.setFont('helvetica','normal'); doc.setFontSize(8);
+      const nl = split(note, iw - 4);
+      if (draw) { doc.setTextColor.apply(doc, GRAY); nl.forEach((ln,i) => T(ln, ix + 4, cy + 2.5 + i*lh(8))); }
+      cy += nl.length * lh(8) + 3;
+
+      if (draw) { doc.setDrawColor.apply(doc, BORDER); doc.line(ix, cy, ix + iw, cy); }
+      cy += 4;
+
+      const drawSec = (title, isChips, payload) => {
+        doc.setFont('helvetica','bold'); doc.setFontSize(10);
+        if (draw) {
+          doc.setFillColor.apply(doc, ORANGE); doc.roundedRect(ix, cy - 2.6, 2.4, 2.4, 0.6, 0.6, 'F');
+          doc.setTextColor.apply(doc, NAVY); T(title, ix + 4.5, cy);
+        }
+        cy += lh(10) + 1.5;
+        if (isChips) {
+          doc.setFont('helvetica','normal'); doc.setFontSize(8.5); let cx = ix;
+          payload.forEach(m => {
+            const cwid = doc.getTextWidth(_san(m)) + 5;
+            if (cx + cwid > ix + iw) { cx = ix; cy += 6; }
+            if (draw) {
+              doc.setFillColor.apply(doc, CHIP); doc.roundedRect(cx, cy - 3.4, cwid, 5, 2.5, 2.5, 'F');
+              doc.setTextColor.apply(doc, BODY); T(m, cx + 2.5, cy);
+            }
+            cx += cwid + 2.5;
+          });
+          cy += 6 + 1;
+        } else {
+          doc.setFont('helvetica','normal'); doc.setFontSize(9);
+          const bl = split(payload, iw);
+          if (draw) { doc.setTextColor.apply(doc, BODY); bl.forEach((ln,i) => T(ln, ix, cy + i*lh(9))); }
+          cy += bl.length * lh(9) + 3;
+        }
+      };
+      if (info.product) drawSec('Producto - ' + info.product.name, false, info.product.desc);
+      if (info.markets) drawSec('Mercado objetivo', true, info.markets);
+      if (info.thesis)  drawSec('Tesis de inversion', false, info.thesis);
+
+      cy += pad - 2;
+      return cy - yTop;
+    }
+
+    let y = M;
+    doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.setTextColor.apply(doc, ORANGE);
+    T(f.name + ' - Empresas', M, y + 3); y += 8;
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor.apply(doc, GRAY);
+    T(f.status + ' - ' + f.confidentiality + ' - Cutoff ' + cutoffPretty, M, y); y += 7;
+
+    for (const r of cos) {
+      const h = card(r, 0, false);
+      if (y + h > PH - M) { doc.addPage(); y = M; }
+      doc.setDrawColor.apply(doc, BORDER); doc.setFillColor(255,255,255);
+      doc.roundedRect(M, y, CW, h, 3, 3, 'FD');
+      card(r, y, true);
+      y += h + 6;
+    }
+    doc.save(f.name.replace(/[^a-z0-9]+/gi, '_') + '_Empresas.pdf');
   } catch (e) {
     alert('No se pudo generar el PDF: ' + e.message);
   } finally {
