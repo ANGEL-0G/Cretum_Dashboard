@@ -4245,7 +4245,68 @@ const FUND_TRACKERS = {
       { company: 'Figure AI Inc.',              invested: 426634,   pct: 0.003, mtm: 5446374,  moic: 12.7659,corpVal: 34.812, pps: 174,   entry: 13.63, shares: 31301,  fdso: 200.1 }
     ],
     overallTotal:     { invested: 128568084, mtm: 196438047, moic: 1.5279 },
-    overallTotal2:    { label: 'Total — Overall (Commitment)', invested: 154000000, mtm: 196438047, moic: 1.2756 }
+    overallTotal2:    { label: 'Total — Overall (Commitment)', invested: 154000000, mtm: 196438047, moic: 1.2756 },
+    logos: {
+      'RapidSOS, Inc.':'rapidsos.com',
+      'BlueVoyant, Inc.':'bluevoyant.com',
+      'Job and Talent Holding, Ltd':'jobandtalent.com',
+      'Epic Games, Inc.':'epicgames.com',
+      'Space Exploration Technologies Corp. (X)':'spacex.com',
+      'Platform Science, Inc.':'platformscience.com',
+      'Patreon, Inc.':'patreon.com',
+      'Wefox Holding AG':'wefox.com',
+      'Cohere':'cohere.com',
+      'Hawkeye 360, Inc.':'he360.com',
+      'Cohesity Global, Inc.':'cohesity.com',
+      'Trusted, Inc.':'trustedhealth.com',
+      'Forto Logistics GmbH & Co':'forto.com',
+      'Revolut Ltd':'revolut.com',
+      'Quantstamp, Inc.':'quantstamp.com',
+      'Groq, Inc.':'groq.com',
+      'IONQ (Capella Space Corp.)':'ionq.com',
+      'Transfix, Inc.':'transfix.io',
+      'Loft Holdings, Ltd':'loft.com.br',
+      'Automattic, Inc.':'automattic.com',
+      'Figure AI Inc.':'figure.ai',
+      'Neutron Holdings, Inc., DBA Lime':'li.me',
+      'Payward Inc., DBA Kraken':'kraken.com',
+      'Turo, Inc.':'turo.com',
+      'Klarna Holding AB':'klarna.com',
+      'Bolt Financial, Inc.':'bolt.com',
+      'Instacart':'instacart.com',
+      'Udemy':'udemy.com'
+    },
+    companyInfo: {
+      'RapidSOS, Inc.':{category:'Datos de emergencia',stage:'Crecimiento',tagline:'Plataforma de datos de emergencia que conecta dispositivos, apps y sensores con los centros de 911.',product:{name:'RapidSOS',desc:'Enruta ubicación y datos críticos a los servicios de emergencia en tiempo real.'},markets:['Seguridad pública','911','IoT','Datos'],thesis:'Infraestructura con efecto de red entre operadores, fabricantes y respondedores de emergencia.'},
+      'BlueVoyant, Inc.':{category:'Ciberseguridad',stage:'Crecimiento',tagline:'Ciberseguridad gestionada: detección y respuesta (MDR) más defensa de la cadena de suministro.',product:{name:'MDR + Supply Chain Defense',desc:'Monitoreo 24/7 y gestión de riesgo de terceros para empresas y gobierno.'},markets:['Ciberseguridad','MDR','Empresas','Gobierno'],thesis:'Demanda estructural de ciberdefensa gestionada ante amenazas crecientes.'},
+      'Job and Talent Holding, Ltd':{category:'Staffing · marketplace',stage:'Crecimiento',tagline:'Marketplace de empleo on-demand que conecta trabajadores temporales con empresas.',product:{name:'Jobandtalent',desc:'Contratación y gestión de personal temporal a escala.'},markets:['Staffing','Marketplace','RRHH','Europa'],thesis:'Digitaliza un mercado laboral temporal enorme y fragmentado.'},
+      'Epic Games, Inc.':{category:'Gaming · software',stage:'Tardía',tagline:'Creador de Fortnite y de Unreal Engine, el motor gráfico estándar de la industria.',product:{name:'Fortnite · Unreal Engine',desc:'Ecosistema de juego, motor 3D, tienda y visión de metaverso.'},markets:['Gaming','Motor 3D','App stores','Metaverso'],thesis:'Marca icónica con ingresos masivos; sus litigios antimonopolio podrían abrir el mercado de app stores.'},
+      'Space Exploration Technologies Corp. (X)':{category:'Espacio · satélites',stage:'Pública (SPCX)',tagline:'SpaceX: líder mundial en lanzamientos reutilizables e internet satelital Starlink.',product:{name:'Falcon/Starship · Starlink',desc:'Cohetes reutilizables y la mayor constelación de internet satelital.'},markets:['Lanzamientos','Internet satelital','Defensa','Gobierno'],thesis:'Cotiza desde jun-2026 (SPCX); valuación re-marcada al mercado. Posición de alta convicción.'},
+      'Platform Science, Inc.':{category:'Telemática · trucking',stage:'Crecimiento',tagline:'Plataforma de telemática y software conectado para flotas de transporte de carga.',product:{name:'Connected Vehicle Platform',desc:'Apps y datos a bordo para optimizar flotas y cumplimiento.'},markets:['Trucking','Telemática','Flotas','SaaS'],thesis:'Digitaliza la operación de flotas; alianzas con grandes fabricantes de camiones.'},
+      'Patreon, Inc.':{category:'Creator economy',stage:'Crecimiento',tagline:'Plataforma de membresías para que creadores cobren suscripciones recurrentes a sus fans.',product:{name:'Patreon',desc:'Suscripciones, contenido exclusivo y comunidad para creadores.'},markets:['Creator economy','Suscripciones','Media','Comunidad'],thesis:'Ingresos recurrentes para creadores; entró en valuación alta y se marcó a la baja.'},
+      'Wefox Holding AG':{category:'Insurtech',stage:'Crecimiento',tagline:'Insurtech europea: distribución digital de seguros a través de agentes y plataforma.',product:{name:'Plataforma de seguros',desc:'Conecta aseguradoras, agentes y clientes en un modelo digital.'},markets:['Insurtech','Seguros','Europa','Distribución'],thesis:'Digitaliza la distribución de seguros; ejecución y rentabilidad bajo escrutinio.'},
+      'Cohere':{category:'IA empresarial',stage:'Crecimiento',tagline:'Modelos de lenguaje (Command) y búsqueda (Rerank) enfocados 100% en empresas.',product:{name:'Command / Rerank',desc:'LLM y búsqueda con privacidad y despliegue on-premise.'},markets:['Empresas','B2B','Búsqueda','On-premise'],thesis:'Alternativa neutral para corporativos que no quieren depender de OpenAI o Anthropic.'},
+      'Hawkeye 360, Inc.':{category:'Geoespacial · RF',stage:'Crecimiento',tagline:'Analítica geoespacial de radiofrecuencia: detecta y geolocaliza señales desde satélites.',product:{name:'RF Analytics',desc:'Inteligencia de señales para defensa, seguridad marítima y monitoreo.'},markets:['Geoespacial','Defensa','Satélites','Inteligencia'],thesis:'Datos únicos de RF desde el espacio, con demanda creciente en defensa y seguridad.'},
+      'Cohesity Global, Inc.':{category:'Gestión de datos',stage:'Tardía',tagline:'Gestión, respaldo y recuperación de datos empresariales; fusionada con Veritas.',product:{name:'Data Cloud',desc:'Backup, recuperación y seguridad de datos contra ransomware.'},markets:['Datos','Backup','Ciberseguridad','Empresas'],thesis:'Líder consolidado en protección de datos tras la fusión con Veritas; rumbo a IPO.'},
+      'Trusted, Inc.':{category:'Healthtech · staffing',stage:'Crecimiento',tagline:'Marketplace de personal de salud que conecta enfermeras con hospitales.',product:{name:'Trusted Health',desc:'Contratación y gestión de enfermería (travel nursing) de forma digital.'},markets:['Salud','Staffing','Marketplace','Enfermería'],thesis:'Digitaliza el staffing de salud ante la escasez crónica de personal.'},
+      'Forto Logistics GmbH & Co':{category:'Logística digital',stage:'Crecimiento',tagline:'Freight forwarding digital: gestiona envíos internacionales de carga de punta a punta.',product:{name:'Plataforma de carga',desc:'Cotización, reserva y visibilidad de envíos en una sola plataforma.'},markets:['Logística','Freight','Supply chain','Europa'],thesis:'Digitaliza el forwarding tradicional; sensible al ciclo del comercio global.'},
+      'Revolut Ltd':{category:'Fintech · neobanco',stage:'Tardía',tagline:'Súper-app financiera: cuentas, tarjetas, FX, cripto e inversiones para decenas de millones.',product:{name:'Revolut',desc:'Banca, pagos, FX, cripto y trading en una sola app.'},markets:['Fintech','Neobanco','Pagos','Cripto'],thesis:'Decacornio global (~$75B); de las fintech más grandes del mundo, rumbo a IPO.'},
+      'Quantstamp, Inc.':{category:'Cripto · seguridad',stage:'Crecimiento',tagline:'Seguridad de blockchain: auditorías de smart contracts y protocolos Web3.',product:{name:'Auditorías Web3',desc:'Revisión y aseguramiento de contratos inteligentes.'},markets:['Cripto','Seguridad','Web3','Auditoría'],thesis:'Capa de confianza para Web3; demanda ligada a la actividad cripto.'},
+      'Groq, Inc.':{category:'Semiconductores · IA',stage:'Adquirida',tagline:'Diseña la LPU, chip de inferencia de IA con latencia ultra baja y velocidad líder.',product:{name:'LPU / GroqCloud',desc:'Inferencia de IA de altísima velocidad; acuerdos de gran escala (incl. Nvidia).'},markets:['Semiconductores','Inferencia','Cloud','IA'],thesis:'Ataca el cuello de botella de la inferencia —el costo dominante de la IA en producción.'},
+      'IONQ (Capella Space Corp.)':{category:'Cómputo cuántico',stage:'Pública',tagline:'IonQ: computación cuántica de iones atrapados, accesible vía la nube (NYSE: IONQ).',product:{name:'Sistemas cuánticos',desc:'Hardware cuántico de iones atrapados ofrecido como servicio.'},markets:['Cuántica','Cómputo','Cloud','Deep tech'],thesis:'Pionero cotizado en computación cuántica; apuesta de muy largo plazo.'},
+      'Transfix, Inc.':{category:'Logística · freight',stage:'Crecimiento',tagline:'Marketplace digital de carga que conecta a remitentes con transportistas.',product:{name:'Transfix',desc:'Plataforma de matching y gestión de fletes de camión.'},markets:['Trucking','Freight','Marketplace','Logística'],thesis:'Eficiencia en un mercado de carga fragmentado; sensible al ciclo de fletes.'},
+      'Loft Holdings, Ltd':{category:'Proptech',stage:'Crecimiento',tagline:'Proptech brasileña: marketplace para comprar, vender y rentar inmuebles en línea.',product:{name:'Loft',desc:'Plataforma de transacciones inmobiliarias residenciales en Brasil.'},markets:['Proptech','Real estate','Brasil','Marketplace'],thesis:'Digitaliza el real estate en LatAm; afectada por tasas y down-rounds.'},
+      'Automattic, Inc.':{category:'Software · web',stage:'Tardía',tagline:'Compañía detrás de WordPress.com, WooCommerce, Tumblr y Jetpack.',product:{name:'WordPress.com · WooCommerce',desc:'Publicación web y e-commerce para una enorme parte de la web.'},markets:['Web','CMS','E-commerce','Open source'],thesis:'Sustenta una fracción enorme de los sitios del mundo; marca y distribución dominantes.'},
+      'Figure AI Inc.':{category:'Robótica humanoide',stage:'Tardía',tagline:'Robots humanoides de propósito general (Figure 02/03) con su propia pila de IA.',product:{name:'Figure 02 / 03',desc:'Humanoides con IA propia; integran modelos de lenguaje para tareas.'},markets:['Robótica','Industrial','IA','Logística'],thesis:'La posición de mayor múltiplo del fondo; pilotos industriales (p. ej. con BMW).'},
+      'Amazegroup, Inc.':{category:'Holding · cripto',stage:'Temprana',tagline:'Holding con exposición a un negocio australiano relacionado con criptomonedas.',markets:['Cripto','Holding'],thesis:'Posición pequeña y especulativa; marcada a la baja.'},
+      'Neutron Holdings, Inc., DBA Lime':{category:'Micromovilidad',stage:'Tardía',tagline:'Lime: scooters y bicicletas eléctricas compartidas en cientos de ciudades.',product:{name:'Lime',desc:'Flota compartida de e-scooters y e-bikes vía app.'},markets:['Micromovilidad','Transporte','Ciudades','App'],thesis:'Líder de micromovilidad, rentable y rumbo a IPO.'},
+      'Payward Inc., DBA Kraken':{category:'Cripto · exchange',stage:'Tardía',tagline:'Opera Kraken, uno de los exchanges de cripto más antiguos y regulados del mundo.',product:{name:'Kraken',desc:'Trading, staking, custodia y servicios institucionales de cripto.'},markets:['Cripto','Trading','Custodia','Institucional'],thesis:'Beneficiaria del ciclo cripto y de mayor claridad regulatoria; candidata a IPO.'},
+      'Turo, Inc.':{category:'Marketplace · movilidad',stage:'Tardía',tagline:'Marketplace de renta de autos entre particulares ("el Airbnb de los autos").',product:{name:'Turo',desc:'Plataforma P2P para rentar y poner autos en renta.'},markets:['Movilidad','Marketplace','Viajes','P2P'],thesis:'Líder en car-sharing P2P en un mercado grande; candidata a IPO.'},
+      'Klarna Holding AB':{category:'Fintech · pagos',stage:'Pública',tagline:'Fintech sueca de "compra ahora, paga después" (BNPL) con decenas de millones de usuarios.',product:{name:'Klarna',desc:'Pagos diferidos, banca, tarjeta y compras asistidas por IA.'},markets:['Fintech','Pagos','BNPL','Banca'],thesis:'Líder global de BNPL; ya cotiza en bolsa.'},
+      'Bolt Financial, Inc.':{category:'Fintech · pagos',stage:'Crecimiento',tagline:'Checkout de un clic que permite pagos rápidos y sin fricción en e-commerce.',product:{name:'Bolt Checkout',desc:'Red de identidad y pago "one-click" para comercios online.'},markets:['Fintech','Pagos','E-commerce','Checkout'],thesis:'Apuesta al checkout sin fricción; entró alto y se marcó fuertemente a la baja.'},
+      'Instacart':{category:'E-commerce · delivery',stage:'Pública',tagline:'Plataforma de entrega de súper bajo demanda en Norteamérica (público: CART).',product:{name:'Instacart',desc:'Entrega de abarrotes y publicidad para retailers.'},markets:['Delivery','Grocery','Retail media','E-commerce'],thesis:'Líder de grocery delivery con un negocio de publicidad rentable; cotiza como CART.'},
+      'Udemy':{category:'Edtech',stage:'Pública',tagline:'Marketplace global de cursos en línea para consumidores y empresas (público: UDMY).',product:{name:'Udemy / Udemy Business',desc:'Cursos a la carta y capacitación corporativa.'},markets:['Edtech','Cursos','B2B','Marketplace'],thesis:'Marketplace de aprendizaje con un brazo empresarial (Udemy Business) en crecimiento.'}
+    }
   },
   fundV: {
     id: 'fundV',
@@ -4685,7 +4746,7 @@ function renderFundTrackerDetail(fundId) {
   if (f.companyInfo) {
     const _seenCo = new Set();
     const allCos = [...f.active, ...(f.distributed || [])].filter(r => {
-      const base = (r.company || '').replace(/\s*\(Distributed\)\s*$/i, '').trim();
+      const base = (r.company || '').replace(/\s*\((?:Distributed|X)\)\s*$/i, '').trim();
       if (_seenCo.has(base)) return false;   // una sola tarjeta por empresa
       _seenCo.add(base); return true;
     });
