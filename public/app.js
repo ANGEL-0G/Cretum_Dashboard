@@ -3746,7 +3746,7 @@ const SPX_LOCKUP_A_EXT = [
 ];
 function spxStructures(seriesName) {
   const s = seriesName || '';
-  if (/All-Star Fund IV|Fund IV/i.test(s)) return ['A', 'B'];
+  if (/All-Star Fund IV/i.test(s)) return ['A', 'B'];
   if (/22K|22J/i.test(s)) return ['A'];
   return ['B'];
 }
@@ -3782,9 +3782,10 @@ function buildLp360(positions) {
     const by = { A: [], B: [] };
     spxPos.forEach(p => {
       const sname = p.series?.name || '';
-      const short = /Fund IV/i.test(sname) ? 'Fund IV' : /Fund V/i.test(sname) ? 'Fund V'
-        : /22K/i.test(sname) ? 'Serie 22K' : /22J/i.test(sname) ? 'Serie 22J'
-        : (sname.replace('MVP Opportunity Fund VI LLC, ', '').replace('MVP ', '') || 'SpaceX directo');
+      const m = sname.match(/Series\s+([\w-]+)/i);
+      const short = /All-Star Fund IV/i.test(sname) ? 'Fund IV'
+        : /All-Star Fund V/i.test(sname) ? 'Fund V'
+        : (m ? 'Serie ' + m[1] : 'SpaceX');
       spxStructures(sname).forEach(st => { if (!by[st].includes(short)) by[st].push(short); });
     });
     const today = new Date().toISOString().slice(0, 10);
