@@ -1771,48 +1771,77 @@ function fmtUsdShort(v) {
 }
 
 let _mvpKpisLoaded = false;
+// Calcula el snapshot MVP-LATAM (live desde la DB). Reusado por el panel de Inicio
+// y por el modal "Full LATAM MVP Snapshot" de Base de Datos.
+async function _computeMvpSnapshot() {
+  const [inv, dist, comps] = await Promise.all([
+    sbFetchAll('investments', 'investor_id,company_id,commitment,commitment_actual,distributed_at'),
+    sbFetchAll('investment_distributions', 'value_in_kind,cash_proceeds'),
+    sbFetchAll('companies', 'id,name')
+  ]);
+  const n = v => (Number(v) || 0);
+  const active = inv.filter(r => !r.distributed_at);
+  const committed = active.reduce((s, r) => s + n(r.commitment), 0);
+  const nav = active.reduce((s, r) => s + (n(r.commitment_actual) || n(r.commitment)), 0);
+  const moic = committed ? nav / committed : 0;
+  const distrib = dist.reduce((s, r) => s + n(r.value_in_kind) + n(r.cash_proceeds), 0);
+  const nInv = new Set(inv.map(r => r.investor_id)).size;
+  const nPos = active.length;
+  const cname = Object.fromEntries(comps.map(c => [c.id, c.name]));
+  const byCo = {};
+  active.forEach(r => { const k = r.company_id; byCo[k] = (byCo[k] || 0) + (n(r.commitment_actual) || n(r.commitment)); });
+  const top = Object.entries(byCo).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  return { committed, nav, moic, distrib, nInv, nPos, top, cname };
+}
+
+function _mvpSnapshotInnerHtml(d, topN) {
+  const top = d.top.slice(0, topN || 5);
+  const maxv = top.length ? top[0][1] : 1;
+  const kpi = (label, val, cls) => `<div class="home-kpi"><div class="home-kpi-l">${label}</div><div class="home-kpi-v ${cls || ''}">${val}</div></div>`;
+  return `<div class="home-kpis-grid">` +
+      kpi('Capital comprometido', fmtUsdShort(d.committed)) +
+      kpi('Valor actual (NAV)', fmtUsdShort(d.nav), 'accent') +
+      kpi('MOIC', d.moic.toFixed(2) + 'x', moicClass(d.moic)) +
+      kpi('Distribuido a la fecha', fmtUsdShort(d.distrib)) +
+      kpi('Inversionistas', d.nInv.toLocaleString('en-US')) +
+      kpi('Posiciones activas', d.nPos.toLocaleString('en-US')) +
+    `</div>` +
+    `<div class="home-top">` +
+      `<div class="home-top-h">Top posiciones por valor (NAV activo)</div>` +
+      top.map(([cid, v]) => `<div class="home-top-row"><span class="home-top-name">${escapeHtml(d.cname[cid] || '—')}</span><div class="home-top-bar"><div class="home-top-fill" style="width:${(v / maxv * 100).toFixed(1)}%"></div></div><span class="home-top-val">${fmtUsdShort(v)}</span></div>`).join('') +
+    `</div>`;
+}
+
 async function renderMvpKpis() {
   const host = document.getElementById('homeKpis');
   if (!host || currentOrg !== 'mvp') return;
   if (!_mvpKpisLoaded) host.innerHTML = '<div class="home-kpis-load">Cargando resumen del negocio…</div>';
   try {
-    const [inv, dist, comps] = await Promise.all([
-      sbFetchAll('investments', 'investor_id,company_id,commitment,commitment_actual,distributed_at'),
-      sbFetchAll('investment_distributions', 'value_in_kind,cash_proceeds'),
-      sbFetchAll('companies', 'id,name')
-    ]);
-    const n = v => (Number(v) || 0);
-    const active = inv.filter(r => !r.distributed_at);
-    const committed = active.reduce((s, r) => s + n(r.commitment), 0);
-    const nav = active.reduce((s, r) => s + (n(r.commitment_actual) || n(r.commitment)), 0);
-    const moic = committed ? nav / committed : 0;
-    const distrib = dist.reduce((s, r) => s + n(r.value_in_kind) + n(r.cash_proceeds), 0);
-    const nInv = new Set(inv.map(r => r.investor_id)).size;
-    const nPos = active.length;
-    const cname = Object.fromEntries(comps.map(c => [c.id, c.name]));
-    const byCo = {};
-    active.forEach(r => { const k = r.company_id; byCo[k] = (byCo[k] || 0) + (n(r.commitment_actual) || n(r.commitment)); });
-    const top = Object.entries(byCo).sort((a, b) => b[1] - a[1]).slice(0, 5);
-    const maxv = top.length ? top[0][1] : 1;
-    const kpi = (label, val, cls) => `<div class="home-kpi"><div class="home-kpi-l">${label}</div><div class="home-kpi-v ${cls || ''}">${val}</div></div>`;
-    host.innerHTML =
-      `<div class="home-kpis-title">Resumen MVP - LATAM</div>` +
-      `<div class="home-kpis-grid">` +
-        kpi('Capital comprometido', fmtUsdShort(committed)) +
-        kpi('Valor actual (NAV)', fmtUsdShort(nav), 'accent') +
-        kpi('MOIC', moic.toFixed(2) + 'x', moicClass(moic)) +
-        kpi('Distribuido a la fecha', fmtUsdShort(distrib)) +
-        kpi('Inversionistas', nInv.toLocaleString('en-US')) +
-        kpi('Posiciones activas', nPos.toLocaleString('en-US')) +
-      `</div>` +
-      `<div class="home-top">` +
-        `<div class="home-top-h">Top posiciones por valor (NAV activo)</div>` +
-        top.map(([cid, v]) => `<div class="home-top-row"><span class="home-top-name">${escapeHtml(cname[cid] || '—')}</span><div class="home-top-bar"><div class="home-top-fill" style="width:${(v / maxv * 100).toFixed(1)}%"></div></div><span class="home-top-val">${fmtUsdShort(v)}</span></div>`).join('') +
-      `</div>`;
+    const d = await _computeMvpSnapshot();
+    host.innerHTML = `<div class="home-kpis-title">Resumen MVP - LATAM</div>` + _mvpSnapshotInnerHtml(d, 5);
     _mvpKpisLoaded = true;
   } catch (e) {
     host.innerHTML = `<div class="home-kpis-err">No se pudo cargar el resumen: ${escapeHtml(e.message || 'error')}</div>`;
   }
+}
+
+// Modal "Full LATAM MVP Snapshot" (Base de Datos) — top 10 posiciones.
+async function openMvpSnapshot() {
+  const modal = document.getElementById('mvpSnapModal');
+  const body = document.getElementById('mvpSnapBody');
+  if (!modal || !body) return;
+  modal.style.display = '';
+  body.innerHTML = '<div class="home-kpis-load">Cargando snapshot…</div>';
+  try {
+    const d = await _computeMvpSnapshot();
+    body.innerHTML = _mvpSnapshotInnerHtml(d, 10);
+  } catch (e) {
+    body.innerHTML = `<div class="home-kpis-err">No se pudo cargar el snapshot: ${escapeHtml(e.message || 'error')}</div>`;
+  }
+}
+function closeMvpSnapshot() {
+  const m = document.getElementById('mvpSnapModal');
+  if (m) m.style.display = 'none';
 }
 
 function renderNavList() {
@@ -2814,6 +2843,8 @@ function renderDbList() {
   const list = document.getElementById('dbList');
   list.style.display = '';
   document.getElementById('dbDetail').classList.remove('show');
+  const snapBtn = document.getElementById('dbSnapBtn');
+  if (snapBtn) snapBtn.style.display = currentOrg === 'mvp' ? '' : 'none';
 
   const anyFilter = !!(q || companyId || seriesId || titular);
   document.getElementById('dbClear').style.display = anyFilter ? '' : 'none';

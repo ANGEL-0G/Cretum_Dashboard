@@ -1108,6 +1108,17 @@ button,input,select{font-family:var(--font)}
 .home-top-fill{height:100%;background:var(--navy);border-radius:6px}
 .home-top-val{flex:0 0 auto;color:var(--gray-700);font-weight:600;font-variant-numeric:tabular-nums}
 .home-kpis-load,.home-kpis-err{font-size:13px;color:var(--gray-500);padding:8px 2px}
+/* Botón + modal Full LATAM MVP Snapshot */
+.db-snap-btn{margin-left:auto;display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border:none;border-radius:10px;background:var(--navy);color:#fff;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:filter .15s}
+.db-snap-btn:hover{filter:brightness(1.08)}
+.mvp-snap-modal{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px}
+.mvp-snap-backdrop{position:absolute;inset:0;background:rgba(15,23,42,.45);backdrop-filter:blur(2px)}
+.mvp-snap-card{position:relative;background:#fff;border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,.28);width:min(720px,100%);max-height:88vh;overflow:auto}
+.mvp-snap-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--gray-100);position:sticky;top:0;background:#fff;z-index:1}
+.mvp-snap-title{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:700;color:var(--navy)}
+.mvp-snap-close{border:none;background:var(--gray-100);color:var(--gray-700);width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:15px}
+.mvp-snap-close:hover{background:var(--gray-200)}
+.mvp-snap-body{padding:22px}
 
 /* Vista 360 del LP (Base de Datos) */
 .lp-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:14px 0 4px}
@@ -2565,6 +2576,21 @@ button,input,select{font-family:var(--font)}
       <div class="db-search">
         <i class="fa-solid fa-magnifying-glass db-search-ico"></i>
         <input id="dbSearch" class="db-search-inp" placeholder="Buscar por nombre…" oninput="renderDbList()" autocomplete="off">
+      </div>
+      <button class="db-snap-btn" id="dbSnapBtn" onclick="openMvpSnapshot()" style="display:none">
+        <i class="fa-solid fa-chart-pie"></i> Full LATAM MVP Snapshot
+      </button>
+    </div>
+
+    <!-- Modal: Full LATAM MVP Snapshot -->
+    <div class="mvp-snap-modal" id="mvpSnapModal" style="display:none">
+      <div class="mvp-snap-backdrop" onclick="closeMvpSnapshot()"></div>
+      <div class="mvp-snap-card">
+        <div class="mvp-snap-head">
+          <div class="mvp-snap-title"><i class="fa-solid fa-chart-pie"></i> Full LATAM MVP Snapshot</div>
+          <button class="mvp-snap-close" onclick="closeMvpSnapshot()" title="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="mvp-snap-body" id="mvpSnapBody"></div>
       </div>
     </div>
 
