@@ -4325,7 +4325,7 @@ const FUND_TRACKERS = {
     // Info enriquecida por empresa (pestaña "Empresas").
     companyInfo: {
       'Decart.AI, Inc.': {
-        category:'IA generativa en tiempo real', stage:'Etapa temprana',
+        category:'IA generativa en tiempo real', stage:'Temprana',
         tagline:'Genera video y mundos interactivos cuadro a cuadro, a partir de texto o de una cámara en vivo — sin motor de videojuego.',
         product:{name:'Oasis', desc:'Entornos jugables y navegables donde la IA "imagina" cada fotograma.'},
         markets:['Gaming','Media','Simulación','Publicidad'],
@@ -4339,7 +4339,7 @@ const FUND_TRACKERS = {
         thesis:'Beneficiaria directa de la prioridad del Pentágono por masa autónoma de bajo costo (programa Replicator). Defense-tech de crecimiento explosivo.'
       },
       'Anthropic PBC': {
-        category:'IA · modelos fundacionales', stage:'Crecimiento',
+        category:'IA · modelos fundacionales', stage:'Tardía',
         tagline:'Laboratorio líder de IA y creador de la familia de modelos Claude; constituida como Public Benefit Corporation.',
         product:{name:'Claude', desc:'Familia de modelos de lenguaje con enfoque en seguridad ("Constitutional AI").'},
         markets:['Empresas','API','Desarrolladores','Consumo'],
@@ -4367,21 +4367,21 @@ const FUND_TRACKERS = {
         thesis:'Ataca la fragilidad de la red y la demanda eléctrica disparada por la IA y los autos eléctricos. Crecimiento acelerado en Texas.'
       },
       'Second Front Systems': {
-        category:'Software de defensa', stage:'Etapa temprana',
+        category:'Software de defensa', stage:'Temprana',
         tagline:'Plataforma SaaS que permite desplegar software comercial dentro de entornos clasificados de defensa, de forma segura y acreditada.',
         product:{name:'Game Warden', desc:'Elimina el cuello de botella de acreditación de seguridad (ATO), pasando de meses a días.'},
         markets:['Defensa','SaaS','Gobierno','Cloud'],
         thesis:'Acelera el "time-to-mission" de contratistas y agencias del DoD de EE.UU. Posición temprana marcada cerca del costo.'
       },
       'Payward (Kraken)': {
-        category:'Cripto · exchange', stage:'Crecimiento',
+        category:'Cripto · exchange', stage:'Tardía',
         tagline:'Opera Kraken, uno de los exchanges de criptomonedas más antiguos, regulados y confiables del mundo.',
         product:{name:'Kraken', desc:'Trading, staking, custodia y servicios institucionales de cripto.'},
         markets:['Cripto','Trading','Custodia','Institucional'],
         thesis:'Beneficiaria del ciclo alcista cripto y de mayor claridad regulatoria; candidata a salir a bolsa.'
       },
       'Agility Robotics': {
-        category:'Robótica humanoide', stage:'Etapa temprana',
+        category:'Robótica humanoide', stage:'Crecimiento',
         tagline:'Fabrica Digit, un robot humanoide bípedo diseñado para logística y almacenes.',
         product:{name:'Digit', desc:'Humanoide que mueve totes y cajas en espacios diseñados para personas.'},
         markets:['Logística','Almacenes','Robótica','Automatización'],
@@ -4402,7 +4402,7 @@ const FUND_TRACKERS = {
         thesis:'Los drones se han vuelto la amenaza dominante en los conflictos modernos; demanda creciente por contramedidas asequibles.'
       },
       'Radiant Industries': {
-        category:'Energía · nuclear', stage:'Etapa temprana',
+        category:'Energía · nuclear', stage:'Temprana',
         tagline:'Desarrolla microreactores nucleares portátiles que caben en un contenedor de transporte.',
         product:{name:'Kaleidos', desc:'Energía limpia y desplegable para bases remotas, zonas de desastre y data centers.'},
         markets:['Energía','Nuclear','Data centers','Defensa'],
@@ -4423,35 +4423,35 @@ const FUND_TRACKERS = {
         thesis:'Ataca el cuello de botella de la inferencia —el costo dominante de la IA en producción— no el entrenamiento.'
       },
       'Mythic Inc.': {
-        category:'Semiconductores · edge', stage:'Etapa temprana',
+        category:'Semiconductores · edge', stage:'Temprana',
         tagline:'Chips de cómputo analógico-en-memoria para IA en el borde (edge), de muy bajo consumo.',
         product:{name:'Procesador analógico', desc:'Ejecuta inferencia sin mover datos constantemente a memoria, reduciendo drásticamente la energía.'},
         markets:['Edge','Semiconductores','IoT','Bajo consumo'],
         thesis:'Nicho técnico diferenciado para dispositivos donde la batería y el calor importan.'
       },
       'Epic Games, Inc.': {
-        category:'Gaming · software', stage:'Crecimiento',
+        category:'Gaming · software', stage:'Tardía',
         tagline:'Creador de Fortnite y de Unreal Engine, el motor gráfico estándar de videojuegos, cine y simulación.',
         product:{name:'Fortnite · Unreal Engine', desc:'Ecosistema de juego, herramientas de creación, tienda propia y visión de "metaverso".'},
         markets:['Gaming','Motor 3D','App stores','Metaverso'],
         thesis:'Marca icónica con ingresos masivos; sus litigios antimonopolio (vs. Apple/Google) podrían abrirle el mercado de las app stores.'
       },
       'Figure AI Inc.': {
-        category:'Robótica humanoide', stage:'Crecimiento',
+        category:'Robótica humanoide', stage:'Tardía',
         tagline:'Desarrolla robots humanoides de propósito general (Figure 02/03) con su propia pila de IA para visión y control.',
         product:{name:'Figure 02 / 03', desc:'Humanoides con IA propia; integra modelos de lenguaje para entender y ejecutar tareas.'},
         markets:['Robótica','Industrial','IA','Logística'],
         thesis:'La posición de mayor múltiplo del fondo. Una de las apuestas más codiciadas en humanoides; pilotos industriales (p. ej. con BMW).'
       },
       'Groq, Inc. (Distributed)': {
-        category:'Semiconductores · IA', stage:'Distribuida',
+        category:'Semiconductores · IA', stage:'Crecimiento',
         tagline:'Misma compañía que Groq (LPU y GroqCloud); esta porción ya fue distribuida a los inversionistas.',
         product:{name:'LPU / GroqCloud', desc:'Inferencia de IA de altísima velocidad.'},
         markets:['Semiconductores','Inferencia','Cloud','IA'],
         thesis:'Porción realizada que refleja la fuerte apreciación de Groq; marcada a su MOIC al momento de la distribución.'
       },
       'Klarna Holding AB': {
-        category:'Fintech · pagos', stage:'Distribuida',
+        category:'Fintech · pagos', stage:'Tardía',
         tagline:'Fintech sueca de "compra ahora, paga después" (BNPL) con decenas de millones de usuarios globales.',
         product:{name:'Klarna BNPL', desc:'Pagos diferidos, banca, tarjeta y compras asistidas por IA.'},
         markets:['Fintech','Pagos','BNPL','Banca'],
