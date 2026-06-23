@@ -4318,6 +4318,10 @@ const FUND_TRACKERS = {
       'Groq, Inc. (Distributed)': 'groq.com',
       'Klarna Holding AB':        'klarna.com'
     },
+    // Logos provistos a mano (prioridad sobre el favicon)
+    logoOverrides: {
+      'CHAOS Industries': '/chaos-industries.png'
+    },
     // Descripciones por empresa (pestaña "Empresas"). Valuación entrada = actual ÷ MOIC.
     descriptions: {
       'Decart.AI, Inc.': [
@@ -4664,13 +4668,20 @@ function renderFundTrackerDetail(fundId) {
       const entry = (r.moic && r.moic > 0) ? cur / r.moic : cur;
       const desc = f.descriptions[r.company];
       const bullets = Array.isArray(desc) ? desc : (desc ? [desc] : []);
+      const override = (f.logoOverrides || {})[r.company];
       const domain = (f.logos || {})[r.company];
-      const logoHtml = domain
-        ? `<div class="ft-co-logo"><span class="ft-co-mono">${escapeHtml(coInitials(r.company))}</span>` +
+      const mono = `<span class="ft-co-mono">${escapeHtml(coInitials(r.company))}</span>`;
+      let logoHtml;
+      if (override) {
+        logoHtml = `<div class="ft-co-logo">${mono}<img class="ft-co-logo-img" alt="" loading="lazy" src="${override}" onerror="this.remove()"></div>`;
+      } else if (domain) {
+        logoHtml = `<div class="ft-co-logo">${mono}` +
           `<img class="ft-co-logo-img" alt="" loading="lazy" ` +
           `src="https://www.google.com/s2/favicons?sz=128&amp;domain=${domain}" ` +
-          `onerror="if(!this.dataset.fb){this.dataset.fb=1;this.src='https://icons.duckduckgo.com/ip3/${domain}.ico';}else{this.remove();}"></div>`
-        : `<div class="ft-co-logo"><span class="ft-co-mono">${escapeHtml(coInitials(r.company))}</span></div>`;
+          `onerror="if(!this.dataset.fb){this.dataset.fb=1;this.src='https://icons.duckduckgo.com/ip3/${domain}.ico';}else{this.remove();}"></div>`;
+      } else {
+        logoHtml = `<div class="ft-co-logo">${mono}</div>`;
+      }
       return `
         <div class="ft-co-card">
           <div class="ft-co-head">

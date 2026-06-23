@@ -8,6 +8,7 @@
     { "src": "public/logo.png",     "use": "@vercel/static" },
     { "src": "public/logo-icon.png", "use": "@vercel/static" },
     { "src": "public/logo-mvp.png",  "use": "@vercel/static" },
+    { "src": "public/chaos-industries.png", "use": "@vercel/static" },
     { "src": "api/tasks.js",             "use": "@vercel/node" },
     { "src": "api/reminder.js",          "use": "@vercel/node" },
     { "src": "api/config.js",            "use": "@vercel/node" },
@@ -30,6 +31,7 @@
     { "src": "/logo.png",      "dest": "/public/logo.png" },
     { "src": "/logo-icon.png", "dest": "/public/logo-icon.png" },
     { "src": "/logo-mvp.png",  "dest": "/public/logo-mvp.png" },
+    { "src": "/chaos-industries.png", "dest": "/public/chaos-industries.png" },
     { "src": "/(.*)",          "dest": "/public/index.html" }
   ]
 }
