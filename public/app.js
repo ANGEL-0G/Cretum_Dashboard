@@ -4941,8 +4941,18 @@ async function exportCompaniesPDF(fundId, btn) {
     await loadHtml2Pdf();
     const cutoffPretty = new Date(f.cutoff + 'T00:00:00').toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
     const wrap = document.createElement('div');
-    wrap.style.cssText = 'position:fixed;left:-99999px;top:0;width:800px;background:#f8f9fc;padding:24px;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif';
+    wrap.id = 'pdfwrap';
+    // En (0,0) detrás de la página (no fuera de pantalla) para que html2canvas capture bien.
+    wrap.style.cssText = 'position:absolute;left:0;top:0;width:820px;background:#f8f9fc;padding:24px;z-index:-1;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif';
+    // Overrides solo-PDF: html2canvas no soporta bien CSS grid → usar inline-block/flex.
+    const ovCss = `
+      #pdfwrap .ft-co-grid{display:block;font-size:0}
+      #pdfwrap .ft-co-card{display:inline-block;width:374px;vertical-align:top;margin:0 0 16px 0;font-size:14px}
+      #pdfwrap .ft-co-card:nth-child(odd){margin-right:16px}
+      #pdfwrap .ft-co-vals{display:flex;gap:12px}
+      #pdfwrap .ft-co-valbox{flex:1}`;
     wrap.innerHTML =
+      `<style>${ovCss}</style>` +
       `<div style="font-size:22px;font-weight:700;color:var(--navy);margin-bottom:4px">${escapeHtml(f.name)} — Empresas</div>` +
       `<div style="font-size:12px;color:var(--gray-500);margin-bottom:16px">${escapeHtml(f.status)} · ${escapeHtml(f.confidentiality)} · Cutoff ${escapeHtml(cutoffPretty)}</div>` +
       `<div class="ft-co-grid">${ftCompanyCards(f, { proxyLogos: true })}</div>`;
@@ -4950,12 +4960,12 @@ async function exportCompaniesPDF(fundId, btn) {
     // esperar a que carguen (o fallen) los logos antes de renderizar
     await Promise.all([...wrap.querySelectorAll('img')].map(img =>
       img.complete ? Promise.resolve() : new Promise(res => { img.onload = img.onerror = res; })));
-    await new Promise(r => setTimeout(r, 150));
+    await new Promise(r => setTimeout(r, 200));
     await html2pdf().set({
       margin: [8, 8, 8, 8],
       filename: `${f.name.replace(/[^a-z0-9]+/gi, '_')}_Empresas.pdf`,
       image: { type: 'jpeg', quality: 0.96 },
-      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#f8f9fc', logging: false },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#f8f9fc', logging: false, scrollX: 0, scrollY: 0, windowWidth: 900 },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
       pagebreak: { mode: ['css', 'legacy'], avoid: '.ft-co-card' }
     }).from(wrap).save();
