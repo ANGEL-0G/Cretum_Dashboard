@@ -4444,14 +4444,14 @@ const FUND_TRACKERS = {
         thesis:'La posición de mayor múltiplo del fondo. Una de las apuestas más codiciadas en humanoides; pilotos industriales (p. ej. con BMW).'
       },
       'Groq, Inc. (Distributed)': {
-        category:'Semiconductores · IA', stage:'Crecimiento',
+        category:'Semiconductores · IA', stage:'Distribuida',
         tagline:'Misma compañía que Groq (LPU y GroqCloud); esta porción ya fue distribuida a los inversionistas.',
         product:{name:'LPU / GroqCloud', desc:'Inferencia de IA de altísima velocidad.'},
         markets:['Semiconductores','Inferencia','Cloud','IA'],
         thesis:'Porción realizada que refleja la fuerte apreciación de Groq; marcada a su MOIC al momento de la distribución.'
       },
       'Klarna Holding AB': {
-        category:'Fintech · pagos', stage:'Tardía',
+        category:'Fintech · pagos', stage:'Distribuida',
         tagline:'Fintech sueca de "compra ahora, paga después" (BNPL) con decenas de millones de usuarios globales.',
         product:{name:'Klarna BNPL', desc:'Pagos diferidos, banca, tarjeta y compras asistidas por IA.'},
         markets:['Fintech','Pagos','BNPL','Banca'],
