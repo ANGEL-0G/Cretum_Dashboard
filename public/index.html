@@ -1089,6 +1089,26 @@ button,input,select{font-family:var(--font)}
 .home-greeting{font-size:26px;font-weight:500;color:var(--navy);margin-bottom:6px;letter-spacing:-.3px}
 .home-question{font-size:14px;color:var(--gray-500)}
 
+/* Panel ejecutivo (resumen del negocio) en el Home */
+.home-kpis{margin-bottom:24px}
+.home-kpis-title{font-size:13px;font-weight:600;color:var(--gray-700);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+.home-kpis-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px}
+.home-kpi{background:#fff;border:1px solid var(--gray-200);border-radius:14px;padding:16px 18px}
+[data-theme="dark"] .home-kpi{background:var(--gray-50)}
+.home-kpi-l{font-size:11px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px}
+.home-kpi-v{font-size:23px;font-weight:700;color:var(--gray-900);font-variant-numeric:tabular-nums;line-height:1.05}
+.home-kpi-v.accent{color:var(--navy)}
+.home-top{background:#fff;border:1px solid var(--gray-200);border-radius:14px;padding:16px 18px}
+[data-theme="dark"] .home-top{background:var(--gray-50)}
+.home-top-h{font-size:12px;font-weight:600;color:var(--gray-700);text-transform:uppercase;letter-spacing:.3px;margin-bottom:12px}
+.home-top-row{display:flex;align-items:center;gap:12px;margin-bottom:9px;font-size:13px}
+.home-top-row:last-child{margin-bottom:0}
+.home-top-name{flex:0 0 38%;color:var(--gray-900);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.home-top-bar{flex:1;height:8px;background:var(--gray-100);border-radius:6px;overflow:hidden}
+.home-top-fill{height:100%;background:var(--navy);border-radius:6px}
+.home-top-val{flex:0 0 auto;color:var(--gray-700);font-weight:600;font-variant-numeric:tabular-nums}
+.home-kpis-load,.home-kpis-err{font-size:13px;color:var(--gray-500);padding:8px 2px}
+
 .home-modules{
   display:flex;flex-wrap:wrap;justify-content:center;gap:14px;
   margin-bottom:24px;
@@ -2389,6 +2409,8 @@ button,input,select{font-family:var(--font)}
       <div class="home-greeting"><span id="homeGreet">Hola</span>, <span id="homeUserName">—</span></div>
       <div class="home-question" id="homeQuestion">¿Con qué quieres empezar hoy?</div>
     </div>
+
+    <div class="home-kpis" id="homeKpis" style="display:none"></div>
 
     <div class="home-modules" id="homeModules"></div>
 

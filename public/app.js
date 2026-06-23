@@ -1750,6 +1750,69 @@ function renderHomeModules() {
       <div class="home-soon-item"><i class="${it.icon}"></i> ${it.label}</div>
     `).join('');
   }
+
+  // Panel ejecutivo (solo MVP)
+  const kpiHost = document.getElementById('homeKpis');
+  if (kpiHost) {
+    if (currentOrg === 'mvp') { kpiHost.style.display = ''; renderMvpKpis(); }
+    else { kpiHost.style.display = 'none'; kpiHost.innerHTML = ''; }
+  }
+}
+
+// Formato compacto de USD
+function fmtUsdShort(v) {
+  v = Number(v) || 0;
+  const s = v < 0 ? '-' : '';
+  v = Math.abs(v);
+  if (v >= 1e9) return s + '$' + (v / 1e9).toFixed(2) + 'B';
+  if (v >= 1e6) return s + '$' + (v / 1e6).toFixed(1) + 'M';
+  if (v >= 1e3) return s + '$' + Math.round(v / 1e3) + 'K';
+  return s + '$' + Math.round(v).toLocaleString('en-US');
+}
+
+let _mvpKpisLoaded = false;
+async function renderMvpKpis() {
+  const host = document.getElementById('homeKpis');
+  if (!host || currentOrg !== 'mvp') return;
+  if (!_mvpKpisLoaded) host.innerHTML = '<div class="home-kpis-load">Cargando resumen del negocio…</div>';
+  try {
+    const [inv, dist, comps] = await Promise.all([
+      sbFetchAll('investments', 'investor_id,company_id,commitment,commitment_actual,distributed_at'),
+      sbFetchAll('investment_distributions', 'value_in_kind,cash_proceeds'),
+      sbFetchAll('companies', 'id,name')
+    ]);
+    const n = v => (Number(v) || 0);
+    const active = inv.filter(r => !r.distributed_at);
+    const committed = active.reduce((s, r) => s + n(r.commitment), 0);
+    const nav = active.reduce((s, r) => s + (n(r.commitment_actual) || n(r.commitment)), 0);
+    const moic = committed ? nav / committed : 0;
+    const distrib = dist.reduce((s, r) => s + n(r.value_in_kind) + n(r.cash_proceeds), 0);
+    const nInv = new Set(inv.map(r => r.investor_id)).size;
+    const nPos = active.length;
+    const cname = Object.fromEntries(comps.map(c => [c.id, c.name]));
+    const byCo = {};
+    active.forEach(r => { const k = r.company_id; byCo[k] = (byCo[k] || 0) + (n(r.commitment_actual) || n(r.commitment)); });
+    const top = Object.entries(byCo).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    const maxv = top.length ? top[0][1] : 1;
+    const kpi = (label, val, cls) => `<div class="home-kpi"><div class="home-kpi-l">${label}</div><div class="home-kpi-v ${cls || ''}">${val}</div></div>`;
+    host.innerHTML =
+      `<div class="home-kpis-title">Resumen del negocio</div>` +
+      `<div class="home-kpis-grid">` +
+        kpi('Capital comprometido', fmtUsdShort(committed)) +
+        kpi('Valor actual (NAV)', fmtUsdShort(nav), 'accent') +
+        kpi('MOIC', moic.toFixed(2) + 'x', moicClass(moic)) +
+        kpi('Distribuido a la fecha', fmtUsdShort(distrib)) +
+        kpi('Inversionistas', nInv.toLocaleString('en-US')) +
+        kpi('Posiciones activas', nPos.toLocaleString('en-US')) +
+      `</div>` +
+      `<div class="home-top">` +
+        `<div class="home-top-h">Top posiciones por valor (NAV activo)</div>` +
+        top.map(([cid, v]) => `<div class="home-top-row"><span class="home-top-name">${escapeHtml(cname[cid] || '—')}</span><div class="home-top-bar"><div class="home-top-fill" style="width:${(v / maxv * 100).toFixed(1)}%"></div></div><span class="home-top-val">${fmtUsdShort(v)}</span></div>`).join('') +
+      `</div>`;
+    _mvpKpisLoaded = true;
+  } catch (e) {
+    host.innerHTML = `<div class="home-kpis-err">No se pudo cargar el resumen: ${escapeHtml(e.message || 'error')}</div>`;
+  }
 }
 
 function renderNavList() {
