@@ -4789,7 +4789,8 @@ function renderFundTrackerDetail(fundId) {
 }
 
 // Construye las tarjetas de empresas (reutilizado por la pestaña y por export HTML/PDF)
-function ftCompanyCards(f) {
+function ftCompanyCards(f, opts) {
+  opts = opts || {};
   const _seenCo = new Set();
   const allCos = [...f.active, ...(f.distributed || [])].filter(r => {
     const base = (r.company || '').replace(/\s*\((?:Distributed|X)\)\s*$/i, '').trim();
@@ -4817,10 +4818,18 @@ function ftCompanyCards(f) {
     if (override) {
       logoHtml = `<div class="ft-co-logo">${mono}<img class="ft-co-logo-img" alt="" loading="lazy" src="${override}" onerror="this.remove()"></div>`;
     } else if (domain) {
-      logoHtml = `<div class="ft-co-logo">${mono}` +
-        `<img class="ft-co-logo-img" alt="" loading="lazy" ` +
-        `src="https://www.google.com/s2/favicons?sz=128&amp;domain=${domain}" ` +
-        `onerror="if(!this.dataset.fb){this.dataset.fb=1;this.src='https://icons.duckduckgo.com/ip3/${domain}.ico';}else{this.remove();}"></div>`;
+      const g = `https://www.google.com/s2/favicons?sz=128&domain=${domain}`;
+      const d = `https://icons.duckduckgo.com/ip3/${domain}.ico`;
+      if (opts.proxyLogos) {
+        // same-origin (proxy) → seguro para canvas/PDF
+        const pg = '/api/logo?u=' + encodeURIComponent(g), pd = '/api/logo?u=' + encodeURIComponent(d);
+        logoHtml = `<div class="ft-co-logo">${mono}<img class="ft-co-logo-img" alt="" src="${pg}" onerror="if(!this.dataset.fb){this.dataset.fb=1;this.src='${pd}';}else{this.remove();}"></div>`;
+      } else {
+        logoHtml = `<div class="ft-co-logo">${mono}` +
+          `<img class="ft-co-logo-img" alt="" loading="lazy" ` +
+          `src="https://www.google.com/s2/favicons?sz=128&amp;domain=${domain}" ` +
+          `onerror="if(!this.dataset.fb){this.dataset.fb=1;this.src='https://icons.duckduckgo.com/ip3/${domain}.ico';}else{this.remove();}"></div>`;
+      }
     } else {
       logoHtml = `<div class="ft-co-logo">${mono}</div>`;
     }
@@ -4910,12 +4919,52 @@ function exportCompaniesHTML(fundId, btn) {
   setTimeout(() => URL.revokeObjectURL(url), 3000);
 }
 
-function exportCompaniesPDF(fundId, btn) {
+// Lazy-load html2pdf.js (html2canvas + jsPDF)
+let _html2pdfPromise = null;
+function loadHtml2Pdf() {
+  if (window.html2pdf) return Promise.resolve();
+  if (_html2pdfPromise) return _html2pdfPromise;
+  _html2pdfPromise = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+    s.onload = resolve;
+    s.onerror = () => { _html2pdfPromise = null; reject(new Error('No se pudo cargar html2pdf')); };
+    document.head.appendChild(s);
+  });
+  return _html2pdfPromise;
+}
+
+async function exportCompaniesPDF(fundId, btn) {
   const f = FUND_TRACKERS[fundId]; if (!f || !f.companyInfo) return;
-  const doc = ftCompaniesDocHtml(f).replace('</body>', '<scr'+'ipt>window.addEventListener("load",function(){setTimeout(function(){window.focus();window.print();},500);});</scr'+'ipt></body>');
-  const w = window.open('', '_blank');
-  if (!w) { alert('Permite las ventanas emergentes para generar el PDF.'); return; }
-  w.document.open(); w.document.write(doc); w.document.close();
+  if (btn) { btn.disabled = true; }
+  try {
+    await loadHtml2Pdf();
+    const cutoffPretty = new Date(f.cutoff + 'T00:00:00').toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'position:fixed;left:-99999px;top:0;width:800px;background:#f8f9fc;padding:24px;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif';
+    wrap.innerHTML =
+      `<div style="font-size:22px;font-weight:700;color:var(--navy);margin-bottom:4px">${escapeHtml(f.name)} — Empresas</div>` +
+      `<div style="font-size:12px;color:var(--gray-500);margin-bottom:16px">${escapeHtml(f.status)} · ${escapeHtml(f.confidentiality)} · Cutoff ${escapeHtml(cutoffPretty)}</div>` +
+      `<div class="ft-co-grid">${ftCompanyCards(f, { proxyLogos: true })}</div>`;
+    document.body.appendChild(wrap);
+    // esperar a que carguen (o fallen) los logos antes de renderizar
+    await Promise.all([...wrap.querySelectorAll('img')].map(img =>
+      img.complete ? Promise.resolve() : new Promise(res => { img.onload = img.onerror = res; })));
+    await new Promise(r => setTimeout(r, 150));
+    await html2pdf().set({
+      margin: [8, 8, 8, 8],
+      filename: `${f.name.replace(/[^a-z0-9]+/gi, '_')}_Empresas.pdf`,
+      image: { type: 'jpeg', quality: 0.96 },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#f8f9fc', logging: false },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['css', 'legacy'], avoid: '.ft-co-card' }
+    }).from(wrap).save();
+    wrap.remove();
+  } catch (e) {
+    alert('No se pudo generar el PDF: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; }
+  }
 }
 
 // Cambio de pestaña en el detalle del tracker
