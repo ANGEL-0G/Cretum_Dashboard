@@ -4295,7 +4295,29 @@ const FUND_TRACKERS = {
     ],
     overallLabel:     'Total — Overall (Invested)',
     overallTotal:     { invested: 151119219, mtm: 279891501, moic: 1.8521 },
-    overallTotal2:    { label: 'Total — Overall (Commitment)', invested: 293000000, mtm: 421772282, moic: 1.4395 }
+    overallTotal2:    { label: 'Total — Overall (Commitment)', invested: 293000000, mtm: 421772282, moic: 1.4395 },
+    // Descripciones por empresa (pestaña "Empresas"). Valuación entrada = actual ÷ MOIC.
+    descriptions: {
+      'Decart.AI, Inc.':       'IA generativa en tiempo real: modelos de video y "world models" interactivos.',
+      'Saronic Technologies':  'Embarcaciones marítimas autónomas no tripuladas para defensa naval.',
+      'Anthropic PBC':         'Laboratorio de inteligencia artificial, creador de los modelos Claude; enfoque en IA segura.',
+      'X.AI Corp. (SpaceX)':   'Exposición a SpaceX: cohetes reutilizables (Falcon/Starship) e internet satelital Starlink.',
+      'CHAOS Industries':      'Tecnología de defensa: sistemas avanzados de sensado y detección electrónica.',
+      'Base Power, Inc.':      'Energía residencial: baterías de respaldo para el hogar y servicios a la red eléctrica.',
+      'Second Front Systems':  'Plataforma de software (Game Warden) para desplegar apps comerciales de forma segura en defensa y gobierno.',
+      'Payward (Kraken)':      'Operador del exchange global de criptomonedas Kraken.',
+      'Agility Robotics':      'Robots humanoides bípedos (Digit) para logística y almacenes.',
+      'Kodiak Robotics':       'Camiones de carga autónomos para transporte de larga distancia.',
+      'Epirus, Inc.':          'Defensa: sistemas de energía dirigida (microondas de alta potencia) anti-drones.',
+      'Radiant Industries':    'Microreactores nucleares portátiles para energía limpia desplegable.',
+      'Cohere Inc.':           'IA empresarial: modelos de lenguaje (LLM) y búsqueda para empresas.',
+      'Groq, Inc.':            'Chips de inferencia de IA de ultra baja latencia (LPU).',
+      'Mythic Inc.':           'Chips de cómputo analógico para IA en el borde (edge).',
+      'Epic Games, Inc.':      'Videojuegos (Fortnite) y motor gráfico Unreal Engine.',
+      'Figure AI Inc.':        'Robots humanoides de propósito general (Figure).',
+      'Groq, Inc. (Distributed)': 'Chips de inferencia de IA de ultra baja latencia (LPU). (Posición distribuida.)',
+      'Klarna Holding AB':     'Fintech de pagos "compra ahora, paga después" (BNPL). (Posición distribuida.)'
+    }
   }
 };
 
@@ -4497,6 +4519,64 @@ function renderFundTrackerDetail(fundId) {
       </div>
     </div>` : '';
 
+  const overviewPanel = `
+    <div class="ft-section">
+      <div class="ft-section-title">Active Positions</div>
+      <div class="ft-table-wrap">
+        <table class="ft-table">
+          <thead><tr>${head}</tr></thead>
+          <tbody>${activeBody}</tbody>
+        </table>
+      </div>
+    </div>
+    ${pendingSection}
+    <div class="ft-section">
+      <div class="ft-section-title">Distributed Positions</div>
+      <div class="ft-table-wrap">
+        <table class="ft-table">
+          <thead><tr>${head}</tr></thead>
+          <tbody>${distBody}${overallRow}</tbody>
+        </table>
+      </div>
+    </div>`;
+
+  // Pestaña "Empresas": valuación entrada (= actual ÷ MOIC) → actual, + descripción
+  let tabsBar = '', companiesPanel = '';
+  if (f.descriptions) {
+    const allCos = [...f.active, ...(f.distributed || [])];
+    const cards = allCos.map(r => {
+      const cur = r.corpVal;
+      const entry = (r.moic && r.moic > 0) ? cur / r.moic : cur;
+      const desc = f.descriptions[r.company] || '';
+      return `
+        <div class="ft-co-card">
+          <div class="ft-co-name">${escapeHtml(r.company)}</div>
+          <div class="ft-co-vals">
+            <div class="ft-co-val">
+              <span class="ft-co-vl">Valuación de entrada</span>
+              <span class="ft-co-vv">${fmtBil(entry)}</span>
+            </div>
+            <div class="ft-co-arrow"><i class="fa-solid fa-arrow-right-long"></i></div>
+            <div class="ft-co-val">
+              <span class="ft-co-vl">Valuación actual</span>
+              <span class="ft-co-vv ft-co-vv-now">${fmtBil(cur)}</span>
+            </div>
+          </div>
+          ${desc ? `<div class="ft-co-desc">${escapeHtml(desc)}</div>` : ''}
+        </div>`;
+    }).join('');
+    tabsBar = `
+      <div class="ft-tabs">
+        <button class="ft-tab active" data-fttab="overview" onclick="switchFtTab('overview')"><i class="fa-solid fa-table-list"></i> Valuation Overview</button>
+        <button class="ft-tab" data-fttab="companies" onclick="switchFtTab('companies')"><i class="fa-solid fa-building"></i> Empresas</button>
+      </div>`;
+    companiesPanel = `
+      <div id="ftTabCompanies" class="ft-tab-panel" style="display:none">
+        <div class="ft-co-note">Valuación corporativa. La de entrada se deriva de la apreciación del PPS (valuación actual ÷ MOIC).</div>
+        <div class="ft-co-grid">${cards}</div>
+      </div>`;
+  }
+
   host.innerHTML = `
     <div class="ft-header">
       <div class="ft-header-top">
@@ -4523,26 +4603,26 @@ function renderFundTrackerDetail(fundId) {
         </div>
       </div>
     </div>
+    ${tabsBar}
+    <div id="ftTabOverview" class="ft-tab-panel">${overviewPanel}</div>
+    ${companiesPanel}`;
+}
 
-    <div class="ft-section">
-      <div class="ft-section-title">Active Positions</div>
-      <div class="ft-table-wrap">
-        <table class="ft-table">
-          <thead><tr>${head}</tr></thead>
-          <tbody>${activeBody}</tbody>
-        </table>
-      </div>
-    </div>
-    ${pendingSection}
-    <div class="ft-section">
-      <div class="ft-section-title">Distributed Positions</div>
-      <div class="ft-table-wrap">
-        <table class="ft-table">
-          <thead><tr>${head}</tr></thead>
-          <tbody>${distBody}${overallRow}</tbody>
-        </table>
-      </div>
-    </div>`;
+// Cambio de pestaña en el detalle del tracker
+function switchFtTab(tab) {
+  document.querySelectorAll('.ft-tab').forEach(b => b.classList.toggle('active', b.dataset.fttab === tab));
+  const ov = document.getElementById('ftTabOverview'), co = document.getElementById('ftTabCompanies');
+  if (ov) ov.style.display = (tab === 'overview') ? 'block' : 'none';
+  if (co) co.style.display = (tab === 'companies') ? 'block' : 'none';
+}
+
+// Formato de valuación corporativa en $B / $M
+function fmtBil(v) {
+  if (v == null || isNaN(v)) return '—';
+  if (v < 1)   return '$' + Math.round(v * 1000).toLocaleString('en-US') + 'M';
+  if (v < 10)  return '$' + v.toFixed(2) + 'B';
+  if (v < 100) return '$' + v.toFixed(1) + 'B';
+  return '$' + Math.round(v).toLocaleString('en-US') + 'B';
 }
 
 // ── Export a Excel (ExcelJS, lazy-load) ──
