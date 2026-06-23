@@ -4416,7 +4416,7 @@ const FUND_TRACKERS = {
         thesis:'Alternativa neutral para corporativos que no quieren depender de OpenAI o Anthropic.'
       },
       'Groq, Inc.': {
-        category:'Semiconductores · IA', stage:'Crecimiento',
+        category:'Semiconductores · IA', stage:'Adquirida',
         tagline:'Diseña la LPU, un chip de inferencia de IA con latencia ultra baja y velocidad de generación de tokens líder en la industria.',
         product:{name:'LPU / GroqCloud', desc:'Inferencia de IA de altísima velocidad; acuerdos de gran escala (incl. la transacción con Nvidia).'},
         markets:['Semiconductores','Inferencia','Cloud','IA'],
@@ -4451,7 +4451,7 @@ const FUND_TRACKERS = {
         thesis:'Porción realizada que refleja la fuerte apreciación de Groq; marcada a su MOIC al momento de la distribución.'
       },
       'Klarna Holding AB': {
-        category:'Fintech · pagos', stage:'Distribuida',
+        category:'Fintech · pagos', stage:'Tardía',
         tagline:'Fintech sueca de "compra ahora, paga después" (BNPL) con decenas de millones de usuarios globales.',
         product:{name:'Klarna BNPL', desc:'Pagos diferidos, banca, tarjeta y compras asistidas por IA.'},
         markets:['Fintech','Pagos','BNPL','Banca'],
@@ -4683,7 +4683,12 @@ function renderFundTrackerDetail(fundId) {
   // Pestaña "Empresas": valuación entrada (= actual ÷ MOIC) → actual, + descripción
   let tabsBar = '', companiesPanel = '';
   if (f.companyInfo) {
-    const allCos = [...f.active, ...(f.distributed || [])];
+    const _seenCo = new Set();
+    const allCos = [...f.active, ...(f.distributed || [])].filter(r => {
+      const base = (r.company || '').replace(/\s*\(Distributed\)\s*$/i, '').trim();
+      if (_seenCo.has(base)) return false;   // una sola tarjeta por empresa
+      _seenCo.add(base); return true;
+    });
     const sec = (icon, title, body) =>
       `<div class="ft-co-sec"><div class="ft-co-sec-ico"><i class="fa-solid ${icon}"></i></div>` +
       `<div class="ft-co-sec-body"><div class="ft-co-sec-h">${escapeHtml(title)}</div>${body}</div></div>`;
