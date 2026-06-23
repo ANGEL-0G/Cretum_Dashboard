@@ -4263,7 +4263,7 @@ const FUND_TRACKERS = {
       'Revolut Ltd':'revolut.com',
       'Quantstamp, Inc.':'quantstamp.com',
       'Groq, Inc.':'groq.com',
-      'IONQ (Capella Space Corp.)':'ionq.com',
+      'IONQ (Capella Space Corp.)':'capellaspace.com',
       'Transfix, Inc.':'transfix.io',
       'Loft Holdings, Ltd':'loft.com.br',
       'Automattic, Inc.':'automattic.com',
@@ -4293,7 +4293,7 @@ const FUND_TRACKERS = {
       'Revolut Ltd':{category:'Fintech · neobanco',stage:'Tardía',tagline:'Súper-app financiera: cuentas, tarjetas, FX, cripto e inversiones para decenas de millones.',product:{name:'Revolut',desc:'Banca, pagos, FX, cripto y trading en una sola app.'},markets:['Fintech','Neobanco','Pagos','Cripto'],thesis:'Decacornio global (~$75B); de las fintech más grandes del mundo, rumbo a IPO.'},
       'Quantstamp, Inc.':{category:'Cripto · seguridad',stage:'Crecimiento',tagline:'Seguridad de blockchain: auditorías de smart contracts y protocolos Web3.',product:{name:'Auditorías Web3',desc:'Revisión y aseguramiento de contratos inteligentes.'},markets:['Cripto','Seguridad','Web3','Auditoría'],thesis:'Capa de confianza para Web3; demanda ligada a la actividad cripto.'},
       'Groq, Inc.':{category:'Semiconductores · IA',stage:'Adquirida',tagline:'Diseña la LPU, chip de inferencia de IA con latencia ultra baja y velocidad líder.',product:{name:'LPU / GroqCloud',desc:'Inferencia de IA de altísima velocidad; acuerdos de gran escala (incl. Nvidia).'},markets:['Semiconductores','Inferencia','Cloud','IA'],thesis:'Ataca el cuello de botella de la inferencia —el costo dominante de la IA en producción.'},
-      'IONQ (Capella Space Corp.)':{category:'Cómputo cuántico',stage:'Pública',tagline:'IonQ: computación cuántica de iones atrapados, accesible vía la nube (NYSE: IONQ).',product:{name:'Sistemas cuánticos',desc:'Hardware cuántico de iones atrapados ofrecido como servicio.'},markets:['Cuántica','Cómputo','Cloud','Deep tech'],thesis:'Pionero cotizado en computación cuántica; apuesta de muy largo plazo.'},
+      'IONQ (Capella Space Corp.)':{displayName:'Capella Space',category:'Espacio · satélites SAR',stage:'Adquirida',tagline:'Capella Space: satélites de radar de apertura sintética (SAR) que captan imágenes de la Tierra de día o de noche y a través de las nubes.',product:{name:'Satélites SAR',desc:'Imágenes de radar bajo cualquier clima y sin luz, con entrega rápida bajo demanda.'},markets:['Espacio','Observación de la Tierra','Defensa','Geoespacial'],thesis:'Adquirida por IonQ para impulsar redes cuánticas vía satélite; datos SAR con fuerte demanda en defensa e inteligencia.'},
       'Transfix, Inc.':{category:'Logística · freight',stage:'Crecimiento',tagline:'Marketplace digital de carga que conecta a remitentes con transportistas.',product:{name:'Transfix',desc:'Plataforma de matching y gestión de fletes de camión.'},markets:['Trucking','Freight','Marketplace','Logística'],thesis:'Eficiencia en un mercado de carga fragmentado; sensible al ciclo de fletes.'},
       'Loft Holdings, Ltd':{category:'Proptech',stage:'Crecimiento',tagline:'Proptech brasileña: marketplace para comprar, vender y rentar inmuebles en línea.',product:{name:'Loft',desc:'Plataforma de transacciones inmobiliarias residenciales en Brasil.'},markets:['Proptech','Real estate','Brasil','Marketplace'],thesis:'Digitaliza el real estate en LatAm; afectada por tasas y down-rounds.'},
       'Automattic, Inc.':{category:'Software · web',stage:'Tardía',tagline:'Compañía detrás de WordPress.com, WooCommerce, Tumblr y Jetpack.',product:{name:'WordPress.com · WooCommerce',desc:'Publicación web y e-commerce para una enorme parte de la web.'},markets:['Web','CMS','E-commerce','Open source'],thesis:'Sustenta una fracción enorme de los sitios del mundo; marca y distribución dominantes.'},
@@ -4764,7 +4764,8 @@ function renderFundTrackerDetail(fundId) {
       else valNote = `Marca a la baja respecto a la entrada (down-round · ${moic.toFixed(2)}x).`;
       const override = (f.logoOverrides || {})[r.company];
       const domain = (f.logos || {})[r.company];
-      const mono = `<span class="ft-co-mono">${escapeHtml(coInitials(r.company))}</span>`;
+      const dn = info.displayName || r.company;
+      const mono = `<span class="ft-co-mono">${escapeHtml(coInitials(dn))}</span>`;
       let logoHtml;
       if (override) {
         logoHtml = `<div class="ft-co-logo">${mono}<img class="ft-co-logo-img" alt="" loading="lazy" src="${override}" onerror="this.remove()"></div>`;
@@ -4786,7 +4787,7 @@ function renderFundTrackerDetail(fundId) {
           <div class="ft-co-head">
             ${logoHtml}
             <div class="ft-co-headtext">
-              <div class="ft-co-name">${escapeHtml(r.company)}</div>
+              <div class="ft-co-name">${escapeHtml(dn)}</div>
               ${tags ? `<div class="ft-co-tags">${tags}</div>` : ''}
             </div>
           </div>
