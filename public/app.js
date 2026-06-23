@@ -1796,7 +1796,7 @@ async function renderMvpKpis() {
     const maxv = top.length ? top[0][1] : 1;
     const kpi = (label, val, cls) => `<div class="home-kpi"><div class="home-kpi-l">${label}</div><div class="home-kpi-v ${cls || ''}">${val}</div></div>`;
     host.innerHTML =
-      `<div class="home-kpis-title">Resumen del negocio</div>` +
+      `<div class="home-kpis-title">Resumen MVP - LATAM</div>` +
       `<div class="home-kpis-grid">` +
         kpi('Capital comprometido', fmtUsdShort(committed)) +
         kpi('Valor actual (NAV)', fmtUsdShort(nav), 'accent') +
