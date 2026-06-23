@@ -4744,71 +4744,6 @@ function renderFundTrackerDetail(fundId) {
   // Pestaña "Empresas": valuación entrada (= actual ÷ MOIC) → actual, + descripción
   let tabsBar = '', companiesPanel = '';
   if (f.companyInfo) {
-    const _seenCo = new Set();
-    const allCos = [...f.active, ...(f.distributed || [])].filter(r => {
-      const base = (r.company || '').replace(/\s*\((?:Distributed|X)\)\s*$/i, '').trim();
-      if (_seenCo.has(base)) return false;   // una sola tarjeta por empresa
-      _seenCo.add(base); return true;
-    });
-    const sec = (icon, title, body) =>
-      `<div class="ft-co-sec"><div class="ft-co-sec-ico"><i class="fa-solid ${icon}"></i></div>` +
-      `<div class="ft-co-sec-body"><div class="ft-co-sec-h">${escapeHtml(title)}</div>${body}</div></div>`;
-    const cards = allCos.map(r => {
-      const cur = r.corpVal;
-      const moic = (r.moic && r.moic > 0) ? r.moic : 1;
-      const entry = cur / moic;
-      const info = (f.companyInfo || {})[r.company] || {};
-      let valNote;
-      if (Math.abs(moic - 1) < 0.02) valNote = 'Sin cambio: entrada en la ronda más reciente — marca fresca, no estancamiento.';
-      else if (moic > 1) valNote = `Apreciación de ${moic.toFixed(2)}x desde la entrada.`;
-      else valNote = `Marca a la baja respecto a la entrada (down-round · ${moic.toFixed(2)}x).`;
-      const override = (f.logoOverrides || {})[r.company];
-      const domain = (f.logos || {})[r.company];
-      const dn = info.displayName || r.company;
-      const mono = `<span class="ft-co-mono">${escapeHtml(coInitials(dn))}</span>`;
-      let logoHtml;
-      if (override) {
-        logoHtml = `<div class="ft-co-logo">${mono}<img class="ft-co-logo-img" alt="" loading="lazy" src="${override}" onerror="this.remove()"></div>`;
-      } else if (domain) {
-        logoHtml = `<div class="ft-co-logo">${mono}` +
-          `<img class="ft-co-logo-img" alt="" loading="lazy" ` +
-          `src="https://www.google.com/s2/favicons?sz=128&amp;domain=${domain}" ` +
-          `onerror="if(!this.dataset.fb){this.dataset.fb=1;this.src='https://icons.duckduckgo.com/ip3/${domain}.ico';}else{this.remove();}"></div>`;
-      } else {
-        logoHtml = `<div class="ft-co-logo">${mono}</div>`;
-      }
-      const tags = [
-        info.category ? `<span class="ft-co-tag ft-co-tag-cat">${escapeHtml(info.category)}</span>` : '',
-        info.stage ? `<span class="ft-co-tag ft-co-tag-stage">${escapeHtml(info.stage)}</span>` : ''
-      ].join('');
-      const hasDetail = info.product || info.markets || info.thesis;
-      return `
-        <div class="ft-co-card">
-          <div class="ft-co-head">
-            ${logoHtml}
-            <div class="ft-co-headtext">
-              <div class="ft-co-name">${escapeHtml(dn)}</div>
-              ${tags ? `<div class="ft-co-tags">${tags}</div>` : ''}
-            </div>
-          </div>
-          ${info.tagline ? `<p class="ft-co-tagline">${escapeHtml(info.tagline)}</p>` : ''}
-          <div class="ft-co-vals">
-            <div class="ft-co-valbox">
-              <span class="ft-co-vl">Entrada</span>
-              <span class="ft-co-vv">${fmtBil(entry)}</span>
-            </div>
-            <div class="ft-co-valbox">
-              <span class="ft-co-vl">Valuación actual</span>
-              <span class="ft-co-vv ft-co-vv-now">${fmtBil(cur)}</span>
-            </div>
-          </div>
-          <div class="ft-co-vnote"><i class="fa-solid fa-circle-info"></i> ${escapeHtml(valNote)}</div>
-          ${hasDetail ? `<hr class="ft-co-div">` : ''}
-          ${info.product ? sec('fa-cube', 'Producto · ' + info.product.name, `<div class="ft-co-sec-t">${escapeHtml(info.product.desc)}</div>`) : ''}
-          ${info.markets ? sec('fa-globe', 'Mercado objetivo', `<div class="ft-co-chips">${info.markets.map(m => `<span class="ft-co-chip">${escapeHtml(m)}</span>`).join('')}</div>`) : ''}
-          ${info.thesis ? sec('fa-arrow-trend-up', 'Tesis de inversión', `<div class="ft-co-sec-t">${escapeHtml(info.thesis)}</div>`) : ''}
-        </div>`;
-    }).join('');
     tabsBar = `
       <div class="ft-tabs">
         <button class="ft-tab active" data-fttab="overview" onclick="switchFtTab('overview')"><i class="fa-solid fa-table-list"></i> Valuation Overview</button>
@@ -4817,10 +4752,9 @@ function renderFundTrackerDetail(fundId) {
     companiesPanel = `
       <div id="ftTabCompanies" class="ft-tab-panel" style="display:none">
         <div class="ft-co-note">Valuación corporativa. La de entrada se deriva de la apreciación del PPS (valuación actual ÷ MOIC).</div>
-        <div class="ft-co-grid">${cards}</div>
+        <div class="ft-co-grid">${ftCompanyCards(f)}</div>
       </div>`;
   }
-
   host.innerHTML = `
     <div class="ft-header">
       <div class="ft-header-top">
@@ -4828,9 +4762,11 @@ function renderFundTrackerDetail(fundId) {
           <div class="ft-name">${escapeHtml(f.name)} — ${escapeHtml(f.subtitle)}</div>
           <div class="ft-sub">${escapeHtml(f.status)} · ${escapeHtml(f.confidentiality)} · Cutoff ${escapeHtml(cutoffPretty)}${f._spcxLiveNote ? ' · ' + escapeHtml(f._spcxLiveNote) : ''}</div>
         </div>
-        <button class="ft-export-btn" onclick="exportFundTrackerExcel('${f.id}', this)">
-          <i class="fa-solid fa-file-excel"></i> Descargar Excel
-        </button>
+        <div class="ft-export-grp">
+          <button class="ft-export-btn" data-ftexp="overview" onclick="exportFundTrackerExcel('${f.id}', this)"><i class="fa-solid fa-file-excel"></i> Descargar Excel</button>
+          ${f.companyInfo ? `<button class="ft-export-btn" data-ftexp="companies" style="display:none" onclick="exportCompaniesPDF('${f.id}', this)"><i class="fa-solid fa-file-pdf"></i> Descargar PDF</button>
+          <button class="ft-export-btn ft-export-btn-alt" data-ftexp="companies" style="display:none" onclick="exportCompaniesHTML('${f.id}', this)"><i class="fa-solid fa-file-code"></i> Descargar HTML</button>` : ''}
+        </div>
       </div>
       <div class="ft-stats">
         <div>
@@ -4852,12 +4788,143 @@ function renderFundTrackerDetail(fundId) {
     ${companiesPanel}`;
 }
 
+// Construye las tarjetas de empresas (reutilizado por la pestaña y por export HTML/PDF)
+function ftCompanyCards(f) {
+  const _seenCo = new Set();
+  const allCos = [...f.active, ...(f.distributed || [])].filter(r => {
+    const base = (r.company || '').replace(/\s*\((?:Distributed|X)\)\s*$/i, '').trim();
+    if (_seenCo.has(base)) return false;
+    _seenCo.add(base); return true;
+  });
+  const sec = (icon, title, body) =>
+    `<div class="ft-co-sec"><div class="ft-co-sec-ico"><i class="fa-solid ${icon}"></i></div>` +
+    `<div class="ft-co-sec-body"><div class="ft-co-sec-h">${escapeHtml(title)}</div>${body}</div></div>`;
+  return allCos.map(r => {
+    const cur = r.corpVal;
+    const moic = (r.moic && r.moic > 0) ? r.moic : 1;
+    const entry = cur / moic;
+    const info = (f.companyInfo || {})[r.company] || {};
+    let valNote;
+    if (Math.abs(moic - 1) < 0.02) valNote = 'Sin cambio: entrada en la ronda más reciente — marca fresca, no estancamiento.';
+    else if (moic > 1) valNote = `Apreciación de ${moic.toFixed(2)}x desde la entrada.`;
+    else valNote = `Marca a la baja respecto a la entrada (down-round · ${moic.toFixed(2)}x).`;
+    const ov0 = (f.logoOverrides || {})[r.company];
+    const override = ov0 ? (/^https?:/i.test(ov0) ? ov0 : (location.origin + ov0)) : null;
+    const domain = (f.logos || {})[r.company];
+    const dn = info.displayName || r.company;
+    const mono = `<span class="ft-co-mono">${escapeHtml(coInitials(dn))}</span>`;
+    let logoHtml;
+    if (override) {
+      logoHtml = `<div class="ft-co-logo">${mono}<img class="ft-co-logo-img" alt="" loading="lazy" src="${override}" onerror="this.remove()"></div>`;
+    } else if (domain) {
+      logoHtml = `<div class="ft-co-logo">${mono}` +
+        `<img class="ft-co-logo-img" alt="" loading="lazy" ` +
+        `src="https://www.google.com/s2/favicons?sz=128&amp;domain=${domain}" ` +
+        `onerror="if(!this.dataset.fb){this.dataset.fb=1;this.src='https://icons.duckduckgo.com/ip3/${domain}.ico';}else{this.remove();}"></div>`;
+    } else {
+      logoHtml = `<div class="ft-co-logo">${mono}</div>`;
+    }
+    const tags = [
+      info.category ? `<span class="ft-co-tag ft-co-tag-cat">${escapeHtml(info.category)}</span>` : '',
+      info.stage ? `<span class="ft-co-tag ft-co-tag-stage">${escapeHtml(info.stage)}</span>` : ''
+    ].join('');
+    const hasDetail = info.product || info.markets || info.thesis;
+    return `
+      <div class="ft-co-card">
+        <div class="ft-co-head">
+          ${logoHtml}
+          <div class="ft-co-headtext">
+            <div class="ft-co-name">${escapeHtml(dn)}</div>
+            ${tags ? `<div class="ft-co-tags">${tags}</div>` : ''}
+          </div>
+        </div>
+        ${info.tagline ? `<p class="ft-co-tagline">${escapeHtml(info.tagline)}</p>` : ''}
+        <div class="ft-co-vals">
+          <div class="ft-co-valbox"><span class="ft-co-vl">Entrada</span><span class="ft-co-vv">${fmtBil(entry)}</span></div>
+          <div class="ft-co-valbox"><span class="ft-co-vl">Valuación actual</span><span class="ft-co-vv ft-co-vv-now">${fmtBil(cur)}</span></div>
+        </div>
+        <div class="ft-co-vnote"><i class="fa-solid fa-circle-info"></i> ${escapeHtml(valNote)}</div>
+        ${hasDetail ? `<hr class="ft-co-div">` : ''}
+        ${info.product ? sec('fa-cube', 'Producto · ' + info.product.name, `<div class="ft-co-sec-t">${escapeHtml(info.product.desc)}</div>`) : ''}
+        ${info.markets ? sec('fa-globe', 'Mercado objetivo', `<div class="ft-co-chips">${info.markets.map(m => `<span class="ft-co-chip">${escapeHtml(m)}</span>`).join('')}</div>`) : ''}
+        ${info.thesis ? sec('fa-arrow-trend-up', 'Tesis de inversión', `<div class="ft-co-sec-t">${escapeHtml(info.thesis)}</div>`) : ''}
+      </div>`;
+  }).join('');
+}
+
+// Documento HTML standalone (para descargar como HTML o imprimir a PDF)
+function ftCompaniesDocHtml(f) {
+  const cutoffPretty = new Date(f.cutoff + 'T00:00:00').toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
+  const css = `
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#f8f9fc;color:#1a1f2e;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.doc{max-width:1120px;margin:0 auto;padding:28px}
+.doc-title{font-size:22px;font-weight:700;color:#e8650d;margin-bottom:4px}
+.doc-sub{font-size:12.5px;color:#6b7589;margin-bottom:6px}
+.doc-note{font-size:12px;color:#6b7589;margin-bottom:18px}
+.ft-co-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.ft-co-card{background:#fff;border:1px solid #dde1ec;border-radius:14px;padding:18px 20px;display:flex;flex-direction:column;break-inside:avoid;page-break-inside:avoid}
+.ft-co-head{display:flex;align-items:center;gap:13px;margin-bottom:12px}
+.ft-co-headtext{min-width:0}
+.ft-co-name{font-size:16px;font-weight:700;color:#1a1f2e;line-height:1.25}
+.ft-co-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.ft-co-tag{font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px}
+.ft-co-tag-cat{background:#fceee0;color:#e8650d}
+.ft-co-tag-stage{background:#eef0f5;color:#3d4559}
+.ft-co-tagline{font-size:13.5px;color:#3d4559;line-height:1.5;margin:0 0 14px}
+.ft-co-logo{position:relative;flex:0 0 auto;width:52px;height:52px;border-radius:13px;background:#fff;border:1px solid #dde1ec;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.ft-co-mono{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;color:#e8650d;background:#fceee0}
+.ft-co-logo-img{position:relative;width:100%;height:100%;object-fit:contain;padding:8px;background:#fff;border-radius:13px}
+.ft-co-vals{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px}
+.ft-co-valbox{background:#f8f9fc;border-radius:11px;padding:11px 14px;display:flex;flex-direction:column;gap:3px}
+.ft-co-vl{font-size:10.5px;font-weight:600;color:#6b7589;text-transform:uppercase;letter-spacing:.3px}
+.ft-co-vv{font-size:21px;font-weight:700;color:#1a1f2e;line-height:1.1}
+.ft-co-vv-now{color:#e8650d}
+.ft-co-vnote{display:flex;align-items:flex-start;gap:7px;font-size:12px;color:#6b7589;line-height:1.45}
+.ft-co-vnote i{margin-top:2px;color:#9aa3b5}
+.ft-co-div{border:none;border-top:1px solid #eef0f5;margin:14px 0}
+.ft-co-sec{display:flex;gap:12px;margin-bottom:14px}
+.ft-co-sec-ico{flex:0 0 auto;width:22px;text-align:center;color:#e8650d;font-size:15px;padding-top:1px}
+.ft-co-sec-body{min-width:0}
+.ft-co-sec-h{font-size:14px;font-weight:700;color:#1a1f2e;margin-bottom:4px}
+.ft-co-sec-t{font-size:13px;color:#3d4559;line-height:1.5}
+.ft-co-chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:2px}
+.ft-co-chip{font-size:12px;font-weight:500;color:#3d4559;background:#eef0f5;padding:4px 11px;border-radius:999px}
+@media print{.doc{padding:0;max-width:none}.ft-co-grid{gap:12px}}
+@page{margin:13mm}`;
+  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(f.name)} — Empresas</title>` +
+    `<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"><style>${css}</style></head>` +
+    `<body><div class="doc"><div class="doc-head"><div class="doc-title">${escapeHtml(f.name)} — Empresas</div>` +
+    `<div class="doc-sub">${escapeHtml(f.status)} · ${escapeHtml(f.confidentiality)} · Cutoff ${escapeHtml(cutoffPretty)}</div>` +
+    `<div class="doc-note">Valuación corporativa. La de entrada se deriva de la apreciación del PPS (valuación actual ÷ MOIC).</div></div>` +
+    `<div class="ft-co-grid">${ftCompanyCards(f)}</div></div></body></html>`;
+}
+
+function exportCompaniesHTML(fundId, btn) {
+  const f = FUND_TRACKERS[fundId]; if (!f || !f.companyInfo) return;
+  const blob = new Blob([ftCompaniesDocHtml(f)], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `${f.name.replace(/[^a-z0-9]+/gi, '_')}_Empresas.html`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 3000);
+}
+
+function exportCompaniesPDF(fundId, btn) {
+  const f = FUND_TRACKERS[fundId]; if (!f || !f.companyInfo) return;
+  const doc = ftCompaniesDocHtml(f).replace('</body>', '<scr'+'ipt>window.addEventListener("load",function(){setTimeout(function(){window.focus();window.print();},500);});</scr'+'ipt></body>');
+  const w = window.open('', '_blank');
+  if (!w) { alert('Permite las ventanas emergentes para generar el PDF.'); return; }
+  w.document.open(); w.document.write(doc); w.document.close();
+}
+
 // Cambio de pestaña en el detalle del tracker
 function switchFtTab(tab) {
   document.querySelectorAll('.ft-tab').forEach(b => b.classList.toggle('active', b.dataset.fttab === tab));
   const ov = document.getElementById('ftTabOverview'), co = document.getElementById('ftTabCompanies');
   if (ov) ov.style.display = (tab === 'overview') ? 'block' : 'none';
   if (co) co.style.display = (tab === 'companies') ? 'block' : 'none';
+  document.querySelectorAll('[data-ftexp]').forEach(b => { b.style.display = (b.dataset.ftexp === tab) ? '' : 'none'; });
 }
 
 // Formato de valuación corporativa en $B / $M
