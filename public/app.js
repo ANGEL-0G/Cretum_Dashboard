@@ -4764,7 +4764,7 @@ function renderFundTrackerDetail(fundId) {
         </div>
         <div class="ft-export-grp">
           <button class="ft-export-btn" data-ftexp="overview" onclick="exportFundTrackerExcel('${f.id}', this)"><i class="fa-solid fa-file-excel"></i> Descargar Excel</button>
-          ${f.companyInfo ? `<button class="ft-export-btn" data-ftexp="companies" style="display:none" onclick="exportCompaniesPDF('${f.id}', this)"><i class="fa-solid fa-file-pdf"></i> Descargar PDF</button>
+          ${f.companyInfo ? `<button class="ft-export-btn ft-export-btn-pdf" data-ftexp="companies" style="display:none" onclick="exportCompaniesPDF('${f.id}', this)"><i class="fa-solid fa-file-pdf"></i> Descargar PDF</button>
           <button class="ft-export-btn ft-export-btn-alt" data-ftexp="companies" style="display:none" onclick="exportCompaniesHTML('${f.id}', this)"><i class="fa-solid fa-file-code"></i> Descargar HTML</button>` : ''}
         </div>
       </div>
