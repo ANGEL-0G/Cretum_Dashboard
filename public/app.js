@@ -1751,12 +1751,9 @@ function renderHomeModules() {
     `).join('');
   }
 
-  // Panel ejecutivo (solo MVP)
+  // Panel ejecutivo MVP: ahora vive en Base de Datos → botón "Full LATAM MVP Snapshot".
   const kpiHost = document.getElementById('homeKpis');
-  if (kpiHost) {
-    if (currentOrg === 'mvp') { kpiHost.style.display = ''; renderMvpKpis(); }
-    else { kpiHost.style.display = 'none'; kpiHost.innerHTML = ''; }
-  }
+  if (kpiHost) { kpiHost.style.display = 'none'; kpiHost.innerHTML = ''; }
 }
 
 // Formato compacto de USD
