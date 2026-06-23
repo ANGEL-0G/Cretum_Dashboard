@@ -3750,6 +3750,82 @@ function spxStructures(seriesName) {
   if (/22K|22J/i.test(s)) return ['A'];
   return ['B'];
 }
+
+// Estructuras completas de lock-up (detalle, espejo del catálogo del reporte SpaceX)
+const SPX_STRUCTURES = {
+  B: {
+    label: 'Lock-up escalonado de 180 días',
+    summary: 'Liberación escalonada y ligada a desempeño dentro de la ventana estándar de <b>180 días</b>. Expira por completo ~9 de diciembre de 2026.',
+    phases: [
+      { hito: '1er cliff — tras Q2 2026 (jul–sep 2026)', pct: '20%', detalle: 'Acumulado: 20%.' },
+      { hito: 'Bono por desempeño', pct: '+10%', detalle: 'Si la acción cotiza ≥30% arriba del IPO en 5 de 10 días consecutivos (pre-Q2). Acumulado: 30%.' },
+      { hito: 'Día 70 (~21 ago 2026)', pct: '7%', detalle: 'Acumulado: 37%.' },
+      { hito: 'Día 90 (~10 sep 2026)', pct: '7%', detalle: 'Acumulado: 44%.' },
+      { hito: 'Día 105 (~25 sep 2026)', pct: '7%', detalle: 'Acumulado: 51%.' },
+      { hito: 'Día 120 (~10 oct 2026)', pct: '7%', detalle: 'Acumulado: 58%.' },
+      { hito: 'Día 135 (~25 oct 2026)', pct: '7%', detalle: 'Acumulado: 65%.' },
+      { hito: '2º cliff — tras Q3 2026 (oct–dic 2026)', pct: '28%', detalle: 'Acumulado: 93%.' },
+      { hito: 'Día 180 (~9 dic 2026)', pct: 'Remanente', detalle: 'Expiración total. Acumulado: 100%.' },
+    ],
+    nota: 'Fechas y porcentajes estimados con base en el S-1 de SpaceX (mayo 2026); el prospecto final es la autoridad.',
+  },
+  A: {
+    label: 'Liberación en dos mitades (hasta ~13 meses)',
+    summary: 'La posición se libera en <b>dos mitades</b>. La primera (~50%) durante los primeros ~6 meses (lock-up de 180 días); la segunda (~50%) en un <b>lock-up extendido</b> que se estira hasta ~13-14 meses post-IPO (liberación final ~ agosto 2027).',
+    groups: [
+      { label: 'Primera mitad (~50%) — lock-up de 180 días', phases: [
+        { hito: '2 días tras Q2 2026', pct: '20%', detalle: 'Primer cliff de esta mitad.' },
+        { hito: '~mismo período', pct: '+10% bonus', detalle: 'Solo si el precio cierra ≥30% arriba del precio de oferta en 5 de los 10 días siguientes a Q2 2026.' },
+        { hito: 'Cada 15-20 días', pct: '7% por bloque', detalle: 'Bloques sucesivos (~ago–oct 2026).' },
+        { hito: 'Tras resultados Q3', pct: '28%', detalle: '~noviembre 2026.' },
+        { hito: 'Día 180 (~9 dic 2026)', pct: 'Remanente', detalle: 'Cierre de la primera mitad.' },
+      ] },
+      { label: 'Segunda mitad (~50%) — lock-up extendido (patrón 20/10/20/10/20/20)', phases: [
+        { hito: '2 días tras Q4 2026 (~feb 2027)', pct: '20%', detalle: 'Inicio del lock-up extendido.' },
+        { hito: 'Día 280 (~19 mar 2027)', pct: '10%', detalle: '' },
+        { hito: '2 días tras Q1 2027 (~may 2027)', pct: '20%', detalle: '' },
+        { hito: 'Día 340 (~18 may 2027)', pct: '10%', detalle: '' },
+        { hito: 'Día 366 (~13 jun 2027)', pct: '20%', detalle: '' },
+        { hito: '2 días tras Q2 2027 (~ago 2027)', pct: '20%', detalle: 'Remanente — liberación final.' },
+      ] },
+    ],
+    nota: 'Fechas y porcentajes estimados con base en el S-1 de SpaceX (mayo 2026); el prospecto final es la autoridad. Liquidez total ~ agosto 2027 (~13-14 meses post-IPO).',
+  },
+};
+function spxShort(sname) {
+  const m = (sname || '').match(/Series\s+([\w-]+)/i);
+  return /All-Star Fund IV/i.test(sname) ? 'Fund IV' : /All-Star Fund V/i.test(sname) ? 'Fund V' : (m ? 'Serie ' + m[1] : 'SpaceX');
+}
+function spxTranches(sname) {
+  const s = sname || '';
+  if (/All-Star Fund IV/i.test(s)) return [{ portion: 0.20, structure: 'A' }, { portion: 0.80, structure: 'B' }];
+  if (/22K|22J/i.test(s)) return [{ portion: 1.0, structure: 'A' }];
+  return [{ portion: 1.0, structure: 'B' }];
+}
+function spxLockupDetail(spxPos) {
+  const agg = { A: [], B: [] };
+  spxPos.forEach(p => {
+    const sname = p.series?.name || '';
+    const short = spxShort(sname);
+    spxTranches(sname).forEach(tr => agg[tr.structure].push({ short, portion: tr.portion }));
+  });
+  const phaseTable = phases => `<table class="lp-phase"><thead><tr><th>Hito</th><th>%</th><th>Detalle</th></tr></thead><tbody>${phases.map(ph => `<tr><td>${escapeHtml(ph.hito)}</td><td class="lp-phase-pct">${escapeHtml(ph.pct)}</td><td>${escapeHtml(ph.detalle || '')}</td></tr>`).join('')}</tbody></table>`;
+  let html = '';
+  ['B', 'A'].forEach(k => {
+    const scopes = agg[k];
+    if (!scopes.length) return;
+    const st = SPX_STRUCTURES[k];
+    const seen = new Set(), applies = [];
+    scopes.forEach(x => { const key = x.short + '|' + x.portion; if (seen.has(key)) return; seen.add(key); applies.push(x.portion < 1 ? `${Math.round(x.portion * 100)}% de ${x.short}` : x.short); });
+    html += `<div class="lp-dd-struct"><div class="lp-dd-h">${escapeHtml(st.label)}</div>` +
+      `<div class="lp-dd-applies">Aplica a: ${escapeHtml(applies.join(' · '))}</div>` +
+      `<div class="lp-dd-sum">${st.summary}</div>`;
+    if (st.groups) st.groups.forEach(g => { html += `<div class="lp-dd-glabel">${escapeHtml(g.label)}</div>` + phaseTable(g.phases); });
+    else if (st.phases) html += phaseTable(st.phases);
+    html += `<div class="lp-dd-nota">${escapeHtml(st.nota)}</div></div>`;
+  });
+  return html;
+}
 function fmtEventDate(d) {
   try { return new Date(d + 'T00:00:00').toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' }); }
   catch (e) { return d; }
@@ -3782,10 +3858,7 @@ function buildLp360(positions) {
     const by = { A: [], B: [] };
     spxPos.forEach(p => {
       const sname = p.series?.name || '';
-      const m = sname.match(/Series\s+([\w-]+)/i);
-      const short = /All-Star Fund IV/i.test(sname) ? 'Fund IV'
-        : /All-Star Fund V/i.test(sname) ? 'Fund V'
-        : (m ? 'Serie ' + m[1] : 'SpaceX');
+      const short = spxShort(sname);
       spxStructures(sname).forEach(st => { if (!by[st].includes(short)) by[st].push(short); });
     });
     const today = new Date().toISOString().slice(0, 10);
@@ -3793,7 +3866,7 @@ function buildLp360(positions) {
     const blocks = [];
     if (by.B.length) blocks.push({ scope: by.B.join(' · '), summary: 'Liberación escalonada y ligada a desempeño dentro de la ventana de 180 días. Expira por completo ~9 dic 2026.' });
     if (by.A.length) blocks.push({ scope: by.A.join(' · '), summary: 'Una porción sigue un lock-up extendido (en parcialidades) hasta ~13-14 meses post-IPO; liberación final ~ago 2027.' });
-    lockup = { blocks, next: nextB || null };
+    lockup = { blocks, next: nextB || null, detail: spxLockupDetail(spxPos) };
   }
   _lp360 = { companyExp, themeExp };
   return { moic, distrib, dpi, nActive: active.length, companyExp, themeExp, lockup, hasSpx: spxPos.length > 0 };
@@ -3863,6 +3936,7 @@ function renderInvestorDetail(inv, contacts, positions) {
     ${_lp.lockup.next ? `<div class="lp-lock-next"><i class="fa-solid fa-unlock"></i> Próxima liberación estimada: <b>${fmtEventDate(_lp.lockup.next.date)}</b> &middot; ${escapeHtml(_lp.lockup.next.pct)} de la posición</div>` : ''}
     ${_lp.lockup.blocks.map(b => `<div class="lp-lock-block"><div class="lp-lock-scope">${escapeHtml(b.scope)}</div><div class="lp-lock-sum">${escapeHtml(b.summary)}</div></div>`).join('')}
     <div class="lp-events-note">Estimado con base en el S-1 de SpaceX (IPO 12-jun-2026); el prospecto final es la autoridad.</div>
+    ${_lp.lockup.detail ? `<details class="lp-distdetail"><summary><i class="fa-solid fa-circle-info"></i> Información detallada de distribución</summary><div class="lp-dd-body">${_lp.lockup.detail}</div></details>` : ''}
   </div>` : '';
   const html = `
     <div class="db-detail-head">
