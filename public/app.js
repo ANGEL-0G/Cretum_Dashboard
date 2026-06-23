@@ -4388,7 +4388,7 @@ const FUND_TRACKERS = {
         thesis:'Apuesta a la escasez estructural de mano de obra y a la automatización del trabajo físico.'
       },
       'Kodiak Robotics': {
-        category:'Conducción autónoma', stage:'Crecimiento',
+        category:'Conducción autónoma', stage:'Pública',
         tagline:'Desarrolla el "Kodiak Driver", sistema de conducción autónoma para camiones de carga de larga distancia.',
         product:{name:'Kodiak Driver', desc:'Autonomía para trucking de larga distancia y una variante para defensa / terreno off-road.'},
         markets:['Trucking','Logística','Defensa','Autonomía'],
@@ -4451,7 +4451,7 @@ const FUND_TRACKERS = {
         thesis:'Porción realizada que refleja la fuerte apreciación de Groq; marcada a su MOIC al momento de la distribución.'
       },
       'Klarna Holding AB': {
-        category:'Fintech · pagos', stage:'Tardía',
+        category:'Fintech · pagos', stage:'Pública',
         tagline:'Fintech sueca de "compra ahora, paga después" (BNPL) con decenas de millones de usuarios globales.',
         product:{name:'Klarna BNPL', desc:'Pagos diferidos, banca, tarjeta y compras asistidas por IA.'},
         markets:['Fintech','Pagos','BNPL','Banca'],
