@@ -3501,29 +3501,6 @@ async function investorChartImages(data) {
       }, 1000, 360));
     }
 
-    // 2) Distribuciones acumuladas en el tiempo — solo si hay 2+ cartas fechadas
-    const dated = data.letters.filter(x => x.fecha && (x.total || 0) > 0 && !x._reinvest)
-      .slice().sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
-    if (dated.length >= 2) {
-      let acc = 0;
-      const labels = dated.map(x => x.fecha);
-      const cum = dated.map(x => (acc += (x.total || 0)));
-      const fmt = moneyAxisFmt(Math.max(...cum));
-      out.push(await renderChartPng({
-        type: 'line',
-        data: { labels, datasets: [{ label: 'Distribuido acumulado', data: cum, borderColor: MVP, backgroundColor: 'rgba(232,101,13,.15)', fill: true, tension: .25, pointRadius: 3, pointBackgroundColor: MVP, borderWidth: 2.5 }] },
-        options: {
-          plugins: {
-            legend: { display: false },
-            title: { display: true, text: 'Distribuciones acumuladas en el tiempo', font: { size: 16, weight: '600' }, color: '#1a1f2e', padding: { bottom: 12 } },
-          },
-          scales: {
-            y: { beginAtZero: true, ticks: { callback: fmt, font: { size: 12 }, color: '#6b7689' }, grid: { color: '#eef1f6' } },
-            x: { ticks: { font: { size: 11 }, color: '#6b7689', maxRotation: 45, minRotation: 0 }, grid: { display: false } },
-          },
-        },
-      }, 1000, 340));
-    }
     // NAV activo por posición (base consistente con el 360 y el snapshot)
     const activePos = data.pos.filter(p => p.estado === 'Activa');
     const navOf = p => (+p.commitment_actual || +p.commitment || 0);
@@ -3534,6 +3511,30 @@ async function investorChartImages(data) {
       },
       cutout: '58%',
     });
+
+    // 2) MOIC por posición — barras horizontales (verde >=1x, rojo <1x)
+    const moicPos = activePos
+      .filter(p => p.moic != null && (+p.commitment || +p.commitment_actual) > 0)
+      .map(p => ({ name: p.company, moic: +p.moic }))
+      .sort((a, b) => b.moic - a.moic)
+      .slice(0, 14);
+    if (moicPos.length) {
+      out.push(await renderChartPng({
+        type: 'bar',
+        data: { labels: moicPos.map(p => short(p.name)), datasets: [{ label: 'MOIC', data: moicPos.map(p => p.moic), backgroundColor: moicPos.map(p => p.moic >= 1 ? POS : NEG), borderRadius: 4, maxBarThickness: 26 }] },
+        options: {
+          indexAxis: 'y',
+          plugins: {
+            legend: { display: false },
+            title: { display: true, text: 'MOIC por posición', font: { size: 16, weight: '600' }, color: '#1a1f2e', padding: { bottom: 12 } },
+          },
+          scales: {
+            x: { beginAtZero: true, ticks: { callback: v => v + 'x', font: { size: 12 }, color: '#6b7689' }, grid: { color: '#eef1f6' } },
+            y: { ticks: { font: { size: 11 }, color: '#1a1f2e' }, grid: { display: false } },
+          },
+        },
+      }, 980, Math.max(280, 70 + moicPos.length * 26)));
+    }
 
     // 3) Composición del portafolio por empresa (NAV activo) — dona
     const byCo = {};
@@ -3560,30 +3561,6 @@ async function investorChartImages(data) {
         data: { labels: thEntries.map(e => e[0]), datasets: [{ data: thEntries.map(e => e[1]), backgroundColor: PAL, borderColor: '#fff', borderWidth: 2 }] },
         options: donutOpts('Exposición por tema (NAV activo)'),
       }, 600, 360));
-    }
-
-    // 5) MOIC por posición — barras horizontales (verde >=1x, rojo <1x)
-    const moicPos = activePos
-      .filter(p => p.moic != null && (+p.commitment || +p.commitment_actual) > 0)
-      .map(p => ({ name: p.company, moic: +p.moic }))
-      .sort((a, b) => b.moic - a.moic)
-      .slice(0, 14);
-    if (moicPos.length) {
-      out.push(await renderChartPng({
-        type: 'bar',
-        data: { labels: moicPos.map(p => short(p.name)), datasets: [{ label: 'MOIC', data: moicPos.map(p => p.moic), backgroundColor: moicPos.map(p => p.moic >= 1 ? POS : NEG), borderRadius: 4, maxBarThickness: 26 }] },
-        options: {
-          indexAxis: 'y',
-          plugins: {
-            legend: { display: false },
-            title: { display: true, text: 'MOIC por posición', font: { size: 16, weight: '600' }, color: '#1a1f2e', padding: { bottom: 12 } },
-          },
-          scales: {
-            x: { beginAtZero: true, ticks: { callback: v => v + 'x', font: { size: 12 }, color: '#6b7689' }, grid: { color: '#eef1f6' } },
-            y: { ticks: { font: { size: 11 }, color: '#1a1f2e' }, grid: { display: false } },
-          },
-        },
-      }, 980, Math.max(280, 70 + moicPos.length * 26)));
     }
   } catch (e) {
     console.warn('[charts] no se pudo generar gráfica:', e);
