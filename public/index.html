@@ -899,6 +899,12 @@ button,input,select{font-family:var(--font)}
 }
 .settings-action:hover{background:var(--gray-50)}
 .settings-action:disabled{opacity:.6;cursor:not-allowed}
+.role-switch{display:flex;gap:6px;padding:2px 10px 4px}
+.role-switch-btn{flex:1;padding:7px 6px;border:1.5px solid var(--gray-200,#e0e3eb);background:var(--white,#fff);border-radius:8px;font-size:12px;font-weight:600;color:var(--gray-500,#667);cursor:pointer;font-family:var(--font)}
+.role-switch-btn:hover{border-color:var(--navy);color:var(--navy)}
+.role-switch-btn.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.role-switch-note{font-size:10.5px;color:var(--gray-400,#889);padding:4px 10px 6px;line-height:1.45}
+[data-theme="dark"] .role-switch-btn{background:rgba(255,255,255,.05)}
 .settings-action > i{
   width:32px;height:32px;flex-shrink:0;
   display:flex;align-items:center;justify-content:center;
@@ -2445,6 +2451,16 @@ button,input,select{font-family:var(--font)}
         <div class="settings-row-sub">Protege tu cuenta con un código de tu celular</div>
       </div>
     </button>
+    <div class="settings-sep" id="roleSwitchSep" style="display:none"></div>
+    <div id="roleSwitchBlock" style="display:none">
+      <div class="settings-h">Ver como (prueba)</div>
+      <div class="role-switch">
+        <button class="role-switch-btn" data-role="admin"  type="button" onclick="setRolePreview('admin')">Admin</button>
+        <button class="role-switch-btn" data-role="editor" type="button" onclick="setRolePreview('editor')">Editor</button>
+        <button class="role-switch-btn" data-role="viewer" type="button" onclick="setRolePreview('viewer')">Viewer</button>
+      </div>
+      <div class="role-switch-note"><i class="fa-solid fa-circle-info"></i> Cambia solo lo que TÚ ves, para probar. No toca la base; refresca para volver a tu rol real.</div>
+    </div>
     <div class="settings-sep"></div>
     <button class="settings-logout" onclick="doLogout()">
       <i class="fa-solid fa-arrow-right-from-bracket"></i>

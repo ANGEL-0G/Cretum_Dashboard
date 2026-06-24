@@ -4,6 +4,7 @@
 let sb = null;                   // Supabase JS client
 let currentUser = null;          // UUID de auth.users
 let currentProfile = null;       // { full_name, initials, role }
+let roleReal = null;             // rol REAL del usuario (el toggle "Ver como" muta currentProfile.role solo en memoria)
 let USERS = {};                  // map UUID → { name, initials, role }
 let state = { simple: [], progress: [], assigned: [], invites: [] };
 let tkView = 'kanban';
@@ -55,6 +56,7 @@ async function enterApp(user) {
   mfaMarkActive(user.id);   // renueva la confianza de 2FA y arranca el rastreo de inactividad
   mfaHookActivity();
   currentProfile = await loadProfile(user.id);
+  roleReal = currentProfile.role;   // rol real (para el toggle "Ver como" — solo admin lo ve)
   await loadAllProfiles();
   document.getElementById('headerAv').textContent = currentProfile.initials || '—';
   document.getElementById('headerUser').textContent = currentProfile.full_name;
@@ -1375,11 +1377,38 @@ function toggleSettings(e) {
     document.getElementById('dropdownUserName').textContent = currentProfile.full_name || '—';
     document.getElementById('dropdownUserRole').textContent = currentProfile.role || '';
     applyThemeToggleState();
+    // Toggle "Ver como" — solo para quien es admin REAL (sirve para probar la UI de editor/viewer)
+    const showSwitch = roleReal === 'admin';
+    const blk = document.getElementById('roleSwitchBlock');
+    const sep = document.getElementById('roleSwitchSep');
+    if (blk) blk.style.display = showSwitch ? '' : 'none';
+    if (sep) sep.style.display = showSwitch ? '' : 'none';
+    if (showSwitch) applyRoleSwitchUI();
     // Asegurar que el editor de nombre vuelva a estado cerrado al abrir el menú
     cancelEditName();
   }
   pop.classList.toggle('show');
   btn?.classList.toggle('open');
+}
+
+/* ── "Ver como" (solo admin real): cambia el rol SOLO en esta sesión del
+   navegador para probar la UI de editor/viewer. No toca la base; al refrescar
+   vuelve el rol real. El backend sigue viendo tu rol real (admin). ── */
+function setRolePreview(r) {
+  if (!['admin', 'editor', 'viewer'].includes(r)) return;
+  if (roleReal === null) roleReal = currentProfile?.role || 'admin';
+  if (!currentProfile) return;
+  currentProfile.role = r;
+  document.getElementById('dropdownUserRole').textContent = r + (r === roleReal ? '' : ' (vista de prueba)');
+  applyRoleSwitchUI();
+  renderNavList();
+  renderHomeModules();
+  if (currentView === 'campaigns') loadCampaigns();
+  toast(r === roleReal ? 'Viendo con tu rol real (admin)' : `Viendo como ${r} (solo tú, no afecta la base)`);
+}
+function applyRoleSwitchUI() {
+  document.querySelectorAll('#roleSwitchBlock .role-switch-btn')
+    .forEach(b => b.classList.toggle('on', b.dataset.role === currentProfile?.role));
 }
 
 /* ── Edición de nombre de perfil (click en el ícono de lápiz del dropdown) ── */
