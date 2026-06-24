@@ -3396,6 +3396,8 @@ function buildInvestorExport(posId) {
       company: p.companies?.name || '—',
       series: p.series?.name || '—',
       estado: p.distributed_at ? 'Terminada' : 'Activa',
+      theme: companyTheme(p.companies?.name),
+      reinvSource: !!p.distributed_at && dists.some(x => /reinver|reinvest/i.test(x.notes || '')),
       commitment: +p.commitment || 0,
       commitment_actual: +p.commitment_actual || 0,
       carry: num(p.carry_pct),
@@ -3782,7 +3784,52 @@ async function exportInvestorXlsx(posId) {
   }
 }
 
+// Reporte premium HTML→PDF vía función serverless (chromium). Fallback a jsPDF si falla.
 async function exportInvestorPdf(posId) {
+  const data = buildInvestorExport(posId);
+  if (!data) { toast('Abre un inversionista primero'); return; }
+  if (posId != null && !data.pos.length) { toast('No encontré esa posición'); return; }
+  const single = posId != null;
+  const t = data.totals;
+  const shown = data.pos.filter(p => !p.reinvSource);
+  const dateStr = new Date().toLocaleDateString('es-MX');
+  const accountsLine = data.combined && data.inv._accounts
+    ? data.inv._accounts.map(a => a.name).join(' + ')
+    : (data.inv.titular ? 'Titular: ' + data.inv.titular : '');
+  const payload = {
+    meta: {
+      title: data.inv.name,
+      accountsLine,
+      combined: !!data.combined,
+      single,
+      count: shown.length,
+      dateStr,
+      filename: invExportFilename(data.inv, single && data.pos[0] ? data.pos[0].company : ''),
+    },
+    totals: { compromiso: t.totCommit, nav: t.totActual, valor: t.valorEstimado, distribuido: t.totDist, moic: t.portMoic, dpi: t.dpi },
+    pos: data.pos.map(p => ({
+      acct: p.cuenta || '', company: p.company, series: p.series, estado: p.estado,
+      entry_pps: p.entry_pps, current_pps: p.current_pps, commitment: p.commitment,
+      commitment_actual: p.commitment_actual, valor: p.valor_estimado, moic: p.moic,
+      theme: p.theme, reinvSource: !!p.reinvSource,
+    })),
+  };
+  try {
+    toast('Generando PDF…');
+    const r = await fetch('/api/report', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    if (!r.ok) throw new Error('report ' + r.status);
+    const blob = await r.blob();
+    if (blob.type !== 'application/pdf') throw new Error('respuesta no es PDF');
+    downloadBlob(blob, payload.meta.filename + '.pdf');
+    toast(single ? `PDF: ${payload.pos[0]?.company || ''}` : 'PDF generado');
+    return;
+  } catch (e) {
+    console.warn('[report] serverless falló, uso jsPDF:', e);
+    return exportInvestorPdfJsPDF(posId);
+  }
+}
+
+async function exportInvestorPdfJsPDF(posId) {
   const data = buildInvestorExport(posId);
   if (!data) { toast('Abre un inversionista primero'); return; }
   if (posId != null && !data.pos.length) { toast('No encontré esa posición'); return; }
