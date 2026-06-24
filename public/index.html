@@ -2775,6 +2775,14 @@ button,input,select{font-family:var(--font)}
     .camp-resp-sel:focus{border-color:var(--navy);outline:none}
     .camp-resp-sel.on{border-color:var(--navy);color:var(--navy);font-weight:600}
     [data-theme="dark"] .camp-fchip,[data-theme="dark"] .camp-resp-sel{background:var(--card,#1a2030)}
+    /* Botón para mostrar la matriz (solo móvil) + CSS de subida al fondo */
+    .camp-matrix-toggle{display:none;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:14px 16px;border:1.5px solid var(--line,#e0e3eb);border-radius:12px;background:var(--white,#fff);color:var(--navy);font-weight:600;font-size:13.5px;font-family:inherit;cursor:pointer;margin-bottom:12px}
+    .camp-matrix-toggle:hover{border-color:var(--navy)}
+    .camp-matrix-toggle.open .camp-mt-chev{transform:rotate(180deg)}
+    .camp-mt-chev{transition:transform .2s;font-size:11px}
+    .camp-upload{margin-top:22px;padding-top:18px;border-top:1px solid var(--line,#e3e8f0)}
+    .camp-upload-title{font-size:13px;font-weight:600;color:var(--ink,#334);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+    .camp-upload-title i{color:var(--navy)}
     /* Tabla de Contactos (no-admin) */
     .ctbl-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
     .ctbl-search{flex:1;min-width:220px}
@@ -2946,22 +2954,28 @@ button,input,select{font-family:var(--font)}
       .camp-rank-row{padding:9px 11px;gap:9px}
       .camp-rank-pos{font-size:15px;min-width:20px}
       .camp-rank-score{font-size:14px}
-      .camp-actions{gap:8px}
-      .camp-actions .cdd-btn{flex:1 1 calc(50% - 8px);justify-content:center}
-      .camp-export-grp{flex:1 1 100%}
-      .camp-export-grp .cdd-btn{flex:1}
+      /* Acciones como TARJETAS grandes (2 columnas), no botones amontonados */
+      .camp-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+      .camp-actions > .cdd-btn{flex-direction:column;gap:8px;padding:15px 8px;min-height:80px;border-radius:14px;font-size:11.5px;text-align:center;line-height:1.2;justify-content:center}
+      .camp-actions > .cdd-btn i{font-size:21px}
+      .camp-export-grp{display:flex}
+      .camp-export-grp .cdd-btn{flex:1;flex-direction:column;gap:8px;padding:15px 8px;min-height:80px;border-radius:14px;font-size:11.5px;text-align:center;line-height:1.2;justify-content:center}
+      .camp-export-grp .cdd-btn i{font-size:21px}
+      .camp-export-lotes{display:none}              /* en móvil exporta 1 archivo; los lotes quedan para escritorio */
       .camp-legend{margin-left:0;flex-basis:100%}
       .camp-filterbar{gap:7px}
       .camp-fchip{flex:1 1 calc(33% - 7px);justify-content:center;padding:8px 6px}
       .camp-resp-sel{flex-basis:100%;max-width:none}
       .camp-upload-row{flex-direction:column}
       .camp-drop{min-width:0;padding:16px}
-      /* matriz: columna de nombre más angosta y fuente menor para que entre más */
+      /* La matriz se muestra solo al pulsar el botón (es muy ancha para móvil) */
+      .camp-matrix-toggle{display:flex}
+      #campMatrix:not(.show){display:none}
       .camp-name,.camp-name-h{width:148px;min-width:148px;max-width:148px}
       .camp-total,.camp-total-h{left:148px}
       .camp-table{font-size:12px}
       .camp-table th,.camp-table td{padding:7px 4px}
-      .camp-table-scroll{max-height:calc(100vh - 260px)}
+      .camp-table-scroll{max-height:calc(100vh - 220px)}
     }
   </style>
   <div class="page page-db" id="pageCampaigns">
@@ -3007,7 +3021,43 @@ button,input,select{font-family:var(--font)}
           <option value="">Por responsable…</option>
         </select>
       </div>
+      <div class="camp-actions">
+        <button class="cdd-btn" type="button" onclick="campAddContactOpen()"><i class="fa-solid fa-user-plus"></i> Añadir contacto</button>
+        <button class="cdd-btn" type="button" onclick="campTemplateOpen()"><i class="fa-solid fa-envelope-open-text"></i> Plantilla del correo</button>
+        <button class="cdd-btn" type="button" onclick="campExportExcel()"><i class="fa-solid fa-file-excel"></i> Exportar Excel</button>
+        <span class="camp-export-grp" title="En cuántos archivos dividir el export — súbelos a Yesware espaciados ~1 hora para no disparar el antispam de Microsoft">
+          <button class="cdd-btn" type="button" onclick="campExportYesware()"><i class="fa-solid fa-paper-plane"></i> Exportar Contactos</button>
+          <select id="campExportLotes" class="camp-export-lotes">
+            <option value="1">1 archivo</option>
+            <option value="2">2 lotes</option>
+            <option value="4">4 lotes</option>
+            <option value="6">6 lotes</option>
+          </select>
+        </span>
+        <button class="cdd-btn" type="button" id="campSheetsBtn" onclick="campSheetsSync()" title="Reescribe el Google Sheets y trae de vuelta los comentarios del equipo"><i class="fa-solid fa-table-cells"></i> Sincronizar Sheets</button>
+        <button class="cdd-btn" type="button" onclick="aperturaOpen()" title="Destinatarios del correo diario de apertura de mercados"><i class="fa-solid fa-sun"></i> Contactos Apertura</button>
+        <button class="cdd-btn camp-btn-danger" type="button" onclick="campDeleteMonth()"><i class="fa-solid fa-trash"></i> Borrar mes</button>
+      </div>
+
+      <div class="db-filters" style="border:none;padding-bottom:8px">
+        <span class="db-count" id="campCount">—</span>
+        <span class="camp-legend">
+          <span class="camp-l1">⚡</span> abrió ·
+          <span class="camp-l2">⚡⚡</span> + click ·
+          <span class="camp-l3">⚡⚡⚡</span> + respondió
+        </span>
+      </div>
+
+      <!-- En móvil la matriz es muy ancha: se muestra solo al pulsar este botón -->
+      <button class="camp-matrix-toggle" id="campMatrixToggle" type="button" onclick="campToggleMatrix()">
+        <span><i class="fa-solid fa-table-cells-large"></i> Ver tabla de interacción</span>
+        <i class="fa-solid fa-chevron-down camp-mt-chev"></i>
+      </button>
+      <div id="campMatrix" class="camp-matrix"></div>
+
+      <!-- Subir CSV de Yesware — al fondo para no estorbar -->
       <div class="camp-upload">
+        <div class="camp-upload-title"><i class="fa-solid fa-cloud-arrow-up"></i> Subir reporte de Yesware</div>
         <div class="camp-upload-row">
           <label class="camp-month-lbl">Mes del reporte
             <input type="month" id="campMonth" class="camp-month">
@@ -3020,36 +3070,8 @@ button,input,select{font-family:var(--font)}
             <input type="file" id="campFileInput" accept=".csv,text/csv" style="display:none" onchange="campHandleFiles(this.files)">
           </div>
         </div>
-        <div class="camp-actions">
-          <button class="cdd-btn" type="button" onclick="campAddContactOpen()"><i class="fa-solid fa-user-plus"></i> Añadir contacto</button>
-          <button class="cdd-btn" type="button" onclick="campTemplateOpen()"><i class="fa-solid fa-envelope-open-text"></i> Plantilla del correo</button>
-          <button class="cdd-btn" type="button" onclick="campExportExcel()"><i class="fa-solid fa-file-excel"></i> Exportar Excel</button>
-          <span class="camp-export-grp" title="En cuántos archivos dividir el export — súbelos a Yesware espaciados ~1 hora para no disparar el antispam de Microsoft">
-            <button class="cdd-btn" type="button" onclick="campExportYesware()"><i class="fa-solid fa-paper-plane"></i> Exportar Contactos</button>
-            <select id="campExportLotes" class="camp-export-lotes">
-              <option value="1">1 archivo</option>
-              <option value="2">2 lotes</option>
-              <option value="4">4 lotes</option>
-              <option value="6">6 lotes</option>
-            </select>
-          </span>
-          <button class="cdd-btn" type="button" id="campSheetsBtn" onclick="campSheetsSync()" title="Reescribe el Google Sheets y trae de vuelta los comentarios del equipo"><i class="fa-solid fa-table-cells"></i> Sincronizar Sheets</button>
-          <button class="cdd-btn" type="button" onclick="aperturaOpen()" title="Destinatarios del correo diario de apertura de mercados"><i class="fa-solid fa-sun"></i> Contactos Apertura</button>
-          <button class="cdd-btn camp-btn-danger" type="button" onclick="campDeleteMonth()"><i class="fa-solid fa-trash"></i> Borrar mes</button>
-        </div>
         <div class="camp-preview" id="campPreview" style="display:none"></div>
       </div>
-
-      <div class="db-filters" style="border:none;padding-bottom:8px">
-        <span class="db-count" id="campCount">—</span>
-        <span class="camp-legend">
-          <span class="camp-l1">⚡</span> abrió ·
-          <span class="camp-l2">⚡⚡</span> + click ·
-          <span class="camp-l3">⚡⚡⚡</span> + respondió
-        </span>
-      </div>
-
-      <div id="campMatrix" class="camp-matrix"></div>
     </div>
 
     <!-- TAB: Tabla de Contactos (todos los no-admin) -->

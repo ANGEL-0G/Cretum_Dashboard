@@ -5988,6 +5988,18 @@ function campSetTab(tab) {
   if (tab === 'tabla') loadContactsTabla();
 }
 
+// En móvil la matriz está oculta hasta pulsar el botón (es muy ancha).
+function campToggleMatrix() {
+  const m = document.getElementById('campMatrix');
+  const btn = document.getElementById('campMatrixToggle');
+  if (!m || !btn) return;
+  const show = !m.classList.contains('show');
+  m.classList.toggle('show', show);
+  btn.classList.toggle('open', show);
+  const span = btn.querySelector('span');
+  if (span) span.innerHTML = `<i class="fa-solid fa-table-cells-large"></i> ${show ? 'Ocultar' : 'Ver'} tabla de interacción`;
+}
+
 async function loadCampaigns() {
   const isAdmin = currentProfile?.role === 'admin';
   // La pestaña Gestión solo es para admin; la Tabla de Contactos para el resto.
