@@ -2062,6 +2062,8 @@ let dbCompanies = [];
 let dbSeries = [];
 const dbInvestorCompanies = {};  // investor_id → Set<company_id>
 const dbInvestorSeries = {};     // investor_id → Set<series_id>
+const dbCompanySeries = {};      // company_id → Set<series_id>  (nivel inversión, para filtrado en cascada)
+const dbSeriesCompanies = {};    // series_id → Set<company_id>
 
 const fmtMoney = (n) => {
   if (!n || isNaN(n)) return '—';
@@ -2658,6 +2660,11 @@ async function loadDb() {
       dbInvestorCompanies[x.investor_id].add(x.company_id);
       if (!dbInvestorSeries[x.investor_id]) dbInvestorSeries[x.investor_id] = new Set();
       dbInvestorSeries[x.investor_id].add(x.series_id);
+      // relación empresa↔serie a nivel inversión (para filtrado en cascada de los dropdowns)
+      if (x.company_id != null && x.series_id != null) {
+        (dbCompanySeries[x.company_id] ||= new Set()).add(x.series_id);
+        (dbSeriesCompanies[x.series_id] ||= new Set()).add(x.company_id);
+      }
     });
     dbInvestors = investors.map(i => ({
       ...i,
@@ -2788,19 +2795,69 @@ function populateFilters() {
   buildPanel('ddTitularPanel', 'Todos los titulares', titulares, 'Buscar titular…');
 }
 
-// Filtra (difuso) las opciones visibles de un panel de desplegable
+// Filtrado en cascada: valores válidos de un dropdown según lo seleccionado en LOS OTROS.
+// Devuelve Set<string> de valores permitidos, o null si no hay restricción.
+// Empresa↔Serie se cruzan a nivel inversión (series reales de la empresa); titular a nivel inversionista.
+function facetValid(which) {
+  const f = getDbFilters();
+  let valid = null;
+  const intersect = (set) => {
+    if (valid == null) valid = new Set(set);
+    else valid = new Set([...valid].filter(v => set.has(v)));
+  };
+  if (which === 'series') {
+    if (f.companyIds.length) {
+      const s = new Set();
+      f.companyIds.forEach(c => (dbCompanySeries[c] || []).forEach(id => s.add(String(id))));
+      intersect(s);
+    }
+    if (f.titulars.length) {
+      const s = new Set();
+      dbInvestors.forEach(r => { const ps = titularPeople(r.titular); if (f.titulars.some(t => ps.includes(t))) (dbInvestorSeries[r.id] || []).forEach(id => s.add(String(id))); });
+      intersect(s);
+    }
+  } else if (which === 'company') {
+    if (f.seriesIds.length) {
+      const s = new Set();
+      f.seriesIds.forEach(sid => (dbSeriesCompanies[sid] || []).forEach(id => s.add(String(id))));
+      intersect(s);
+    }
+    if (f.titulars.length) {
+      const s = new Set();
+      dbInvestors.forEach(r => { const ps = titularPeople(r.titular); if (f.titulars.some(t => ps.includes(t))) (dbInvestorCompanies[r.id] || []).forEach(id => s.add(String(id))); });
+      intersect(s);
+    }
+  } else if (which === 'titular') {
+    if (f.companyIds.length || f.seriesIds.length) {
+      const s = new Set();
+      dbInvestors.forEach(r => {
+        const okC = !f.companyIds.length || f.companyIds.some(c => dbInvestorCompanies[r.id]?.has(+c));
+        const okS = !f.seriesIds.length || f.seriesIds.some(x => dbInvestorSeries[r.id]?.has(+x));
+        if (okC && okS) titularPeople(r.titular).forEach(p => s.add(p));
+      });
+      intersect(s);
+    }
+  }
+  return valid;
+}
+
+// Filtra las opciones visibles de un panel: por búsqueda difusa Y por cascada (facetValid)
 function cddFilterOpts(panelId, q) {
   const panel = document.getElementById(panelId);
   if (!panel) return;
+  const which = { ddCompanyPanel: 'company', ddSeriesPanel: 'series', ddTitularPanel: 'titular' }[panelId];
+  const valid = which ? facetValid(which) : null;
   let visibles = 0;
   panel.querySelectorAll('.cdd-opt').forEach(opt => {
     if (!opt.dataset.value) { opt.style.display = ''; return; }  // "Todas…" siempre
-    const ok = fuzzyMatch(q, opt.textContent);
-    opt.style.display = ok ? '' : 'none';
-    if (ok) visibles++;
+    const okQ = fuzzyMatch(q, opt.textContent);
+    const okFacet = !valid || valid.has(opt.dataset.value) || opt.classList.contains('selected');
+    const show = okQ && okFacet;
+    opt.style.display = show ? '' : 'none';
+    if (show) visibles++;
   });
   const noopt = panel.querySelector('[data-noopt]');
-  if (noopt) noopt.style.display = (q && !visibles) ? '' : 'none';
+  if (noopt) noopt.style.display = visibles ? 'none' : '';
 }
 
 // Delegación: click en una opción o fuera del dropdown
