@@ -376,7 +376,7 @@ button,input,select{font-family:var(--font)}
 /* ── STATS ── */
 /* Stats esbeltas: número + etiqueta en una línea, completadas atenuadas */
 .tk-stats{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
-.tk-stat{flex:1 1 calc(25% - 8px);min-width:118px;display:flex;align-items:baseline;gap:8px;background:var(--white);border:1px solid var(--gray-100);border-radius:var(--r-md);padding:9px 13px}
+.tk-stat{flex:1 1 calc(33.333% - 6px);min-width:120px;display:flex;align-items:baseline;gap:8px;background:var(--white);border:1px solid var(--gray-100);border-radius:var(--r-md);padding:9px 13px}
 .tk-stat-n{font-size:18px;font-weight:400;color:var(--navy);font-family:var(--mono);line-height:1}
 .tk-stat-l{font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.4px}
 .tk-stat-done .tk-stat-n{color:var(--gray-400)}   /* las completadas, de lado */
@@ -420,15 +420,23 @@ button,input,select{font-family:var(--font)}
 .inv-decline{padding:6px 10px;background:none;border:1px solid var(--gray-200);border-radius:var(--r-sm);color:var(--gray-400);font-size:11px;cursor:pointer}
 .inv-decline:hover{border-color:var(--red);color:var(--red)}
 
-/* ── LISTA ── */
-.list-view{display:flex;flex-direction:column;gap:6px}
-.list-item{
-  display:flex;align-items:center;gap:10px;padding:10px 14px;
-  background:var(--white);border:1px solid var(--gray-100);border-radius:var(--r-lg);
-  transition:border-color .15s;
+/* ── LISTA — agrupada por horizonte, filas con divisor (no tarjeta por ítem) ── */
+.tk-list{display:flex;flex-direction:column;gap:20px}
+.tk-group-label{
+  display:flex;align-items:center;gap:8px;margin:0 2px 8px;
+  font-size:11px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:.6px;
 }
-.list-item:hover{border-color:var(--gray-200)}
-.list-item.done-item{opacity:.5}
+.tk-group-label.od{color:var(--red)}
+.tk-group-n{font-family:var(--mono);font-size:11px;font-weight:500;color:var(--gray-400);background:var(--gray-100);border-radius:10px;padding:0 7px;line-height:18px}
+.tk-group-label.od .tk-group-n{color:var(--red);background:var(--red-bg)}
+.tk-rows{background:var(--white);border:1px solid var(--gray-100);border-radius:var(--r-lg);overflow:hidden}
+.list-item{
+  display:flex;align-items:center;gap:11px;padding:11px 14px;
+  border-bottom:1px solid var(--gray-100);transition:background .15s;
+}
+.tk-rows .list-item:last-child{border-bottom:none}
+.list-item:hover{background:var(--gray-50)}
+.list-item.done-item{opacity:.55}
 .list-item.done-item .li-name{text-decoration:line-through;color:var(--gray-400)}
 .li-chk{
   width:17px;height:17px;border-radius:4px;border:1.5px solid var(--gray-300);
@@ -438,8 +446,8 @@ button,input,select{font-family:var(--font)}
 .li-chk.on{background:var(--navy);border-color:var(--navy);color:white}
 .li-name{flex:1;font-size:13px;color:var(--gray-700);line-height:1.4}
 .li-meta{display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap}
-.li-due{font-size:11px;color:var(--gray-400);display:flex;align-items:center;gap:3px}
-.li-due.od{color:var(--red)}
+.li-due{font-size:11px;color:var(--gray-500);display:flex;align-items:center;gap:3px}
+.li-due.od{color:var(--red);background:var(--red-bg);padding:2px 8px;border-radius:10px;font-weight:500}
 .li-prio{font-size:10px;padding:2px 8px;border-radius:10px}
 .lp-a{background:var(--red-bg);color:var(--red)}
 .lp-m{background:var(--amber-bg);color:var(--amber)}
@@ -450,6 +458,15 @@ button,input,select{font-family:var(--font)}
 .li-prog-fill{height:100%;background:var(--navy);border-radius:3px}
 .li-del{background:none;border:none;color:var(--gray-300);font-size:13px;cursor:pointer;transition:color .15s;flex-shrink:0}
 .li-del:hover{color:var(--red)}
+
+/* Accesibilidad de movimiento: honra prefers-reduced-motion en toda la app
+   (PRODUCT.md lo pide). Vuelve transiciones/animaciones casi instantáneas. */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{
+    animation-duration:.001ms!important;animation-iteration-count:1!important;
+    transition-duration:.001ms!important;scroll-behavior:auto!important;
+  }
+}
 
 /* ── KANBAN ── */
 .kanban-view{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;align-items:start}
@@ -2674,7 +2691,6 @@ button,input,select{font-family:var(--font)}
       <div class="tk-stat"><div class="tk-stat-n" id="sPend">0</div><div class="tk-stat-l">Pendientes</div></div>
       <div class="tk-stat"><div class="tk-stat-n" id="sProg">0</div><div class="tk-stat-l">En progreso</div></div>
       <div class="tk-stat tk-stat-done"><div class="tk-stat-n" id="sDone">0</div><div class="tk-stat-l">Completadas</div></div>
-      <div class="tk-stat"><div class="tk-stat-n" id="sTotal">0</div><div class="tk-stat-l">Total</div></div>
     </div>
 
     <!-- Banner de limpieza mensual de completadas -->

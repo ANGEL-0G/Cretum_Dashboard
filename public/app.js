@@ -531,7 +531,6 @@ function render() {
   animateCounter('sPend',  pend);
   animateCounter('sProg',  inprog);
   animateCounter('sDone',  done);
-  animateCounter('sTotal', mt.length);
   document.getElementById('rPend').textContent = pend;
   document.getElementById('rDone').textContent = done;
 
@@ -621,24 +620,44 @@ function buildLista() {
     }
   };
 
-  let html = '<div class="list-view">';
-  html += active.length
-    ? active.map(item).join('')
-    : '<div class="tk-empty mini"><i class="fa-regular fa-circle-check"></i><p>¡Todo al día! No tienes tareas activas.</p></div>';
-  html += '</div>';
+  // Agrupa las activas por horizonte temporal → "qué importa ahora" de un vistazo
+  const now = new Date(); now.setHours(0, 0, 0, 0);
+  const toStr = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const todayStr = toStr(now);
+  const wk = new Date(now); wk.setDate(wk.getDate() + 7); const wkStr = toStr(wk);
+  const defs = [
+    { label: 'Vencidas',    tone: 'od', test: t => t.due && t.due < todayStr },
+    { label: 'Hoy',         tone: '',   test: t => t.due === todayStr },
+    { label: 'Esta semana', tone: '',   test: t => t.due && t.due > todayStr && t.due <= wkStr },
+    { label: 'Después',     tone: '',   test: t => t.due && t.due > wkStr },
+    { label: 'Sin fecha',   tone: '',   test: t => !t.due },
+  ];
+  const groups = defs.map(g => ({ ...g, tasks: active.filter(g.test).sort(taskSort) })).filter(g => g.tasks.length);
+  const showLabels = groups.length > 1;   // si todo cae en un mismo grupo, no hace falta encabezar
+
+  let html = '<div class="tk-list">';
+  if (!active.length) {
+    html += '<div class="tk-empty mini"><i class="fa-regular fa-circle-check"></i><p>¡Todo al día! No tienes tareas activas.</p></div>';
+  } else {
+    html += groups.map(g => `<div class="tk-group">
+      ${showLabels ? `<div class="tk-group-label ${g.tone}">${g.label} <span class="tk-group-n">${g.tasks.length}</span></div>` : ''}
+      <div class="tk-rows">${g.tasks.map(item).join('')}</div>
+    </div>`).join('');
+  }
 
   // Completadas: a un lado, en una sección colapsable (no satura la vista)
   if (done.length) {
     html += `<div class="tk-done-sec">
       <div class="tk-done-head">
         <button class="tk-done-toggle" onclick="tkToggleDone(this)">
-          <i class="fa-solid fa-chevron-right tk-done-chev"></i> Completadas · ${done.length}
+          <i class="fa-solid fa-chevron-right tk-done-chev"></i> Completadas <span class="tk-group-n">${done.length}</span>
         </button>
         <button class="tk-done-clear" onclick="clearCompleted()" title="Eliminar las completadas"><i class="fa-solid fa-broom"></i> Vaciar</button>
       </div>
-      <div class="tk-done-body" style="display:none"><div class="list-view">${done.map(item).join('')}</div></div>
+      <div class="tk-done-body" style="display:none"><div class="tk-rows">${done.map(item).join('')}</div></div>
     </div>`;
   }
+  html += '</div>';
   return html;
 }
 
