@@ -914,8 +914,20 @@ function setScope(s) {
   document.getElementById('togPersonal')?.classList.toggle('on', s === 'personal');
   document.getElementById('togEquipo')?.classList.toggle('on', s === 'equipo');
   document.getElementById('togOtros')?.classList.toggle('on', s === 'otros');
+  tkMoveSlider();
   render();
 }
+
+// Mueve la pill deslizante tras el botón de scope activo (anchos variables → JS)
+function tkMoveSlider() {
+  const wrap = document.querySelector('.tk-toggle');
+  const slider = document.getElementById('tkSlider');
+  const active = wrap?.querySelector('.tk-tog-btn.on');
+  if (!wrap || !slider || !active || !active.offsetWidth) return;   // oculto/sin layout: se reintenta al mostrar
+  slider.style.left = active.offsetLeft + 'px';
+  slider.style.width = active.offsetWidth + 'px';
+}
+window.addEventListener('resize', () => { if (currentView === 'tasks') tkMoveSlider(); });
 function setType(t) {
   tkType = t;
   document.getElementById('tt-simple')?.classList.toggle('on', t === 'simple');
@@ -1971,6 +1983,7 @@ function switchView(view, isBack = false) {
   if (view === 'campaigns') loadCampaigns();
   if (view === 'reports') loadReports();
   if (view === 'portal') { portalOrg = currentOrg || 'cretum'; loadPortalAdmin(); }
+  if (view === 'tasks') requestAnimationFrame(tkMoveSlider);   // coloca la pill una vez visible
 
   syncHash();
 }
