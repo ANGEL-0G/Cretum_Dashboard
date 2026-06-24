@@ -1854,6 +1854,30 @@ button,input,select{font-family:var(--font)}
 }
 .cdd.open .cdd-chev{transform:rotate(180deg);color:var(--navy)}
 
+/* ═══ Pulido global de botones — reactivos al color de la empresa ═══
+   Usan var(--navy), que MVP remapea a naranja, así un solo estilo sirve
+   para ambas. Hover se tiñe del acento; al presionar se "ilumina" con un
+   aro del color; foco por teclado con el mismo aro. */
+.cdd-btn,.dbx-btn,.ft-export-btn,.camp-fchip,.role-switch-btn,.btn-primary,.btn-login,.camp-tab{
+  transition:border-color .15s,background .15s,color .15s,box-shadow .15s,transform .08s;
+}
+.cdd-btn:hover,.ft-export-btn:hover{border-color:var(--navy);color:var(--navy)}
+.cdd-btn:active,.dbx-btn:active,.ft-export-btn:active,.camp-fchip:active,.role-switch-btn:active{
+  background:var(--navy-pale);border-color:var(--navy);color:var(--navy);
+  box-shadow:0 0 0 3px var(--navy-pale);transform:translateY(1px);
+}
+/* El botón de borrar mantiene su rojo al presionar (no se tiñe de azul/naranja) */
+.camp-btn-danger:active{
+  background:rgba(192,57,43,.12);border-color:#c0392b;color:#c0392b;
+  box-shadow:0 0 0 3px rgba(192,57,43,.15);transform:translateY(1px);
+}
+.btn-primary:active,.btn-login:active{transform:translateY(1px);filter:brightness(1.06)}
+.settings-action:active{background:var(--navy-pale)}
+.cdd-btn:focus-visible,.dbx-btn:focus-visible,.ft-export-btn:focus-visible,.camp-fchip:focus-visible,
+.role-switch-btn:focus-visible,.btn-primary:focus-visible,.btn-login:focus-visible{
+  outline:none;box-shadow:0 0 0 3px var(--navy-pale);border-color:var(--navy);
+}
+
 .cdd-panel{
   position:absolute;top:calc(100% + 6px);left:0;min-width:100%;
   background:var(--white);border:1px solid var(--gray-100);
