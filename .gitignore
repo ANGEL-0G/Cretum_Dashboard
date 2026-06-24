@@ -20,6 +20,7 @@ build/
 .vscode/
 .idea/
 .claude/
+CLAUDE.local.md
 .DS_Store
 Thumbs.db
 *.log
