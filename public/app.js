@@ -2974,6 +2974,16 @@ function getFilteredInvestors() {
   if (companyIds.length) filtered = filtered.filter(r => companyIds.some(c => dbInvestorCompanies[r.id]?.has(+c)));
   if (seriesIds.length)  filtered = filtered.filter(r => seriesIds.some(s => dbInvestorSeries[r.id]?.has(+s)));
   if (titulars.length)   filtered = filtered.filter(r => { const ps = titularPeople(r.titular); return titulars.some(t => ps.includes(t)); });
+  // Con búsqueda: ordena por RELEVANCIA (mejor coincidencia arriba), no por monto.
+  // Si no, el resultado buscado queda enterrado por compromiso y "solo aparece
+  // cuando escribes casi el nombre completo".
+  if (q) {
+    filtered = filtered.slice().sort((a, b) => {
+      const sa = Math.max(repScore(q, a.name), repScore(q, a.titular || ''));
+      const sb = Math.max(repScore(q, b.name), repScore(q, b.titular || ''));
+      return sb - sa || (b.commitment || 0) - (a.commitment || 0) || a.name.localeCompare(b.name, 'es');
+    });
+  }
   return filtered;
 }
 
