@@ -660,14 +660,14 @@ function buildLista() {
 
   // Completadas: a un lado, en una sección colapsable (no satura la vista)
   if (done.length) {
-    html += `<div class="tk-done-sec">
+    html += `<div class="tk-done-sec${tkDoneOpen ? ' open' : ''}">
       <div class="tk-done-head">
         <button class="tk-done-toggle" onclick="tkToggleDone(this)">
           <i class="fa-solid fa-chevron-right tk-done-chev"></i> Completadas <span class="tk-group-n">${done.length}</span>
         </button>
         <button class="tk-done-clear" onclick="clearCompleted()" title="Eliminar las completadas"><i class="fa-solid fa-broom"></i> Vaciar</button>
       </div>
-      <div class="tk-done-body" style="display:none"><div class="tk-rows">${done.map(item).join('')}</div></div>
+      <div class="tk-done-body" style="display:${tkDoneOpen ? '' : 'none'}"><div class="tk-rows">${done.map(item).join('')}</div></div>
     </div>`;
   }
   html += '</div>';
@@ -682,6 +682,7 @@ function tkToggleDone(btn) {
   const open = body.style.display === 'none';
   body.style.display = open ? '' : 'none';
   sec.classList.toggle('open', open);
+  tkDoneOpen = open;   // recuerda el estado para que no se cierre al re-render
 }
 
 /* ── Vaciado de tareas completadas (limpieza) ── */
@@ -1077,6 +1078,7 @@ function toggleDrawer(btnId, bodyId) {
    ACCIONES
 ═══════════════════════════════════════════ */
 let tkToggleAnim = null;   // marca la tarea recién (re)abierta para animar su llegada
+let tkDoneOpen = false;    // recuerda si la sección "Completadas" quedó desplegada (persiste entre renders)
 
 function toggle(id, kind) {
   const applyToggle = () => {
