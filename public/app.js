@@ -3971,7 +3971,7 @@ const SPX_LOCKUP_A_EXT = [
 function spxStructures(seriesName) {
   const s = seriesName || '';
   if (/All-Star Fund IV/i.test(s)) return ['A', 'B'];
-  if (/22K|22J/i.test(s)) return ['A'];
+  if (/22K|22J|26B/i.test(s)) return ['A'];   // 26B (todas sus variantes) = Calendario 1 / Estructura A, como 22J/22K
   return ['B'];
 }
 
@@ -4023,7 +4023,7 @@ function spxShort(sname) {
 function spxTranches(sname) {
   const s = sname || '';
   if (/All-Star Fund IV/i.test(s)) return [{ portion: 0.20, structure: 'A' }, { portion: 0.80, structure: 'B' }];
-  if (/22K|22J/i.test(s)) return [{ portion: 1.0, structure: 'A' }];
+  if (/22K|22J|26B/i.test(s)) return [{ portion: 1.0, structure: 'A' }];   // 26B = Calendario 1 / Estructura A
   return [{ portion: 1.0, structure: 'B' }];
 }
 function spxLockupDetail(spxPos) {
