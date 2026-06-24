@@ -2060,6 +2060,30 @@ function renderColumnPicker() {
 let dbInvestors = [];
 let dbCompanies = [];
 let dbSeries = [];
+const dbSelected = new Set();   // investor_ids marcados para portafolio combinado
+
+function toggleInvestorSel(id, checked) {
+  if (checked) dbSelected.add(id); else dbSelected.delete(id);
+  updateCombineBar();
+}
+function clearInvestorSel() {
+  dbSelected.clear();
+  document.querySelectorAll('#dbList input.db-row-check').forEach(c => { c.checked = false; });
+  updateCombineBar();
+}
+function updateCombineBar() {
+  const bar = document.getElementById('dbCombineBar');
+  if (!bar) return;
+  const n = dbSelected.size;
+  bar.style.display = n ? '' : 'none';
+  const cnt = document.getElementById('dbCombineCount');
+  if (cnt) cnt.textContent = n + (n === 1 ? ' seleccionado' : ' seleccionados');
+  const btn = document.getElementById('dbCombineGo');
+  if (btn) btn.disabled = n < 1;
+}
+function openSelectedCombined() {
+  if (dbSelected.size) openInvestorGroup([...dbSelected]);
+}
 const dbInvestorCompanies = {};  // investor_id → Set<company_id>
 const dbInvestorSeries = {};     // investor_id → Set<series_id>
 const dbCompanySeries = {};      // company_id → Set<series_id>  (nivel inversión, para filtrado en cascada)
@@ -2973,7 +2997,7 @@ function renderDbList() {
   }
 
   // Headers de la tabla
-  const headers = ['<th class="col-name">Nombre</th>'];
+  const headers = ['<th class="db-check-col"></th>', '<th class="col-name">Nombre</th>'];
   if (isColVisible('titular'))   headers.push('<th>Titular</th>');
   if (isColVisible('series'))    headers.push('<th>Serie</th>');
   if (isColVisible('company'))   headers.push('<th>Empresa</th>');
@@ -2984,7 +3008,10 @@ function renderDbList() {
 
   // Filas
   const rows = filtered.map(i => {
-    const cells = [`<td class="col-name">${escapeHtml(i.name)}</td>`];
+    const cells = [
+      `<td class="db-check-col" onclick="event.stopPropagation()"><input type="checkbox" class="db-row-check" ${dbSelected.has(i.id) ? 'checked' : ''} onclick="toggleInvestorSel(${i.id}, this.checked)" title="Seleccionar para portafolio combinado"></td>`,
+      `<td class="col-name">${escapeHtml(i.name)}</td>`,
+    ];
     if (isColVisible('titular')) {
       cells.push(`<td>${i.titular ? escapeHtml(i.titular) : '<span class="db-cell-empty">—</span>'}</td>`);
     }
@@ -3010,6 +3037,7 @@ function renderDbList() {
         <tbody>${rows.join('')}</tbody>
       </table>
     </div>`;
+  updateCombineBar();
 }
 
 function escapeHtml(s) {
@@ -3637,6 +3665,42 @@ async function openInvestor(id) {
   }
 }
 
+// Portafolio COMBINADO: une las posiciones de varios inversionistas en una sola vista 360.
+async function openInvestorGroup(ids) {
+  if (!ids || !ids.length) return;
+  if (ids.length === 1) return openInvestor(ids[0]);
+  const invs = ids.map(id => dbInvestors.find(x => x.id === id)).filter(Boolean);
+  if (!invs.length) return;
+  showDetailLoading();
+  try {
+    const [{ data: contacts }, { data: positions }] = await Promise.all([
+      sb.from('contacts').select('id, name, email, investor_id').in('investor_id', ids).order('id'),
+      sb.from('investments')
+        .select(`id, investor_id, entry_ev_b, entry_pps, current_ev_b, current_ev_pps, shares,
+                 commitment, commitment_actual, dpi_moic, carry_pct,
+                 start_date, end_date, duration_years, distributed_at, last_ca_letter,
+                 series(name), companies(id, name, is_public),
+                 investment_distributions(distribution_date, letter_type, underlying_company,
+                   price_per_share, shares_distributed, cash_proceeds, value_in_kind, letter_url, notes)`)
+        .in('investor_id', ids),
+    ]);
+    const nameById = Object.fromEntries(invs.map(i => [i.id, i.name]));
+    (positions || []).forEach(p => { p._acct = nameById[p.investor_id] || '—'; });
+    const synthetic = {
+      _combined: true,
+      _accounts: invs.map(i => ({ id: i.id, name: i.name })),
+      name: 'Portafolio combinado',
+      titular: null,
+      positions: (positions || []).length,
+      commitment: invs.reduce((s, i) => s + (+i.commitment || 0), 0),
+      actual: invs.reduce((s, i) => s + (+i.actual || 0), 0),
+    };
+    renderInvestorDetail(synthetic, contacts || [], positions || []);
+  } catch (err) {
+    document.getElementById('dbDetailContent').innerHTML = `<div class="db-error">Error: ${err.message}</div>`;
+  }
+}
+
 // Guarda el "Titular" (a quién pertenece la cuenta) de un inversionista
 async function saveTitular(id, value) {
   const v = (value || '').trim();
@@ -3698,6 +3762,8 @@ function showDetailLoading() {
   // El export de la barra exporta TODA la lista; dentro de un detalle no aplica.
   const tbExport = document.getElementById('ddExport');
   if (tbExport) tbExport.style.display = 'none';
+  const cb = document.getElementById('dbCombineBar');
+  if (cb) cb.style.display = 'none';   // ocultar barra de combinado dentro del detalle
   document.getElementById('dbDetailContent').innerHTML = '<div class="db-loading"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
 }
 
@@ -3706,6 +3772,7 @@ function closeDetail() {
   document.getElementById('dbList').style.display = '';
   const tbExport = document.getElementById('ddExport');
   if (tbExport) tbExport.style.display = '';
+  updateCombineBar();   // restaura la barra de combinado si sigue habiendo selección
 }
 
 /* ─── Selector de columnas del detalle del inversionista ─── */
@@ -3773,7 +3840,7 @@ function renderPosColumnPicker() {
   }).join('');
 }
 
-function renderPositionsBlock(title, rows) {
+function renderPositionsBlock(title, rows, showAcct) {
   if (!rows.length) return '';
   const dash = '<span style="color:var(--gray-300)">—</span>';
   const fmt = {
@@ -3810,8 +3877,9 @@ function renderPositionsBlock(title, rows) {
   };
 
   const visible = POSITION_COLUMNS.filter(c => isPosColVisible(c.key));
-  const headers = visible.map(c => `<th class="${numericKeys.has(c.key) ? 'num' : ''}">${escapeHtml(c.label)}</th>`).join('');
-  const body = rows.map(p => `<tr>${visible.map(c => cellFor(p, c.key)).join('')}</tr>`).join('');
+  const acctHead = showAcct ? '<th>Cuenta</th>' : '';
+  const headers = acctHead + visible.map(c => `<th class="${numericKeys.has(c.key) ? 'num' : ''}">${escapeHtml(c.label)}</th>`).join('');
+  const body = rows.map(p => `<tr>${showAcct ? `<td><span class="db-cell-pill muted">${escapeHtml(p._acct || '—')}</span></td>` : ''}${visible.map(c => cellFor(p, c.key)).join('')}</tr>`).join('');
 
   return `
     <div class="db-section">
@@ -4034,7 +4102,8 @@ async function draw360Theme() {
 
 function renderInvestorDetail(inv, contacts, positions) {
   lastInvestorDetail = { inv, contacts, positions };
-  const canEditTitular = currentProfile?.role === 'admin' || currentProfile?.role === 'editor';
+  const combined = !!inv._combined;
+  const canEditTitular = !combined && (currentProfile?.role === 'admin' || currentProfile?.role === 'editor');
   const totalEv = positions.reduce((s, p) => s + (+p.current_ev_b || 0), 0);
   const DIVERSIFIED_FUND_ID = 10;
   const activePositions = positions.filter(p => !p.distributed_at);
@@ -4089,19 +4158,24 @@ function renderInvestorDetail(inv, contacts, positions) {
       <div class="db-detail-topbar">
         <div>
           <div class="db-detail-name">${escapeHtml(inv.name)}</div>
-          <div class="db-detail-sub">Inversionista</div>
+          <div class="db-detail-sub">${combined ? `${inv._accounts.length} cuentas combinadas` : 'Inversionista'}</div>
         </div>
         <div class="db-detail-export">
           <button class="dbx-btn" onclick="exportInvestorXlsx()" title="Exportar todo su detalle a Excel"><i class="fa-solid fa-file-excel"></i> Excel</button>
           <button class="dbx-btn pdf" onclick="exportInvestorPdf()" title="Exportar todo su detalle a PDF"><i class="fa-solid fa-file-pdf"></i> PDF</button>
         </div>
       </div>
-      <div class="db-detail-titular">
-        <span class="db-titular-lbl"><i class="fa-solid fa-user-tag"></i> Titular</span>
-        ${canEditTitular
-          ? `<input id="dbTitularInp" class="db-titular-inp" value="${escapeHtml(inv.titular || '')}" placeholder="A quién pertenece la cuenta" autocomplete="off" onkeydown="if(event.key==='Enter')this.blur()" onblur="saveTitular(${inv.id}, this.value)">`
-          : `<span class="db-titular-val">${inv.titular ? escapeHtml(inv.titular) : '—'}</span>`}
-      </div>
+      ${combined
+        ? `<div class="db-detail-accounts">
+             <span class="db-titular-lbl"><i class="fa-solid fa-user-group"></i> Cuentas combinadas</span>
+             ${inv._accounts.map(a => `<span class="db-acct-chip">${escapeHtml(a.name)}</span>`).join('')}
+           </div>`
+        : `<div class="db-detail-titular">
+             <span class="db-titular-lbl"><i class="fa-solid fa-user-tag"></i> Titular</span>
+             ${canEditTitular
+               ? `<input id="dbTitularInp" class="db-titular-inp" value="${escapeHtml(inv.titular || '')}" placeholder="A quién pertenece la cuenta" autocomplete="off" onkeydown="if(event.key==='Enter')this.blur()" onblur="saveTitular(${inv.id}, this.value)">`
+               : `<span class="db-titular-val">${inv.titular ? escapeHtml(inv.titular) : '—'}</span>`}
+           </div>`}
       <div class="db-detail-stats">
         <div class="db-stat"><div class="db-stat-l">Posiciones</div><div class="db-stat-v">${inv.positions}</div></div>
         <div class="db-stat"><div class="db-stat-l">Commitment total</div><div class="db-stat-v">${fmtMoney(inv.commitment)}</div></div>
@@ -4144,8 +4218,8 @@ function renderInvestorDetail(inv, contacts, positions) {
 
     ${exposicion}
     ${eventos}
-    ${renderPositionsBlock('Posiciones activas', activePositions)}
-    ${renderPositionsBlock('Posiciones terminadas', terminatedPositions)}
+    ${renderPositionsBlock('Posiciones activas', activePositions, combined)}
+    ${renderPositionsBlock('Posiciones terminadas', terminatedPositions, combined)}
 
     ${renderDistrosBlock('Distribuciones · Oportunidades en directo (SPVs)', distrosSpv)}
     ${renderDistrosBlock('Distribuciones · Fondos MVP', distrosFund)}`;
