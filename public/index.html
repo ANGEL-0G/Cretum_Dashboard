@@ -359,12 +359,19 @@ button,input,select{font-family:var(--font)}
 .tk-new-btn:hover{background:var(--navy-mid);box-shadow:0 6px 18px rgba(26,58,107,.3);transform:translateY(-1px)}
 .tk-new-btn:active{transform:translateY(0) scale(.99)}
 .tk-new-btn i{font-size:12px}
-.tk-view-toggle{display:flex;gap:2px;background:var(--gray-100);border-radius:var(--r-md);padding:3px;margin-left:auto}
-.tk-view-btn{
-  padding:7px 12px;border-radius:var(--r-sm);border:none;
-  background:transparent;color:var(--gray-400);cursor:pointer;transition:all .15s;
+.tk-view-toggle{position:relative;display:flex;gap:2px;background:var(--gray-100);border-radius:var(--r-md);padding:3px;margin-left:auto}
+.tk-view-slider{
+  position:absolute;top:3px;bottom:3px;left:3px;width:0;
+  background:var(--white);border-radius:var(--r-sm);box-shadow:var(--shadow-sm);
+  transition:left .18s cubic-bezier(.4,0,.2,1),width .18s cubic-bezier(.4,0,.2,1);
+  z-index:0;pointer-events:none;
 }
-.tk-view-btn.on{background:var(--white);color:var(--navy);box-shadow:var(--shadow-sm)}
+.tk-view-btn{
+  position:relative;z-index:1;
+  padding:7px 12px;border-radius:var(--r-sm);border:none;
+  background:transparent;color:var(--gray-400);cursor:pointer;transition:color .15s;
+}
+.tk-view-btn.on{color:var(--navy)}   /* el fondo blanco lo da el slider deslizante */
 
 /* ── STATS ── */
 .tk-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
@@ -2621,6 +2628,7 @@ button,input,select{font-family:var(--font)}
         <i class="fa-solid fa-plus"></i> Nueva tarea
       </button>
       <div class="tk-view-toggle" id="viewToggle">
+        <div class="tk-view-slider" id="tkViewSlider"></div>
         <button class="tk-view-btn" id="vbtn-lista" onclick="setView('lista')" title="Lista">
           <i class="fa-solid fa-list"></i>
         </button>

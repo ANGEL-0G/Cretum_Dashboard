@@ -907,6 +907,7 @@ function setView(v) {
   tkView = v;
   ['lista','kanban','timeline'].forEach(k =>
     document.getElementById('vbtn-'+k)?.classList.toggle('on', k === v));
+  tkMoveViewSlider();
   render();
 }
 function setScope(s) {
@@ -916,18 +917,22 @@ function setScope(s) {
   document.getElementById('togOtros')?.classList.toggle('on', s === 'otros');
   tkMoveSlider();
   render();
+  requestAnimationFrame(tkMoveViewSlider);   // el toggle de vista reaparece en "personal"
 }
 
-// Mueve la pill deslizante tras el botón de scope activo (anchos variables → JS)
-function tkMoveSlider() {
-  const wrap = document.querySelector('.tk-toggle');
-  const slider = document.getElementById('tkSlider');
-  const active = wrap?.querySelector('.tk-tog-btn.on');
+// Mueve una pill deslizante tras el botón activo (anchos variables → JS)
+function tkSlide(toggleSel, sliderId, btnSel) {
+  const wrap = document.querySelector(toggleSel);
+  const slider = document.getElementById(sliderId);
+  const active = wrap?.querySelector(btnSel + '.on');
   if (!wrap || !slider || !active || !active.offsetWidth) return;   // oculto/sin layout: se reintenta al mostrar
   slider.style.left = active.offsetLeft + 'px';
   slider.style.width = active.offsetWidth + 'px';
 }
-window.addEventListener('resize', () => { if (currentView === 'tasks') tkMoveSlider(); });
+function tkMoveSlider() { tkSlide('.tk-toggle', 'tkSlider', '.tk-tog-btn'); }
+function tkMoveViewSlider() { tkSlide('.tk-view-toggle', 'tkViewSlider', '.tk-view-btn'); }
+function tkMoveSliders() { tkMoveSlider(); tkMoveViewSlider(); }
+window.addEventListener('resize', () => { if (currentView === 'tasks') tkMoveSliders(); });
 function setType(t) {
   tkType = t;
   document.getElementById('tt-simple')?.classList.toggle('on', t === 'simple');
@@ -1983,7 +1988,7 @@ function switchView(view, isBack = false) {
   if (view === 'campaigns') loadCampaigns();
   if (view === 'reports') loadReports();
   if (view === 'portal') { portalOrg = currentOrg || 'cretum'; loadPortalAdmin(); }
-  if (view === 'tasks') requestAnimationFrame(tkMoveSlider);   // coloca la pill una vez visible
+  if (view === 'tasks') requestAnimationFrame(tkMoveSliders);   // coloca las pills una vez visible
 
   syncHash();
 }
