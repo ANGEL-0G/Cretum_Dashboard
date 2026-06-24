@@ -2175,12 +2175,24 @@ function repBestMatches(q, limit) {
 function fuzzyMatch(q, text, threshold) {
   const qn = repNorm(q), nn = repNorm(text);
   if (!qn) return true;
-  if (nn.includes(qn)) return true;                 // substring siempre coincide
-  if (qn.length < 4) return false;                  // queries cortas: solo substring
+  if (nn.includes(qn)) return true;                 // substring exacto (cualquier longitud)
   const th = threshold != null ? threshold : 0.7;
-  if (repSim(qn, nn) >= th) return true;            // nombre completo parecido
-  return nn.split(' ').some(tok =>                  // o una palabra parecida (longitud similar)
-    Math.abs(tok.length - qn.length) <= 3 && repSim(qn, tok) >= th);
+  const words = nn.split(' ');
+  // ¿alguna palabra del texto contiene o se parece a este término?
+  const tokenHit = (tok) => {
+    if (!tok) return true;
+    if (nn.includes(tok)) return true;              // aparece como substring en cualquier parte
+    if (tok.length < 4) return false;               // términos cortos: solo substring (evita ruido)
+    return words.some(w => Math.abs(w.length - tok.length) <= 3 && repSim(tok, w) >= th);
+  };
+  // Búsqueda por términos: si escribes varias palabras, TODAS deben aparecer,
+  // sin importar el orden ni que haya palabras en medio. Así "Alejandro Creixell"
+  // encuentra "Alejandro Enrique Creixell Castañeda".
+  const qToks = qn.split(' ');
+  if (qToks.length > 1) return qToks.every(tokenHit);
+  if (qn.length < 4) return false;                  // query corta de una palabra: solo substring
+  if (repSim(qn, nn) >= th) return true;            // nombre completo parecido (tolera typos)
+  return tokenHit(qn);                              // o una sola palabra parecida
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
