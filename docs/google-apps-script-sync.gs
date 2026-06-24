@@ -92,6 +92,17 @@ function doPost(e) {
     sh.setFrozenRows(1);
     sh.setFrozenColumns(1);
 
+    // Anchos de columna fijos — clear() no resetea anchos, así que "Comentarios"
+    // se quedaba estirada de un auto-ajuste viejo. Los fijamos y envolvemos el texto.
+    sh.setColumnWidth(1, 220);   // Email
+    sh.setColumnWidth(2, 110);   // Nombre
+    sh.setColumnWidth(3, 200);   // Nombre Completo
+    sh.setColumnWidth(4, 160);   // Responsable
+    sh.setColumnWidth(5, 260);   // Comentarios (ancho fijo, ya no se extiende)
+    sh.setColumnWidth(6, 55);    // Meses Vistos
+    if (meses > 0) sh.setColumnWidths(7, meses * 3, 32);  // sub-columnas ⚡ angostas
+    sh.getRange(1, 5, all.length, 1).setWrap(true);       // Comentarios: envuelve en vez de desbordarse
+
     // 4) Devuelve a Cretum Desk el seguimiento final (para traerlo de vuelta)
     var back = {};
     rows.forEach(function (r) {
