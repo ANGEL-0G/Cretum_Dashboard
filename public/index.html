@@ -459,6 +459,15 @@ button,input,select{font-family:var(--font)}
 .li-del{background:none;border:none;color:var(--gray-300);font-size:13px;cursor:pointer;transition:color .15s;flex-shrink:0}
 .li-del:hover{color:var(--red)}
 
+/* Completar / reabrir: la fila sale desvaneciéndose y entra en su nuevo lugar
+   con un breve destello del acento. Solo transform/opacity (GPU). */
+@keyframes tkLeave{to{opacity:0;transform:translateX(10px) scale(.98)}}
+.list-item.tk-leaving{animation:tkLeave .18s cubic-bezier(.23,1,.32,1) forwards;pointer-events:none}
+@keyframes tkEnter{from{opacity:0;transform:translateY(-7px);background:var(--navy-pale)}to{opacity:1;transform:translateY(0);background:transparent}}
+.list-item.tk-entering{animation:tkEnter .26s cubic-bezier(.23,1,.32,1)}
+@keyframes tkBump{0%{transform:scale(1)}40%{transform:scale(1.28)}100%{transform:scale(1)}}
+.tk-group-n.tk-bump{display:inline-block;animation:tkBump .32s cubic-bezier(.23,1,.32,1)}
+
 /* Accesibilidad de movimiento: honra prefers-reduced-motion en toda la app
    (PRODUCT.md lo pide). Vuelve transiciones/animaciones casi instantáneas. */
 @media (prefers-reduced-motion: reduce){

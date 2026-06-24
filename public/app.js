@@ -553,6 +553,19 @@ function render() {
   if (tkView === 'lista')       c.innerHTML = buildLista();
   else if (tkView === 'kanban') c.innerHTML = buildKanban();
   else                          c.innerHTML = buildTimeline();
+
+  // Si una tarea recién completada aterrizó en "Completadas" colapsado, pulsa
+  // su contador para que el ojo vea a dónde fue (la fila entrante está oculta).
+  if (tkToggleAnim) {
+    if (tkToggleAnim.becameDone) {
+      const body = document.querySelector('.tk-done-body');
+      if (body && body.style.display === 'none') {
+        const n = document.querySelector('.tk-done-toggle .tk-group-n');
+        if (n) { n.classList.remove('tk-bump'); void n.offsetWidth; n.classList.add('tk-bump'); }
+      }
+    }
+    tkToggleAnim = null;
+  }
 }
 
 /* Orden de tareas activas: por fecha (vencidas/próximas primero), sin fecha al
@@ -576,7 +589,7 @@ function buildLista() {
     const od = isOD(t.due) && !done;
     const delay = `style="animation-delay:${Math.min(i, 12) * 30}ms"`;
     if (t.kind === 'simple') return `
-      <div class="list-item ${done ? 'done-item' : ''}" ${delay}>
+      <div class="list-item ${done ? 'done-item' : ''}${tkToggleAnim && tkToggleAnim.id === t.id ? ' tk-entering' : ''}" data-tid="${t.id}" ${delay}>
         <div class="li-chk ${done ? 'on' : ''}" onclick="toggle('${t.id}','simple')">✓</div>
         <div class="li-name">${t.name}</div>
         <div class="li-meta">
@@ -592,7 +605,7 @@ function buildLista() {
     else {
       const p = pct(t);
       return `
-      <div class="list-item ${done ? 'done-item' : ''}" ${delay}>
+      <div class="list-item ${done ? 'done-item' : ''}${tkToggleAnim && tkToggleAnim.id === t.id ? ' tk-entering' : ''}" data-tid="${t.id}" ${delay}>
         <div class="li-chk ${done ? 'on' : ''}">✓</div>
         <div style="flex:1;min-width:0">
           <div class="li-name ${done ? 'struck' : ''}">${t.name}</div>
@@ -1063,24 +1076,38 @@ function toggleDrawer(btnId, bodyId) {
 /* ═══════════════════════════════════════════
    ACCIONES
 ═══════════════════════════════════════════ */
+let tkToggleAnim = null;   // marca la tarea recién (re)abierta para animar su llegada
+
 function toggle(id, kind) {
-  if (kind === 'simple') {
-    const t = state.simple.find(x => x.id === id);
-    if (t) { t.done = !t.done; toast(t.done ? 'Tarea completada ✓' : 'Tarea reabierta'); }
-  }
-  if (kind === 'progress') {
-    const t = state.progress.find(x => x.id === id);
-    if (t) {
-      if (t.done >= t.total) {
-        t.done = Math.max(0, t.total - 1);
-        toast('Tarea reabierta');
-      } else {
-        t.done = t.total;
-        toast('Tarea completada ✓');
+  const applyToggle = () => {
+    let becameDone = false;
+    if (kind === 'simple') {
+      const t = state.simple.find(x => x.id === id);
+      if (t) { t.done = !t.done; becameDone = t.done; toast(t.done ? 'Tarea completada ✓' : 'Tarea reabierta'); }
+    } else if (kind === 'progress') {
+      const t = state.progress.find(x => x.id === id);
+      if (t) {
+        if (t.done >= t.total) { t.done = Math.max(0, t.total - 1); toast('Tarea reabierta'); }
+        else { t.done = t.total; becameDone = true; toast('Tarea completada ✓'); }
       }
     }
+    tkToggleAnim = { id, becameDone };   // render() la marca con animación de entrada
+    scheduleSave();
+    render();
+  };
+
+  // Anima la salida de la fila (se desvanece) antes de re-ubicarla; luego re-render
+  const row = document.querySelector(`.list-item[data-tid="${(window.CSS && CSS.escape) ? CSS.escape(id) : id}"]`);
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (row && !reduce) {
+    row.classList.add('tk-leaving');
+    let fired = false;
+    const go = () => { if (fired) return; fired = true; applyToggle(); };
+    row.addEventListener('animationend', go, { once: true });
+    setTimeout(go, 240);   // respaldo si animationend no dispara
+  } else {
+    applyToggle();
   }
-  scheduleSave(); render();
 }
 
 async function deleteAssigned(id) {
