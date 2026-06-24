@@ -3433,12 +3433,22 @@ async function investorChartImages(data) {
   const MVP = '#E8650D', SLATE = '#9aa3b5', POS = '#2E9E5B', NEG = '#C0392B';
   const PAL = ['#E8650D', '#1F3A5F', '#E0A458', '#5B8C7B', '#9B6A8F', '#7A93B0', '#C9572E', '#3F6B5E', '#B8923E', '#6B7689'];
   try {
-    // 1) Aportado vs. valor actual estimado (por posición) — siempre que haya posiciones con monto
-    const conMonto = data.pos.filter(p => (p.commitment_actual || p.commitment) > 0);
-    if (conMonto.length) {
-      const labels = conMonto.map(p => short(p.company));
-      const aportado = conMonto.map(p => p.commitment || p.commitment_actual);   // costo (capital comprometido)
-      const valor = conMonto.map(p => p.valor_estimado != null ? p.valor_estimado : null);
+    // 1) Comprometido vs. valor actual — AGREGADO POR EMPRESA y solo posiciones ACTIVAS
+    //    (las terminadas ya se realizaron; evita mostrar la mitad vendida del 22F duplicada con su recompra 26A QP)
+    const byCoCmp = {};
+    data.pos.filter(p => p.estado === 'Activa').forEach(p => {
+      const c = +p.commitment || 0;
+      const v = p.valor_estimado != null ? +p.valor_estimado : 0;
+      if (c <= 0 && v <= 0) return;
+      (byCoCmp[p.company] ||= { c: 0, v: 0 });
+      byCoCmp[p.company].c += c;
+      byCoCmp[p.company].v += v;
+    });
+    const cmpArr = Object.entries(byCoCmp).sort((a, b) => b[1].v - a[1].v);
+    if (cmpArr.length) {
+      const labels = cmpArr.map(e => short(e[0]));
+      const aportado = cmpArr.map(e => e[1].c);
+      const valor = cmpArr.map(e => e[1].v);
       const maxV = Math.max(...aportado, ...valor.map(v => v || 0));
       const fmt = moneyAxisFmt(maxV);
       out.push(await renderChartPng({
