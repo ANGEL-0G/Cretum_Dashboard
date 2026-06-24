@@ -5814,6 +5814,63 @@ let campContacts = [];          // [{email, nombre, nombre_completo, responsable
 let campEditingEmail = null;    // email del contacto en edición (null = modo "añadir")
 let campEngagement = [];        // [{email, periodo, nivel, ...}]
 let campPending = null;         // upload pendiente de confirmar
+let campRespFilter = 'all';     // filtro por responsable: 'all' | 'me' | 'none' | 'p:<key>'
+
+// Un contacto puede tener varios responsables ("A / B"). Devuelve la lista limpia.
+function campRespPeople(str) {
+  return String(str || '')
+    .split(/\s*(?:\/|&|,)\s*/)
+    .map(s => s.replace(/\s+/g, ' ').trim())
+    .filter(s => s && !['na', 'n/a', '-', 'sin', 'tbd', 'pendiente'].includes(s.toLowerCase()));
+}
+// Clave normalizada (sin acentos, minúsculas) para agrupar typos: "Armando  NArchi" == "Armando Narchi"
+function campRespKey(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim();
+}
+function campTitleCase(s) {
+  return String(s || '').toLowerCase().split(' ').map(w => w ? w[0].toUpperCase() + w.slice(1) : w).join(' ');
+}
+// ¿Este contacto cae en el filtro de responsable activo?
+function campMatchesResp(c) {
+  if (campRespFilter === 'all') return true;
+  const keys = campRespPeople(c.responsable).map(campRespKey);
+  if (campRespFilter === 'none') return keys.length === 0;
+  if (campRespFilter === 'me') {
+    const me = campRespKey(currentProfile?.full_name || '');
+    return me ? keys.includes(me) : false;
+  }
+  if (campRespFilter.startsWith('p:')) return keys.includes(campRespFilter.slice(2));
+  return true;
+}
+// Cambia el filtro de responsable y re-renderiza
+function campSetResp(v) {
+  campRespFilter = v || 'all';
+  if (campRespFilter === 'p:') campRespFilter = 'all';
+  renderCampaigns();
+}
+// Llena el <select> de responsables con personas distintas + conteos, y refleja chips activos
+function campPopulateResp() {
+  const sel = document.getElementById('campRespSel');
+  const map = new Map();   // key -> {disp, n}
+  campContacts.forEach(c => {
+    campRespPeople(c.responsable).forEach(p => {
+      const k = campRespKey(p);
+      if (!map.has(k)) map.set(k, { disp: campTitleCase(p), n: 0 });
+      map.get(k).n++;
+    });
+  });
+  if (sel) {
+    const items = [...map.entries()].sort((a, b) => a[1].disp.localeCompare(b[1].disp, 'es'));
+    const cur = campRespFilter.startsWith('p:') ? campRespFilter.slice(2) : '';
+    sel.innerHTML = `<option value="">Por responsable…</option>` +
+      items.map(([k, v]) => `<option value="${escapeHtml(k)}"${k === cur ? ' selected' : ''}>${escapeHtml(v.disp)} (${v.n})</option>`).join('');
+    sel.classList.toggle('on', !!cur);
+  }
+  // Estado activo de los chips (Todos / Mis contactos / Sin responsable)
+  document.querySelectorAll('#campFilterbar .camp-fchip').forEach(ch => {
+    ch.classList.toggle('on', ch.dataset.rf === campRespFilter);
+  });
+}
 
 const MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
                   'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -6141,23 +6198,40 @@ function renderCampaigns() {
   const lvl = new Map();
   campEngagement.forEach(e => lvl.set(`${e.email}|${periodoKey(e.periodo)}`, e.nivel));
 
-  // Filtro de búsqueda
+  // Refresca el selector de responsables (conteos al día tras editar/cargar)
+  campPopulateResp();
+
+  // Filtro de búsqueda + filtro por responsable
   const q = (document.getElementById('campSearch')?.value || '').trim().toLowerCase();
   let contacts = campContacts.slice().sort((a, b) =>
     (a.nombre_completo || a.email).localeCompare(b.nombre_completo || b.email, 'es'));
+  contacts = contacts.filter(campMatchesResp);
   if (q) contacts = contacts.filter(c =>
     fuzzyMatch(q, c.nombre_completo || '') ||
     (c.email || '').toLowerCase().includes(q) ||   // email: literal (la similitud no aplica bien)
     fuzzyMatch(q, c.responsable || ''));
 
+  const respLbl = campRespFilter === 'me' ? ' · mis contactos'
+    : campRespFilter === 'none' ? ' · sin responsable'
+    : campRespFilter.startsWith('p:') ? ' · ' + campTitleCase(campRespFilter.slice(2)) : '';
   document.getElementById('campCount').textContent =
-    `${contacts.length} LP${contacts.length === 1 ? '' : 's'} · ${periods.length} mes${periods.length === 1 ? '' : 'es'}`;
+    `${contacts.length} LP${contacts.length === 1 ? '' : 's'} · ${periods.length} mes${periods.length === 1 ? '' : 'es'}${respLbl}`;
 
   if (!campContacts.length) {
     matrix.innerHTML = `<div class="camp-empty">
       <i class="fa-solid fa-inbox"></i>
       <p>Aún no hay LPs cargados. Pídeme la carga inicial del histórico, o sube tu primer CSV de Yesware arriba.</p>
     </div>`;
+    return;
+  }
+
+  if (!contacts.length) {
+    const msg = campRespFilter === 'me'
+      ? 'No tienes contactos asignados como responsable. (Tu nombre debe coincidir con el campo "responsable" del contacto.)'
+      : campRespFilter === 'none'
+        ? '🎉 Todos los contactos tienen responsable asignado.'
+        : 'Ningún contacto coincide con este filtro.';
+    matrix.innerHTML = `<div class="camp-empty"><i class="fa-solid fa-filter-circle-xmark"></i><p>${msg}</p></div>`;
     return;
   }
 

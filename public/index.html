@@ -2749,6 +2749,16 @@ button,input,select{font-family:var(--font)}
     .camp-empty i{font-size:34px;opacity:.4;display:block;margin-bottom:12px}
     [data-theme="dark"] .camp-name,[data-theme="dark"] .camp-month{background:var(--card,#1a2030)}
     .camp-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    /* Barra de filtro por responsable */
+    .camp-filterbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:4px 0 12px}
+    .camp-fchip{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border:1.5px solid var(--line,#e0e3eb);background:var(--white,#fff);color:var(--ink-soft,#667);border-radius:20px;font-size:12.5px;font-weight:600;font-family:inherit;cursor:pointer;transition:border-color .15s,color .15s,background .15s}
+    .camp-fchip:hover{border-color:var(--navy);color:var(--navy)}
+    .camp-fchip.on{background:var(--navy);border-color:var(--navy);color:#fff}
+    .camp-fchip i{font-size:11px}
+    .camp-resp-sel{padding:7px 12px;border:1.5px solid var(--line,#e0e3eb);border-radius:20px;font-size:12.5px;font-family:inherit;background:var(--white,#fff);color:var(--ink,#334);cursor:pointer;max-width:240px}
+    .camp-resp-sel:focus{border-color:var(--navy);outline:none}
+    .camp-resp-sel.on{border-color:var(--navy);color:var(--navy);font-weight:600}
+    [data-theme="dark"] .camp-fchip,[data-theme="dark"] .camp-resp-sel{background:var(--card,#1a2030)}
     .camp-btn-danger{color:#c0392b;border-color:rgba(192,57,43,.3)}
     .camp-btn-danger:hover{background:rgba(192,57,43,.08);border-color:#c0392b}
     .camp-row-acts{float:right;display:inline-flex;gap:2px;margin-left:6px;opacity:0;transition:opacity .12s}
@@ -2872,6 +2882,36 @@ button,input,select{font-family:var(--font)}
     #campActualFrame{width:100%;height:calc(100vh - 240px);min-height:480px;border:0;background:#f0f1f5;display:block}
     .camp-empty-mini{padding:40px 20px;text-align:center;color:var(--ink-soft,#889)}
     .camp-empty-mini i{font-size:30px;opacity:.4;display:block;margin-bottom:10px}
+    /* ─── Campañas en móvil: que no se vea amontonado ─── */
+    @media (max-width:640px){
+      #pageCampaigns .db-toolbar{flex-direction:column;align-items:stretch;gap:10px}
+      #pageCampaigns .db-title-block{font-size:17px}
+      .camp-tabs{width:100%;gap:6px}
+      .camp-tab{flex:1;justify-content:center;padding:9px 6px;font-size:12px;white-space:nowrap}
+      .camp-rank-head{flex-direction:column;align-items:flex-start;gap:6px;margin-bottom:10px}
+      .camp-rank-title{font-size:16px}
+      .camp-rank-sub{display:block}
+      .camp-rank-note{margin-left:0}
+      .camp-rank-row{padding:9px 11px;gap:9px}
+      .camp-rank-pos{font-size:15px;min-width:20px}
+      .camp-rank-score{font-size:14px}
+      .camp-actions{gap:8px}
+      .camp-actions .cdd-btn{flex:1 1 calc(50% - 8px);justify-content:center}
+      .camp-export-grp{flex:1 1 100%}
+      .camp-export-grp .cdd-btn{flex:1}
+      .camp-legend{margin-left:0;flex-basis:100%}
+      .camp-filterbar{gap:7px}
+      .camp-fchip{flex:1 1 calc(33% - 7px);justify-content:center;padding:8px 6px}
+      .camp-resp-sel{flex-basis:100%;max-width:none}
+      .camp-upload-row{flex-direction:column}
+      .camp-drop{min-width:0;padding:16px}
+      /* matriz: columna de nombre más angosta y fuente menor para que entre más */
+      .camp-name,.camp-name-h{width:148px;min-width:148px;max-width:148px}
+      .camp-total,.camp-total-h{left:148px}
+      .camp-table{font-size:12px}
+      .camp-table th,.camp-table td{padding:7px 4px}
+      .camp-table-scroll{max-height:calc(100vh - 260px)}
+    }
   </style>
   <div class="page page-db" id="pageCampaigns">
     <div class="db-toolbar">
@@ -2906,6 +2946,14 @@ button,input,select{font-family:var(--font)}
       <div class="db-search camp-gestion-search">
         <i class="fa-solid fa-magnifying-glass db-search-ico"></i>
         <input id="campSearch" class="db-search-inp" placeholder="Buscar LP, email o responsable…" oninput="renderCampaigns()" autocomplete="off">
+      </div>
+      <div class="camp-filterbar" id="campFilterbar">
+        <button class="camp-fchip on" data-rf="all" onclick="campSetResp('all')"><i class="fa-solid fa-layer-group"></i> Todos</button>
+        <button class="camp-fchip" data-rf="me" onclick="campSetResp('me')"><i class="fa-solid fa-user"></i> Mis contactos</button>
+        <button class="camp-fchip" data-rf="none" onclick="campSetResp('none')"><i class="fa-solid fa-user-slash"></i> Sin responsable</button>
+        <select id="campRespSel" class="camp-resp-sel" onchange="campSetResp(this.value ? 'p:'+this.value : 'all')" title="Filtrar por responsable">
+          <option value="">Por responsable…</option>
+        </select>
       </div>
       <div class="camp-upload">
         <div class="camp-upload-row">
