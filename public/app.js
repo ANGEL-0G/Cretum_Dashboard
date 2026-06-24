@@ -7,7 +7,7 @@ let currentProfile = null;       // { full_name, initials, role }
 let roleReal = null;             // rol REAL del usuario (el toggle "Ver como" muta currentProfile.role solo en memoria)
 let USERS = {};                  // map UUID → { name, initials, role }
 let state = { simple: [], progress: [], assigned: [], invites: [] };
-let tkView = 'kanban';
+let tkView = (() => { try { return localStorage.getItem('tkView') || 'kanban'; } catch { return 'kanban'; } })();
 let tkScope = 'personal';
 let tkType = 'simple';
 let tkId = Date.now();
@@ -549,10 +549,12 @@ function render() {
 
   maybeOfferClearCompleted();   // ofrece limpieza mensual de completadas
 
+  syncViewButtons();
   const c = document.getElementById('viewContainer');
-  if (tkView === 'lista')       c.innerHTML = buildLista();
-  else if (tkView === 'kanban') c.innerHTML = buildKanban();
-  else                          c.innerHTML = buildTimeline();
+  if (tkView === 'lista')         c.innerHTML = buildLista();
+  else if (tkView === 'kanban')   c.innerHTML = buildKanban();
+  else if (tkView === 'proyectos') c.innerHTML = buildProyectos();
+  else                            c.innerHTML = buildTimeline();
 
   // Si una tarea recién completada aterrizó en "Completadas" colapsado, pulsa
   // su contador para que el ojo vea a dónde fue (la fila entrante está oculta).
@@ -577,63 +579,74 @@ function taskSort(a, b) {
   return rank(a.prio) - rank(b.prio);
 }
 
-/* ── LISTA ── */
+/* ── Render de UNA fila de tarea (compartido por Lista y Proyectos) ── */
+function tkRow(t, i) {
+  const done = isDone(t);
+  const od = isOD(t.due) && !done;
+  const delay = `style="animation-delay:${Math.min(i, 12) * 30}ms"`;
+  const enter = (tkToggleAnim && tkToggleAnim.id === t.id) ? ' tk-entering' : '';
+  if (t.kind === 'simple') return `
+    <div class="list-item ${done ? 'done-item' : ''}${enter}" data-tid="${t.id}" ${delay}>
+      <div class="li-chk ${done ? 'on' : ''}" onclick="toggle('${t.id}','simple')">✓</div>
+      <div class="li-name">${t.name}</div>
+      <div class="li-meta">
+        ${t.due ? `<span class="li-due ${od ? 'od' : ''}">${fmtD(t.due)}</span>` : ''}
+        <span class="li-prio ${prioC(t.prio)}">${t.prio}</span>
+        ${t.collab ? '<span class="li-tag">Colaborativa</span>' : ''}
+        ${done ? `<button class="sm-btn sm-red" onclick="toggle('${t.id}','simple')">Reabrir</button>` : ''}
+      </div>
+      <button class="li-del" onclick="del('${t.id}','simple')"><i class="fa-solid fa-xmark"></i></button>
+    </div>`;
+  const p = pct(t);
+  return `
+    <div class="list-item ${done ? 'done-item' : ''}${enter}" data-tid="${t.id}" ${delay}>
+      <div class="li-chk ${done ? 'on' : ''}">✓</div>
+      <div style="flex:1;min-width:0">
+        <div class="li-name ${done ? 'struck' : ''}">${t.name}</div>
+        <div class="li-prog">
+          <div class="li-prog-bar"><div class="li-prog-fill" style="width:${p}%"></div></div>
+          <span>${t.done}/${t.total} ${t.unit} · ${p}%</span>
+        </div>
+      </div>
+      <div class="li-meta">
+        ${t.due ? `<span class="li-due ${od ? 'od' : ''}">${fmtD(t.due)}</span>` : ''}
+        <span class="li-prio ${prioC(t.prio)}">${t.prio}</span>
+        ${done
+          ? `<button class="sm-btn sm-red" onclick="toggle('${t.id}','progress')">Reabrir</button>`
+          : `<span style="display:flex;align-items:center;gap:4px">
+              <input type="number" placeholder="" id="l-${t.id}"
+                title="Positivo para sumar, negativo para corregir"
+                style="width:74px;padding:5px 9px;border:1px solid var(--gray-200);border-radius:var(--r-sm);font-size:13px;text-align:center;outline:none"
+                onkeydown="if(event.key==='Enter')addInc('${t.id}')">
+              <button class="sm-btn sm-solid" onclick="addInc('${t.id}')">+</button>
+              ${t.log.length ? `<button class="sm-btn sm-red" onclick="undoLog('${t.id}')" title="Deshacer última entrada">↩</button>` : ''}
+            </span>`}
+      </div>
+      <button class="li-del" onclick="del('${t.id}','progress')"><i class="fa-solid fa-xmark"></i></button>
+    </div>`;
+}
+
+/* ── Sección colapsable de "Completadas" (compartida por Lista y Proyectos) ── */
+function tkCompletedSection(done) {
+  if (!done.length) return '';
+  return `<div class="tk-done-sec${tkDoneOpen ? ' open' : ''}">
+    <div class="tk-done-head">
+      <button class="tk-done-toggle" onclick="tkToggleDone(this)">
+        <i class="fa-solid fa-chevron-right tk-done-chev"></i> Completadas <span class="tk-group-n">${done.length}</span>
+      </button>
+      <button class="tk-done-clear" onclick="clearCompleted()" title="Eliminar las completadas"><i class="fa-solid fa-broom"></i> Vaciar</button>
+    </div>
+    <div class="tk-done-body" style="display:${tkDoneOpen ? '' : 'none'}"><div class="tk-rows">${done.map(tkRow).join('')}</div></div>
+  </div>`;
+}
+
+/* ── LISTA — activas agrupadas por horizonte temporal ── */
 function buildLista() {
   const all = myTasks();
   if (!all.length) return '<div class="tk-empty"><i class="fa-regular fa-square-check"></i><p>Sin tareas. Crea la primera con <strong>Nueva tarea</strong>.</p></div>';
   const active = all.filter(t => !isDone(t)).sort(taskSort);
   const done = all.filter(isDone);
 
-  const item = (t, i) => {
-    const done = isDone(t);
-    const od = isOD(t.due) && !done;
-    const delay = `style="animation-delay:${Math.min(i, 12) * 30}ms"`;
-    if (t.kind === 'simple') return `
-      <div class="list-item ${done ? 'done-item' : ''}${tkToggleAnim && tkToggleAnim.id === t.id ? ' tk-entering' : ''}" data-tid="${t.id}" ${delay}>
-        <div class="li-chk ${done ? 'on' : ''}" onclick="toggle('${t.id}','simple')">✓</div>
-        <div class="li-name">${t.name}</div>
-        <div class="li-meta">
-          ${t.due ? `<span class="li-due ${od ? 'od' : ''}">${fmtD(t.due)}</span>` : ''}
-          <span class="li-prio ${prioC(t.prio)}">${t.prio}</span>
-          ${t.collab ? '<span class="li-tag">Colaborativa</span>' : ''}
-          ${done
-            ? `<button class="sm-btn sm-red" onclick="toggle('${t.id}','simple')">Reabrir</button>`
-            : ''}
-        </div>
-        <button class="li-del" onclick="del('${t.id}','simple')"><i class="fa-solid fa-xmark"></i></button>
-      </div>`;
-    else {
-      const p = pct(t);
-      return `
-      <div class="list-item ${done ? 'done-item' : ''}${tkToggleAnim && tkToggleAnim.id === t.id ? ' tk-entering' : ''}" data-tid="${t.id}" ${delay}>
-        <div class="li-chk ${done ? 'on' : ''}">✓</div>
-        <div style="flex:1;min-width:0">
-          <div class="li-name ${done ? 'struck' : ''}">${t.name}</div>
-          <div class="li-prog">
-            <div class="li-prog-bar"><div class="li-prog-fill" style="width:${p}%"></div></div>
-            <span>${t.done}/${t.total} ${t.unit} · ${p}%</span>
-          </div>
-        </div>
-        <div class="li-meta">
-          ${t.due ? `<span class="li-due ${od ? 'od' : ''}">${fmtD(t.due)}</span>` : ''}
-          <span class="li-prio ${prioC(t.prio)}">${t.prio}</span>
-          ${done
-            ? `<button class="sm-btn sm-red" onclick="toggle('${t.id}','progress')">Reabrir</button>`
-            : `<span style="display:flex;align-items:center;gap:4px">
-                <input type="number" placeholder="" id="l-${t.id}"
-                  title="Positivo para sumar, negativo para corregir"
-                  style="width:74px;padding:5px 9px;border:1px solid var(--gray-200);border-radius:var(--r-sm);font-size:13px;text-align:center;outline:none"
-                  onkeydown="if(event.key==='Enter')addInc('${t.id}')">
-                <button class="sm-btn sm-solid" onclick="addInc('${t.id}')">+</button>
-                ${t.log.length ? `<button class="sm-btn sm-red" onclick="undoLog('${t.id}')" title="Deshacer última entrada">↩</button>` : ''}
-              </span>`}
-        </div>
-        <button class="li-del" onclick="del('${t.id}','progress')"><i class="fa-solid fa-xmark"></i></button>
-      </div>`;
-    }
-  };
-
-  // Agrupa las activas por horizonte temporal → "qué importa ahora" de un vistazo
   const now = new Date(); now.setHours(0, 0, 0, 0);
   const toStr = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   const todayStr = toStr(now);
@@ -646,7 +659,7 @@ function buildLista() {
     { label: 'Sin fecha',   tone: '',   test: t => !t.due },
   ];
   const groups = defs.map(g => ({ ...g, tasks: active.filter(g.test).sort(taskSort) })).filter(g => g.tasks.length);
-  const showLabels = groups.length > 1;   // si todo cae en un mismo grupo, no hace falta encabezar
+  const showLabels = groups.length > 1;
 
   let html = '<div class="tk-list">';
   if (!active.length) {
@@ -654,22 +667,48 @@ function buildLista() {
   } else {
     html += groups.map(g => `<div class="tk-group">
       ${showLabels ? `<div class="tk-group-label ${g.tone}">${g.label} <span class="tk-group-n">${g.tasks.length}</span></div>` : ''}
-      <div class="tk-rows">${g.tasks.map(item).join('')}</div>
+      <div class="tk-rows">${g.tasks.map(tkRow).join('')}</div>
     </div>`).join('');
   }
+  html += tkCompletedSection(done);
+  html += '</div>';
+  return html;
+}
 
-  // Completadas: a un lado, en una sección colapsable (no satura la vista)
-  if (done.length) {
-    html += `<div class="tk-done-sec${tkDoneOpen ? ' open' : ''}">
-      <div class="tk-done-head">
-        <button class="tk-done-toggle" onclick="tkToggleDone(this)">
-          <i class="fa-solid fa-chevron-right tk-done-chev"></i> Completadas <span class="tk-group-n">${done.length}</span>
-        </button>
-        <button class="tk-done-clear" onclick="clearCompleted()" title="Eliminar las completadas"><i class="fa-solid fa-broom"></i> Vaciar</button>
-      </div>
-      <div class="tk-done-body" style="display:${tkDoneOpen ? '' : 'none'}"><div class="tk-rows">${done.map(item).join('')}</div></div>
-    </div>`;
+/* ── PROYECTOS — activas agrupadas por proyecto (cada proyecto, sus tareas) ── */
+function tkProject(t) { return (t.project || '').trim(); }
+function buildProyectos() {
+  const all = myTasks();
+  if (!all.length) return '<div class="tk-empty"><i class="fa-regular fa-folder-open"></i><p>Sin tareas. Crea una y asígnale un <strong>proyecto</strong>.</p></div>';
+  const active = all.filter(t => !isDone(t));
+  const done = all.filter(isDone);
+
+  const byProj = new Map();
+  active.forEach(t => {
+    const key = tkProject(t) || '__none__';
+    if (!byProj.has(key)) byProj.set(key, []);
+    byProj.get(key).push(t);
+  });
+  // Proyectos nombrados primero (alfabético), "Sin proyecto" al final
+  const keys = [...byProj.keys()].sort((a, b) =>
+    a === '__none__' ? 1 : b === '__none__' ? -1 : a.localeCompare(b, 'es'));
+
+  let html = '<div class="tk-list">';
+  if (!active.length) {
+    html += '<div class="tk-empty mini"><i class="fa-regular fa-circle-check"></i><p>¡Todo al día! No tienes tareas activas.</p></div>';
+  } else {
+    html += keys.map(key => {
+      const tasks = byProj.get(key).sort(taskSort);
+      const isNone = key === '__none__';
+      const label = isNone ? 'Sin proyecto' : key;
+      const ico = isNone ? 'fa-folder' : 'fa-folder-open';
+      return `<div class="tk-group">
+        <div class="tk-group-label${isNone ? ' tk-proj-none' : ''}"><i class="fa-solid ${ico} tk-proj-ico"></i> ${escapeHtml(label)} <span class="tk-group-n">${tasks.length}</span></div>
+        <div class="tk-rows">${tasks.map(tkRow).join('')}</div>
+      </div>`;
+    }).join('');
   }
+  html += tkCompletedSection(done);
   html += '</div>';
   return html;
 }
@@ -1023,10 +1062,14 @@ function toggleOtroMember(uid) {
 ═══════════════════════════════════════════ */
 function setView(v) {
   tkView = v;
-  ['lista','kanban','timeline'].forEach(k =>
-    document.getElementById('vbtn-'+k)?.classList.toggle('on', k === v));
+  try { localStorage.setItem('tkView', v); } catch {}
+  syncViewButtons();
   tkMoveViewSlider();
   render();
+}
+function syncViewButtons() {
+  ['lista', 'kanban', 'timeline', 'proyectos'].forEach(k =>
+    document.getElementById('vbtn-' + k)?.classList.toggle('on', k === tkView));
 }
 function setScope(s) {
   tkScope = s;
@@ -1191,10 +1234,21 @@ function undoLog(id) {
   scheduleSave(); render(); toast(`Entrada del ${fmtD(last.date)} deshecha (−${last.n} ${t.unit})`);
 }
 
+// Proyectos distintos ya usados (para autocompletar en el modal y agrupar)
+function tkAllProjects() {
+  const set = new Set();
+  allTasks().forEach(t => { const p = (t.project || '').trim(); if (p) set.add(p); });
+  return [...set].sort((a, b) => a.localeCompare(b, 'es'));
+}
+
 function openTaskModal() {
   const m = document.getElementById('taskModal');
   if (!m) return;
   setType('simple');
+  // Autocompletado de proyectos existentes + limpia los campos de proyecto
+  const dl = document.getElementById('projectList');
+  if (dl) dl.innerHTML = tkAllProjects().map(p => `<option value="${escapeHtml(p)}"></option>`).join('');
+  ['fProject', 'pProject'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   m.classList.add('show');
   setTimeout(() => document.getElementById('fName')?.focus(), 80);
 }
@@ -1335,6 +1389,7 @@ function addSimple() {
     name: n,
     due: document.getElementById('fDue').value,
     prio: document.getElementById('fPrio').value,
+    project: document.getElementById('fProject').value.trim() || null,
     done: false,
     collab: false,
     owner: currentUser,
@@ -1342,6 +1397,7 @@ function addSimple() {
   });
   document.getElementById('fName').value = '';
   document.getElementById('fDue').value = '';
+  document.getElementById('fProject').value = '';
   resetPrio('fPrio');
   scheduleSave(); render(); toast('Tarea agregada');
   closeTaskModal();
@@ -1357,6 +1413,7 @@ function addProgress() {
     name: n, unit, total, done: 0, log: [],
     due: document.getElementById('pDue').value,
     prio: document.getElementById('pPrio').value,
+    project: document.getElementById('pProject').value.trim() || null,
     owner: currentUser,
     createdAt: new Date().toISOString()
   });
@@ -1364,6 +1421,7 @@ function addProgress() {
   document.getElementById('pTotal').value = '';
   document.getElementById('pUnit').value = '';
   document.getElementById('pDue').value = '';
+  document.getElementById('pProject').value = '';
   resetPrio('pPrio');
   scheduleSave(); render(); toast('Tarea con progreso creada');
   closeTaskModal();
