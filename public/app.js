@@ -544,8 +544,11 @@ function render() {
   // El botón "Nueva tarea" personal solo aplica en scope personal.
   document.getElementById('newTaskBtn').style.display = (isEquipo || isOtros) ? 'none' : 'flex';
 
-  if (isEquipo) { renderEquipo(); return; }
-  if (isOtros)  { renderOtros();  return; }
+  const clrB = document.getElementById('tkClearBanner');
+  if (isEquipo) { if (clrB) clrB.style.display = 'none'; renderEquipo(); return; }
+  if (isOtros)  { if (clrB) clrB.style.display = 'none'; renderOtros();  return; }
+
+  maybeOfferClearCompleted();   // ofrece limpieza mensual de completadas
 
   const c = document.getElementById('viewContainer');
   if (tkView === 'lista')       c.innerHTML = buildLista();
@@ -553,11 +556,23 @@ function render() {
   else                          c.innerHTML = buildTimeline();
 }
 
+/* Orden de tareas activas: por fecha (vencidas/próximas primero), sin fecha al
+   final; a igualdad de fecha, por prioridad (Alta → Media → Baja). */
+function taskSort(a, b) {
+  const rank = p => p === 'Alta' ? 0 : p === 'Media' ? 1 : 2;
+  const ad = a.due || '9999-99-99', bd = b.due || '9999-99-99';
+  if (ad !== bd) return ad < bd ? -1 : 1;
+  return rank(a.prio) - rank(b.prio);
+}
+
 /* ── LISTA ── */
 function buildLista() {
-  const tasks = myTasks();
-  if (!tasks.length) return '<div style="padding:32px;text-align:center;color:var(--gray-400)">Sin tareas</div>';
-  return `<div class="list-view">${tasks.map((t, i) => {
+  const all = myTasks();
+  if (!all.length) return '<div class="tk-empty"><i class="fa-regular fa-square-check"></i><p>Sin tareas. Crea la primera con <strong>Nueva tarea</strong>.</p></div>';
+  const active = all.filter(t => !isDone(t)).sort(taskSort);
+  const done = all.filter(isDone);
+
+  const item = (t, i) => {
     const done = isDone(t);
     const od = isOD(t.due) && !done;
     const delay = `style="animation-delay:${Math.min(i, 12) * 30}ms"`;
@@ -604,7 +619,77 @@ function buildLista() {
         <button class="li-del" onclick="del('${t.id}','progress')"><i class="fa-solid fa-xmark"></i></button>
       </div>`;
     }
-  }).join('')}</div>`;
+  };
+
+  let html = '<div class="list-view">';
+  html += active.length
+    ? active.map(item).join('')
+    : '<div class="tk-empty mini"><i class="fa-regular fa-circle-check"></i><p>¡Todo al día! No tienes tareas activas.</p></div>';
+  html += '</div>';
+
+  // Completadas: a un lado, en una sección colapsable (no satura la vista)
+  if (done.length) {
+    html += `<div class="tk-done-sec">
+      <div class="tk-done-head">
+        <button class="tk-done-toggle" onclick="tkToggleDone(this)">
+          <i class="fa-solid fa-chevron-right tk-done-chev"></i> Completadas · ${done.length}
+        </button>
+        <button class="tk-done-clear" onclick="clearCompleted()" title="Eliminar las completadas"><i class="fa-solid fa-broom"></i> Vaciar</button>
+      </div>
+      <div class="tk-done-body" style="display:none"><div class="list-view">${done.map(item).join('')}</div></div>
+    </div>`;
+  }
+  return html;
+}
+
+// Despliega/colapsa la sección de completadas
+function tkToggleDone(btn) {
+  const sec = btn.closest('.tk-done-sec');
+  if (!sec) return;
+  const body = sec.querySelector('.tk-done-body');
+  const open = body.style.display === 'none';
+  body.style.display = open ? '' : 'none';
+  sec.classList.toggle('open', open);
+}
+
+/* ── Vaciado de tareas completadas (limpieza) ── */
+const _mine = t => !t.owner || t.owner === currentUser;
+function countMyDone() {
+  return state.simple.filter(t => _mine(t) && t.done).length
+       + state.progress.filter(t => _mine(t) && t.done >= t.total).length;
+}
+function clearCompleted() {
+  const n = countMyDone();
+  if (!n) { toast('No hay tareas completadas para vaciar'); maybeOfferClearCompleted(); return; }
+  if (!confirm(`¿Vaciar ${n} tarea${n === 1 ? '' : 's'} completada${n === 1 ? '' : 's'}? Esto las elimina y no se puede deshacer.`)) return;
+  state.simple = state.simple.filter(t => !(_mine(t) && t.done));
+  state.progress = state.progress.filter(t => !(_mine(t) && t.done >= t.total));
+  try { localStorage.setItem('tkClearPromptAt', String(Date.now())); } catch {}
+  scheduleSave();
+  render();
+  toast(`${n} completada${n === 1 ? '' : 's'} eliminada${n === 1 ? '' : 's'}`);
+}
+function snoozeClearPrompt() {
+  try { localStorage.setItem('tkClearPromptAt', String(Date.now())); } catch {}
+  const b = document.getElementById('tkClearBanner'); if (b) b.style.display = 'none';
+}
+// Una vez al mes, si hay varias completadas acumuladas, ofrece vaciarlas
+function maybeOfferClearCompleted() {
+  const banner = document.getElementById('tkClearBanner');
+  if (!banner) return;
+  const n = countMyDone();
+  let last = 0; try { last = +(localStorage.getItem('tkClearPromptAt') || 0); } catch {}
+  const overdue = !last || (Date.now() - last) > 30 * 24 * 60 * 60 * 1000;
+  if (n >= 5 && overdue) {
+    banner.innerHTML = `<div class="tk-clear-txt"><i class="fa-solid fa-broom"></i> Tienes <strong>${n}</strong> tareas completadas acumuladas. ¿Las vaciamos para mantener tu lista limpia?</div>
+      <div class="tk-clear-acts">
+        <button class="sm-btn sm-solid" onclick="clearCompleted()">Vaciar</button>
+        <button class="sm-btn" onclick="snoozeClearPrompt()">Ahora no</button>
+      </div>`;
+    banner.style.display = 'flex';
+  } else {
+    banner.style.display = 'none';
+  }
 }
 
 /* ── KANBAN ── */
@@ -670,8 +755,8 @@ function buildKanban() {
 
 /* ── TIMELINE ── */
 function buildTimeline() {
-  const tasks = myTasks();
-  if (!tasks.length) return '<div style="padding:32px;text-align:center;color:var(--gray-400)">Sin tareas</div>';
+  const tasks = myTasks().filter(t => !isDone(t));   // la línea de tiempo es para lo que falta; las completadas se dejan de lado
+  if (!tasks.length) return '<div class="tk-empty"><i class="fa-regular fa-circle-check"></i><p>Sin tareas pendientes. ¡Buen trabajo!</p></div>';
   const todayStr = new Date().toISOString().slice(0, 10);
   const grouped = {};
   tasks.forEach(t => {

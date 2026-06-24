@@ -374,10 +374,38 @@ button,input,select{font-family:var(--font)}
 .tk-view-btn.on{color:var(--navy)}   /* el fondo blanco lo da el slider deslizante */
 
 /* ── STATS ── */
-.tk-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
-.tk-stat{background:var(--white);border:1px solid var(--gray-100);border-radius:var(--r-md);padding:12px 14px;box-shadow:var(--shadow-sm)}
-.tk-stat-n{font-size:22px;font-weight:300;color:var(--navy);font-family:var(--mono)}
-.tk-stat-l{font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+/* Stats esbeltas: número + etiqueta en una línea, completadas atenuadas */
+.tk-stats{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.tk-stat{flex:1 1 calc(25% - 8px);min-width:118px;display:flex;align-items:baseline;gap:8px;background:var(--white);border:1px solid var(--gray-100);border-radius:var(--r-md);padding:9px 13px}
+.tk-stat-n{font-size:18px;font-weight:400;color:var(--navy);font-family:var(--mono);line-height:1}
+.tk-stat-l{font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.4px}
+.tk-stat-done .tk-stat-n{color:var(--gray-400)}   /* las completadas, de lado */
+
+/* Estados vacíos amables */
+.tk-empty{padding:40px 20px;text-align:center;color:var(--gray-400)}
+.tk-empty.mini{padding:22px 16px}
+.tk-empty i{font-size:30px;opacity:.5;display:block;margin-bottom:10px}
+.tk-empty p{margin:0;font-size:13px}
+
+/* Sección de completadas (colapsable, al fondo) */
+.tk-done-sec{margin-top:16px;border-top:1px dashed var(--gray-200);padding-top:12px}
+.tk-done-head{display:flex;align-items:center;gap:8px}
+.tk-done-toggle{flex:1;display:flex;align-items:center;gap:8px;background:none;border:none;cursor:pointer;font-family:var(--font);font-size:12px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px;padding:4px 2px;text-align:left}
+.tk-done-toggle:hover{color:var(--navy)}
+.tk-done-chev{font-size:10px;transition:transform .18s}
+.tk-done-sec.open .tk-done-chev{transform:rotate(90deg)}
+.tk-done-clear{background:none;border:1px solid var(--gray-200);border-radius:var(--r-sm);color:var(--gray-400);font-size:11px;font-family:var(--font);cursor:pointer;padding:5px 10px;display:flex;align-items:center;gap:6px;transition:border-color .15s,color .15s}
+.tk-done-clear:hover{border-color:var(--red);color:var(--red)}
+.tk-done-body{margin-top:10px}
+
+/* Banner de limpieza mensual */
+.tk-clear-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 16px;margin-bottom:14px;border:1px solid var(--navy-pale);background:var(--navy-ghost);border-radius:var(--r-lg)}
+.tk-clear-txt{font-size:13px;color:var(--gray-700);flex:1;min-width:200px}
+.tk-clear-txt i{color:var(--navy);margin-right:6px}
+.tk-clear-acts{display:flex;gap:8px}
+.tk-clear-acts .sm-btn{padding:7px 14px;font-size:12px;font-weight:500}
+.tk-clear-acts .sm-btn:not(.sm-solid){background:var(--white);border:1px solid var(--gray-200);color:var(--gray-500)}
+.tk-clear-acts .sm-btn:not(.sm-solid):hover{border-color:var(--navy);color:var(--navy)}
 
 /* ── INVITES ── */
 .tk-invite{
@@ -2645,9 +2673,12 @@ button,input,select{font-family:var(--font)}
     <div class="tk-stats">
       <div class="tk-stat"><div class="tk-stat-n" id="sPend">0</div><div class="tk-stat-l">Pendientes</div></div>
       <div class="tk-stat"><div class="tk-stat-n" id="sProg">0</div><div class="tk-stat-l">En progreso</div></div>
-      <div class="tk-stat"><div class="tk-stat-n" id="sDone">0</div><div class="tk-stat-l">Completadas</div></div>
+      <div class="tk-stat tk-stat-done"><div class="tk-stat-n" id="sDone">0</div><div class="tk-stat-l">Completadas</div></div>
       <div class="tk-stat"><div class="tk-stat-n" id="sTotal">0</div><div class="tk-stat-l">Total</div></div>
     </div>
+
+    <!-- Banner de limpieza mensual de completadas -->
+    <div id="tkClearBanner" class="tk-clear-banner" style="display:none"></div>
 
     <!-- Invites -->
     <div id="invitesEl"></div>
