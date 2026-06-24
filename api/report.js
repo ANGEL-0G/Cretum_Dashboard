@@ -11,8 +11,6 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import chromium from '@sparticuz/chromium';
-import puppeteer from 'puppeteer-core';
 import { buildReportHtml } from './_lib/report-template.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -44,6 +42,8 @@ export default async function handler(req, res) {
 
   let browser;
   try {
+    const chromium = (await import('@sparticuz/chromium')).default;
+    const puppeteer = (await import('puppeteer-core')).default;
     const html = buildReportHtml(payload, fontFaces());
     browser = await puppeteer.launch({
       args: chromium.args,
@@ -66,6 +66,6 @@ export default async function handler(req, res) {
     res.status(200).send(Buffer.from(pdf));
   } catch (e) {
     if (browser) { try { await browser.close(); } catch { /* noop */ } }
-    res.status(500).json({ error: String(e && e.message || e) });
+    res.status(500).json({ error: String(e && e.message || e), stack: (e && e.stack ? String(e.stack).split('\n').slice(0, 5) : null) });
   }
 }
