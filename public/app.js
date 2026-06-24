@@ -2311,7 +2311,7 @@ function renderPtDashboards() {
 
 function renderPtUsers() {
   const el = document.getElementById('ptUserList');
-  if (!ptUsers.length) { el.innerHTML = '<div class="pt-empty">Aún no hay usuarios-cliente.</div>'; return; }
+  if (!ptUsers.length) { el.innerHTML = '<div class="pt-empty">Aún no hay accesos. Crea el primero.</div>'; return; }
   const countFor = (uid) => ptAccess.filter(a => a.user_id === uid).length;
   el.innerHTML = ptUsers.map(u => {
     const n = countFor(u.id);
@@ -2320,7 +2320,7 @@ function renderPtUsers() {
       <div class="sub">usuario: ${escapeHtml(u.username)} · <span class="pt-badge">${n} dashboard${n === 1 ? '' : 's'}</span></div>
       <div class="acts">
         <button class="cdd-btn" onclick="ptUserOpen(${u.id})"><i class="fa-solid fa-pen"></i> Editar</button>
-        <button class="cdd-btn camp-btn-danger" onclick="ptUserDelete(${u.id})"><i class="fa-solid fa-trash"></i></button>
+        <button class="cdd-btn camp-btn-danger" onclick="ptUserDelete(${u.id})"><i class="fa-solid fa-trash"></i> Eliminar</button>
       </div>
     </div>`;
   }).join('');
