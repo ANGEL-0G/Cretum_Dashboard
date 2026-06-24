@@ -3371,6 +3371,9 @@ async function renderChartPng(config, w, h) {
 async function investorChartImages(data) {
   const out = [];
   const short = (s) => { s = String(s || ''); return s.length > 16 ? s.slice(0, 15) + '…' : s; };
+  // Paleta MVP: naranja líder + neutros discretos; verde/rojo solo para ganancia/pérdida
+  const MVP = '#E8650D', SLATE = '#9aa3b5', POS = '#2E9E5B', NEG = '#C0392B';
+  const PAL = ['#E8650D', '#1F3A5F', '#E0A458', '#5B8C7B', '#9B6A8F', '#7A93B0', '#C9572E', '#3F6B5E', '#B8923E', '#6B7689'];
   try {
     // 1) Aportado vs. valor actual estimado (por posición) — siempre que haya posiciones con monto
     const conMonto = data.pos.filter(p => (p.commitment_actual || p.commitment) > 0);
@@ -3383,8 +3386,8 @@ async function investorChartImages(data) {
       out.push(await renderChartPng({
         type: 'bar',
         data: { labels, datasets: [
-          { label: 'Aportado', data: aportado, backgroundColor: '#17436b', borderRadius: 4, maxBarThickness: 64 },
-          { label: 'Valor actual est.', data: valor, backgroundColor: '#0f9b5a', borderRadius: 4, maxBarThickness: 64 },
+          { label: 'Aportado', data: aportado, backgroundColor: SLATE, borderRadius: 4, maxBarThickness: 64 },
+          { label: 'Valor actual est.', data: valor, backgroundColor: MVP, borderRadius: 4, maxBarThickness: 64 },
         ] },
         options: {
           plugins: {
@@ -3409,7 +3412,7 @@ async function investorChartImages(data) {
       const fmt = moneyAxisFmt(Math.max(...cum));
       out.push(await renderChartPng({
         type: 'line',
-        data: { labels, datasets: [{ label: 'Distribuido acumulado', data: cum, borderColor: '#0f9b5a', backgroundColor: 'rgba(15,155,90,.15)', fill: true, tension: .25, pointRadius: 3, pointBackgroundColor: '#0f9b5a', borderWidth: 2.5 }] },
+        data: { labels, datasets: [{ label: 'Distribuido acumulado', data: cum, borderColor: MVP, backgroundColor: 'rgba(232,101,13,.15)', fill: true, tension: .25, pointRadius: 3, pointBackgroundColor: MVP, borderWidth: 2.5 }] },
         options: {
           plugins: {
             legend: { display: false },
@@ -3421,6 +3424,67 @@ async function investorChartImages(data) {
           },
         },
       }, 1000, 380));
+    }
+    // NAV activo por posición (base consistente con el 360 y el snapshot)
+    const activePos = data.pos.filter(p => p.estado === 'Activa');
+    const navOf = p => (+p.commitment_actual || +p.commitment || 0);
+    const donutOpts = (title) => ({
+      plugins: {
+        legend: { position: 'right', labels: { font: { size: 12 }, usePointStyle: true, boxWidth: 8 } },
+        title: { display: true, text: title, font: { size: 16, weight: '600' }, color: '#1a1f2e', padding: { bottom: 12 } },
+      },
+      cutout: '58%',
+    });
+
+    // 3) Composición del portafolio por empresa (NAV activo) — dona
+    const byCo = {};
+    activePos.forEach(p => { if (navOf(p) > 0) byCo[p.company] = (byCo[p.company] || 0) + navOf(p); });
+    let coEntries = Object.entries(byCo).sort((a, b) => b[1] - a[1]);
+    if (coEntries.length) {
+      const top = coEntries.slice(0, 8);
+      const rest = coEntries.slice(8);
+      if (rest.length) top.push(['Otros', rest.reduce((s, [, v]) => s + v, 0)]);
+      out.push(await renderChartPng({
+        type: 'doughnut',
+        data: { labels: top.map(e => e[0]), datasets: [{ data: top.map(e => e[1]), backgroundColor: PAL, borderColor: '#fff', borderWidth: 2 }] },
+        options: donutOpts('Composición por empresa (NAV activo)'),
+      }, 660, 460));
+    }
+
+    // 4) Exposición por tema/sector (NAV activo) — dona
+    const byTheme = {};
+    activePos.forEach(p => { if (navOf(p) > 0) { const th = companyTheme(p.company); byTheme[th] = (byTheme[th] || 0) + navOf(p); } });
+    const thEntries = Object.entries(byTheme).sort((a, b) => b[1] - a[1]);
+    if (thEntries.length) {
+      out.push(await renderChartPng({
+        type: 'doughnut',
+        data: { labels: thEntries.map(e => e[0]), datasets: [{ data: thEntries.map(e => e[1]), backgroundColor: PAL, borderColor: '#fff', borderWidth: 2 }] },
+        options: donutOpts('Exposición por tema (NAV activo)'),
+      }, 660, 460));
+    }
+
+    // 5) MOIC por posición — barras horizontales (verde >=1x, rojo <1x)
+    const moicPos = activePos
+      .filter(p => p.moic != null && (+p.commitment || +p.commitment_actual) > 0)
+      .map(p => ({ name: p.company, moic: +p.moic }))
+      .sort((a, b) => b.moic - a.moic)
+      .slice(0, 14);
+    if (moicPos.length) {
+      out.push(await renderChartPng({
+        type: 'bar',
+        data: { labels: moicPos.map(p => short(p.name)), datasets: [{ label: 'MOIC', data: moicPos.map(p => p.moic), backgroundColor: moicPos.map(p => p.moic >= 1 ? POS : NEG), borderRadius: 4, maxBarThickness: 26 }] },
+        options: {
+          indexAxis: 'y',
+          plugins: {
+            legend: { display: false },
+            title: { display: true, text: 'MOIC por posición', font: { size: 16, weight: '600' }, color: '#1a1f2e', padding: { bottom: 12 } },
+          },
+          scales: {
+            x: { beginAtZero: true, ticks: { callback: v => v + 'x', font: { size: 12 }, color: '#6b7689' }, grid: { color: '#eef1f6' } },
+            y: { ticks: { font: { size: 11 }, color: '#1a1f2e' }, grid: { display: false } },
+          },
+        },
+      }, 900, Math.max(320, 80 + moicPos.length * 30)));
     }
   } catch (e) {
     console.warn('[charts] no se pudo generar gráfica:', e);
@@ -3438,9 +3502,9 @@ async function exportInvestorXlsx(posId) {
     await loadScript('https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js');
     const charts = await investorChartImages(data);
     const wb = new ExcelJS.Workbook();
-    wb.creator = 'Cretum Desk';
+    wb.creator = 'MVP Manager';
 
-    const NAVY = 'FF17436B', GREEN = 'FF0F9B5A', RED = 'FFC0392B', GRAY = 'FF8A93A6', INK = 'FF1A1F2E', ZEBRA = 'FFF4F7FC';
+    const NAVY = 'FF17436B', ORANGE = 'FFE8650D', GREEN = 'FF0F9B5A', RED = 'FFC0392B', GRAY = 'FF8A93A6', INK = 'FF1A1F2E', ZEBRA = 'FFF4F7FC';
     const Z = { money: '"$"#,##0', money2: '"$"#,##0.00', pct: '0.00%', moic: '0.00"x"', evb: '"$"0.00"B"', sh: '#,##0', dur: '0.00" yrs"' };
     const t = data.totals;
 
@@ -3476,7 +3540,7 @@ async function exportInvestorXlsx(posId) {
     R.mergeCells('A1:F1');
     const tcell = R.getCell('A1');
     tcell.value = data.inv.name;
-    tcell.font = { size: 22, bold: true, color: { argb: NAVY } };
+    tcell.font = { size: 22, bold: true, color: { argb: ORANGE } };
     R.getRow(1).height = 30;
     R.mergeCells('A2:F2');
     const subParts = [];
@@ -3488,7 +3552,7 @@ async function exportInvestorXlsx(posId) {
     R.getCell('A2').font = { size: 10, color: { argb: GRAY } };
 
     const kpis = [
-      { l: 'Compromiso total', v: t.totCommit, z: Z.money, accent: NAVY, big: true },
+      { l: 'Compromiso total', v: t.totCommit, z: Z.money, accent: ORANGE, big: true },
       { l: 'Comp. ejecutado', v: t.totActual, z: Z.money, accent: INK },
       { l: 'Valor actual est.', v: t.valorEstimado || null, z: Z.money, accent: (t.valorEstimado >= t.totActual ? GREEN : RED) },
       { l: 'Distribuido', v: t.totDist, z: Z.money, accent: INK },
@@ -3567,21 +3631,22 @@ async function exportInvestorPdf(posId) {
     const charts = await investorChartImages(data);
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
-    const navy = [23, 67, 107], green = [15, 155, 90], red = [192, 57, 67], ink = [26, 31, 46], gray = [122, 134, 152];
+    const orange = [232, 101, 13], dark = [31, 42, 68], green = [15, 155, 90], red = [192, 57, 67], ink = [26, 31, 46], gray = [122, 134, 152];
+    const navy = orange;   // acento principal = naranja MVP
     const PW = doc.internal.pageSize.getWidth();
     const PH = doc.internal.pageSize.getHeight();
     const M = 32;
     const t = data.totals;
 
-    // Banda superior navy
-    doc.setFillColor(navy[0], navy[1], navy[2]);
+    // Banda superior MVP (naranja)
+    doc.setFillColor(orange[0], orange[1], orange[2]);
     doc.rect(0, 0, PW, 78, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(8.5);
-    doc.text(single ? 'CRETUM PARTNERS · REPORTE DE OPORTUNIDAD' : 'CRETUM PARTNERS · REPORTE DE INVERSIONISTA', M, 26);
+    doc.text(single ? 'MVP · REPORTE DE OPORTUNIDAD' : 'MVP · REPORTE DE PORTAFOLIO', M, 26);
     doc.setFontSize(20);
     doc.text(data.inv.name, M, 50);
-    doc.setFontSize(9.5); doc.setTextColor(206, 218, 232);
+    doc.setFontSize(9.5); doc.setTextColor(255, 224, 200);
     const sub = [];
     if (data.inv.titular) sub.push('Titular: ' + data.inv.titular);
     if (single && data.pos[0]) sub.push('Oportunidad: ' + data.pos[0].company + ' · ' + data.pos[0].series);
@@ -3613,23 +3678,27 @@ async function exportInvestorPdf(posId) {
 
     let y = cardY + cardH + 18;
 
-    // Gráfica(s)
-    if (charts.length === 1) {
-      const ch = charts[0];
-      const w = 480, h = Math.round(w * ch.h / ch.w);
-      doc.addImage(ch.dataUrl, 'PNG', (PW - w) / 2, y, w, h);
-      y += h + 16;
-    } else if (charts.length >= 2) {
-      const w = (PW - 2 * M - gap) / 2;
-      let maxh = 0;
-      charts.slice(0, 2).forEach((ch, i) => { const h = Math.round(w * ch.h / ch.w); maxh = Math.max(maxh, h); doc.addImage(ch.dataUrl, 'PNG', M + i * (w + gap), y, w, h); });
-      y += maxh + 16;
+    // Gráficas — rejilla de 2 columnas, pagina si no caben
+    if (charts.length) {
+      const colW = (PW - 2 * M - gap) / 2;
+      const footer = 30;
+      for (let i = 0; i < charts.length; i += 2) {
+        const pair = charts.slice(i, i + 2);
+        const rowH = Math.max(...pair.map(ch => Math.round(colW * ch.h / ch.w)));
+        if (y + rowH > PH - footer) { doc.addPage(); y = 40; }
+        pair.forEach((ch, j) => {
+          const h = Math.round(colW * ch.h / ch.w);
+          doc.addImage(ch.dataUrl, 'PNG', M + j * (colW + gap), y, colW, h);
+        });
+        y += rowH + 16;
+      }
     }
 
     const money = (v) => v == null ? '' : fmtMoney(v);
     const pps = (v) => v == null ? '' : '$' + (+v).toFixed(2);
     const sh = (v) => v == null ? '' : Number(v).toLocaleString('en-US');
 
+    if (y > PH - 120) { doc.addPage(); y = 40; }   // que el título + tabla no queden pegados al borde
     doc.setFontSize(12); doc.setTextColor(navy[0], navy[1], navy[2]);
     doc.text('Posiciones', M, y);
     doc.autoTable({
@@ -3638,7 +3707,7 @@ async function exportInvestorPdf(posId) {
       head: [['Empresa', 'Series', 'Estado', 'Compromiso', 'Carry', 'Acciones', 'Entry PPS', 'Current PPS', 'All-in PPS', 'MOIC', 'Valor est.', 'Distribuido', 'Cartas']],
       body: data.pos.map(p => [p.company, p.series, p.estado, money(p.commitment), (p.carry != null ? (p.carry * 100).toFixed(1) + '%' : ''), sh(p.shares), pps(p.entry_pps), pps(p.current_pps), pps(p.all_in_pps), (p.moic != null ? p.moic.toFixed(2) + 'x' : ''), money(p.valor_estimado), money(p.distribuido), p.n_cartas || '']),
       styles: { fontSize: 7.5, cellPadding: 3, overflow: 'linebreak' },
-      headStyles: { fillColor: navy, textColor: 255, fontSize: 7.5 },
+      headStyles: { fillColor: dark, textColor: 255, fontSize: 7.5 },
       alternateRowStyles: { fillColor: [244, 247, 252] },
       columnStyles: { 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' }, 7: { halign: 'right' }, 8: { halign: 'right' }, 9: { halign: 'right' }, 10: { halign: 'right' }, 11: { halign: 'right' }, 12: { halign: 'right' } },
     });
@@ -3654,7 +3723,7 @@ async function exportInvestorPdf(posId) {
         head: [['Empresa', 'Fecha', 'Tipo', 'Empresa subyacente', 'Acciones', 'PPS', 'Efectivo', 'En especie', 'Total', 'Carta']],
         body: data.letters.map(x => [x.company, x.fecha, x.tipo, x.subyacente, sh(x.shares), pps(x.pps), money(x.cash), money(x.especie), money(x.total), (x.carta ? 'Ver' : '')]),
         styles: { fontSize: 7.5, cellPadding: 3, overflow: 'linebreak' },
-        headStyles: { fillColor: navy, textColor: 255, fontSize: 7.5 },
+        headStyles: { fillColor: dark, textColor: 255, fontSize: 7.5 },
         alternateRowStyles: { fillColor: [244, 247, 252] },
         columnStyles: { 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' }, 7: { halign: 'right' }, 8: { halign: 'right' }, 9: { halign: 'center', textColor: navy } },
         didDrawCell: (hk) => {
@@ -3671,7 +3740,7 @@ async function exportInvestorPdf(posId) {
     for (let i = 1; i <= pages; i++) {
       doc.setPage(i);
       doc.setFontSize(7.5); doc.setTextColor(160);
-      doc.text(`Cretum Desk · documento interno · ${new Date().toLocaleDateString('es-MX')} · pág. ${i}/${pages}`, M, PH - 16);
+      doc.text(`MVP Manager · documento interno · ${new Date().toLocaleDateString('es-MX')} · pág. ${i}/${pages}`, M, PH - 16);
     }
 
     doc.save(invExportFilename(data.inv, extra) + '.pdf');
