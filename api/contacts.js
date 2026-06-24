@@ -57,12 +57,22 @@ export default async function handler(req, res) {
 
   try {
     if (action === 'list') {
-      const { data, error } = await admin
+      const { data: contacts, error } = await admin
         .from('lp_contacts')
         .select('email, nombre, nombre_completo, responsable, cancelado')
         .order('nombre_completo', { nullsFirst: false });
       if (error) throw error;
-      return res.status(200).json({ contacts: data || [], me: myName });
+      // Interacción por contacto (campaign_engagement es solo-admin a nivel RLS;
+      // aquí la exponemos agregada por LP — igual que el ranking que ya ven todos).
+      const { data: eng, error: e2 } = await admin
+        .from('campaign_engagement')
+        .select('email, periodo, nivel, opened, clicked, replied');
+      if (e2) throw e2;
+      const byEmail = {};
+      (eng || []).forEach(e => { (byEmail[e.email] ||= []).push(e); });
+      Object.values(byEmail).forEach(arr => arr.sort((a, b) => String(a.periodo).localeCompare(String(b.periodo))));
+      const out = (contacts || []).map(c => ({ ...c, hist: byEmail[c.email] || [] }));
+      return res.status(200).json({ contacts: out, me: myName });
     }
 
     if (action === 'add') {

@@ -6723,13 +6723,27 @@ function renderContactsTabla() {
     return;
   }
 
+  // Calendario global de campañas (meses con datos) para medir rachas continuas
+  const allPeriods = [...new Set(ctblContacts.flatMap(c => (c.hist || []).map(h => periodoKey(h.periodo))))].sort();
+
   const body = rows.map(c => {
     const mine = ctblIsMine(c);
     const resp = c.responsable ? escapeHtml(c.responsable) : '<span style="color:var(--ink-soft,#aab)">—</span>';
     const em = encodeURIComponent(c.email);
+    // Interacción: racha de meses seguidos abriendo (desde el mes más reciente hacia atrás) + total
+    const nivelBy = {};
+    (c.hist || []).forEach(h => { nivelBy[periodoKey(h.periodo)] = h.nivel; });
+    const vistos = (c.hist || []).filter(h => h.nivel >= 1).length;
+    let streak = 0;
+    for (let i = allPeriods.length - 1; i >= 0; i--) { if ((nivelBy[allPeriods[i]] || 0) >= 1) streak++; else break; }
+    const inter = streak > 0
+      ? `<span class="ctbl-streak" title="${streak} mes${streak === 1 ? '' : 'es'} seguidos abriendo">⚡ ${streak}</span>` +
+        (vistos > streak ? ` <span class="ctbl-vistos">· ${vistos} en total</span>` : '')
+      : (vistos > 0 ? `<span class="ctbl-vistos">${vistos} mes${vistos === 1 ? '' : 'es'}</span>` : '<span class="ctbl-vistos">—</span>');
     return `<tr class="${c.cancelado ? 'ctbl-row-cancel' : ''}">
-      <td><div class="ctbl-nm">${escapeHtml(c.nombre_completo || c.nombre || '—')}</div></td>
+      <td><div class="ctbl-nm ctbl-clickable" onclick="ctblOpenDetail('${em}')" title="Ver qué meses vio y qué pasó">${escapeHtml(c.nombre_completo || c.nombre || '—')}</div></td>
       <td class="ctbl-em">${escapeHtml(c.email)}</td>
+      <td class="ctbl-inter">${inter}</td>
       <td class="ctbl-resp">${mine ? `<span class="ctbl-resp-mine">${resp}</span>` : resp}</td>
       <td class="ctbl-acts">${mine ? `
         <button class="ctbl-act" title="Editar nombre" onclick="ctblEditOpen('${em}')"><i class="fa-solid fa-pen"></i></button>
@@ -6738,8 +6752,19 @@ function renderContactsTabla() {
   }).join('');
 
   list.innerHTML = `<div class="db-list-wrap"><table class="ctbl-table">
-    <thead><tr><th>Nombre</th><th>Email</th><th>Responsable</th><th></th></tr></thead>
+    <thead><tr><th>Nombre</th><th>Email</th><th>Interacción</th><th>Responsable</th><th></th></tr></thead>
     <tbody>${body}</tbody></table></div>`;
+}
+
+// Detalle de interacción de un contacto (reusa el modal/render del admin)
+function ctblOpenDetail(emailEnc) {
+  const email = decodeURIComponent(emailEnc);
+  const c = ctblContacts.find(x => x.email === email);
+  if (!c) return;
+  const hist = (c.hist || [])
+    .map(h => ({ periodo: h.periodo, opened: h.opened, clicked: h.clicked, replied: h.replied, nivel: h.nivel }))
+    .sort((a, b) => String(a.periodo).localeCompare(String(b.periodo)));
+  campLpRender(c.nombre_completo || c.nombre || email, hist);
 }
 
 function ctblToggleMine() { ctblMineOnly = !ctblMineOnly; renderContactsTabla(); }
