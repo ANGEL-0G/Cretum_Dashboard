@@ -4612,6 +4612,7 @@ const FUND_TRACKERS = {
     cutoff: '2026-06-30',
     status: 'Preliminary, Unaudited',
     confidentiality: 'CONFIDENTIAL',
+    committedParFill: true,
     columns: [
       { key: 'company', label: 'Company' },
       { key: 'invested', label: 'Investment Amount', type: 'money' },
@@ -4850,26 +4851,43 @@ function fetchSpacexLiveMark() {
     });
 }
 
+// Recalcula los totales de un fondo SIEMPRE desde las filas (nunca hardcodeados),
+// para que cambiar cualquier valuación los actualice automáticamente.
+// overallTotal2 (base Commitment) valora el capital comprometido aún no invertido a la par.
+function computeFundTotals(f) {
+  if (!f || f.placeholder || !f.active) return;
+  const sum = (arr, k) => (arr || []).reduce((s, r) => s + (+r[k] || 0), 0);
+  const aInv = sum(f.active, 'invested'), aMtm = sum(f.active, 'mtm');
+  f.activeTotal = { invested: aInv, mtm: aMtm, moic: aInv ? aMtm / aInv : 0 };
+  const oInv = aInv + sum(f.distributed, 'invested');
+  const oMtm = aMtm + sum(f.distributed, 'mtm');
+  f.overallTotal = { invested: oInv, mtm: oMtm, moic: oInv ? oMtm / oInv : 0 };
+  if (f.committed || (f.overallTotal2 && f.overallTotal2.invested)) {
+    const committed = f.committed || f.overallTotal2.invested;
+    const label = (f.overallTotal2 && f.overallTotal2.label) || 'Total — Overall (Commitment)';
+    // committedParFill: valorar el capital comprometido aún no invertido a la par (solo fondos que lo usan)
+    const fill = f.committedParFill ? Math.max(0, committed - oInv) : 0;
+    const o2Mtm = oMtm + fill;
+    f.committed = committed;
+    f.overallTotal2 = { label, invested: committed, mtm: o2Mtm, moic: committed ? o2Mtm / committed : 0 };
+  }
+}
+
 function applySpacexLiveToTrackers() {
   if (!_spcxLive) return;
   for (const f of [FUND_TRACKERS.fundIV, FUND_TRACKERS.fundV]) {
     if (!f || f.placeholder || !f.active) continue;
-    let delta = 0;
+    let hit = false;
     for (const row of f.active) {
       if (!SPCX_ROW_RE.test(row.company) || !row.shares) continue;
-      const newMtm = Math.round(row.shares * _spcxLive.pps);
-      delta += newMtm - row.mtm;
       row.pps = _spcxLive.pps;
       if (_spcxLive.evB) row.corpVal = _spcxLive.evB;
-      row.mtm = newMtm;
-      if (row.invested) row.moic = newMtm / row.invested;
+      row.mtm = Math.round(row.shares * _spcxLive.pps);
+      if (row.invested) row.moic = row.mtm / row.invested;
+      hit = true;
     }
-    if (!delta) continue;
-    for (const t of [f.activeTotal, f.overallTotal, f.overallTotal2]) {
-      if (!t || t.mtm == null) continue;
-      t.mtm += delta;
-      if (t.invested) t.moic = t.mtm / t.invested;
-    }
+    if (!hit) continue;
+    computeFundTotals(f); // los totales se recalculan desde las filas (incluye SpaceX live)
     f._spcxLiveNote = 'SpaceX @ mercado (SPCX $' +
       _spcxLive.pps.toLocaleString('en-US', { maximumFractionDigits: 2 }) + ')';
   }
@@ -4914,6 +4932,7 @@ function renderFundTrackerHome() {
   const cards = document.getElementById('ftCards');
   if (!cards) return;
   const funds = [FUND_TRACKERS.fundIV, FUND_TRACKERS.fundV];
+  funds.forEach(computeFundTotals);
   cards.innerHTML = funds.map(f => {
     const isPh = !!f.placeholder;
     const stat = isPh
@@ -4959,6 +4978,7 @@ function renderFundTrackerDetail(fundId) {
   const f = FUND_TRACKERS[fundId];
   const host = document.getElementById('ftDetailContent');
   if (!f || !host) return;
+  computeFundTotals(f);
 
   if (f.placeholder) {
     host.innerHTML = `
@@ -5463,6 +5483,7 @@ function loadExcelJS() {
 async function exportFundTrackerExcel(fundId, btn) {
   const f = FUND_TRACKERS[fundId];
   if (!f || f.placeholder) return;
+  computeFundTotals(f);
   if (btn) { btn.disabled = true; }
   try {
     await loadExcelJS();
