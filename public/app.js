@@ -3320,10 +3320,12 @@ function buildInvestorExport(posId) {
     (p._dists || []).forEach(x => {
       const val = (+x.value_in_kind || 0) + (+x.cash_proceeds || 0);
       const num = (v) => (v != null && v !== '') ? +v : null;
+      const isReinv = /reinver|reinvest/i.test(x.notes || '');   // reinversión interna (no distribución real al LP)
       letters.push({
         company: p.company, series: p.series,
         fecha: x.distribution_date || '',
-        tipo: x.letter_type === 'distribution_cash' ? 'Efectivo' : 'En especie',
+        tipo: isReinv ? 'Reinversión' : (x.letter_type === 'distribution_cash' ? 'Efectivo' : 'En especie'),
+        _reinvest: isReinv,
         subyacente: x.underlying_company || '',
         shares: num(x.shares_distributed),
         pps: num(x.price_per_share),
@@ -3345,16 +3347,27 @@ function buildInvestorExport(posId) {
       : (p.moic != null && aportado ? aportado * p.moic : null);
   });
 
-  // Totales
-  const totCommit = pos.reduce((s, p) => s + p.commitment, 0);
-  const totActual = pos.reduce((s, p) => s + p.commitment_actual, 0);
-  const totDist = pos.reduce((s, p) => s + p.distribuido, 0);
-  const valorEstimado = pos.reduce((s, p) => s + (p.valor_estimado || 0), 0);
-  let moicW = 0, moicBase = 0;
-  pos.forEach(p => { if (p.moic != null && p.commitment > 0) { moicBase += p.commitment; moicW += p.commitment * p.moic; } });
-  const portMoic = moicBase > 0 ? moicW / moicBase : 0;
-  // DPI estándar = distribuido / capital comprometido (paid-in), no sobre el valor marcado
-  const dpi = totCommit > 0 ? totDist / totCommit : 0;
+  // Reinversiones internas (ej. mitad vendida del 22F → recompra 26A QP con el mismo dinero):
+  // no son distribución real al LP ni capital nuevo → se netean para no inflar los totales.
+  const reinvestAmts = [];
+  pos.forEach(p => (p._dists || []).forEach(x => {
+    if (/reinver|reinvest/i.test(x.notes || '')) reinvestAmts.push((+x.cash_proceeds || 0) + (+x.value_in_kind || 0));
+  }));
+  const reinvested = reinvestAmts.reduce((s, a) => s + a, 0);
+  // marca la posición ACTIVA financiada por esa reinversión (commitment ≈ monto reinvertido) = capital reciclado
+  const pend = reinvestAmts.slice();
+  pos.forEach(p => {
+    if (p.estado === 'Activa') { const i = pend.findIndex(a => Math.abs(a - p.commitment) < 1); if (i >= 0) { p._recycled = true; pend.splice(i, 1); } }
+  });
+
+  // Totales (vista de flujo real del LP)
+  const active = pos.filter(p => p.estado === 'Activa');
+  const totCommit = pos.reduce((s, p) => s + (p._recycled ? 0 : p.commitment), 0);  // paid-in real (sin reciclado)
+  const totActual = active.reduce((s, p) => s + p.commitment_actual, 0);            // NAV: solo posiciones activas
+  const totDist = pos.reduce((s, p) => s + p.distribuido, 0) - reinvested;          // distribuido real (sin reinversiones)
+  const valorEstimado = active.reduce((s, p) => s + (p.valor_estimado || 0), 0);
+  const portMoic = totCommit > 0 ? totActual / totCommit : 0;   // valor activo / paid-in real
+  const dpi = totCommit > 0 ? totDist / totCommit : 0;          // distribuido real / paid-in real
 
   const combined = !!inv._combined;
   return { inv, combined, contacts: contacts || [], pos, letters, totals: { totCommit, totActual, totDist, valorEstimado, portMoic, dpi } };
@@ -3471,7 +3484,7 @@ async function investorChartImages(data) {
     }
 
     // 2) Distribuciones acumuladas en el tiempo — solo si hay 2+ cartas fechadas
-    const dated = data.letters.filter(x => x.fecha && (x.total || 0) > 0)
+    const dated = data.letters.filter(x => x.fecha && (x.total || 0) > 0 && !x._reinvest)
       .slice().sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
     if (dated.length >= 2) {
       let acc = 0;
