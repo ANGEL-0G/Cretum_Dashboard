@@ -5954,16 +5954,22 @@ function campSetTab(tab) {
   document.getElementById('campPaneRanking').style.display = tab === 'ranking' ? '' : 'none';
   document.getElementById('campPaneActual').style.display  = tab === 'actual'  ? '' : 'none';
   document.getElementById('campPaneGestion').style.display = tab === 'gestion' ? '' : 'none';
+  const tablaPane = document.getElementById('campPaneTabla');
+  if (tablaPane) tablaPane.style.display = tab === 'tabla' ? '' : 'none';
+  if (tab === 'tabla') loadContactsTabla();
 }
 
 async function loadCampaigns() {
   const isAdmin = currentProfile?.role === 'admin';
-  // La pestaña Gestión solo existe para admin
+  // La pestaña Gestión solo es para admin; la Tabla de Contactos para el resto.
   const gTab = document.querySelector('#pageCampaigns .camp-tab-admin');
   if (gTab) gTab.style.display = isAdmin ? '' : 'none';
+  const uTab = document.querySelector('#pageCampaigns .camp-tab-user');
+  if (uTab) uTab.style.display = isAdmin ? 'none' : '';
   // Pestaña por defecto la primera vez
   if (!campTab) campSetTab('ranking');
   else if (campTab === 'gestion' && !isAdmin) campSetTab('ranking');
+  else if (campTab === 'tabla' && isAdmin) campSetTab('ranking');
 
   // Ranking y Campaña Actual: para TODOS (ranking primero para saber el último mes)
   await loadCampRanking();
@@ -6629,6 +6635,152 @@ async function campAddContactSave() {
   campAddContactClose();
   campaignsLoaded = false;
   await loadCampaigns();
+}
+
+/* ═══════════════════════════════════════════
+   TABLA DE CONTACTOS (no-admin) — vía /api/contacts (service role server-side)
+   Ven todos; añaden con responsable = ellos mismos; editan/borran solo los suyos.
+═══════════════════════════════════════════ */
+let ctblContacts = [], ctblMe = '', ctblMineOnly = false, ctblEditEmail = null, ctblLoaded = false;
+
+async function ctblApi(body) {
+  const r = await authedFetch('/api/contacts', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
+  return d;
+}
+
+// ¿Este contacto es de los que el usuario logueado es responsable?
+function ctblIsMine(c) {
+  const meKey = campRespKey(ctblMe);
+  return !!meKey && campRespPeople(c.responsable).map(campRespKey).includes(meKey);
+}
+
+async function loadContactsTabla(force) {
+  const list = document.getElementById('ctblList');
+  if (ctblLoaded && !force) { renderContactsTabla(); return; }
+  if (list) list.innerHTML = '<div class="db-loading"><i class="fa-solid fa-spinner fa-spin"></i> Cargando contactos…</div>';
+  try {
+    const d = await ctblApi({ action: 'list' });
+    ctblContacts = d.contacts || [];
+    ctblMe = d.me || currentProfile?.full_name || '';
+    ctblLoaded = true;
+    renderContactsTabla();
+  } catch (err) {
+    if (list) list.innerHTML = `<div class="db-loading">Error al cargar: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function renderContactsTabla() {
+  const list = document.getElementById('ctblList');
+  if (!list) return;
+  const q = (document.getElementById('ctblSearch')?.value || '').trim().toLowerCase();
+  let rows = ctblContacts.slice().sort((a, b) =>
+    (a.nombre_completo || a.email).localeCompare(b.nombre_completo || b.email, 'es'));
+  if (ctblMineOnly) rows = rows.filter(ctblIsMine);
+  if (q) rows = rows.filter(c =>
+    fuzzyMatch(q, c.nombre_completo || c.nombre || '') ||
+    (c.email || '').toLowerCase().includes(q) ||
+    fuzzyMatch(q, c.responsable || ''));
+
+  document.getElementById('ctblMineChip')?.classList.toggle('on', ctblMineOnly);
+  document.getElementById('ctblCount').textContent =
+    `${rows.length} contacto${rows.length === 1 ? '' : 's'}${ctblMineOnly ? ' · míos' : ''}`;
+
+  if (!rows.length) {
+    list.innerHTML = `<div class="camp-empty"><i class="fa-solid fa-address-book"></i><p>${ctblContacts.length ? 'Sin resultados para este filtro.' : 'Aún no hay contactos. Añade el primero.'}</p></div>`;
+    return;
+  }
+
+  const body = rows.map(c => {
+    const mine = ctblIsMine(c);
+    const resp = c.responsable ? escapeHtml(c.responsable) : '<span style="color:var(--ink-soft,#aab)">—</span>';
+    const em = encodeURIComponent(c.email);
+    return `<tr class="${c.cancelado ? 'ctbl-row-cancel' : ''}">
+      <td><div class="ctbl-nm">${escapeHtml(c.nombre_completo || c.nombre || '—')}</div></td>
+      <td class="ctbl-em">${escapeHtml(c.email)}</td>
+      <td class="ctbl-resp">${mine ? `<span class="ctbl-resp-mine">${resp}</span>` : resp}</td>
+      <td class="ctbl-acts">${mine ? `
+        <button class="ctbl-act" title="Editar nombre" onclick="ctblEditOpen('${em}')"><i class="fa-solid fa-pen"></i></button>
+        <button class="ctbl-act del" title="Borrar contacto" onclick="ctblDelete('${em}')"><i class="fa-solid fa-xmark"></i></button>` : ''}</td>
+    </tr>`;
+  }).join('');
+
+  list.innerHTML = `<div class="db-list-wrap"><table class="ctbl-table">
+    <thead><tr><th>Nombre</th><th>Email</th><th>Responsable</th><th></th></tr></thead>
+    <tbody>${body}</tbody></table></div>`;
+}
+
+function ctblToggleMine() { ctblMineOnly = !ctblMineOnly; renderContactsTabla(); }
+
+function ctblAddOpen() {
+  ctblEditEmail = null;
+  document.getElementById('ctblTitle').innerHTML = '<i class="fa-solid fa-user-plus"></i> Añadir contacto';
+  document.getElementById('ctblFull').value = '';
+  const em = document.getElementById('ctblEmail'); em.value = ''; em.disabled = false;
+  document.getElementById('ctblEmailHint').style.display = 'none';
+  document.getElementById('ctblRespNote').innerHTML = `Responsable: <b>${escapeHtml(ctblMe || '—')}</b> (tú)`;
+  document.getElementById('ctblMsg').textContent = '';
+  document.getElementById('ctblModal').classList.add('show');
+  setTimeout(() => document.getElementById('ctblFull').focus(), 60);
+}
+
+function ctblEditOpen(emailEnc) {
+  const email = decodeURIComponent(emailEnc);
+  const c = ctblContacts.find(x => x.email === email);
+  if (!c) return;
+  ctblEditEmail = email;
+  document.getElementById('ctblTitle').innerHTML = '<i class="fa-solid fa-pen"></i> Editar contacto';
+  document.getElementById('ctblFull').value = c.nombre_completo || c.nombre || '';
+  const em = document.getElementById('ctblEmail'); em.value = c.email; em.disabled = true;
+  document.getElementById('ctblEmailHint').style.display = '';
+  document.getElementById('ctblRespNote').innerHTML = `Responsable: <b>${escapeHtml(c.responsable || '—')}</b>`;
+  document.getElementById('ctblMsg').textContent = '';
+  document.getElementById('ctblModal').classList.add('show');
+  setTimeout(() => document.getElementById('ctblFull').focus(), 60);
+}
+
+function ctblClose() { document.getElementById('ctblModal').classList.remove('show'); ctblEditEmail = null; }
+
+async function ctblSave() {
+  const full = document.getElementById('ctblFull').value.trim();
+  const email = document.getElementById('ctblEmail').value.trim().toLowerCase();
+  const msg = document.getElementById('ctblMsg');
+  const fail = (t) => { msg.textContent = t; msg.className = 'camp-modal-msg err'; };
+  if (!full) return fail('El nombre completo es obligatorio.');
+  const btn = document.getElementById('ctblSaveBtn'); btn.disabled = true;
+  try {
+    if (ctblEditEmail) {
+      await ctblApi({ action: 'update', email: ctblEditEmail, nombre_completo: full });
+      toast('Contacto actualizado');
+    } else {
+      if (!email || !email.includes('@')) { btn.disabled = false; return fail('El email no parece válido.'); }
+      await ctblApi({ action: 'add', email, nombre_completo: full });
+      toast('Contacto añadido');
+    }
+    ctblClose();
+    await loadContactsTabla(true);
+  } catch (err) {
+    fail(err.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function ctblDelete(emailEnc) {
+  const email = decodeURIComponent(emailEnc);
+  const c = ctblContacts.find(x => x.email === email);
+  if (!c) return;
+  if (!confirm(`¿Borrar a ${c.nombre_completo || c.nombre || email}?\nSe elimina el contacto y su historial de campañas.`)) return;
+  try {
+    await ctblApi({ action: 'delete', email });
+    toast('Contacto borrado');
+    await loadContactsTabla(true);
+  } catch (err) {
+    toast('Error: ' + err.message);
+  }
 }
 
 /* ── Exportar contactos para Yesware (email + nombre, sin apellido) ──

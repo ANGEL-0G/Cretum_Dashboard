@@ -2759,6 +2759,36 @@ button,input,select{font-family:var(--font)}
     .camp-resp-sel:focus{border-color:var(--navy);outline:none}
     .camp-resp-sel.on{border-color:var(--navy);color:var(--navy);font-weight:600}
     [data-theme="dark"] .camp-fchip,[data-theme="dark"] .camp-resp-sel{background:var(--card,#1a2030)}
+    /* Tabla de Contactos (no-admin) */
+    .ctbl-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+    .ctbl-search{flex:1;min-width:220px}
+    .ctbl-add{margin-left:auto}
+    .ctbl-hint{font-size:12px;color:var(--ink-soft,#889);margin-left:auto}
+    .ctbl-resp-note{font-size:12.5px;color:var(--ink-soft,#667);margin-top:12px;background:var(--navy-ghost,#f0f3fa);border-radius:8px;padding:9px 12px}
+    .ctbl-resp-note b{color:var(--navy)}
+    .ctbl-table{width:100%;border-collapse:separate;border-spacing:0;font-size:13px;background:var(--white,#fff);border:1px solid var(--line,#e3e8f0);border-radius:8px;overflow:hidden}
+    .ctbl-table th{background:var(--navy);color:#fff;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.3px;padding:10px 12px;text-align:left}
+    .ctbl-table td{padding:9px 12px;border-bottom:1px solid var(--line,#eef1f6);vertical-align:middle}
+    .ctbl-table tbody tr:last-child td{border-bottom:none}
+    .ctbl-table tbody tr:hover td{background:var(--navy-ghost,#f4f7fc)}
+    .ctbl-nm{font-weight:500}
+    .ctbl-em{color:var(--ink-soft,#778);font-size:12.5px}
+    .ctbl-resp{font-size:12px}
+    .ctbl-resp-mine{display:inline-block;background:var(--navy-pale,#e6edf7);color:var(--navy);border-radius:20px;padding:2px 9px;font-size:11px;font-weight:600}
+    .ctbl-acts{text-align:right;white-space:nowrap}
+    .ctbl-act{background:none;border:none;color:var(--ink-soft,#c2c8d2);cursor:pointer;font-size:13px;padding:3px 6px}
+    .ctbl-act:hover{color:var(--navy)}
+    .ctbl-act.del:hover{color:#c0392b}
+    .ctbl-row-cancel td{background:#fbeceb}
+    .ctbl-row-cancel .ctbl-nm{color:#c0392b;text-decoration:line-through}
+    [data-theme="dark"] .ctbl-table tbody tr:hover td{background:rgba(93,143,245,.12)}
+    @media (max-width:640px){
+      .ctbl-add{margin-left:0;flex:1 1 100%;justify-content:center}
+      .ctbl-hint{margin-left:0;flex-basis:100%}
+      .ctbl-table{font-size:12px}
+      .ctbl-table th,.ctbl-table td{padding:8px 8px}
+      .ctbl-em{display:block}
+    }
     .camp-btn-danger{color:#c0392b;border-color:rgba(192,57,43,.3)}
     .camp-btn-danger:hover{background:rgba(192,57,43,.08);border-color:#c0392b}
     .camp-row-acts{float:right;display:inline-flex;gap:2px;margin-left:6px;opacity:0;transition:opacity .12s}
@@ -2920,6 +2950,7 @@ button,input,select{font-family:var(--font)}
         <button class="camp-tab on" data-ctab="ranking" onclick="campSetTab('ranking')"><i class="fa-solid fa-ranking-star"></i> Ranking</button>
         <button class="camp-tab" data-ctab="actual" onclick="campSetTab('actual')"><i class="fa-solid fa-envelope-open-text"></i> Campaña Actual</button>
         <button class="camp-tab camp-tab-admin" data-ctab="gestion" onclick="campSetTab('gestion')" style="display:none"><i class="fa-solid fa-sliders"></i> Gestión</button>
+        <button class="camp-tab camp-tab-user" data-ctab="tabla" onclick="campSetTab('tabla')" style="display:none"><i class="fa-solid fa-address-book"></i> Tabla de Contactos</button>
       </div>
     </div>
 
@@ -2999,6 +3030,23 @@ button,input,select{font-family:var(--font)}
 
       <div id="campMatrix" class="camp-matrix"></div>
     </div>
+
+    <!-- TAB: Tabla de Contactos (todos los no-admin) -->
+    <div class="camp-pane" id="campPaneTabla" style="display:none">
+      <div class="ctbl-bar">
+        <div class="db-search ctbl-search">
+          <i class="fa-solid fa-magnifying-glass db-search-ico"></i>
+          <input id="ctblSearch" class="db-search-inp" placeholder="Buscar nombre, email o responsable…" oninput="renderContactsTabla()" autocomplete="off">
+        </div>
+        <button class="camp-fchip" id="ctblMineChip" onclick="ctblToggleMine()"><i class="fa-solid fa-user"></i> Solo míos</button>
+        <button class="cdd-btn ctbl-add" type="button" onclick="ctblAddOpen()"><i class="fa-solid fa-user-plus"></i> Añadir contacto</button>
+      </div>
+      <div class="db-filters" style="border:none;padding-bottom:8px">
+        <span class="db-count" id="ctblCount">—</span>
+        <span class="ctbl-hint">Al añadir, tú quedas como responsable. Solo puedes editar/borrar los tuyos.</span>
+      </div>
+      <div id="ctblList"></div>
+    </div>
   </div>
 
   <!-- Modal: Añadir contacto -->
@@ -3025,6 +3073,29 @@ button,input,select{font-family:var(--font)}
       <div class="camp-modal-foot">
         <button class="camp-prev-cancel" onclick="campAddContactClose()">Cancelar</button>
         <button class="btn-primary" id="campCSaveBtn" onclick="campAddContactSave()"><i class="fa-solid fa-check"></i> Guardar contacto</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Añadir/editar contacto (Tabla de Contactos, no-admin) -->
+  <div class="camp-modal-backdrop" id="ctblModal" onclick="if(event.target===this)ctblClose()">
+    <div class="camp-modal">
+      <div class="camp-modal-head">
+        <div class="camp-modal-title" id="ctblTitle"><i class="fa-solid fa-user-plus"></i> Añadir contacto</div>
+        <button class="camp-modal-x" onclick="ctblClose()" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="camp-modal-body">
+        <label class="camp-f-lbl">Nombre completo <span class="camp-req">*</span></label>
+        <input id="ctblFull" class="camp-f-inp" placeholder="Nombre y apellido" autocomplete="off">
+        <label class="camp-f-lbl">Email <span class="camp-req">*</span></label>
+        <input id="ctblEmail" class="camp-f-inp" type="email" placeholder="correo@dominio.com" autocomplete="off">
+        <div class="camp-f-hint" id="ctblEmailHint" style="display:none">El email es la llave del histórico — no se edita aquí. Si necesitas cambiarlo, borra y vuelve a crear el contacto.</div>
+        <div class="ctbl-resp-note" id="ctblRespNote"></div>
+        <div class="camp-modal-msg" id="ctblMsg"></div>
+      </div>
+      <div class="camp-modal-foot">
+        <button class="camp-prev-cancel" onclick="ctblClose()">Cancelar</button>
+        <button class="btn-primary" id="ctblSaveBtn" onclick="ctblSave()"><i class="fa-solid fa-check"></i> Guardar</button>
       </div>
     </div>
   </div>
