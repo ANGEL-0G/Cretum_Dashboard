@@ -2302,8 +2302,9 @@ function renderPtDashboards() {
     <div class="nm">${escapeHtml(d.title)}</div>
     <div class="sub">${base} · ${escapeHtml(d.slug)}</div>
     <div class="acts">
+      <button class="cdd-btn" onclick="ptDashView(${d.id})"><i class="fa-solid fa-eye"></i> Previsualizar</button>
       <button class="cdd-btn" onclick="ptDashOpen(${d.id})"><i class="fa-solid fa-pen"></i> Editar</button>
-      <button class="cdd-btn camp-btn-danger" onclick="ptDashDelete(${d.id})"><i class="fa-solid fa-trash"></i></button>
+      <button class="cdd-btn camp-btn-danger" onclick="ptDashDelete(${d.id})"><i class="fa-solid fa-trash"></i> Eliminar</button>
     </div>
   </div>`).join('');
 }
@@ -2397,6 +2398,21 @@ async function ptDashDelete(id) {
   if (!confirm(`¿Borrar el dashboard "${d?.title}"? Los usuarios perderán acceso.`)) return;
   try { await portalApi({ action: 'delete_dashboard', id }); toast('Dashboard borrado'); loadPortalAdmin(); }
   catch (err) { toast('Error: ' + err.message); }
+}
+
+// Previsualiza un dashboard YA guardado (trae su HTML y lo muestra en iframe aislado)
+async function ptDashView(id) {
+  const d = ptDashboards.find(x => x.id === id);
+  document.getElementById('ptViewTitle').textContent = d ? d.title : 'Vista previa';
+  const f = document.getElementById('ptViewFrame');
+  if (f) f.srcdoc = '<p style="font-family:sans-serif;color:#889;padding:24px">Cargando…</p>';
+  document.getElementById('ptViewModal').classList.add('show');
+  try {
+    const full = await portalApi({ action: 'get_dashboard', id });
+    if (f) f.srcdoc = full.html || '<p style="font-family:sans-serif;color:#889;padding:24px">Este dashboard no tiene HTML.</p>';
+  } catch (err) {
+    if (f) f.srcdoc = `<p style="font-family:sans-serif;color:#c0392b;padding:24px">No se pudo cargar: ${escapeHtml(err.message)}</p>`;
+  }
 }
 
 function ptUserOpen(id) {

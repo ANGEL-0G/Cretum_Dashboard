@@ -3286,7 +3286,9 @@ button,input,select{font-family:var(--font)}
   .pt-item{border:1px solid var(--line,#e3e8f0);border-radius:10px;padding:11px 13px;background:var(--white,#fff)}
   .pt-item .nm{font-weight:600;font-size:13.5px}
   .pt-item .sub{font-size:11.5px;color:var(--ink-soft,#889);margin-top:3px;word-break:break-all}
-  .pt-item .acts{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}
+  .pt-item .acts{display:flex;gap:8px;margin-top:11px}
+  .pt-item .acts .cdd-btn{flex:1;min-width:0;max-width:none;justify-content:center;align-items:center;gap:7px;padding:9px 10px;font-size:12.5px;white-space:nowrap}
+  @media (max-width:560px){ .pt-item .acts{flex-wrap:wrap} .pt-item .acts .cdd-btn{flex:1 1 calc(50% - 8px)} }
   .pt-badge{font-size:10.5px;padding:2px 8px;border-radius:20px;background:var(--navy-ghost,#eef3fb);color:var(--navy)}
   .pt-badge.off{background:#fbe6e3;color:#c0392b}
   .pt-empty{padding:24px;text-align:center;color:var(--ink-soft,#889);font-size:13px}
@@ -3348,6 +3350,21 @@ button,input,select{font-family:var(--font)}
     <div class="camp-modal-foot">
       <button class="camp-prev-cancel" onclick="ptClose('ptDashModal')">Cancelar</button>
       <button class="btn-primary" onclick="ptDashSave()"><i class="fa-solid fa-floppy-disk"></i> Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: vista previa de un dashboard guardado -->
+<div class="camp-modal-backdrop" id="ptViewModal" onclick="if(event.target===this)ptClose('ptViewModal')">
+  <div class="camp-modal camp-modal-wide">
+    <div class="camp-modal-head">
+      <div class="camp-modal-title"><i class="fa-solid fa-eye"></i> <span id="ptViewTitle">Vista previa</span></div>
+      <button class="camp-modal-x" onclick="ptClose('ptViewModal')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="camp-modal-body">
+      <div class="pt-preview-wrap">
+        <iframe id="ptViewFrame" class="pt-preview-frame" sandbox="allow-scripts allow-popups allow-forms" title="Vista previa del dashboard"></iframe>
+      </div>
     </div>
   </div>
 </div>
