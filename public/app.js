@@ -2728,6 +2728,45 @@ function cddPick(id, value, label) {
   renderDbList();
 }
 
+// Dropdowns de filtro con selección MÚLTIPLE
+const MULTI_CDD = new Set(['ddCompany', 'ddSeries', 'ddTitular']);
+
+// Valores seleccionados (no vacíos) de un dropdown multi
+function cddValues(id) {
+  const cdd = document.getElementById(id);
+  if (!cdd) return [];
+  return [...cdd.querySelectorAll('.cdd-opt.selected')].map(o => o.dataset.value).filter(Boolean);
+}
+
+// Actualiza el texto del botón según cuántas opciones haya seleccionadas
+function updateCddLabel(cdd) {
+  const labelEl = cdd.querySelector('.cdd-label');
+  const allOpt = cdd.querySelector('.cdd-opt[data-value=""]');
+  const def = (allOpt && allOpt.textContent.trim()) || (labelEl ? labelEl.textContent : '');
+  const sel = [...cdd.querySelectorAll('.cdd-opt.selected')].filter(o => o.dataset.value);
+  if (!sel.length) { labelEl.textContent = def; cdd.classList.remove('active'); }
+  else if (sel.length === 1) { labelEl.textContent = sel[0].textContent.trim(); cdd.classList.add('active'); }
+  else { labelEl.textContent = sel.length + ' seleccionadas'; cdd.classList.add('active'); }
+}
+
+// Click en una opción de un dropdown multi: alterna sin cerrar el panel
+function cddPickMulti(id, opt) {
+  const cdd = document.getElementById(id);
+  if (!cdd) return;
+  const allOpt = cdd.querySelector('.cdd-opt[data-value=""]');
+  if (!opt.dataset.value) {
+    // "Todas…" → limpiar todo
+    cdd.querySelectorAll('.cdd-opt').forEach(o => o.classList.toggle('selected', o === allOpt));
+  } else {
+    opt.classList.toggle('selected');
+    if (allOpt) allOpt.classList.remove('selected');
+    const anySel = [...cdd.querySelectorAll('.cdd-opt.selected')].some(o => o.dataset.value);
+    if (!anySel && allOpt) allOpt.classList.add('selected');  // sin nada → vuelve a "Todas…"
+  }
+  updateCddLabel(cdd);
+  renderDbList();  // el panel queda abierto para seguir eligiendo
+}
+
 function populateFilters() {
   const buildPanel = (panelId, allLabel, items, ph) => {
     const panel = document.getElementById(panelId);
@@ -2769,7 +2808,10 @@ document.addEventListener('click', (e) => {
   const opt = e.target.closest('.cdd-opt');
   if (opt) {
     const cdd = opt.closest('.cdd');
-    if (cdd) cddPick(cdd.id, opt.dataset.value || '', opt.textContent.trim());
+    if (cdd) {
+      if (MULTI_CDD.has(cdd.id)) cddPickMulti(cdd.id, opt);
+      else cddPick(cdd.id, opt.dataset.value || '', opt.textContent.trim());
+    }
     return;
   }
   if (!e.target.closest('.cdd')) {
@@ -2779,30 +2821,37 @@ document.addEventListener('click', (e) => {
 
 function clearFilters() {
   document.getElementById('dbSearch').value = '';
-  cddPick('ddCompany', '', 'Todas las empresas');
-  cddPick('ddSeries', '', 'Todas las series');
-  cddPick('ddTitular', '', 'Todos los titulares');
+  ['ddCompany', 'ddSeries', 'ddTitular'].forEach(id => {
+    const cdd = document.getElementById(id);
+    if (!cdd) return;
+    const allOpt = cdd.querySelector('.cdd-opt[data-value=""]');
+    cdd.querySelectorAll('.cdd-opt').forEach(o => o.classList.toggle('selected', o === allOpt));
+    updateCddLabel(cdd);
+  });
   renderDbList();
 }
 
-function investorSeriesLabel(invId, filterSeriesId) {
-  const ids = [...(dbInvestorSeries[invId] || [])];
+// filterIds: array de ids seleccionados (multi). Si hay, resalta los que matchean.
+function investorSeriesLabel(invId, filterIds) {
+  let ids = [...(dbInvestorSeries[invId] || [])];
   if (!ids.length) return '—';
-  if (filterSeriesId) {
-    const s = dbSeries.find(x => x.id === +filterSeriesId);
-    return s ? s.name : '—';
+  if (filterIds && filterIds.length) {
+    const set = new Set(filterIds.map(Number));
+    const inter = ids.filter(id => set.has(id));
+    if (inter.length) ids = inter;
   }
   const names = ids.map(id => dbSeries.find(s => s.id === id)?.name).filter(Boolean);
   if (names.length <= 2) return names.join(', ');
   return `${names[0]}, ${names[1]} +${names.length - 2}`;
 }
 
-function investorCompanyLabel(invId, filterCompanyId) {
-  const ids = [...(dbInvestorCompanies[invId] || [])];
+function investorCompanyLabel(invId, filterIds) {
+  let ids = [...(dbInvestorCompanies[invId] || [])];
   if (!ids.length) return '—';
-  if (filterCompanyId) {
-    const c = dbCompanies.find(x => x.id === +filterCompanyId);
-    return c ? c.name : '—';
+  if (filterIds && filterIds.length) {
+    const set = new Set(filterIds.map(Number));
+    const inter = ids.filter(id => set.has(id));
+    if (inter.length) ids = inter;
   }
   const names = ids.map(id => dbCompanies.find(c => c.id === id)?.name).filter(Boolean);
   if (names.length <= 2) return names.join(', ');
@@ -2814,9 +2863,9 @@ function investorCompanyLabel(invId, filterCompanyId) {
 function getDbFilters() {
   return {
     q: (document.getElementById('dbSearch').value || '').trim().toLowerCase(),
-    companyId: document.getElementById('ddCompany')?.dataset.value || '',
-    seriesId: document.getElementById('ddSeries')?.dataset.value || '',
-    titular: document.getElementById('ddTitular')?.dataset.value || '',
+    companyIds: cddValues('ddCompany'),
+    seriesIds: cddValues('ddSeries'),
+    titulars: cddValues('ddTitular'),
   };
 }
 
@@ -2826,24 +2875,24 @@ function titularPeople(t) {
 }
 
 function getFilteredInvestors() {
-  const { q, companyId, seriesId, titular } = getDbFilters();
+  const { q, companyIds, seriesIds, titulars } = getDbFilters();
   let filtered = dbInvestors;
   if (q) filtered = filtered.filter(r => fuzzyMatch(q, r.name) || fuzzyMatch(q, r.titular || ''));
-  if (companyId) filtered = filtered.filter(r => dbInvestorCompanies[r.id]?.has(+companyId));
-  if (seriesId)  filtered = filtered.filter(r => dbInvestorSeries[r.id]?.has(+seriesId));
-  if (titular)   filtered = filtered.filter(r => titularPeople(r.titular).includes(titular));
+  if (companyIds.length) filtered = filtered.filter(r => companyIds.some(c => dbInvestorCompanies[r.id]?.has(+c)));
+  if (seriesIds.length)  filtered = filtered.filter(r => seriesIds.some(s => dbInvestorSeries[r.id]?.has(+s)));
+  if (titulars.length)   filtered = filtered.filter(r => { const ps = titularPeople(r.titular); return titulars.some(t => ps.includes(t)); });
   return filtered;
 }
 
 function renderDbList() {
-  const { q, companyId, seriesId, titular } = getDbFilters();
+  const { q, companyIds, seriesIds, titulars } = getDbFilters();
   const list = document.getElementById('dbList');
   list.style.display = '';
   document.getElementById('dbDetail').classList.remove('show');
   const snapBtn = document.getElementById('dbSnapBtn');
   if (snapBtn) snapBtn.style.display = currentOrg === 'mvp' ? '' : 'none';
 
-  const anyFilter = !!(q || companyId || seriesId || titular);
+  const anyFilter = !!(q || companyIds.length || seriesIds.length || titulars.length);
   document.getElementById('dbClear').style.display = anyFilter ? '' : 'none';
 
   const filtered = getFilteredInvestors();
@@ -2871,11 +2920,11 @@ function renderDbList() {
       cells.push(`<td>${i.titular ? escapeHtml(i.titular) : '<span class="db-cell-empty">—</span>'}</td>`);
     }
     if (isColVisible('series')) {
-      const lbl = investorSeriesLabel(i.id, seriesId);
+      const lbl = investorSeriesLabel(i.id, seriesIds);
       cells.push(`<td>${lbl === '—' ? '<span class="db-cell-empty">—</span>' : `<span class="db-cell-pill">${escapeHtml(lbl)}</span>`}</td>`);
     }
     if (isColVisible('company')) {
-      const lbl = investorCompanyLabel(i.id, companyId);
+      const lbl = investorCompanyLabel(i.id, companyIds);
       cells.push(`<td>${lbl === '—' ? '<span class="db-cell-empty">—</span>' : `<span class="db-cell-pill muted">${escapeHtml(lbl)}</span>`}</td>`);
     }
     if (isColVisible('positions')) cells.push(`<td class="num muted">${i.positions}</td>`);
@@ -2929,7 +2978,7 @@ function downloadBlob(blob, filename) {
 // Construye {cols, rows} de la BD con los filtros y columnas visibles actuales.
 // rows contiene valores crudos (números sin formato) para CSV/Excel usables.
 function getExportTable() {
-  const { companyId, seriesId } = getDbFilters();
+  const { companyIds, seriesIds } = getDbFilters();
   const cols = [{ key: 'name', label: 'Nombre', type: 'text' }];
   if (isColVisible('titular'))   cols.push({ key: 'titular',   label: 'Titular',              type: 'text'  });
   if (isColVisible('series'))    cols.push({ key: 'series',    label: 'Serie',                type: 'text'  });
@@ -2942,8 +2991,8 @@ function getExportTable() {
     switch (c.key) {
       case 'name':      return i.name;
       case 'titular':   return i.titular || '';
-      case 'series':    return investorSeriesLabel(i.id, seriesId);
-      case 'company':   return investorCompanyLabel(i.id, companyId);
+      case 'series':    return investorSeriesLabel(i.id, seriesIds);
+      case 'company':   return investorCompanyLabel(i.id, companyIds);
       case 'positions': return i.positions;
       case 'actual':    return i.actual;
       case 'amount':    return i.commitment;

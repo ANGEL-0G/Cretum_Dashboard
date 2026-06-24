@@ -1869,6 +1869,14 @@ button,input,select{font-family:var(--font)}
 .cdd-opt:hover{background:var(--gray-50);padding-left:18px}
 .cdd-opt.selected{background:var(--navy-pale);color:var(--navy);font-weight:500}
 .cdd-opt.selected:hover{background:var(--navy-pale)}
+/* Dropdowns de filtro con selección múltiple: checkbox a la izquierda */
+.cdd-multi .cdd-opt{display:flex;align-items:center;gap:9px}
+.cdd-multi .cdd-opt::before{content:'';width:15px;height:15px;flex:0 0 auto;border:1.5px solid var(--gray-300);border-radius:4px;background:#fff;transition:background .12s,border-color .12s}
+.cdd-multi .cdd-opt.selected::before{background:var(--navy);border-color:var(--navy);content:'\2713';color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;line-height:1}
+.cdd-multi .cdd-opt[data-value=""]::before{display:none}
+.cdd-multi .cdd-opt:hover{padding-left:14px}
+[data-theme="dark"] .cdd-multi .cdd-opt::before{border-color:#3a3a3a;background:#0a0a0a}
+[data-theme="dark"] .cdd-multi .cdd-opt.selected::before{background:var(--navy);border-color:var(--navy)}
 /* Buscador dentro de un desplegable de filtro */
 .cdd-search{position:sticky;top:0;background:var(--white,#fff);padding:8px;border-bottom:1px solid var(--gray-100,#eef0f5);display:flex;align-items:center;gap:6px;z-index:1}
 .cdd-search i{color:var(--gray-400,#9aa3b5);font-size:11px}
@@ -2595,7 +2603,7 @@ button,input,select{font-family:var(--font)}
     </div>
 
     <div class="db-filters" id="dbFilters">
-      <div class="cdd db-cdd" id="ddCompany" data-value="">
+      <div class="cdd db-cdd cdd-multi" id="ddCompany" data-value="">
         <button class="cdd-btn" type="button" onclick="cddToggle('ddCompany')">
           <i class="fa-solid fa-building cdd-ico"></i>
           <span class="cdd-label">Todas las empresas</span>
@@ -2603,7 +2611,7 @@ button,input,select{font-family:var(--font)}
         </button>
         <div class="cdd-panel" id="ddCompanyPanel"></div>
       </div>
-      <div class="cdd db-cdd" id="ddSeries" data-value="">
+      <div class="cdd db-cdd cdd-multi" id="ddSeries" data-value="">
         <button class="cdd-btn" type="button" onclick="cddToggle('ddSeries')">
           <i class="fa-solid fa-layer-group cdd-ico"></i>
           <span class="cdd-label">Todas las series</span>
@@ -2611,7 +2619,7 @@ button,input,select{font-family:var(--font)}
         </button>
         <div class="cdd-panel" id="ddSeriesPanel"></div>
       </div>
-      <div class="cdd db-cdd" id="ddTitular" data-value="">
+      <div class="cdd db-cdd cdd-multi" id="ddTitular" data-value="">
         <button class="cdd-btn" type="button" onclick="cddToggle('ddTitular')">
           <i class="fa-solid fa-user-tag cdd-ico"></i>
           <span class="cdd-label">Todos los titulares</span>
