@@ -4643,7 +4643,7 @@ const FUND_TRACKERS = {
       { company: 'Epic Games, Inc.',       invested: 1833323,  pct: 0.012, mtm: 2633898,    moic: 1.4367,  corpVal: 30.364, pps: 696.43, entry: 484.75, shares: 3782,      fdso: 43.6   },
       { company: 'Figure AI Inc.',         invested: 1300007,  pct: 0.009, mtm: 18592184,   moic: 14.3016, corpVal: 39.006, pps: 194.93, entry: 13.63,  shares: 95378,     fdso: 200.1  }
     ],
-    activeTotal:      { invested: 145202039, mtm: 263154825, moic: 1.8123 },
+    activeTotal:      { invested: 145202039, mtm: 280962452, moic: 1.9350 },
     pendingTitle: 'Pending Positions (Q2 2026)',
     pending: [],
     pendingTotal:     { invested: 0, mtm: 0, moic: 0 },
@@ -4652,8 +4652,8 @@ const FUND_TRACKERS = {
       { company: 'Klarna Holding AB',        invested: 436638,  pct: 0.003, mtm: 266292,   moic: 0.6099, corpVal: 5.435,  pps: 13,   entry: 21.32, shares: 20484,  fdso: 418.1 }
     ],
     overallLabel:     'Total — Overall (Invested)',
-    overallTotal:     { invested: 151119219, mtm: 279891501, moic: 1.8521 },
-    overallTotal2:    { label: 'Total — Overall (Commitment)', invested: 293000000, mtm: 421772282, moic: 1.4395 },
+    overallTotal:     { invested: 151119219, mtm: 297699128, moic: 1.9700 },
+    overallTotal2:    { label: 'Total — Overall (Commitment)', invested: 293000000, mtm: 439579909, moic: 1.5003 },
     // Dominio para el logo (Clearbit). Fallback a monograma si no carga.
     logos: {
       'Decart.AI, Inc.':          'decart.ai',
