@@ -3583,7 +3583,7 @@ async function investorChartImages(data) {
             x: { ticks: { font: { size: 12 }, color: '#1a1f2e' }, grid: { display: false } },
           },
         },
-      }, 1000, 360));
+      }, 640, 460));
     }
 
     // NAV activo por posición (base consistente con el 360 y el snapshot)
@@ -3618,7 +3618,7 @@ async function investorChartImages(data) {
             y: { ticks: { font: { size: 11 }, color: '#1a1f2e' }, grid: { display: false } },
           },
         },
-      }, 980, Math.max(280, 70 + moicPos.length * 26)));
+      }, 640, 460));
     }
 
     // 3) Composición del portafolio por empresa (NAV activo) — dona
@@ -3633,7 +3633,7 @@ async function investorChartImages(data) {
         type: 'doughnut',
         data: { labels: top.map(e => e[0]), datasets: [{ data: top.map(e => e[1]), backgroundColor: PAL, borderColor: '#fff', borderWidth: 2 }] },
         options: donutOpts('Composición por empresa (NAV activo)'),
-      }, 600, 360));
+      }, 640, 460));
     }
 
     // 4) Exposición por tema/sector (NAV activo) — dona
@@ -3645,7 +3645,7 @@ async function investorChartImages(data) {
         type: 'doughnut',
         data: { labels: thEntries.map(e => e[0]), datasets: [{ data: thEntries.map(e => e[1]), backgroundColor: PAL, borderColor: '#fff', borderWidth: 2 }] },
         options: donutOpts('Exposición por tema (NAV activo)'),
-      }, 600, 360));
+      }, 640, 460));
     }
   } catch (e) {
     console.warn('[charts] no se pudo generar gráfica:', e);
