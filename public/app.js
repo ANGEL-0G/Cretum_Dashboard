@@ -3414,7 +3414,7 @@ async function investorChartImages(data) {
             x: { ticks: { font: { size: 12 }, color: '#1a1f2e' }, grid: { display: false } },
           },
         },
-      }, 1000, 420));
+      }, 1000, 360));
     }
 
     // 2) Distribuciones acumuladas en el tiempo — solo si hay 2+ cartas fechadas
@@ -3438,7 +3438,7 @@ async function investorChartImages(data) {
             x: { ticks: { font: { size: 11 }, color: '#6b7689', maxRotation: 45, minRotation: 0 }, grid: { display: false } },
           },
         },
-      }, 1000, 380));
+      }, 1000, 340));
     }
     // NAV activo por posición (base consistente con el 360 y el snapshot)
     const activePos = data.pos.filter(p => p.estado === 'Activa');
@@ -3463,7 +3463,7 @@ async function investorChartImages(data) {
         type: 'doughnut',
         data: { labels: top.map(e => e[0]), datasets: [{ data: top.map(e => e[1]), backgroundColor: PAL, borderColor: '#fff', borderWidth: 2 }] },
         options: donutOpts('Composición por empresa (NAV activo)'),
-      }, 660, 460));
+      }, 600, 360));
     }
 
     // 4) Exposición por tema/sector (NAV activo) — dona
@@ -3475,7 +3475,7 @@ async function investorChartImages(data) {
         type: 'doughnut',
         data: { labels: thEntries.map(e => e[0]), datasets: [{ data: thEntries.map(e => e[1]), backgroundColor: PAL, borderColor: '#fff', borderWidth: 2 }] },
         options: donutOpts('Exposición por tema (NAV activo)'),
-      }, 660, 460));
+      }, 600, 360));
     }
 
     // 5) MOIC por posición — barras horizontales (verde >=1x, rojo <1x)
@@ -3499,7 +3499,7 @@ async function investorChartImages(data) {
             y: { ticks: { font: { size: 11 }, color: '#1a1f2e' }, grid: { display: false } },
           },
         },
-      }, 900, Math.max(320, 80 + moicPos.length * 30)));
+      }, 980, Math.max(280, 70 + moicPos.length * 26)));
     }
   } catch (e) {
     console.warn('[charts] no se pudo generar gráfica:', e);
@@ -3655,60 +3655,75 @@ async function exportInvestorPdf(posId) {
     const M = 32;
     const t = data.totals;
 
-    // Banda superior MVP (naranja)
+    const line = [232, 236, 242];
+    const sectionTitle = (txt, yy) => {
+      doc.setFillColor(orange[0], orange[1], orange[2]); doc.rect(M, yy - 9, 3, 12, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(dark[0], dark[1], dark[2]);
+      doc.text(txt, M + 9, yy);
+      doc.setDrawColor(line[0], line[1], line[2]); doc.setLineWidth(0.5); doc.line(M, yy + 7, PW - M, yy + 7);
+    };
+
+    // Encabezado limpio: regla de marca + eyebrow + acento + título (estilo dashboard)
     doc.setFillColor(orange[0], orange[1], orange[2]);
-    doc.rect(0, 0, PW, 78, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(8.5);
-    doc.text(single ? 'MVP · REPORTE DE OPORTUNIDAD' : 'MVP · REPORTE DE PORTAFOLIO', M, 26);
-    doc.setFontSize(20);
-    doc.text(data.inv.name, M, 50);
-    doc.setFontSize(9.5); doc.setTextColor(255, 224, 200);
+    doc.rect(0, 0, PW, 5, 'F');
     const sub = [];
     if (data.inv._accounts) sub.push(data.inv._accounts.map(a => a.name).join(' + '));
     else if (data.inv.titular) sub.push('Titular: ' + data.inv.titular);
     if (single && data.pos[0]) sub.push('Oportunidad: ' + data.pos[0].company + ' · ' + data.pos[0].series);
     else sub.push(data.pos.length + ' posiciones');
     sub.push('Generado ' + new Date().toLocaleDateString('es-MX'));
-    doc.text(sub.join('   ·   '), M, 67);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(orange[0], orange[1], orange[2]);
+    doc.text(single ? 'MVP · REPORTE DE OPORTUNIDAD' : 'MVP · REPORTE DE PORTAFOLIO', M, 32);
+    doc.setFillColor(orange[0], orange[1], orange[2]); doc.rect(M, 41, 3.5, 24, 'F');
+    doc.setFontSize(22); doc.setTextColor(dark[0], dark[1], dark[2]);
+    doc.text(data.inv.name, M + 12, 60);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(gray[0], gray[1], gray[2]);
+    doc.text(sub.join('   ·   '), M + 12, 76);
 
-    // Tarjetas KPI
+    // KPIs en barra unificada (label + valor por celda, divididas)
     const kpis = [
-      { l: 'COMPROMISO TOTAL', v: fmtMoney(t.totCommit), accent: navy },
+      { l: 'COMPROMISO TOTAL', v: fmtMoney(t.totCommit), accent: orange },
       { l: 'COMP. EJECUTADO', v: fmtMoney(t.totActual), accent: ink },
       { l: 'VALOR ACTUAL EST.', v: t.valorEstimado ? fmtMoney(t.valorEstimado) : '—', accent: (t.valorEstimado >= t.totActual ? green : red) },
       { l: 'DISTRIBUIDO', v: fmtMoney(t.totDist), accent: ink },
       { l: 'MOIC', v: t.portMoic.toFixed(2) + 'x', accent: ink },
       { l: 'DPI', v: t.dpi.toFixed(2) + 'x', accent: ink },
     ];
-    const gap = 10, cardY = 92, cardH = 50;
-    const cardW = (PW - 2 * M - gap * (kpis.length - 1)) / kpis.length;
+    const gap = 12, stripY = 92, stripH = 58;
+    doc.setFillColor(250, 251, 253); doc.setDrawColor(228, 233, 240); doc.setLineWidth(0.5);
+    doc.roundedRect(M, stripY, PW - 2 * M, stripH, 7, 7, 'FD');
+    const cw = (PW - 2 * M) / kpis.length;
     kpis.forEach((k, i) => {
-      const x = M + i * (cardW + gap);
-      doc.setFillColor(250, 251, 253);
-      doc.setDrawColor(228, 233, 240);
-      doc.roundedRect(x, cardY, cardW, cardH, 5, 5, 'FD');
-      doc.setFontSize(7); doc.setTextColor(gray[0], gray[1], gray[2]);
-      doc.text(k.l, x + 9, cardY + 16);
-      doc.setFontSize(14); doc.setTextColor(k.accent[0], k.accent[1], k.accent[2]);
-      doc.text(String(k.v), x + 9, cardY + 37);
+      const cx = M + i * cw;
+      if (i > 0) { doc.setDrawColor(line[0], line[1], line[2]); doc.line(cx, stripY + 12, cx, stripY + stripH - 12); }
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.setTextColor(gray[0], gray[1], gray[2]);
+      doc.text(k.l, cx + 14, stripY + 22);
+      doc.setFontSize(15); doc.setTextColor(k.accent[0], k.accent[1], k.accent[2]);
+      doc.text(String(k.v), cx + 14, stripY + 43);
     });
 
-    let y = cardY + cardH + 18;
+    let y = stripY + stripH + 20;
 
-    // Gráficas — rejilla de 2 columnas, pagina si no caben
+    // Gráficas en tarjetas con borde (2 columnas; última sola → ancho completo)
     if (charts.length) {
-      const colW = (PW - 2 * M - gap) / 2;
-      const footer = 30;
+      const pad = 12, colW = (PW - 2 * M - gap) / 2, footer = 34;
       for (let i = 0; i < charts.length; i += 2) {
         const pair = charts.slice(i, i + 2);
-        const rowH = Math.max(...pair.map(ch => Math.round(colW * ch.h / ch.w)));
+        const full = pair.length === 1;
+        const rowH = Math.max(...pair.map(ch => {
+          const w = full ? (PW - 2 * M) : colW;
+          return Math.round((w - 2 * pad) * ch.h / ch.w) + 2 * pad;
+        }));
         if (y + rowH > PH - footer) { doc.addPage(); y = 40; }
         pair.forEach((ch, j) => {
-          const h = Math.round(colW * ch.h / ch.w);
-          doc.addImage(ch.dataUrl, 'PNG', M + j * (colW + gap), y, colW, h);
+          const w = full ? (PW - 2 * M) : colW;
+          const x = M + j * (colW + gap);
+          doc.setFillColor(255, 255, 255); doc.setDrawColor(228, 233, 240); doc.setLineWidth(0.5);
+          doc.roundedRect(x, y, w, rowH, 6, 6, 'FD');
+          const iw = w - 2 * pad, ih = Math.round(iw * ch.h / ch.w);
+          doc.addImage(ch.dataUrl, 'PNG', x + pad, y + pad, iw, ih);
         });
-        y += rowH + 16;
+        y += rowH + gap;
       }
     }
 
@@ -3716,38 +3731,36 @@ async function exportInvestorPdf(posId) {
     const pps = (v) => v == null ? '' : '$' + (+v).toFixed(2);
     const sh = (v) => v == null ? '' : Number(v).toLocaleString('en-US');
 
-    if (y > PH - 120) { doc.addPage(); y = 40; }   // que el título + tabla no queden pegados al borde
-    doc.setFontSize(12); doc.setTextColor(navy[0], navy[1], navy[2]);
-    doc.text('Posiciones', M, y);
+    if (y > PH - 130) { doc.addPage(); y = 40; }   // que el título + tabla no queden pegados al borde
+    sectionTitle('Posiciones', y);
     const acctCol = data.combined;   // combinado → muestra de qué cuenta es cada posición
     const posHead = (acctCol ? ['Cuenta'] : []).concat(['Empresa', 'Series', 'Estado', 'Compromiso', 'Carry', 'Acciones', 'Entry PPS', 'Current PPS', 'All-in PPS', 'MOIC', 'Valor est.', 'Distribuido', 'Cartas']);
     const numFrom = acctCol ? 4 : 3;   // índice de la 1ª columna numérica (Compromiso)
     const colStyles = {};
     for (let c = numFrom; c <= numFrom + 9; c++) colStyles[c] = { halign: 'right' };
     doc.autoTable({
-      startY: y + 8,
+      startY: y + 16,
       margin: { left: M, right: M, top: 40, bottom: 28 },
       head: [posHead],
       body: data.pos.map(p => (acctCol ? [p.cuenta || '—'] : []).concat([p.company, p.series, p.estado, money(p.commitment), (p.carry != null ? (p.carry * 100).toFixed(1) + '%' : ''), sh(p.shares), pps(p.entry_pps), pps(p.current_pps), pps(p.all_in_pps), (p.moic != null ? p.moic.toFixed(2) + 'x' : ''), money(p.valor_estimado), money(p.distribuido), p.n_cartas || ''])),
-      styles: { fontSize: 7.5, cellPadding: 3, overflow: 'linebreak' },
-      headStyles: { fillColor: dark, textColor: 255, fontSize: 7.5 },
-      alternateRowStyles: { fillColor: [244, 247, 252] },
+      styles: { fontSize: 7.5, cellPadding: 4, overflow: 'linebreak', lineColor: line, lineWidth: 0.3, textColor: [45, 52, 70] },
+      headStyles: { fillColor: dark, textColor: 255, fontSize: 7.5, cellPadding: 5 },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
       columnStyles: colStyles,
     });
 
     if (data.letters.length) {
-      let ly = doc.lastAutoTable.finalY + 22;
-      if (ly > PH - 80) { doc.addPage(); ly = 46; }
-      doc.setFontSize(12); doc.setTextColor(navy[0], navy[1], navy[2]);
-      doc.text('Distribuciones (cartas)', M, ly);
+      let ly = doc.lastAutoTable.finalY + 26;
+      if (ly > PH - 90) { doc.addPage(); ly = 46; }
+      sectionTitle('Distribuciones (cartas)', ly);
       doc.autoTable({
-        startY: ly + 8,
+        startY: ly + 16,
         margin: { left: M, right: M, top: 40, bottom: 28 },
         head: [['Empresa', 'Fecha', 'Tipo', 'Empresa subyacente', 'Acciones', 'PPS', 'Efectivo', 'En especie', 'Total', 'Carta']],
         body: data.letters.map(x => [x.company, x.fecha, x.tipo, x.subyacente, sh(x.shares), pps(x.pps), money(x.cash), money(x.especie), money(x.total), (x.carta ? 'Ver' : '')]),
-        styles: { fontSize: 7.5, cellPadding: 3, overflow: 'linebreak' },
-        headStyles: { fillColor: dark, textColor: 255, fontSize: 7.5 },
-        alternateRowStyles: { fillColor: [244, 247, 252] },
+        styles: { fontSize: 7.5, cellPadding: 4, overflow: 'linebreak', lineColor: line, lineWidth: 0.3, textColor: [45, 52, 70] },
+        headStyles: { fillColor: dark, textColor: 255, fontSize: 7.5, cellPadding: 5 },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
         columnStyles: { 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' }, 7: { halign: 'right' }, 8: { halign: 'right' }, 9: { halign: 'center', textColor: navy } },
         didDrawCell: (hk) => {
           if (hk.section === 'body' && hk.column.index === 9) {
