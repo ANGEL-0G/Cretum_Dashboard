@@ -4630,7 +4630,7 @@ const FUND_TRACKERS = {
       { company: 'Anthropic PBC',          invested: 18587304, pct: 0.123, mtm: 62330216,   moic: 3.3534,  corpVal: 965,    pps: 589.01, entry: 175.65, shares: 105822,    fdso: 1638.34},
       { company: 'X.AI Corp. (SpaceX)',    invested: 15000870, pct: 0.099, mtm: 53228475,   moic: 3.5484,  corpVal: 1770,   pps: 135,    entry: 38.05,  shares: 394285,    fdso: 11869  },
       { company: 'CHAOS Industries',       invested: 9999962,  pct: 0.066, mtm: 9999962,    moic: 1.0000,  corpVal: 4.446,  pps: 138.94, entry: 138.94, shares: 71975,     fdso: 32     },
-      { company: 'Base Power, Inc.',       invested: 9280871,  pct: 0.061, mtm: 9280871,    moic: 1.0000,  corpVal: 4.111,  pps: 120.92, entry: 120.92, shares: 76751,     fdso: 34     },
+      { company: 'Base Power, Inc.',       invested: 9280871,  pct: 0.061, mtm: 27088498,   moic: 2.9187,  corpVal: 12,     pps: 352.94, entry: 120.92, shares: 76751,     fdso: 34     },
       { company: 'Second Front Systems',   invested: 7500000,  pct: 0.050, mtm: 7500000,    moic: 1.0000,  corpVal: 0.023,  pps: 1,      entry: 1,      shares: 7500000,   fdso: 22.7   },
       { company: 'Payward (Kraken)',       invested: 6375000,  pct: 0.042, mtm: 8557300,    moic: 1.3423,  corpVal: 20.002, pps: 61.47,  entry: 45.79,  shares: 139211,    fdso: 325.4  },
       { company: 'Agility Robotics',       invested: 5211514,  pct: 0.034, mtm: 5211514,    moic: 1.0000,  corpVal: 1.859,  pps: 66.15,  entry: 66.15,  shares: 78789,     fdso: 28.1   },
