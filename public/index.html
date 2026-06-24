@@ -3293,6 +3293,10 @@ button,input,select{font-family:var(--font)}
   .pt-dash-cks{display:flex;flex-direction:column;gap:6px;max-height:180px;overflow:auto;border:1px solid var(--line,#e8ecf3);border-radius:8px;padding:8px}
   .pt-dash-cks label{display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer}
   #ptDashHtml{width:100%;min-height:200px;font-family:var(--mono,monospace);font-size:12px;border:1px solid var(--line,#d7dde8);border-radius:8px;padding:10px;resize:vertical}
+  .pt-preview-bar{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}
+  .pt-preview-hint{font-size:11.5px;color:var(--ink-soft,#889)}
+  .pt-preview-wrap{margin-top:10px;border:1px solid var(--line,#d7dde8);border-radius:8px;overflow:hidden;background:#fff}
+  .pt-preview-frame{width:100%;height:60vh;min-height:360px;border:0;background:#fff;display:block}
 </style>
 <div class="page page-db" id="pagePortal">
   <div class="db-toolbar">
@@ -3331,7 +3335,14 @@ button,input,select{font-family:var(--font)}
       <label class="camp-f-lbl">Identificador (slug) <span class="camp-opt">se autogenera del título</span></label>
       <input id="ptDashSlug" class="camp-f-inp" placeholder="fund-v-q2-2026">
       <label class="camp-f-lbl">HTML del dashboard</label>
-      <textarea id="ptDashHtml" placeholder="Pega aquí tu HTML"></textarea>
+      <textarea id="ptDashHtml" placeholder="Pega aquí tu HTML" oninput="ptDashPreviewLive()"></textarea>
+      <div class="pt-preview-bar">
+        <button type="button" class="cdd-btn" id="ptPrevBtn" onclick="ptDashPreviewToggle()"><i class="fa-solid fa-eye"></i> Vista previa</button>
+        <span class="pt-preview-hint">Se renderiza aislado (sandbox), igual que lo verá el cliente.</span>
+      </div>
+      <div class="pt-preview-wrap" id="ptDashPreviewWrap" style="display:none">
+        <iframe id="ptDashPreview" class="pt-preview-frame" sandbox="allow-scripts allow-popups allow-forms" title="Vista previa del dashboard"></iframe>
+      </div>
       <div class="camp-modal-msg" id="ptDashMsg"></div>
     </div>
     <div class="camp-modal-foot">

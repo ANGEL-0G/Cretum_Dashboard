@@ -2337,13 +2337,40 @@ function ptDashOpen(id) {
   document.getElementById('ptDashSlug').value = d ? d.slug : '';
   document.getElementById('ptDashHtml').value = '';
   const msg = document.getElementById('ptDashMsg'); msg.textContent = ''; msg.className = 'camp-modal-msg';
+  // Resetea la vista previa al abrir
+  const pw = document.getElementById('ptDashPreviewWrap'); if (pw) pw.style.display = 'none';
+  const pb = document.getElementById('ptPrevBtn'); if (pb) pb.innerHTML = '<i class="fa-solid fa-eye"></i> Vista previa';
   document.getElementById('ptDashModal').classList.add('show');
   if (d) {  // trae el HTML actual para editar
     document.getElementById('ptDashHtml').value = 'Cargando…';
     portalApi({ action: 'get_dashboard', id: d.id })
-      .then(full => { document.getElementById('ptDashHtml').value = full.html || ''; })
+      .then(full => { document.getElementById('ptDashHtml').value = full.html || ''; ptDashPreviewLive(); })
       .catch(() => { document.getElementById('ptDashHtml').value = ''; });
   }
+}
+
+// Vista previa del HTML del dashboard (iframe aislado, igual que lo ve el cliente)
+let ptPreviewTimer = null;
+function ptDashPreviewRender() {
+  const f = document.getElementById('ptDashPreview');
+  if (f) f.srcdoc = document.getElementById('ptDashHtml').value || '';
+}
+function ptDashPreviewToggle() {
+  const wrap = document.getElementById('ptDashPreviewWrap');
+  const btn = document.getElementById('ptPrevBtn');
+  if (!wrap) return;
+  const show = wrap.style.display === 'none';
+  wrap.style.display = show ? '' : 'none';
+  if (show) ptDashPreviewRender();
+  if (btn) btn.innerHTML = show
+    ? '<i class="fa-solid fa-eye-slash"></i> Ocultar vista previa'
+    : '<i class="fa-solid fa-eye"></i> Vista previa';
+}
+function ptDashPreviewLive() {
+  const wrap = document.getElementById('ptDashPreviewWrap');
+  if (!wrap || wrap.style.display === 'none') return;   // solo si está visible
+  clearTimeout(ptPreviewTimer);
+  ptPreviewTimer = setTimeout(ptDashPreviewRender, 300);  // debounce al teclear
 }
 
 async function ptDashSave() {
