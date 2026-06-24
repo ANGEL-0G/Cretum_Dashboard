@@ -101,6 +101,19 @@ function greetingForTime() {
   return 'Buenas noches';
 }
 
+// Mostrar/ocultar la contraseña del login (ojo abierto/cerrado)
+function toggleLoginPass() {
+  const inp = document.getElementById('loginPass');
+  const btn = document.getElementById('loginEye');
+  if (!inp) return;
+  const show = inp.type === 'password';
+  inp.type = show ? 'text' : 'password';
+  const ic = btn?.querySelector('i');
+  if (ic) ic.className = show ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+  if (btn) { btn.title = show ? 'Ocultar contraseña' : 'Mostrar contraseña'; btn.setAttribute('aria-label', btn.title); }
+  inp.focus();
+}
+
 async function doLogin() {
   const email = document.getElementById('loginUser').value.trim();
   const pass = document.getElementById('loginPass').value;

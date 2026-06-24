@@ -261,6 +261,16 @@ button,input,select{font-family:var(--font)}
 .fi:hover{border-color:var(--gray-300)}
 .fi:focus{border-color:var(--navy);box-shadow:0 0 0 3px rgba(26,58,107,.1)}
 .fi::placeholder{color:var(--gray-300)}
+/* Campo de contraseña con ojo para mostrar/ocultar */
+.fi-pass{padding-right:44px}
+.login-eye{
+  position:absolute;right:6px;top:50%;transform:translateY(-50%);
+  background:none;border:none;color:var(--gray-300);font-size:14px;
+  cursor:pointer;padding:7px 10px;z-index:2;transition:color .2s;line-height:1;
+}
+.login-eye:hover{color:var(--navy)}
+/* Oculta el ojo/equis nativo de Edge para no duplicar el control */
+.fi-pass::-ms-reveal,.fi-pass::-ms-clear{display:none}
 
 .btn-login{
   position:relative;overflow:hidden;
@@ -2302,9 +2312,12 @@ button,input,select{font-family:var(--font)}
     </div>
     <div class="login-field">
       <i class="fa-solid fa-lock login-field-ico"></i>
-      <input class="fi" type="password" id="loginPass" placeholder="Contraseña"
+      <input class="fi fi-pass" type="password" id="loginPass" placeholder="Contraseña"
         autocomplete="current-password"
         onkeydown="if(event.key==='Enter')doLogin()">
+      <button type="button" class="login-eye" id="loginEye" onclick="toggleLoginPass()" aria-label="Mostrar contraseña" title="Mostrar contraseña" tabindex="-1">
+        <i class="fa-solid fa-eye"></i>
+      </button>
     </div>
     <button class="btn-login" id="btnLogin" onclick="doLogin()">
       <span>Entrar</span>
