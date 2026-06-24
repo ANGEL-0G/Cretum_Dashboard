@@ -3246,6 +3246,7 @@ function buildInvestorExport(posId) {
     const shares = num(p.shares);
     const base = (+p.commitment_actual || +p.commitment || 0);
     return {
+      cuenta: p._acct || null,
       company: p.companies?.name || '—',
       series: p.series?.name || '—',
       estado: p.distributed_at ? 'Terminada' : 'Activa',
@@ -3309,10 +3310,11 @@ function buildInvestorExport(posId) {
   let moicW = 0, moicBase = 0;
   pos.forEach(p => { if (p.moic != null && p.commitment > 0) { moicBase += p.commitment; moicW += p.commitment * p.moic; } });
   const portMoic = moicBase > 0 ? moicW / moicBase : 0;
-  const base = totActual > 0 ? totActual : totCommit;
-  const dpi = base > 0 ? totDist / base : 0;
+  // DPI estándar = distribuido / capital comprometido (paid-in), no sobre el valor marcado
+  const dpi = totCommit > 0 ? totDist / totCommit : 0;
 
-  return { inv, contacts: contacts || [], pos, letters, totals: { totCommit, totActual, totDist, valorEstimado, portMoic, dpi } };
+  const combined = !!inv._combined;
+  return { inv, combined, contacts: contacts || [], pos, letters, totals: { totCommit, totActual, totDist, valorEstimado, portMoic, dpi } };
 }
 
 // Nombre de archivo seguro a partir del nombre del inversionista (+ etiqueta opcional)
@@ -3392,20 +3394,20 @@ async function investorChartImages(data) {
     const conMonto = data.pos.filter(p => (p.commitment_actual || p.commitment) > 0);
     if (conMonto.length) {
       const labels = conMonto.map(p => short(p.company));
-      const aportado = conMonto.map(p => p.commitment_actual || p.commitment);
+      const aportado = conMonto.map(p => p.commitment || p.commitment_actual);   // costo (capital comprometido)
       const valor = conMonto.map(p => p.valor_estimado != null ? p.valor_estimado : null);
       const maxV = Math.max(...aportado, ...valor.map(v => v || 0));
       const fmt = moneyAxisFmt(maxV);
       out.push(await renderChartPng({
         type: 'bar',
         data: { labels, datasets: [
-          { label: 'Aportado', data: aportado, backgroundColor: SLATE, borderRadius: 4, maxBarThickness: 64 },
+          { label: 'Comprometido', data: aportado, backgroundColor: SLATE, borderRadius: 4, maxBarThickness: 64 },
           { label: 'Valor actual est.', data: valor, backgroundColor: MVP, borderRadius: 4, maxBarThickness: 64 },
         ] },
         options: {
           plugins: {
             legend: { position: 'top', labels: { font: { size: 13 }, usePointStyle: true, boxWidth: 8 } },
-            title: { display: true, text: 'Aportado vs. valor actual estimado', font: { size: 16, weight: '600' }, color: '#1a1f2e', padding: { bottom: 12 } },
+            title: { display: true, text: 'Comprometido vs. valor actual estimado', font: { size: 16, weight: '600' }, color: '#1a1f2e', padding: { bottom: 12 } },
           },
           scales: {
             y: { beginAtZero: true, ticks: { callback: fmt, font: { size: 12 }, color: '#6b7689' }, grid: { color: '#eef1f6' } },
@@ -3557,7 +3559,8 @@ async function exportInvestorXlsx(posId) {
     R.getRow(1).height = 30;
     R.mergeCells('A2:F2');
     const subParts = [];
-    if (data.inv.titular) subParts.push('Titular: ' + data.inv.titular);
+    if (data.inv._accounts) subParts.push(data.inv._accounts.map(a => a.name).join(' + '));
+    else if (data.inv.titular) subParts.push('Titular: ' + data.inv.titular);
     if (single && data.pos[0]) subParts.push(data.pos[0].company + ' · ' + data.pos[0].series);
     else subParts.push(data.pos.length + ' posiciones');
     subParts.push('Generado ' + new Date().toLocaleDateString('es-MX'));
@@ -3608,9 +3611,10 @@ async function exportInvestorXlsx(posId) {
     }
 
     // ── Hoja Posiciones ──
-    const posHead = ['Empresa', 'Series', 'Estado', 'Compromiso', 'Comp. ejecutado', 'Carry', 'Acciones', 'Entry EV', 'Entry PPS', 'Current EV', 'Current PPS', 'All-in PPS', 'MOIC', 'Valor actual est.', 'Distribuido', '# Cartas', 'Inicio', 'Fin', 'Duración', 'Última carta (CA)'];
-    const posRows = data.pos.map(p => [p.company, p.series, p.estado, p.commitment, p.commitment_actual, p.carry, p.shares, p.entry_ev_b, p.entry_pps, p.current_ev_b, p.current_pps, p.all_in_pps, p.moic, p.valor_estimado, p.distribuido, p.n_cartas, p.inicio, p.fin, p.duracion, p.carta_ca]);
-    const posMeta = [{ w: 26 }, { w: 18 }, { w: 11 }, { w: 15, z: Z.money, num: 1 }, { w: 15, z: Z.money, num: 1 }, { w: 9, z: Z.pct, num: 1 }, { w: 13, z: Z.sh, num: 1 }, { w: 11, z: Z.evb, num: 1 }, { w: 11, z: Z.money2, num: 1 }, { w: 11, z: Z.evb, num: 1 }, { w: 12, z: Z.money2, num: 1 }, { w: 12, z: Z.money2, num: 1 }, { w: 9, z: Z.moic, num: 1 }, { w: 16, z: Z.money, num: 1 }, { w: 15, z: Z.money, num: 1 }, { w: 9, z: Z.sh, num: 1 }, { w: 12 }, { w: 12 }, { w: 11, z: Z.dur, num: 1 }, { w: 44 }];
+    const acctCol = data.combined;
+    const posHead = (acctCol ? ['Cuenta'] : []).concat(['Empresa', 'Series', 'Estado', 'Compromiso', 'Comp. ejecutado', 'Carry', 'Acciones', 'Entry EV', 'Entry PPS', 'Current EV', 'Current PPS', 'All-in PPS', 'MOIC', 'Valor actual est.', 'Distribuido', '# Cartas', 'Inicio', 'Fin', 'Duración', 'Última carta (CA)']);
+    const posRows = data.pos.map(p => (acctCol ? [p.cuenta || '—'] : []).concat([p.company, p.series, p.estado, p.commitment, p.commitment_actual, p.carry, p.shares, p.entry_ev_b, p.entry_pps, p.current_ev_b, p.current_pps, p.all_in_pps, p.moic, p.valor_estimado, p.distribuido, p.n_cartas, p.inicio, p.fin, p.duracion, p.carta_ca]));
+    const posMeta = (acctCol ? [{ w: 24 }] : []).concat([{ w: 26 }, { w: 18 }, { w: 11 }, { w: 15, z: Z.money, num: 1 }, { w: 15, z: Z.money, num: 1 }, { w: 9, z: Z.pct, num: 1 }, { w: 13, z: Z.sh, num: 1 }, { w: 11, z: Z.evb, num: 1 }, { w: 11, z: Z.money2, num: 1 }, { w: 11, z: Z.evb, num: 1 }, { w: 12, z: Z.money2, num: 1 }, { w: 12, z: Z.money2, num: 1 }, { w: 9, z: Z.moic, num: 1 }, { w: 16, z: Z.money, num: 1 }, { w: 15, z: Z.money, num: 1 }, { w: 9, z: Z.sh, num: 1 }, { w: 12 }, { w: 12 }, { w: 11, z: Z.dur, num: 1 }, { w: 44 }]);
     const P = dropEmptyCols(posHead, posRows, posMeta);
     styledTable(wb.addWorksheet('Posiciones', { views: [{ showGridLines: false }] }), P.headers, P.rows, P.meta);
 
@@ -3661,7 +3665,8 @@ async function exportInvestorPdf(posId) {
     doc.text(data.inv.name, M, 50);
     doc.setFontSize(9.5); doc.setTextColor(255, 224, 200);
     const sub = [];
-    if (data.inv.titular) sub.push('Titular: ' + data.inv.titular);
+    if (data.inv._accounts) sub.push(data.inv._accounts.map(a => a.name).join(' + '));
+    else if (data.inv.titular) sub.push('Titular: ' + data.inv.titular);
     if (single && data.pos[0]) sub.push('Oportunidad: ' + data.pos[0].company + ' · ' + data.pos[0].series);
     else sub.push(data.pos.length + ' posiciones');
     sub.push('Generado ' + new Date().toLocaleDateString('es-MX'));
@@ -3714,15 +3719,20 @@ async function exportInvestorPdf(posId) {
     if (y > PH - 120) { doc.addPage(); y = 40; }   // que el título + tabla no queden pegados al borde
     doc.setFontSize(12); doc.setTextColor(navy[0], navy[1], navy[2]);
     doc.text('Posiciones', M, y);
+    const acctCol = data.combined;   // combinado → muestra de qué cuenta es cada posición
+    const posHead = (acctCol ? ['Cuenta'] : []).concat(['Empresa', 'Series', 'Estado', 'Compromiso', 'Carry', 'Acciones', 'Entry PPS', 'Current PPS', 'All-in PPS', 'MOIC', 'Valor est.', 'Distribuido', 'Cartas']);
+    const numFrom = acctCol ? 4 : 3;   // índice de la 1ª columna numérica (Compromiso)
+    const colStyles = {};
+    for (let c = numFrom; c <= numFrom + 9; c++) colStyles[c] = { halign: 'right' };
     doc.autoTable({
       startY: y + 8,
       margin: { left: M, right: M, top: 40, bottom: 28 },
-      head: [['Empresa', 'Series', 'Estado', 'Compromiso', 'Carry', 'Acciones', 'Entry PPS', 'Current PPS', 'All-in PPS', 'MOIC', 'Valor est.', 'Distribuido', 'Cartas']],
-      body: data.pos.map(p => [p.company, p.series, p.estado, money(p.commitment), (p.carry != null ? (p.carry * 100).toFixed(1) + '%' : ''), sh(p.shares), pps(p.entry_pps), pps(p.current_pps), pps(p.all_in_pps), (p.moic != null ? p.moic.toFixed(2) + 'x' : ''), money(p.valor_estimado), money(p.distribuido), p.n_cartas || '']),
+      head: [posHead],
+      body: data.pos.map(p => (acctCol ? [p.cuenta || '—'] : []).concat([p.company, p.series, p.estado, money(p.commitment), (p.carry != null ? (p.carry * 100).toFixed(1) + '%' : ''), sh(p.shares), pps(p.entry_pps), pps(p.current_pps), pps(p.all_in_pps), (p.moic != null ? p.moic.toFixed(2) + 'x' : ''), money(p.valor_estimado), money(p.distribuido), p.n_cartas || ''])),
       styles: { fontSize: 7.5, cellPadding: 3, overflow: 'linebreak' },
       headStyles: { fillColor: dark, textColor: 255, fontSize: 7.5 },
       alternateRowStyles: { fillColor: [244, 247, 252] },
-      columnStyles: { 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' }, 7: { halign: 'right' }, 8: { halign: 'right' }, 9: { halign: 'right' }, 10: { halign: 'right' }, 11: { halign: 'right' }, 12: { halign: 'right' } },
+      columnStyles: colStyles,
     });
 
     if (data.letters.length) {
@@ -4052,6 +4062,7 @@ function renderDistrosBlock(title, rows) {
 // ── Vista 360 del LP: temas, lock-ups SpaceX, métricas ──
 function companyTheme(name) {
   const n = (name || '').toLowerCase();
+  if (/diversified|all-star|all star/.test(n)) return 'Fondos All-Star';
   if (/space|spacex|x\.ai|capella|hawkeye/.test(n)) return 'Espacio & Satélites';
   if (/saronic|chaos|second front|epirus|mach|anduril|palantir/.test(n)) return 'Defensa';
   if (/anthropic|cohere|groq|mythic|decart|figure|agility|openai/.test(n)) return 'IA & Robótica';
