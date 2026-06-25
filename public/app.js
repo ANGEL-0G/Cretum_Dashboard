@@ -3897,7 +3897,7 @@ async function exportInvestorXlsx(posId) {
 
     const kpis = [
       { l: 'Compromiso total', v: t.totCommit, z: Z.money, accent: ORANGE, big: true },
-      { l: 'Comp. ejecutado', v: t.totActual, z: Z.money, accent: INK },
+      { l: 'Account Balance', v: t.totActual, z: Z.money, accent: INK },
       { l: 'Valor actual est.', v: t.valorEstimado || null, z: Z.money, accent: (t.valorEstimado >= t.totActual ? GREEN : RED) },
       { l: 'Distribuido', v: t.totDist, z: Z.money, accent: INK },
       { l: 'MOIC', v: t.portMoic, z: Z.moic, accent: INK },
@@ -3998,7 +3998,7 @@ function buildReportHtmlClient(payload) {
   const cvl = Object.entries(cv).sort((a, b) => b[1].v - a[1].v).slice(0, 7);
   const mxCv = Math.max(1, ...cvl.map(([, d]) => Math.max(d.c, d.v)));
   const cvbars = cvl.map(([co, d]) => `<div class="cvrow"><span class="bn">${E(co)}</span><span class="cvbars"><span class="cvb"><span class="cvf gray" style="width:${(d.c / mxCv * 100).toFixed(0)}%"></span></span><span class="cvb"><span class="cvf orange" style="width:${(d.v / mxCv * 100).toFixed(0)}%"></span></span></span><span class="bv">${M(d.v)}</span></div>`).join('');
-  const kpis = [['Compromiso total', M(totals.compromiso), 'accent'], ['Comp. ejecutado', M(totals.nav), ''], ['Valor actual est.', M(totals.valor), totals.valor >= totals.nav ? 'pos' : 'neg'], ['Distribuido', M(totals.distribuido), ''], ['MOIC', (+totals.moic).toFixed(2) + 'x', ''], ['DPI', (+totals.dpi).toFixed(2) + 'x', '']];
+  const kpis = [['Compromiso total', M(totals.compromiso), 'accent'], ['Account Balance', M(totals.nav), ''], ['Valor actual est.', M(totals.valor), totals.valor >= totals.nav ? 'pos' : 'neg'], ['Distribuido', M(totals.distribuido), ''], ['MOIC', (+totals.moic).toFixed(2) + 'x', ''], ['DPI', (+totals.dpi).toFixed(2) + 'x', '']];
   const kpihtml = kpis.map(([l, v, c]) => `<div class="kpi ${c}"><div class="kl">${E(l)}</div><div class="kv">${E(v)}</div></div>`).join('');
   const showAcct = !!meta.combined;
   const rows = pos.filter(p => !p.reinvSource).slice().sort((a, b) => (+b.commitment || 0) - (+a.commitment || 0));
@@ -4547,9 +4547,11 @@ function renderPositionsBlock(title, rows, showAcct) {
     }
   };
 
+  const isActive = /activ/i.test(title);   // en activas, "Comp. ejec." se muestra como "Account Balance"
+  const colLabel = (c) => (isActive && c.key === 'commitment_actual') ? 'Account Balance' : c.label;
   const visible = POSITION_COLUMNS.filter(c => isPosColVisible(c.key));
   const acctHead = showAcct ? '<th>Cuenta</th>' : '';
-  const headers = acctHead + visible.map(c => `<th class="${numericKeys.has(c.key) ? 'num' : ''}">${escapeHtml(c.label)}</th>`).join('');
+  const headers = acctHead + visible.map(c => `<th class="${numericKeys.has(c.key) ? 'num' : ''}">${escapeHtml(colLabel(c))}</th>`).join('');
   const body = rows.map(p => `<tr>${showAcct ? `<td><span class="db-cell-pill muted">${escapeHtml(p._acct || '—')}</span></td>` : ''}${visible.map(c => cellFor(p, c.key)).join('')}</tr>`).join('');
 
   return `
