@@ -3550,12 +3550,13 @@ function buildInvestorExport(posId) {
   });
   letters.sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
 
-  // Valor actual estimado por posición: el real (acciones×PPS) o, si no hay acciones,
-  // el aportado × MOIC (así siempre tenemos un valor para graficar el desempeño).
+  // Valor actual estimado por posición: el real (acciones×PPS) o, si no hay acciones (fondos),
+  // commitment × MOIC = el valor marcado (= commitment_actual). OJO: usar commitment (costo),
+  // NO commitment_actual, porque commitment_actual ya es commitment×MOIC → aplicar MOIC otra vez infla.
   pos.forEach(p => {
-    const aportado = p.commitment_actual || p.commitment;
     p.valor_estimado = p.valor_actual != null ? p.valor_actual
-      : (p.moic != null && aportado ? aportado * p.moic : null);
+      : (p.moic != null && p.commitment ? p.commitment * p.moic
+        : (p.commitment_actual || p.commitment || null));
   });
 
   // Reinversiones internas (ej. mitad vendida del 22F → recompra 26A QP con el mismo dinero):
