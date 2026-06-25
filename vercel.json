@@ -18,7 +18,7 @@
     { "src": "api/contacts.js",          "use": "@vercel/node" },
     { "src": "api/notify-assignment.js", "use": "@vercel/node" },
     { "src": "api/logo.js",              "use": "@vercel/node" },
-    { "src": "api/report.js",            "use": "@vercel/node", "config": { "includeFiles": "api/_lib/fonts/**" } }
+    { "src": "public/fonts/*.ttf",       "use": "@vercel/static" }
   ],
   "routes": [
     { "src": "/api/tasks",              "dest": "/api/tasks.js" },
@@ -30,7 +30,7 @@
     { "src": "/api/contacts",           "dest": "/api/contacts.js" },
     { "src": "/api/notify-assignment",  "dest": "/api/notify-assignment.js" },
     { "src": "/api/logo",                "dest": "/api/logo.js" },
-    { "src": "/api/report",              "dest": "/api/report.js" },
+    { "src": "/fonts/(.+\\.ttf)",        "dest": "/public/fonts/$1" },
     { "src": "/portal-mvp",    "dest": "/public/portal-mvp.html" },
     { "src": "/portal",        "dest": "/public/portal.html" },
     { "src": "/app.js",        "dest": "/public/app.js" },
