@@ -3835,6 +3835,93 @@ async function investorChartImages(data) {
   return out;
 }
 
+// ════════ Gráficas NATIVAS de Excel (inyección OOXML sobre el .xlsx de ExcelJS) ════════
+const CHART_PALETTE = ['E8650D', '17436B', '0F9B5A', '9B59B6', 'E1B12C', '3B65B0', 'C0392B', '16A085', 'b08968', '8A93A6'];
+const C_NS = 'http://schemas.openxmlformats.org/drawingml/2006/chart';
+const A_NS = 'http://schemas.openxmlformats.org/drawingml/2006/main';
+const RL_NS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+const _chEsc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');  // NO escapa ' (refs de hoja)
+let _jszipPromise = null;
+function loadJSZip() {
+  if (window.JSZip) return Promise.resolve();
+  if (_jszipPromise) return _jszipPromise;
+  _jszipPromise = new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js'; s.onload = res; s.onerror = () => { _jszipPromise = null; rej(new Error('No se pudo cargar JSZip')); }; document.head.appendChild(s); });
+  return _jszipPromise;
+}
+function _chTitle(title) {
+  if (!title) return '<c:autoTitleDeleted val="1"/>';
+  return `<c:title><c:tx><c:rich><a:bodyPr rot="0" spcFirstLastPara="1" vertOverflow="ellipsis" wrap="square" anchor="ctr" anchorCtr="1"/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1100" b="1"><a:solidFill><a:srgbClr val="1A1F2E"/></a:solidFill><a:latin typeface="Calibri"/></a:defRPr></a:pPr><a:r><a:rPr lang="es-MX" sz="1100" b="1"><a:solidFill><a:srgbClr val="1A1F2E"/></a:solidFill></a:rPr><a:t>${_chEsc(title)}</a:t></a:r></a:p></c:rich></c:tx><c:overlay val="0"/></c:title><c:autoTitleDeleted val="0"/>`;
+}
+function _chSer(s, i, cat, withColor) {
+  const fill = withColor ? `<c:spPr><a:solidFill><a:srgbClr val="${s.color || CHART_PALETTE[i % CHART_PALETTE.length]}"/></a:solidFill></c:spPr>` : '';
+  const nameRef = s.name ? `<c:tx><c:strRef><c:f>${_chEsc(s.name)}</c:f></c:strRef></c:tx>` : '';
+  return `<c:ser><c:idx val="${i}"/><c:order val="${i}"/>${nameRef}${fill}<c:cat><c:strRef><c:f>${_chEsc(cat)}</c:f></c:strRef></c:cat><c:val><c:numRef><c:f>${_chEsc(s.val)}</c:f></c:numRef></c:val></c:ser>`;
+}
+function _chBar(spec, axA, axB) {
+  const dir = spec.type === 'bar' ? 'bar' : 'col';
+  const sers = spec.series.map((s, i) => _chSer(s, i, spec.cat, true)).join('');
+  const catPos = spec.type === 'bar' ? 'l' : 'b', valPos = spec.type === 'bar' ? 'b' : 'l';
+  const valFmt = spec.numFmt || '"$"#,##0';
+  return `<c:barChart><c:barDir val="${dir}"/><c:grouping val="clustered"/><c:varyColors val="0"/>${sers}<c:gapWidth val="${spec.type === 'bar' ? 60 : 120}"/><c:axId val="${axA}"/><c:axId val="${axB}"/></c:barChart>` +
+    `<c:catAx><c:axId val="${axA}"/><c:scaling><c:orientation val="${spec.type === 'bar' ? 'maxMin' : 'minMax'}"/></c:scaling><c:delete val="0"/><c:axPos val="${catPos}"/><c:majorTickMark val="none"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/><c:crossAx val="${axB}"/><c:lblOffset val="100"/><c:noMultiLvlLbl val="0"/></c:catAx>` +
+    `<c:valAx><c:axId val="${axB}"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:delete val="0"/><c:axPos val="${valPos}"/><c:majorGridlines><c:spPr><a:ln><a:solidFill><a:srgbClr val="EAEEF4"/></a:solidFill></a:ln></c:spPr></c:majorGridlines><c:numFmt formatCode="${_chEsc(valFmt)}" sourceLinked="0"/><c:majorTickMark val="none"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/><c:crossAx val="${axA}"/></c:valAx>`;
+}
+function _chPie(spec) {
+  const tag = spec.type === 'doughnut' ? 'doughnutChart' : 'pieChart';
+  const s = spec.series[0], colors = spec.colors || CHART_PALETTE, n = spec.nPoints || 8;
+  let dpts = '';
+  for (let i = 0; i < n; i++) dpts += `<c:dPt><c:idx val="${i}"/><c:bubble3D val="0"/><c:spPr><a:solidFill><a:srgbClr val="${colors[i % colors.length]}"/></a:solidFill><a:ln><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill></a:ln></c:spPr></c:dPt>`;
+  const dLbls = spec.pctLabels ? `<c:dLbls><c:numFmt formatCode="0%" sourceLinked="0"/><c:spPr><a:noFill/></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="800" b="1"><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill></a:defRPr></a:pPr><a:endParaRPr lang="es-MX"/></a:p></c:txPr><c:showLegendKey val="0"/><c:showVal val="0"/><c:showCatName val="0"/><c:showSerName val="0"/><c:showPercent val="1"/><c:showBubbleSize val="0"/></c:dLbls>` : '';
+  const hole = spec.type === 'doughnut' ? '<c:holeSize val="55"/>' : '';
+  return `<c:${tag}><c:varyColors val="1"/><c:ser><c:idx val="0"/><c:order val="0"/>${s.name ? `<c:tx><c:strRef><c:f>${_chEsc(s.name)}</c:f></c:strRef></c:tx>` : ''}${dpts}${dLbls}<c:cat><c:strRef><c:f>${_chEsc(spec.cat)}</c:f></c:strRef></c:cat><c:val><c:numRef><c:f>${_chEsc(s.val)}</c:f></c:numRef></c:val></c:ser><c:firstSliceAng val="0"/>${hole}</c:${tag}>`;
+}
+function _chChartXml(spec, idx) {
+  const axA = 100000000 + idx * 10, axB = 200000000 + idx * 10;
+  const plot = (spec.type === 'pie' || spec.type === 'doughnut') ? _chPie(spec) : _chBar(spec, axA, axB);
+  const legend = (spec.type === 'pie' || spec.type === 'doughnut') ? '<c:legend><c:legendPos val="r"/><c:overlay val="0"/></c:legend>' : (spec.series.length > 1 ? '<c:legend><c:legendPos val="t"/><c:overlay val="0"/></c:legend>' : '');
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<c:chartSpace xmlns:c="${C_NS}" xmlns:a="${A_NS}" xmlns:r="${RL_NS}"><c:roundedCorners val="0"/><c:chart>${_chTitle(spec.title)}<c:plotArea><c:layout/>${plot}</c:plotArea>${legend}<c:plotVisOnly val="1"/><c:dispBlanksAs val="gap"/></c:chart></c:chartSpace>`;
+}
+function _chEmu(px) { return Math.round(px * 9525); }
+function _chDrawingXml(specs) {
+  const anchors = specs.map((spec, i) => { const a = spec.anchor; return `<xdr:oneCellAnchor><xdr:from><xdr:col>${a.col}</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${a.row}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:ext cx="${_chEmu(a.w || 460)}" cy="${_chEmu(a.h || 260)}"/><xdr:graphicFrame macro=""><xdr:nvGraphicFramePr><xdr:cNvPr id="${i + 2}" name="Chart ${i + 1}"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr><xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm><a:graphic><a:graphicData uri="${C_NS}"><c:chart xmlns:c="${C_NS}" xmlns:r="${RL_NS}" r:id="rId${i + 1}"/></a:graphicData></a:graphic></xdr:graphicFrame><xdr:clientData/></xdr:oneCellAnchor>`; }).join('');
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="${A_NS}">${anchors}</xdr:wsDr>`;
+}
+async function _chSheetFile(zip, sheetName) {
+  const wb = await zip.file('xl/workbook.xml').async('string');
+  const rels = await zip.file('xl/_rels/workbook.xml.rels').async('string');
+  const m = [...wb.matchAll(/<sheet[^>]*name="([^"]*)"[^>]*r:id="([^"]*)"/g)];
+  const target = m.find(x => x[1] === sheetName); if (!target) throw new Error('hoja: ' + sheetName);
+  const rid = target[2];
+  const rm = rels.match(new RegExp(`<Relationship[^>]*Id="${rid}"[^>]*Target="([^"]*)"`)) || rels.match(new RegExp(`<Relationship[^>]*Target="([^"]*)"[^>]*Id="${rid}"`));
+  return 'xl/' + rm[1].replace(/^\/?xl\//, '').replace(/^\//, '');
+}
+async function injectNativeCharts(arrayBuffer, sheetName, specs) {
+  if (!specs || !specs.length) return arrayBuffer;
+  const zip = await window.JSZip.loadAsync(arrayBuffer);
+  const sheetPath = await _chSheetFile(zip, sheetName);
+  const sheetFile = sheetPath.split('/').pop(), drawingName = 'drawing1.xml';
+  specs.forEach((spec, i) => zip.file(`xl/charts/chart${i + 1}.xml`, _chChartXml(spec, i)));
+  zip.file(`xl/drawings/${drawingName}`, _chDrawingXml(specs));
+  zip.file(`xl/drawings/_rels/${drawingName}.rels`, `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">` + specs.map((s, i) => `<Relationship Id="rId${i + 1}" Type="${RL_NS}/chart" Target="../charts/chart${i + 1}.xml"/>`).join('') + `</Relationships>`);
+  const sheetRelsPath = `xl/worksheets/_rels/${sheetFile}.rels`; let drawRid;
+  const existing = zip.file(sheetRelsPath);
+  if (existing) { let xml = await existing.async('string'); const ids = [...xml.matchAll(/Id="rId(\d+)"/g)].map(m => +m[1]); drawRid = 'rId' + ((ids.length ? Math.max(...ids) : 0) + 1); xml = xml.replace('</Relationships>', `<Relationship Id="${drawRid}" Type="${RL_NS}/drawing" Target="../drawings/${drawingName}"/></Relationships>`); zip.file(sheetRelsPath, xml); }
+  else { drawRid = 'rId1'; zip.file(sheetRelsPath, `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="${drawRid}" Type="${RL_NS}/drawing" Target="../drawings/${drawingName}"/></Relationships>`); }
+  let sheetXml = await zip.file(sheetPath).async('string');
+  if (!/<drawing /.test(sheetXml)) {
+    const dtag = `<drawing r:id="${drawRid}"/>`;             // debe ir ANTES del <extLst> de hoja (orden del schema)
+    const li = sheetXml.lastIndexOf('<extLst>');
+    if (li >= 0) sheetXml = sheetXml.slice(0, li) + dtag + sheetXml.slice(li);
+    else sheetXml = sheetXml.replace('</worksheet>', dtag + '</worksheet>');
+    if (!/xmlns:r=/.test(sheetXml)) sheetXml = sheetXml.replace('<worksheet ', `<worksheet xmlns:r="${RL_NS}" `);
+    zip.file(sheetPath, sheetXml);
+  }
+  let ct = await zip.file('[Content_Types].xml').async('string');
+  const adds = [`<Override PartName="/xl/drawings/${drawingName}" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>`].concat(specs.map((s, i) => `<Override PartName="/xl/charts/chart${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>`));
+  zip.file('[Content_Types].xml', ct.replace('</Types>', adds.join('') + '</Types>'));
+  return zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE' });
+}
+
 async function exportInvestorXlsx(posId) {
   const data = buildInvestorExport(posId);
   if (!data) { toast('Abre un inversionista primero'); return; }
@@ -3843,49 +3930,25 @@ async function exportInvestorXlsx(posId) {
   const extra = single && data.pos[0] ? data.pos[0].company : '';
   try {
     await loadScript('https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js');
-    const charts = await investorChartImages(data);
+    await loadJSZip();
     const wb = new ExcelJS.Workbook();
     wb.creator = 'MVP Manager';
 
-    const NAVY = 'FF17436B', ORANGE = 'FFE8650D', GREEN = 'FF0F9B5A', RED = 'FFC0392B', GRAY = 'FF8A93A6', INK = 'FF1A1F2E', ZEBRA = 'FFF4F7FC';
-    const Z = { money: '"$"#,##0', money2: '"$"#,##0.00', pct: '0.00%', moic: '0.00"x"', evb: '"$"0.00"B"', sh: '#,##0', dur: '0.00" yrs"' };
+    const NAVY = 'FF17436B', ORANGE = 'FFE8650D', GREEN = 'FF0F9B5A', GRAY = 'FF8A93A6', INK = 'FF1A1F2E', SLATE = 'FF8A93A6', ZEBRA = 'FFF4F7FC', CARD = 'FFF7F9FC', BORDER = 'FFDDE3EC', WHITE = 'FFFFFFFF';
+    const Z = { money: '"$"#,##0', money2: '"$"#,##0.00', pct: '0.0%', moic: '0.00"x"', sh: '#,##0' };
     const t = data.totals;
+    const combined = !!data.combined;
+    const thin = { style: 'thin', color: { argb: BORDER } };
+    const border = { top: thin, left: thin, bottom: thin, right: thin };
+    const cleanSer = s => String(s || '').replace(/MVP Opportunity (Fund VI LLC, )?/i, '').replace(/Series /i, '');
 
-    // Tabla estilizada (header navy, zebra, formatos, autofiltro, freeze)
-    const styledTable = (ws, headers, rows, meta) => {
-      const hr = ws.getRow(1);
-      headers.forEach((h, i) => {
-        const c = hr.getCell(i + 1);
-        c.value = h;
-        c.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10 };
-        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } };
-        c.alignment = { vertical: 'middle', horizontal: meta[i].num ? 'right' : 'left' };
-      });
-      hr.height = 18;
-      rows.forEach((r, ri) => {
-        const row = ws.getRow(2 + ri);
-        r.forEach((v, i) => {
-          const c = row.getCell(i + 1);
-          c.value = (v === '' ? null : v);
-          if (meta[i].z && typeof c.value === 'number') c.numFmt = meta[i].z;
-          c.alignment = { horizontal: meta[i].num ? 'right' : 'left' };
-          c.font = { size: 10, color: { argb: INK } };
-          if (ri % 2 === 1) c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ZEBRA } };
-        });
-      });
-      headers.forEach((h, i) => { ws.getColumn(i + 1).width = meta[i].w || Math.max(String(h).length + 2, 12); });
-      ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: headers.length } };
-      ws.views = [{ state: 'frozen', ySplit: 1, showGridLines: false }];
-    };
-
-    // ── Hoja Resumen (hero + KPIs + gráfica) ──
+    // ===== Hoja RESUMEN (dashboard) =====
     const R = wb.addWorksheet('Resumen', { views: [{ showGridLines: false }] });
-    R.mergeCells('A1:F1');
-    const tcell = R.getCell('A1');
-    tcell.value = data.inv.name;
-    tcell.font = { size: 22, bold: true, color: { argb: ORANGE } };
+    R.mergeCells('A1:G1');
+    R.getCell('A1').value = data.inv.name;
+    R.getCell('A1').font = { size: 22, bold: true, color: { argb: ORANGE } };
     R.getRow(1).height = 30;
-    R.mergeCells('A2:F2');
+    R.mergeCells('A2:G2');
     const subParts = [];
     if (data.inv._accounts) subParts.push(data.inv._accounts.map(a => a.name).join(' + '));
     else if (data.inv.titular) subParts.push('Titular: ' + data.inv.titular);
@@ -3895,68 +3958,137 @@ async function exportInvestorXlsx(posId) {
     R.getCell('A2').value = subParts.join('   ·   ');
     R.getCell('A2').font = { size: 10, color: { argb: GRAY } };
 
-    const kpis = [
-      { l: 'Compromiso total', v: t.totCommit, z: Z.money, accent: ORANGE, big: true },
-      { l: 'Account Balance', v: t.totActual, z: Z.money, accent: INK },
-      { l: 'Account Balance + Dist.', v: (+t.totActual || 0) + (+t.totDist || 0), z: Z.money, accent: GREEN },
-      { l: 'Distribuido', v: t.totDist, z: Z.money, accent: INK },
-      { l: 'MOIC', v: t.portMoic, z: Z.moic, accent: INK },
-      { l: 'DPI', v: t.dpi, z: Z.moic, accent: INK },
+    // KPI band (cajas)
+    const kbar = [
+      { l: 'COMPROMISO TOTAL', v: t.totCommit, z: Z.money, c: ORANGE },
+      { l: 'ACCOUNT BALANCE', v: t.totActual, z: Z.money, c: INK },
+      { l: 'ACCOUNT BALANCE + DIST.', v: (+t.totActual || 0) + (+t.totDist || 0), z: Z.money, c: GREEN },
+      { l: 'DISTRIBUIDO', v: t.totDist, z: Z.money, c: INK },
+      { l: 'MOIC', v: t.portMoic, z: Z.moic, c: INK },
+      { l: 'DPI', v: t.dpi, z: Z.moic, c: INK },
     ];
-    kpis.forEach((k, i) => {
+    kbar.forEach((k, i) => {
       const col = i + 1;
-      const lc = R.getCell(4, col);
-      lc.value = k.l.toUpperCase();
-      lc.font = { size: 8, bold: true, color: { argb: GRAY } };
-      const vc = R.getCell(5, col);
-      vc.value = k.v;
-      if (typeof k.v === 'number') vc.numFmt = k.z;
-      vc.font = { size: k.big ? 17 : 14, bold: true, color: { argb: k.accent } };
-      R.getColumn(col).width = 17;
+      const lc = R.getCell(4, col); lc.value = k.l; lc.font = { size: 7.5, bold: true, color: { argb: GRAY } }; lc.alignment = { horizontal: 'left' };
+      lc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: CARD } }; lc.border = { top: border.top, left: border.left, right: border.right };
+      const vc = R.getCell(5, col); vc.value = k.v; if (typeof k.v === 'number') vc.numFmt = k.z;
+      vc.font = { size: 13, bold: true, color: { argb: k.c } }; vc.alignment = { horizontal: 'left' };
+      vc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: CARD } }; vc.border = { bottom: border.bottom, left: border.left, right: border.right };
+      R.getColumn(col).width = 18;
     });
-    R.getRow(5).height = 24;
+    R.getRow(5).height = 22;
 
-    // Gráfica(s) embebidas
-    let imgRow = 7;
-    charts.forEach(ch => {
-      const id = wb.addImage({ base64: ch.dataUrl.split(',')[1], extension: 'png' });
-      const dispW = 560, dispH = Math.round(dispW * ch.h / ch.w);
-      R.addImage(id, { tl: { col: 0, row: imgRow }, ext: { width: dispW, height: dispH } });
-      imgRow += Math.ceil(dispH / 20) + 2;
+    // ---- tablas de análisis (alimentan las gráficas) ----
+    const active = data.pos.filter(p => p.estado === 'Activa');
+    const byCo = {};
+    active.forEach(p => { const k = p.company; (byCo[k] || (byCo[k] = { c: 0, a: 0, d: 0 })); byCo[k].c += +p.commitment || 0; byCo[k].a += +p.commitment_actual || 0; });
+    data.pos.forEach(p => { const k = p.company; (byCo[k] || (byCo[k] = { c: 0, a: 0, d: 0 })); byCo[k].d += +p.distribuido || 0; });
+    const coArr = Object.entries(byCo).sort((a, b) => b[1].a - a[1].a);
+    const byTh = {}; active.forEach(p => { const k = p.theme || companyTheme(p.company); byTh[k] = (byTh[k] || 0) + (+p.commitment_actual || 0); });
+    const thArr = Object.entries(byTh).sort((a, b) => b[1] - a[1]);
+    const moicArr = active.filter(p => p.moic != null).sort((a, b) => b.moic - a.moic).slice(0, 8);
+    const totA = coArr.reduce((s, [, d]) => s + d.a, 0) || 1;
+
+    let row = 39;
+    const secHdr = (r, txt) => { const c = R.getCell(r, 1); c.value = txt; c.font = { size: 11, bold: true, color: { argb: NAVY } }; };
+    const tblHdr = (r, cols) => cols.forEach((h, i) => { const c = R.getCell(r, i + 1); c.value = h; c.font = { size: 9, bold: true, color: { argb: WHITE } }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } }; c.alignment = { horizontal: i === 0 ? 'left' : 'right' }; c.border = border; });
+
+    secHdr(row, 'ANÁLISIS POR EMPRESA'); row++;
+    const empHdrRow = row; tblHdr(row, ['Empresa', 'Comprometido', 'Account Balance', 'Distribuido', 'MOIC', '% Portafolio']); row++;
+    const empStart = row;
+    coArr.forEach(([nm, d]) => {
+      const moic = d.c > 0 ? (d.a + d.d) / d.c : 0;
+      [nm, d.c, d.a, d.d, moic, d.a / totA].forEach((v, i) => { const c = R.getCell(row, i + 1); c.value = v; c.font = { size: 9, color: { argb: INK } }; c.alignment = { horizontal: i === 0 ? 'left' : 'right' }; c.border = border; if (i >= 1 && i <= 3) c.numFmt = Z.money; if (i === 4) c.numFmt = Z.moic; if (i === 5) c.numFmt = Z.pct; });
+      row++;
     });
+    const empEnd = row - 1;
+    { const c0 = R.getCell(row, 1); c0.value = 'TOTAL'; c0.font = { size: 9, bold: true, color: { argb: INK } }; c0.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ZEBRA } }; c0.border = border;
+      [['B', Z.money], ['C', Z.money], ['D', Z.money], [null], ['F', Z.pct]].forEach((sp, idx) => { const c = R.getCell(row, idx + 2); c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ZEBRA } }; c.border = border; c.font = { size: 9, bold: true, color: { argb: INK } }; c.alignment = { horizontal: 'right' }; if (sp[0]) { c.value = { formula: `SUM(${sp[0]}${empStart}:${sp[0]}${empEnd})` }; c.numFmt = sp[1]; } }); }
+    row += 2;
 
-    // Contactos debajo de la(s) gráfica(s)
-    if (data.contacts.length) {
-      const cStart = imgRow + 1;
-      R.getCell(cStart, 1).value = 'CONTACTOS';
-      R.getCell(cStart, 1).font = { size: 9, bold: true, color: { argb: GRAY } };
-      data.contacts.forEach((c, i) => {
-        R.getCell(cStart + 1 + i, 1).value = c.name || '—';
-        R.getCell(cStart + 1 + i, 2).value = c.email || '';
-        R.getCell(cStart + 1 + i, 1).font = { size: 10, color: { argb: INK } };
-        R.getCell(cStart + 1 + i, 2).font = { size: 10, color: { argb: GRAY } };
-      });
+    secHdr(row, 'EXPOSICIÓN POR TEMA'); row++;
+    tblHdr(row, ['Tema', 'Account Balance', '% Portafolio']); row++;
+    const thStart = row;
+    thArr.forEach(([nm, v]) => { [nm, v, v / totA].forEach((vv, i) => { const c = R.getCell(row, i + 1); c.value = vv; c.font = { size: 9, color: { argb: INK } }; c.alignment = { horizontal: i === 0 ? 'left' : 'right' }; c.border = border; if (i === 1) c.numFmt = Z.money; if (i === 2) c.numFmt = Z.pct; }); row++; });
+    const thEnd = row - 1; row += 2;
+
+    secHdr(row, 'TOP POSICIONES POR MOIC'); row++;
+    tblHdr(row, ['Posición', 'MOIC']); row++;
+    const moicStart = row;
+    moicArr.forEach(p => { const label = p.company + (p.series ? ' · ' + cleanSer(p.series) : ''); [label, p.moic].forEach((v, i) => { const c = R.getCell(row, i + 1); c.value = v; c.font = { size: 9, color: { argb: INK } }; c.alignment = { horizontal: i === 0 ? 'left' : 'right' }; c.border = border; if (i === 1) c.numFmt = Z.moic; }); row++; });
+    const moicEnd = row - 1;
+
+    R.addConditionalFormatting({ ref: `B${empStart}:B${empEnd}`, rules: [{ type: 'dataBar', cfvo: [{ type: 'min' }, { type: 'max' }], color: { argb: SLATE }, gradient: false }] });
+    R.addConditionalFormatting({ ref: `C${empStart}:C${empEnd}`, rules: [{ type: 'dataBar', cfvo: [{ type: 'min' }, { type: 'max' }], color: { argb: ORANGE }, gradient: false }] });
+    R.addConditionalFormatting({ ref: `E${empStart}:E${empEnd}`, rules: [{ type: 'colorScale', cfvo: [{ type: 'min' }, { type: 'percentile', value: 50 }, { type: 'max' }], color: [{ argb: 'FFF8696B' }, { argb: 'FFFFEB84' }, { argb: 'FF63BE7B' }] }] });
+    R.addConditionalFormatting({ ref: `B${moicStart}:B${moicEnd}`, rules: [{ type: 'dataBar', cfvo: [{ type: 'min' }, { type: 'max' }], color: { argb: GREEN }, gradient: false }] });
+
+    R.getColumn(1).width = 30; R.getColumn(2).width = 18; R.getColumn(3).width = 18; R.getColumn(4).width = 16; R.getColumn(5).width = 10; R.getColumn(6).width = 13; R.getColumn(7).width = 12;
+
+    const specs = [
+      { type: 'col', title: 'Comprometido vs. Account Balance · por empresa', anchor: { col: 0, row: 6, w: 470, h: 250 }, cat: `'Resumen'!$A$${empStart}:$A$${empEnd}`, series: [{ name: `'Resumen'!$B$${empHdrRow}`, val: `'Resumen'!$B$${empStart}:$B$${empEnd}`, color: '8A93A6' }, { name: `'Resumen'!$C$${empHdrRow}`, val: `'Resumen'!$C$${empStart}:$C$${empEnd}`, color: 'E8650D' }] },
+      { type: 'doughnut', title: 'Composición por empresa (Account Balance)', anchor: { col: 8, row: 6, w: 400, h: 250 }, cat: `'Resumen'!$A$${empStart}:$A$${empEnd}`, nPoints: coArr.length, pctLabels: true, series: [{ val: `'Resumen'!$C$${empStart}:$C$${empEnd}` }] },
+      { type: 'bar', title: 'MOIC por posición', anchor: { col: 0, row: 21, w: 470, h: 240 }, cat: `'Resumen'!$A$${moicStart}:$A$${moicEnd}`, numFmt: '0.0"x"', series: [{ val: `'Resumen'!$B$${moicStart}:$B$${moicEnd}`, color: '0F9B5A' }] },
+      { type: 'doughnut', title: 'Exposición por tema', anchor: { col: 8, row: 21, w: 400, h: 240 }, cat: `'Resumen'!$A$${thStart}:$A$${thEnd}`, nPoints: thArr.length, pctLabels: true, series: [{ val: `'Resumen'!$B$${thStart}:$B$${thEnd}` }] },
+    ];
+
+    // ===== Hoja POSICIONES =====
+    const acctCol = combined;
+    const headers = (acctCol ? ['Cuenta'] : []).concat(['Empresa', 'Serie', 'Estado', 'Compromiso', 'Account Balance', 'Plusvalía', 'Distribuido', 'MOIC', 'TVPI', '% Port.', 'Acciones', 'Entry PPS', 'Current PPS', '# Cartas']);
+    const PS = wb.addWorksheet('Posiciones', { views: [{ state: 'frozen', ySplit: 1, showGridLines: false }] });
+    headers.forEach((h, i) => { const c = PS.getCell(1, i + 1); c.value = h; c.font = { bold: true, color: { argb: WHITE }, size: 10 }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } }; c.alignment = { horizontal: i < (acctCol ? 4 : 3) ? 'left' : 'right', vertical: 'middle' }; });
+    PS.getRow(1).height = 18;
+    const totCommitAll = data.pos.reduce((s, p) => s + (+p.commitment || 0), 0) || 1;
+    const colL = n => { let s = ''; while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = (n - m - 1) / 26; } return s; };
+    data.pos.forEach((p, ri) => {
+      const plus = (+p.commitment_actual || 0) - (+p.commitment || 0);
+      const tvpi = p.commitment > 0 ? ((+p.commitment_actual || 0) + (+p.distribuido || 0)) / p.commitment : null;
+      const vals = (acctCol ? [p.cuenta || '—'] : []).concat([p.company, cleanSer(p.series), p.estado, +p.commitment || 0, +p.commitment_actual || 0, plus, +p.distribuido || 0, p.moic, tvpi, (+p.commitment || 0) / totCommitAll, p.shares, p.entry_pps, p.current_pps, p.n_cartas]);
+      const r = PS.getRow(2 + ri);
+      vals.forEach((v, i) => { const c = r.getCell(i + 1); c.value = (v == null ? null : v); c.font = { size: 9.5, color: { argb: INK } }; c.alignment = { horizontal: i >= (acctCol ? 4 : 3) ? 'right' : 'left' }; if (ri % 2 === 1) c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ZEBRA } }; });
+      const b = acctCol ? 1 : 0;
+      r.getCell(b + 5).numFmt = Z.money; r.getCell(b + 6).numFmt = Z.money; r.getCell(b + 7).numFmt = Z.money; r.getCell(b + 8).numFmt = Z.money;
+      r.getCell(b + 9).numFmt = Z.moic; r.getCell(b + 10).numFmt = Z.moic; r.getCell(b + 11).numFmt = Z.pct; r.getCell(b + 12).numFmt = Z.sh; r.getCell(b + 13).numFmt = Z.money2; r.getCell(b + 14).numFmt = Z.money2;
+    });
+    const lastRow = data.pos.length + 1, baseC = acctCol ? 1 : 0;
+    const tr = PS.getRow(lastRow + 1);
+    tr.getCell(1).value = 'TOTAL'; tr.getCell(1).font = { bold: true, color: { argb: INK } };
+    [5, 6, 7, 8].forEach(off => { const ci = baseC + off; const c = tr.getCell(ci); c.value = { formula: `SUM(${colL(ci)}2:${colL(ci)}${lastRow})` }; c.numFmt = Z.money; c.font = { bold: true, color: { argb: INK } }; c.alignment = { horizontal: 'right' }; });
+    const moicC = colL(baseC + 9), comC = colL(baseC + 5), abC = colL(baseC + 6);
+    PS.addConditionalFormatting({ ref: `${moicC}2:${moicC}${lastRow}`, rules: [{ type: 'colorScale', cfvo: [{ type: 'num', value: 0 }, { type: 'num', value: 1 }, { type: 'max' }], color: [{ argb: 'FFF8696B' }, { argb: 'FFFFEB84' }, { argb: 'FF63BE7B' }] }] });
+    PS.addConditionalFormatting({ ref: `${comC}2:${comC}${lastRow}`, rules: [{ type: 'dataBar', cfvo: [{ type: 'min' }, { type: 'max' }], color: { argb: SLATE }, gradient: false }] });
+    PS.addConditionalFormatting({ ref: `${abC}2:${abC}${lastRow}`, rules: [{ type: 'dataBar', cfvo: [{ type: 'min' }, { type: 'max' }], color: { argb: ORANGE }, gradient: false }] });
+    PS.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: headers.length } };
+    ((acctCol ? [22] : []).concat([24, 22, 11, 15, 16, 14, 14, 9, 9, 9, 12, 12, 12, 9])).forEach((w, i) => PS.getColumn(i + 1).width = w);
+
+    // ===== Hoja RECOMPRAS =====
+    const reps = [];
+    data.pos.forEach(p => (p._dists || []).forEach(d => { if (/reinver|reinvest/i.test(d.notes || '')) reps.push({ ...d, _company: p.company, _series: p.series }); }));
+    if (reps.length) {
+      const ids = combined ? (data.inv._accounts || []).map(a => a.id) : (data.inv.id != null ? [data.inv.id] : []);
+      const rnet = computeReinvestNetting(data.pos.map(p => ({ seriesName: p.series, commitment: +p.commitment || 0, dists: p._dists })), ids);
+      let remR = rnet.reinvestedDist;
+      reps.sort((a, b) => (b.distribution_date || '').localeCompare(a.distribution_date || ''));
+      reps.forEach(d => { const g = (+d.cash_proceeds || 0) + (+d.value_in_kind || 0); const rv = Math.min(remR, g); remR -= rv; d._g = g; d._r = rv; d._c = g - rv; });
+      const RP = wb.addWorksheet('Recompras', { views: [{ state: 'frozen', ySplit: 1, showGridLines: false }] });
+      ['Fecha', 'Empresa', 'Serie vendida', 'Acciones', 'Vendido', 'Reinvertido', 'Efectivo neto'].forEach((h, i) => { const c = RP.getCell(1, i + 1); c.value = h; c.font = { bold: true, color: { argb: WHITE }, size: 10 }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } }; c.alignment = { horizontal: i < 3 ? 'left' : 'right' }; });
+      reps.forEach((d, i) => { const r = RP.getRow(2 + i); [d.distribution_date, d._company, cleanSer(d._series), d.shares_distributed, d._g, d._r, d._c].forEach((v, j) => { const c = r.getCell(j + 1); c.value = v; c.font = { size: 9.5, color: { argb: INK } }; c.alignment = { horizontal: j < 3 ? 'left' : 'right' }; if (j === 3) c.numFmt = Z.sh; if (j >= 4) c.numFmt = Z.money; }); });
+      [22, 22, 28, 12, 15, 15, 15].forEach((w, i) => RP.getColumn(i + 1).width = w);
+      RP.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 7 } };
     }
 
-    // ── Hoja Posiciones ──
-    const acctCol = data.combined;
-    const posHead = (acctCol ? ['Cuenta'] : []).concat(['Empresa', 'Series', 'Estado', 'Compromiso', 'Comp. ejecutado', 'Carry', 'Acciones', 'Entry EV', 'Entry PPS', 'Current EV', 'Current PPS', 'All-in PPS', 'MOIC', 'Valor actual est.', 'Distribuido', '# Cartas', 'Inicio', 'Fin', 'Duración', 'Última carta (CA)']);
-    const posRows = data.pos.map(p => (acctCol ? [p.cuenta || '—'] : []).concat([p.company, p.series, p.estado, p.commitment, p.commitment_actual, p.carry, p.shares, p.entry_ev_b, p.entry_pps, p.current_ev_b, p.current_pps, p.all_in_pps, p.moic, p.valor_estimado, p.distribuido, p.n_cartas, p.inicio, p.fin, p.duracion, p.carta_ca]));
-    const posMeta = (acctCol ? [{ w: 24 }] : []).concat([{ w: 26 }, { w: 18 }, { w: 11 }, { w: 15, z: Z.money, num: 1 }, { w: 15, z: Z.money, num: 1 }, { w: 9, z: Z.pct, num: 1 }, { w: 13, z: Z.sh, num: 1 }, { w: 11, z: Z.evb, num: 1 }, { w: 11, z: Z.money2, num: 1 }, { w: 11, z: Z.evb, num: 1 }, { w: 12, z: Z.money2, num: 1 }, { w: 12, z: Z.money2, num: 1 }, { w: 9, z: Z.moic, num: 1 }, { w: 16, z: Z.money, num: 1 }, { w: 15, z: Z.money, num: 1 }, { w: 9, z: Z.sh, num: 1 }, { w: 12 }, { w: 12 }, { w: 11, z: Z.dur, num: 1 }, { w: 44 }]);
-    const P = dropEmptyCols(posHead, posRows, posMeta);
-    styledTable(wb.addWorksheet('Posiciones', { views: [{ showGridLines: false }] }), P.headers, P.rows, P.meta);
-
-    // ── Hoja Distribuciones (cartas) ──
-    if (data.letters.length) {
-      const lHead = ['Empresa', 'Series', 'Fecha', 'Tipo', 'Empresa subyacente', 'Acciones', 'PPS', 'Efectivo', 'En especie', 'Total', 'Carta', 'Notas'];
-      const lRows = data.letters.map(x => [x.company, x.series, x.fecha, x.tipo, x.subyacente, x.shares, x.pps, x.cash, x.especie, x.total, x.carta, x.notas]);
-      const lMeta = [{ w: 24 }, { w: 18 }, { w: 12 }, { w: 11 }, { w: 24 }, { w: 13, z: Z.sh, num: 1 }, { w: 11, z: Z.money2, num: 1 }, { w: 14, z: Z.money, num: 1 }, { w: 14, z: Z.money, num: 1 }, { w: 14, z: Z.money, num: 1 }, { w: 44 }, { w: 30 }];
-      const L = dropEmptyCols(lHead, lRows, lMeta);
-      styledTable(wb.addWorksheet('Distribuciones', { views: [{ showGridLines: false }] }), L.headers, L.rows, L.meta);
+    // ===== Hoja DISTRIBUCIONES =====
+    if (data.letters && data.letters.length) {
+      const D = wb.addWorksheet('Distribuciones', { views: [{ state: 'frozen', ySplit: 1, showGridLines: false }] });
+      ['Empresa', 'Serie', 'Fecha', 'Tipo', 'Acciones', 'PPS', 'Efectivo', 'Total'].forEach((h, i) => { const c = D.getCell(1, i + 1); c.value = h; c.font = { bold: true, color: { argb: WHITE }, size: 10 }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } }; c.alignment = { horizontal: i < 4 ? 'left' : 'right' }; });
+      data.letters.forEach((x, i) => { const r = D.getRow(2 + i); [x.company, cleanSer(x.series), x.fecha, x.tipo, x.shares, x.pps, x.cash, x.total].forEach((v, j) => { const c = r.getCell(j + 1); c.value = v; c.font = { size: 9.5, color: { argb: INK } }; c.alignment = { horizontal: j < 4 ? 'left' : 'right' }; if (j === 4) c.numFmt = Z.sh; if (j === 5) c.numFmt = Z.money2; if (j >= 6) c.numFmt = Z.money; }); });
+      [22, 18, 12, 11, 12, 11, 14, 14].forEach((w, i) => D.getColumn(i + 1).width = w);
+      D.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 8 } };
     }
 
     const buf = await wb.xlsx.writeBuffer();
-    downloadBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), invExportFilename(data.inv, extra) + '.xlsx');
+    const out = await injectNativeCharts(buf, 'Resumen', specs);
+    downloadBlob(new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), invExportFilename(data.inv, extra) + '.xlsx');
     toast(single ? `Excel: ${extra}` : `Excel: ${data.pos.length} posiciones · ${data.letters.length} cartas`);
   } catch (e) {
     console.error('[export inv xlsx]', e);
