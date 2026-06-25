@@ -2027,11 +2027,15 @@ async function _computeMvpSnapshot() {
     sbFetchAll('companies', 'id,name')
   ]);
   const n = v => (Number(v) || 0);
+  // Neteo de reinversiones 22F→26A QP (no inflar comprometido ni distribuido).
+  let netTot = { totalRecycled: 0, totalReinvested: 0 };
+  try { netTot = await loadReinvestNettingMap(); } catch (e) { console.warn('netting map', e); }
   const active = inv.filter(r => !r.distributed_at);
-  const committed = active.reduce((s, r) => s + n(r.commitment), 0);
+  const committed = active.reduce((s, r) => s + n(r.commitment), 0) - netTot.totalRecycled;   // comprometido real
   const nav = active.reduce((s, r) => s + (n(r.commitment_actual) || n(r.commitment)), 0);
-  const moic = committed ? nav / committed : 0;
-  const distrib = dist.reduce((s, r) => s + n(r.value_in_kind) + n(r.cash_proceeds), 0);
+  const distrib = dist.reduce((s, r) => s + n(r.value_in_kind) + n(r.cash_proceeds), 0) - netTot.totalReinvested;  // distribuido real
+  const paidIn = inv.reduce((s, r) => s + n(r.commitment), 0) - netTot.totalRecycled;          // paid-in total (activo + distribuido)
+  const moic = paidIn ? (nav + distrib) / paidIn : 0;   // MOIC/TVPI: (NAV + distribuido) / paid-in real
   const nInv = new Set(inv.map(r => r.investor_id)).size;
   const nPos = active.length;
   const cname = Object.fromEntries(comps.map(c => [c.id, c.name]));
@@ -2996,12 +3000,21 @@ async function loadDb() {
         (dbSeriesCompanies[x.series_id] ||= new Set()).add(x.company_id);
       }
     });
-    dbInvestors = investors.map(i => ({
-      ...i,
-      positions: invMap[i.id]?.positions || 0,
-      commitment: invMap[i.id]?.commitment || 0,
-      actual: invMap[i.id]?.actual || 0,
-    })).sort((a, b) => b.commitment - a.commitment || a.name.localeCompare(b.name));
+    // Neteo de reinversiones 22F→26A QP: el comprometido no debe doblar el capital reciclado.
+    let _net = { byInvestor: {}, totalRecycled: 0 };
+    try { _net = await loadReinvestNettingMap(); } catch (e) { console.warn('netting map', e); }
+    const _netMap = _net.byInvestor || {};
+    dbInvestors = investors.map(i => {
+      const rawCommit = invMap[i.id]?.commitment || 0;
+      const recycled = _netMap[i.id]?.recycledPaidIn || 0;
+      return {
+        ...i,
+        positions: invMap[i.id]?.positions || 0,
+        commitmentRaw: rawCommit,
+        commitment: rawCommit - recycled,    // paid-in real (sin capital reciclado)
+        actual: invMap[i.id]?.actual || 0,
+      };
+    }).sort((a, b) => b.commitment - a.commitment || a.name.localeCompare(b.name));
 
     // Agrega por company
     const compMap = {};
@@ -3012,6 +3025,10 @@ async function loadDb() {
       compMap[x.company_id].commitment += +x.commitment || 0;
       compMap[x.company_id].actual += +x.commitment_actual || 0;
     });
+    // SpaceX: netea el comprometido por el capital reciclado del 26A QP (todo el reciclado es SpaceX).
+    const _s26 = new Set(series.filter(s => SPX_REINV_IS_26AQP(s.name)).map(s => s.id));
+    const _spxCompId = (investments.find(x => _s26.has(x.series_id)) || {}).company_id;
+    if (_spxCompId != null && compMap[_spxCompId]) compMap[_spxCompId].commitment -= (_net.totalRecycled || 0);
     dbCompanies = companies.map(c => ({
       ...c,
       positions: compMap[c.id]?.positions || 0,
@@ -3478,6 +3495,69 @@ async function exportPDF(cols, rows) {
 }
 
 /* ═══════════════════════════════════════════
+   NETEO DE REINVERSIONES 22F → 26A QP (SpaceX) — fuente única de verdad
+   La mitad vendida de la 22F se reinvirtió en la 26A QP (mismo dinero). No es capital
+   nuevo (no suma al "comprometido") ni distribución real al LP (no suma al "distribuido").
+   Regla por inversionista: R = min(P, Q)
+     P = reinversión (distribuciones de la 22F con nota "reinvest")
+     Q = commitment del 26A QP (serie VI-26A QP; NO el "Closing 10", que es dinero fresco)
+   Cubre: recompra total, parcial (lo no reinvertido SÍ es efectivo), +dinero fresco, o
+   tomar efectivo (sin 26A → R=0). Cretum es cruzado entre entidades (119↔615): excepción.
+   positions: [{ seriesName, commitment, dists:[{cash_proceeds,value_in_kind,notes}] }]
+═══════════════════════════════════════════ */
+const SPX_REINV_IS_26AQP = s => /26A\s*QP/i.test(s || '') && !/closing/i.test(s || '');
+const SPX_REINV_IS_NOTE = nt => /reinver|reinvest/i.test(nt || '');
+// Dado P (reinversión) y Q (commitment 26A QP) de un inversionista → cuánto netear de paid-in y distribuido.
+function nettingFromPQ(P, Q, investorIds) {
+  const R = Math.min(P, Q);
+  let recycledPaidIn = R, reinvestedDist = R;
+  const ids = new Set((Array.isArray(investorIds) ? investorIds : [investorIds]).map(Number));
+  const CRETUM = 268194.85;   // 119 (22F vendida/reinversión) ↔ 615 (26A QP). Mismo dinero.
+  if (ids.has(119) && !ids.has(615)) reinvestedDist += CRETUM;   // 119 solo: su distribución fue reinversión a 615 (no efectivo)
+  if (ids.has(615) && !ids.has(119)) recycledPaidIn += CRETUM;   // 615 solo: su 26A QP es reciclado de 119
+  return { recycledPaidIn, reinvestedDist };
+}
+function computeReinvestNetting(positions, investorIds) {
+  let P = 0, Q = 0, has26 = false;
+  for (const p of (positions || [])) {
+    if (SPX_REINV_IS_26AQP(p.seriesName)) { Q += (+p.commitment || 0); has26 = true; }
+    for (const d of (p.dists || [])) if (SPX_REINV_IS_NOTE(d.notes)) P += ((+d.cash_proceeds || 0) + (+d.value_in_kind || 0));
+  }
+  const r = nettingFromPQ(P, Q, investorIds || []);
+  const ids = new Set((investorIds || []).map(Number));
+  return { ...r, hasReinvestTarget: has26 || ids.has(119) };
+}
+
+// Carga (una vez) el neteo de reinversión por inversionista para vistas agregadas (lista DB, snapshot).
+// Devuelve { byInvestor:{id:{recycledPaidIn,reinvestedDist}}, totalRecycled, totalReinvested }.
+let _reinvestNettingCache = null;
+async function loadReinvestNettingMap() {
+  if (_reinvestNettingCache) return _reinvestNettingCache;
+  const [series, invs, pdistRes] = await Promise.all([
+    sbFetchAll('series', 'id,name'),
+    sbFetchAll('investments', 'investor_id,series_id,commitment'),
+    sb.from('investment_distributions').select('cash_proceeds,value_in_kind,investments(investor_id)').ilike('notes', '%reinvest%'),
+  ]);
+  if (pdistRes.error) throw pdistRes.error;
+  const s26 = new Set(series.filter(s => SPX_REINV_IS_26AQP(s.name)).map(s => s.id));
+  const Q = {}, P = {};
+  invs.forEach(x => { if (s26.has(x.series_id)) Q[x.investor_id] = (Q[x.investor_id] || 0) + (+x.commitment || 0); });
+  (pdistRes.data || []).forEach(d => {
+    const iid = d.investments?.investor_id; if (iid == null) return;
+    P[iid] = (P[iid] || 0) + ((+d.cash_proceeds || 0) + (+d.value_in_kind || 0));
+  });
+  const ids = new Set([...Object.keys(Q), ...Object.keys(P)].map(Number));
+  ids.add(119); ids.add(615);   // Cretum cruzado: garantizar que ambos entren al cálculo
+  const byInvestor = {}; let totalRecycled = 0, totalReinvested = 0;
+  ids.forEach(id => {
+    const net = nettingFromPQ(P[id] || 0, Q[id] || 0, id);
+    if (net.recycledPaidIn || net.reinvestedDist) { byInvestor[id] = net; totalRecycled += net.recycledPaidIn; totalReinvested += net.reinvestedDist; }
+  });
+  _reinvestNettingCache = { byInvestor, totalRecycled, totalReinvested };
+  return _reinvestNettingCache;
+}
+
+/* ═══════════════════════════════════════════
    EXPORT ENRIQUECIDO — detalle de UN inversionista (posiciones + cartas)
    Usa los datos ya cargados en lastInvestorDetail; no re-consulta.
 ═══════════════════════════════════════════ */
@@ -3559,24 +3639,17 @@ function buildInvestorExport(posId) {
         : (p.commitment_actual || p.commitment || null));
   });
 
-  // Reinversiones internas (ej. mitad vendida del 22F → recompra 26A QP con el mismo dinero):
-  // no son distribución real al LP ni capital nuevo → se netean para no inflar los totales.
-  const reinvestAmts = [];
-  pos.forEach(p => (p._dists || []).forEach(x => {
-    if (/reinver|reinvest/i.test(x.notes || '')) reinvestAmts.push((+x.cash_proceeds || 0) + (+x.value_in_kind || 0));
-  }));
-  const reinvested = reinvestAmts.reduce((s, a) => s + a, 0);
-  // marca la posición ACTIVA financiada por esa reinversión (commitment ≈ monto reinvertido) = capital reciclado
-  const pend = reinvestAmts.slice();
-  pos.forEach(p => {
-    if (p.estado === 'Activa') { const i = pend.findIndex(a => Math.abs(a - p.commitment) < 1); if (i >= 0) { p._recycled = true; pend.splice(i, 1); } }
-  });
+  // Neteo de reinversiones 22F→26A QP (ver computeReinvestNetting). R = min(P, Q) por inversionista.
+  const investorIds = inv._combined ? (inv._accounts || []).map(a => a.id) : (inv.id != null ? [inv.id] : []);
+  const net = computeReinvestNetting(pos.map(p => ({ seriesName: p.series, commitment: p.commitment, dists: p._dists })), investorIds);
+  // La mitad vendida del 22F se oculta de la tabla SOLO si realmente se reinvirtió (hay 26A QP / caso 119).
+  if (!net.hasReinvestTarget) pos.forEach(p => { p.reinvSource = false; });
 
   // Totales (vista de flujo real del LP)
   const active = pos.filter(p => p.estado === 'Activa');
-  const totCommit = pos.reduce((s, p) => s + (p._recycled ? 0 : p.commitment), 0);  // paid-in real (sin reciclado)
-  const totActual = active.reduce((s, p) => s + p.commitment_actual, 0);            // NAV: solo posiciones activas
-  const totDist = pos.reduce((s, p) => s + p.distribuido, 0) - reinvested;          // distribuido real (sin reinversiones)
+  const totCommit = pos.reduce((s, p) => s + p.commitment, 0) - net.recycledPaidIn;  // paid-in real (sin reciclado)
+  const totActual = active.reduce((s, p) => s + p.commitment_actual, 0);             // NAV: solo posiciones activas
+  const totDist = pos.reduce((s, p) => s + p.distribuido, 0) - net.reinvestedDist;   // distribuido real (sin reinversiones)
   const valorEstimado = active.reduce((s, p) => s + (p.valor_estimado || 0), 0);
   const portMoic = totCommit > 0 ? (totActual + totDist) / totCommit : 0;   // MOIC/TVPI: (valor activo + distribuido) / paid-in real
   const dpi = totCommit > 0 ? totDist / totCommit : 0;          // distribuido real / paid-in real
@@ -4644,16 +4717,20 @@ function fmtEventDate(d) {
   catch (e) { return d; }
 }
 let _lp360 = null;
-function buildLp360(positions) {
+function buildLp360(positions, investorIds) {
   const num = v => (Number(v) || 0);
   const active = positions.filter(p => !p.distributed_at);
-  const committedActive = active.reduce((a, p) => a + num(p.commitment), 0);
   const navActive = active.reduce((a, p) => a + (num(p.commitment_actual) || num(p.commitment)), 0);
-  const moic = committedActive ? navActive / committedActive : 0;
-  const committedTotal = positions.reduce((a, p) => a + num(p.commitment), 0);
+  // Neteo de reinversiones 22F→26A QP (paid-in y distribuido). Misma regla que el reporte.
+  const net = computeReinvestNetting(positions.map(p => ({ seriesName: p.series?.name, commitment: num(p.commitment), dists: p.investment_distributions })), investorIds || []);
+  const committedNet = positions.reduce((a, p) => a + num(p.commitment), 0) - net.recycledPaidIn;   // paid-in real
   let distrib = 0;
   positions.forEach(p => (p.investment_distributions || []).forEach(d => { distrib += num(d.value_in_kind) + num(d.cash_proceeds); }));
-  const dpi = committedTotal ? distrib / committedTotal : 0;
+  distrib -= net.reinvestedDist;                                                                     // distribuido real
+  const committedActive = committedNet;
+  const moic = committedNet ? (navActive + distrib) / committedNet : 0;   // MOIC/TVPI: (valor activo + distribuido) / paid-in real
+  const committedTotal = committedNet;
+  const dpi = committedNet ? distrib / committedNet : 0;
   const byCo = {}, byTheme = {};
   active.forEach(p => {
     const isFund = p.companies?.id === 10;
@@ -4682,7 +4759,7 @@ function buildLp360(positions) {
     lockup = { blocks, next: nextB || null, detail: spxLockupDetail(spxPos) };
   }
   _lp360 = { companyExp, themeExp };
-  return { moic, distrib, dpi, nActive: active.length, companyExp, themeExp, lockup, hasSpx: spxPos.length > 0 };
+  return { moic, distrib, dpi, nActive: active.length, committedNet, navActive, companyExp, themeExp, lockup, hasSpx: spxPos.length > 0 };
 }
 async function draw360Theme() {
   const cv = document.getElementById('lpThemeChart');
@@ -4723,7 +4800,8 @@ function renderInvestorDetail(inv, contacts, positions) {
   const sortDesc = (a, b) => (b.distribution_date || '').localeCompare(a.distribution_date || '');
   distrosSpv.sort(sortDesc);
   distrosFund.sort(sortDesc);
-  const _lp = buildLp360(positions);
+  const _lpIds = combined ? (inv._accounts || []).map(a => a.id) : (inv.id != null ? [inv.id] : []);
+  const _lp = buildLp360(positions, _lpIds);
   const _lpkpi = (l, v, c) => `<div class="lp-kpi"><div class="lp-kpi-l">${l}</div><div class="lp-kpi-v ${c || ''}">${v}</div></div>`;
   const lpKpis = `<div class="lp-kpis">
     ${_lpkpi('MOIC', _lp.moic.toFixed(2) + 'x', moicClass(_lp.moic))}
@@ -4777,8 +4855,8 @@ function renderInvestorDetail(inv, contacts, positions) {
            </div>`}
       <div class="db-detail-stats">
         <div class="db-stat"><div class="db-stat-l">Posiciones</div><div class="db-stat-v">${inv.positions}</div></div>
-        <div class="db-stat"><div class="db-stat-l">Commitment total</div><div class="db-stat-v">${fmtMoney(inv.commitment)}</div></div>
-        <div class="db-stat"><div class="db-stat-l">Commitment actual</div><div class="db-stat-v">${fmtMoney(inv.actual)}</div></div>
+        <div class="db-stat"><div class="db-stat-l">Commitment total</div><div class="db-stat-v">${fmtMoney(_lp.committedNet)}</div></div>
+        <div class="db-stat"><div class="db-stat-l">Commitment actual</div><div class="db-stat-v">${fmtMoney(_lp.navActive)}</div></div>
       </div>
     </div>
 
