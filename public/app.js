@@ -2048,14 +2048,14 @@ async function _computeMvpSnapshot() {
 function _mvpSnapshotInnerHtml(d, topN) {
   const top = d.top.slice(0, topN || 5);
   const maxv = top.length ? top[0][1] : 1;
-  const kpi = (label, val, cls) => `<div class="home-kpi"><div class="home-kpi-l">${label}</div><div class="home-kpi-v ${cls || ''}">${val}</div></div>`;
+  const kpi = (label, val, cls, info, right) => `<div class="home-kpi"><div class="home-kpi-l">${label}${info ? infoIc(info, right) : ''}</div><div class="home-kpi-v ${cls || ''}">${val}</div></div>`;
   return `<div class="home-kpis-grid">` +
-      kpi('Capital comprometido', fmtUsdShort(d.committed)) +
-      kpi('Valor actual (NAV)', fmtUsdShort(d.nav), 'accent') +
-      kpi('MOIC', d.moic.toFixed(2) + 'x', moicClass(d.moic)) +
-      kpi('Distribuido a la fecha', fmtUsdShort(d.distrib)) +
-      kpi('Inversionistas', d.nInv.toLocaleString('en-US')) +
-      kpi('Posiciones activas', d.nPos.toLocaleString('en-US')) +
+      kpi('Capital comprometido', fmtUsdShort(d.committed), '', 'Suma del compromiso de las posiciones activas de todos los LP, neto de reinversiones SpaceX (la 22F vendida y reinvertida en la 26A QP se cuenta una sola vez).') +
+      kpi('Valor actual (NAV)', fmtUsdShort(d.nav), 'accent', 'Valor de mercado actual de todas las posiciones activas (mark-to-market, sincronizado con el último precio).', true) +
+      kpi('MOIC', d.moic.toFixed(2) + 'x', moicClass(d.moic), 'Múltiplo total (TVPI): (NAV + distribuido real) ÷ capital pagado real (incluye terminadas). Neto de reinversiones.') +
+      kpi('Distribuido a la fecha', fmtUsdShort(d.distrib), '', 'Efectivo y acciones realmente devueltos a los LP. Excluye recompras/reinversiones SpaceX.', true) +
+      kpi('Inversionistas', d.nInv.toLocaleString('en-US'), '', 'Número de inversionistas (LP) distintos en la base.') +
+      kpi('Posiciones activas', d.nPos.toLocaleString('en-US'), '', 'Posiciones aún sin distribuir ni liquidar.', true) +
     `</div>` +
     `<div class="home-top">` +
       `<div class="home-top-h">Top posiciones por valor (NAV activo)</div>` +
@@ -4821,6 +4821,29 @@ async function draw360Theme() {
   });
 }
 
+// Ícono de info (i) con popup explicativo al hacer clic. `right`=ancla el popup a la derecha (cards del borde).
+function infoIc(text, right) {
+  return `<span class="info-ic${right ? ' info-ic--right' : ''}" onclick="event.stopPropagation();toggleInfoPop(this)" title="¿Cómo se calcula?"><i class="fa-solid fa-circle-info"></i><span class="info-pop">${escapeHtml(text)}</span></span>`;
+}
+function toggleInfoPop(el) {
+  const open = el.classList.contains('open');
+  document.querySelectorAll('.info-ic.open').forEach(e => e.classList.remove('open'));
+  if (!open) el.classList.add('open');
+}
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.info-ic')) document.querySelectorAll('.info-ic.open').forEach(el => el.classList.remove('open'));
+});
+// Textos de ayuda de los KPIs del LP 360.
+const LP_KPI_INFO = {
+  posiciones: 'Número total de posiciones del inversionista: activas (sin distribuir) + terminadas (ya distribuidas o liquidadas).',
+  commitTotal: 'Capital comprometido real (paid-in): suma del compromiso de todas las posiciones, neto de reinversiones SpaceX. La mitad de la Serie 22F que se vendió y se reinvirtió en la 26A QP se cuenta una sola vez (no se dobla el capital reciclado).',
+  commitActual: 'Valor actual estimado (NAV) de las posiciones activas, a precio de mercado (mark-to-market, sincronizado con el último precio). No incluye posiciones ya distribuidas.',
+  moic: 'Múltiplo total sobre el capital (TVPI): (valor actual de las posiciones activas + distribuido real) ÷ comprometido real. Sí incluye lo ya distribuido. Neto de reinversiones SpaceX.',
+  distribuido: 'Efectivo y acciones realmente devueltos al inversionista a la fecha. Excluye recompras/reinversiones: la 22F vendida y reinvertida en la 26A QP no cuenta como distribución (la parte tomada en efectivo sí).',
+  dpi: 'Distribuciones sobre capital (DPI): distribuido real ÷ comprometido real. Cuánto se ha devuelto en efectivo/acciones por cada dólar comprometido.',
+  posActivas: 'Posiciones que siguen vivas (aún sin distribuir ni liquidar).',
+};
+
 function renderInvestorDetail(inv, contacts, positions) {
   lastInvestorDetail = { inv, contacts, positions };
   const combined = !!inv._combined;
@@ -4861,12 +4884,12 @@ function renderInvestorDetail(inv, contacts, positions) {
     });
   }
   const _lp = buildLp360(positions, _lpIds);
-  const _lpkpi = (l, v, c) => `<div class="lp-kpi"><div class="lp-kpi-l">${l}</div><div class="lp-kpi-v ${c || ''}">${v}</div></div>`;
+  const _lpkpi = (l, v, c, info, right) => `<div class="lp-kpi"><div class="lp-kpi-l">${l}${info ? infoIc(info, right) : ''}</div><div class="lp-kpi-v ${c || ''}">${v}</div></div>`;
   const lpKpis = `<div class="lp-kpis">
-    ${_lpkpi('MOIC', _lp.moic.toFixed(2) + 'x', moicClass(_lp.moic))}
-    ${_lpkpi('Distribuido a la fecha', fmtUsdShort(_lp.distrib))}
-    ${_lpkpi('DPI', _lp.dpi.toFixed(2) + 'x')}
-    ${_lpkpi('Posiciones activas', String(_lp.nActive))}
+    ${_lpkpi('MOIC', _lp.moic.toFixed(2) + 'x', moicClass(_lp.moic), LP_KPI_INFO.moic)}
+    ${_lpkpi('Distribuido a la fecha', fmtUsdShort(_lp.distrib), '', LP_KPI_INFO.distribuido)}
+    ${_lpkpi('DPI', _lp.dpi.toFixed(2) + 'x', '', LP_KPI_INFO.dpi)}
+    ${_lpkpi('Posiciones activas', String(_lp.nActive), '', LP_KPI_INFO.posActivas, true)}
   </div>`;
   const _maxCo = _lp.companyExp.length ? _lp.companyExp[0][1] : 1;
   const exposicion = _lp.companyExp.length ? `<div class="db-section">
@@ -4913,9 +4936,9 @@ function renderInvestorDetail(inv, contacts, positions) {
                : `<span class="db-titular-val">${inv.titular ? escapeHtml(inv.titular) : '—'}</span>`}
            </div>`}
       <div class="db-detail-stats">
-        <div class="db-stat"><div class="db-stat-l">Posiciones</div><div class="db-stat-v">${inv.positions}</div></div>
-        <div class="db-stat"><div class="db-stat-l">Commitment total</div><div class="db-stat-v">${fmtMoney(_lp.committedNet)}</div></div>
-        <div class="db-stat"><div class="db-stat-l">Commitment actual</div><div class="db-stat-v">${fmtMoney(_lp.navActive)}</div></div>
+        <div class="db-stat"><div class="db-stat-l">Posiciones${infoIc(LP_KPI_INFO.posiciones)}</div><div class="db-stat-v">${inv.positions}</div></div>
+        <div class="db-stat"><div class="db-stat-l">Commitment total${infoIc(LP_KPI_INFO.commitTotal)}</div><div class="db-stat-v">${fmtMoney(_lp.committedNet)}</div></div>
+        <div class="db-stat"><div class="db-stat-l">Commitment actual${infoIc(LP_KPI_INFO.commitActual, true)}</div><div class="db-stat-v">${fmtMoney(_lp.navActive)}</div></div>
       </div>
     </div>
 
