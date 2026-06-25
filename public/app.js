@@ -3578,7 +3578,7 @@ function buildInvestorExport(posId) {
   const totActual = active.reduce((s, p) => s + p.commitment_actual, 0);            // NAV: solo posiciones activas
   const totDist = pos.reduce((s, p) => s + p.distribuido, 0) - reinvested;          // distribuido real (sin reinversiones)
   const valorEstimado = active.reduce((s, p) => s + (p.valor_estimado || 0), 0);
-  const portMoic = totCommit > 0 ? totActual / totCommit : 0;   // valor activo / paid-in real
+  const portMoic = totCommit > 0 ? (totActual + totDist) / totCommit : 0;   // MOIC/TVPI: (valor activo + distribuido) / paid-in real
   const dpi = totCommit > 0 ? totDist / totCommit : 0;          // distribuido real / paid-in real
 
   const combined = !!inv._combined;
