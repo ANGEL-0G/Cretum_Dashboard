@@ -4564,6 +4564,51 @@ function renderPositionsBlock(title, rows, showAcct) {
     </div>`;
 }
 
+// Recompras: posiciones vendidas por el fondo subyacente cuyo importe se reinvirtió (no es efectivo al LP).
+function renderRepurchasesBlock(title, rows) {
+  if (!rows.length) return '';
+  const tot = rows.reduce((a, d) => ({ g: a.g + (d._gross || 0), r: a.r + (d._reinv || 0), c: a.c + (d._cash || 0) }), { g: 0, r: 0, c: 0 });
+  return `
+    <div class="db-section">
+      <div class="db-section-h">${escapeHtml(title)} (${rows.length})</div>
+      <div class="db-section-note">Posiciones que el fondo subyacente liquidó y cuyo importe se reinvirtió en un vehículo directo de SpaceX (Serie 26A QP). La parte reinvertida no es efectivo devuelto al inversionista; el resto (si lo hay) sí se entregó en efectivo.</div>
+      <table class="db-table">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Empresa</th>
+            <th class="hide-mobile">Serie vendida</th>
+            <th class="num hide-mobile">Acciones</th>
+            <th class="num">Vendido</th>
+            <th class="num">Reinvertido</th>
+            <th class="num">Efectivo neto</th>
+            <th class="hide-mobile">Carta</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(d => `
+            <tr>
+              <td>${escapeHtml(d.distribution_date || '—')}</td>
+              <td>${escapeHtml(d.underlying_company || d._company)}</td>
+              <td class="hide-mobile">${escapeHtml(d._series)}</td>
+              <td class="num hide-mobile">${d.shares_distributed != null ? Number(d.shares_distributed).toLocaleString('en-US') : '—'}</td>
+              <td class="num">${fmtMoney(d._gross || 0)}</td>
+              <td class="num">${d._reinv ? fmtMoney(d._reinv) : '—'}</td>
+              <td class="num">${d._cash ? fmtMoney(d._cash) : '—'}</td>
+              <td class="hide-mobile">${d.letter_url ? `<a href="${escapeHtml(d.letter_url)}" target="_blank" rel="noopener"><i class="fa-solid fa-file-pdf"></i> PDF</a>` : '—'}</td>
+            </tr>`).join('')}
+          <tr class="db-total-row">
+            <td colspan="4">TOTAL</td>
+            <td class="num">${fmtMoney(tot.g)}</td>
+            <td class="num">${tot.r ? fmtMoney(tot.r) : '—'}</td>
+            <td class="num">${tot.c ? fmtMoney(tot.c) : '—'}</td>
+            <td class="hide-mobile"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>`;
+}
+
 function renderDistrosBlock(title, rows) {
   if (!rows.length) return '';
   return `
@@ -4786,6 +4831,7 @@ function renderInvestorDetail(inv, contacts, positions) {
   const terminatedPositions = positions.filter(p => p.distributed_at);
   const distrosSpv = [];
   const distrosFund = [];
+  const repurchases = [];   // vendidas pero reinvertidas (recompra): se separan de distribuciones reales
   positions.forEach(p => {
     const isFund = p.companies?.id === DIVERSIFIED_FUND_ID;
     (p.investment_distributions || []).forEach(d => {
@@ -4794,13 +4840,26 @@ function renderInvestorDetail(inv, contacts, positions) {
         _company: p.companies?.name || '—',
         _series: p.series?.name || '—',
       };
-      (isFund ? distrosFund : distrosSpv).push(row);
+      if (/reinver|reinvest/i.test(d.notes || '')) repurchases.push(row);
+      else (isFund ? distrosFund : distrosSpv).push(row);
     });
   });
   const sortDesc = (a, b) => (b.distribution_date || '').localeCompare(a.distribution_date || '');
   distrosSpv.sort(sortDesc);
   distrosFund.sort(sortDesc);
+  repurchases.sort(sortDesc);
   const _lpIds = combined ? (inv._accounts || []).map(a => a.id) : (inv.id != null ? [inv.id] : []);
+  // Reparte el monto reinvertido (R) entre las recompras para mostrar reinvertido vs efectivo por fila.
+  if (repurchases.length) {
+    const _rnet = computeReinvestNetting(positions.map(p => ({ seriesName: p.series?.name, commitment: +p.commitment || 0, dists: p.investment_distributions })), _lpIds);
+    let _remR = _rnet.reinvestedDist;
+    repurchases.forEach(d => {
+      const gross = (+d.cash_proceeds || 0) + (+d.value_in_kind || 0);
+      const reinv = Math.min(_remR, gross);
+      _remR -= reinv;
+      d._gross = gross; d._reinv = reinv; d._cash = gross - reinv;
+    });
+  }
   const _lp = buildLp360(positions, _lpIds);
   const _lpkpi = (l, v, c) => `<div class="lp-kpi"><div class="lp-kpi-l">${l}</div><div class="lp-kpi-v ${c || ''}">${v}</div></div>`;
   const lpKpis = `<div class="lp-kpis">
@@ -4898,6 +4957,7 @@ function renderInvestorDetail(inv, contacts, positions) {
     ${renderPositionsBlock('Posiciones activas', activePositions, combined)}
     ${renderPositionsBlock('Posiciones terminadas', terminatedPositions, combined)}
 
+    ${renderRepurchasesBlock('Recompras y reinversiones', repurchases)}
     ${renderDistrosBlock('Distribuciones · Oportunidades en directo (SPVs)', distrosSpv)}
     ${renderDistrosBlock('Distribuciones · Fondos MVP', distrosFund)}`;
   document.getElementById('dbDetailContent').innerHTML = html;
