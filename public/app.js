@@ -3898,7 +3898,7 @@ async function exportInvestorXlsx(posId) {
     const kpis = [
       { l: 'Compromiso total', v: t.totCommit, z: Z.money, accent: ORANGE, big: true },
       { l: 'Account Balance', v: t.totActual, z: Z.money, accent: INK },
-      { l: 'Valor actual est.', v: t.valorEstimado || null, z: Z.money, accent: (t.valorEstimado >= t.totActual ? GREEN : RED) },
+      { l: 'Account Balance + Dist.', v: (+t.totActual || 0) + (+t.totDist || 0), z: Z.money, accent: GREEN },
       { l: 'Distribuido', v: t.totDist, z: Z.money, accent: INK },
       { l: 'MOIC', v: t.portMoic, z: Z.moic, accent: INK },
       { l: 'DPI', v: t.dpi, z: Z.moic, accent: INK },
@@ -3998,7 +3998,7 @@ function buildReportHtmlClient(payload) {
   const cvl = Object.entries(cv).sort((a, b) => b[1].v - a[1].v).slice(0, 7);
   const mxCv = Math.max(1, ...cvl.map(([, d]) => Math.max(d.c, d.v)));
   const cvbars = cvl.map(([co, d]) => `<div class="cvrow"><span class="bn">${E(co)}</span><span class="cvbars"><span class="cvb"><span class="cvf gray" style="width:${(d.c / mxCv * 100).toFixed(0)}%"></span></span><span class="cvb"><span class="cvf orange" style="width:${(d.v / mxCv * 100).toFixed(0)}%"></span></span></span><span class="bv">${M(d.v)}</span></div>`).join('');
-  const kpis = [['Compromiso total', M(totals.compromiso), 'accent'], ['Account Balance', M(totals.nav), ''], ['Valor actual est.', M(totals.valor), totals.valor >= totals.nav ? 'pos' : 'neg'], ['Distribuido', M(totals.distribuido), ''], ['MOIC', (+totals.moic).toFixed(2) + 'x', ''], ['DPI', (+totals.dpi).toFixed(2) + 'x', '']];
+  const kpis = [['Compromiso total', M(totals.compromiso), 'accent'], ['Account Balance', M(totals.nav), ''], ['Account Balance + Dist.', M((+totals.nav || 0) + (+totals.distribuido || 0)), 'pos'], ['Distribuido', M(totals.distribuido), ''], ['MOIC', (+totals.moic).toFixed(2) + 'x', ''], ['DPI', (+totals.dpi).toFixed(2) + 'x', '']];
   const kpihtml = kpis.map(([l, v, c]) => `<div class="kpi ${c}"><div class="kl">${E(l)}</div><div class="kv">${E(v)}</div></div>`).join('');
   const showAcct = !!meta.combined;
   const rows = pos.filter(p => !p.reinvSource).slice().sort((a, b) => (+b.commitment || 0) - (+a.commitment || 0));
@@ -4210,8 +4210,8 @@ async function exportInvestorPdfJsPDF(posId) {
     // KPIs en barra unificada (label + valor por celda, divididas)
     const kpis = [
       { l: 'COMPROMISO TOTAL', v: fmtMoney(t.totCommit), accent: orange },
-      { l: 'COMP. EJECUTADO', v: fmtMoney(t.totActual), accent: ink },
-      { l: 'VALOR ACTUAL EST.', v: t.valorEstimado ? fmtMoney(t.valorEstimado) : '—', accent: (t.valorEstimado >= t.totActual ? green : red) },
+      { l: 'ACCOUNT BALANCE', v: fmtMoney(t.totActual), accent: ink },
+      { l: 'ACCOUNT BALANCE + DIST.', v: fmtMoney((+t.totActual || 0) + (+t.totDist || 0)), accent: green },
       { l: 'DISTRIBUIDO', v: fmtMoney(t.totDist), accent: ink },
       { l: 'MOIC', v: t.portMoic.toFixed(2) + 'x', accent: ink },
       { l: 'DPI', v: t.dpi.toFixed(2) + 'x', accent: ink },
