@@ -3736,7 +3736,7 @@ async function investorChartImages(data) {
     const byCoCmp = {};
     data.pos.filter(p => p.estado === 'Activa').forEach(p => {
       const c = +p.commitment || 0;
-      const v = p.valor_estimado != null ? +p.valor_estimado : 0;
+      const v = +p.commitment_actual || 0;   // Account Balance (NAV marcado), para cuadrar con el KPI
       if (c <= 0 && v <= 0) return;
       (byCoCmp[p.company] ||= { c: 0, v: 0 });
       byCoCmp[p.company].c += c;
@@ -3753,12 +3753,12 @@ async function investorChartImages(data) {
         type: 'bar',
         data: { labels, datasets: [
           { label: 'Comprometido', data: aportado, backgroundColor: SLATE, borderRadius: 4, maxBarThickness: 64 },
-          { label: 'Valor actual est.', data: valor, backgroundColor: MVP, borderRadius: 4, maxBarThickness: 64 },
+          { label: 'Account Balance', data: valor, backgroundColor: MVP, borderRadius: 4, maxBarThickness: 64 },
         ] },
         options: {
           plugins: {
             legend: { position: 'top', labels: { font: { size: 13 }, usePointStyle: true, boxWidth: 8 } },
-            title: { display: true, text: 'Comprometido vs. valor actual estimado', font: { size: 16, weight: '600' }, color: '#1a1f2e', padding: { bottom: 12 } },
+            title: { display: true, text: 'Comprometido vs. Account Balance', font: { size: 16, weight: '600' }, color: '#1a1f2e', padding: { bottom: 12 } },
           },
           scales: {
             y: { beginAtZero: true, ticks: { callback: fmt, font: { size: 12 }, color: '#6b7689' }, grid: { color: '#eef1f6' } },
@@ -3994,7 +3994,7 @@ function buildReportHtmlClient(payload) {
   const moicp = active.filter(p => N(p.moic) != null).sort((a, b) => b.moic - a.moic).slice(0, 8);
   const mxM = Math.max(1, ...moicp.map(p => +p.moic));
   const moicbars = moicp.map(p => { const m = +p.moic, col = m >= 1 ? '#E8650D' : '#b08968'; return `<div class="barrow"><span class="bn">${E(p.company)}</span><span class="bt"><span class="bf" style="width:${(m / mxM * 100).toFixed(0)}%;background:${col}"></span></span><span class="bv">${m.toFixed(2)}x</span></div>`; }).join('');
-  const cv = {}; active.forEach(p => { const d = cv[p.company] || (cv[p.company] = { c: 0, v: 0 }); d.c += +p.commitment || 0; d.v += +p.valor || 0; });
+  const cv = {}; active.forEach(p => { const d = cv[p.company] || (cv[p.company] = { c: 0, v: 0 }); d.c += +p.commitment || 0; d.v += +p.commitment_actual || 0; });
   const cvl = Object.entries(cv).sort((a, b) => b[1].v - a[1].v).slice(0, 7);
   const mxCv = Math.max(1, ...cvl.map(([, d]) => Math.max(d.c, d.v)));
   const cvbars = cvl.map(([co, d]) => `<div class="cvrow"><span class="bn">${E(co)}</span><span class="cvbars"><span class="cvb"><span class="cvf gray" style="width:${(d.c / mxCv * 100).toFixed(0)}%"></span></span><span class="cvb"><span class="cvf orange" style="width:${(d.v / mxCv * 100).toFixed(0)}%"></span></span></span><span class="bv">${M(d.v)}</span></div>`).join('');
@@ -4070,7 +4070,7 @@ td.co{font-weight:700;color:#241f1b}td.acct{color:#9a8f84;font-size:8.5px;max-wi
 </div>
 <div class="grid2">
 <div class="card"><div class="ctitle">MOIC por posición</div>${moicbars}</div>
-<div class="card"><div class="ctitle">Comprometido vs. valor · por empresa</div><div class="leg2">▮ gris = comprometido · ▮ naranja = valor actual</div>${cvbars}</div>
+<div class="card"><div class="ctitle">Comprometido vs. Account Balance · por empresa</div><div class="leg2">▮ gris = comprometido · ▮ naranja = Account Balance</div>${cvbars}</div>
 </div>
 <div class="sec">Posiciones</div>
 <table><thead><tr>${acctHead}<th>Empresa</th><th>Serie</th><th>Estado</th><th class="n">PPS Entrada</th><th class="n">PPS Actual</th><th class="n">Compromiso</th><th class="n">Comp. ejec.</th><th class="n">MOIC</th></tr></thead><tbody>${posrows}</tbody></table>
