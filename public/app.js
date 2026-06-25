@@ -4005,20 +4005,42 @@ td.co{font-weight:700;color:#241f1b}td.acct{color:#9a8f84;font-size:8.5px;max-wi
 </div></body></html>`;
 }
 
-// Renderiza el HTML en un iframe oculto (mismo origen), espera fuentes y abre el diálogo de impresión.
-function printReportHtml(html) {
+// Renderiza el HTML en un iframe fuera de pantalla, lo captura y genera el PDF como
+// DESCARGA REAL (aparece en la barra de descargas, con nombre propio). Diseño idéntico.
+async function renderReportPdf(html, fileName) {
   const old = document.getElementById('reportPrintFrame');
   if (old) old.remove();
   const iframe = document.createElement('iframe');
   iframe.id = 'reportPrintFrame';
-  iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+  iframe.style.cssText = 'position:absolute;left:-10000px;top:0;width:816px;height:1120px;border:0;background:#fff';
   document.body.appendChild(iframe);
-  const doc = iframe.contentWindow.document;
-  doc.open(); doc.write(html); doc.close();
-  const go = () => { try { iframe.contentWindow.focus(); iframe.contentWindow.print(); } catch (e) { console.warn('print', e); } setTimeout(() => iframe.remove(), 60000); };
-  const win = iframe.contentWindow;
-  if (win.document.fonts && win.document.fonts.ready) win.document.fonts.ready.then(() => setTimeout(go, 200));
-  else setTimeout(go, 700);
+  try {
+    const doc = iframe.contentWindow.document;
+    doc.open(); doc.write(html); doc.close();
+    await new Promise(r => setTimeout(r, 80));
+    try { if (doc.fonts && doc.fonts.ready) await doc.fonts.ready; } catch (e) { /* noop */ }
+    await new Promise(r => setTimeout(r, 180));
+    const el = doc.querySelector('.page') || doc.body;
+    const h = Math.ceil(el.getBoundingClientRect().height) + 4;
+    iframe.style.height = (h + 30) + 'px';
+    // html2canvas renderiza en el documento principal → asegurar las fuentes también aquí
+    if (!document.getElementById('reportFontFaces')) {
+      const st = document.createElement('style'); st.id = 'reportFontFaces'; st.textContent = REPORT_FONT_FACES; document.head.appendChild(st);
+    }
+    try { await document.fonts.ready; } catch (e) { /* noop */ }
+    await loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js');
+    await loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
+    const canvas = await window.html2canvas(el, { scale: 2.5, backgroundColor: '#ffffff', width: 816, height: h, windowWidth: 816, useCORS: true, logging: false });
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'letter' });
+    const pageW = pdf.internal.pageSize.getWidth(), pageH = pdf.internal.pageSize.getHeight();
+    let w = pageW, hh = canvas.height * pageW / canvas.width;
+    if (hh > pageH) { hh = pageH; w = canvas.width * pageH / canvas.height; }
+    pdf.addImage(canvas.toDataURL('image/jpeg', 0.94), 'JPEG', (pageW - w) / 2, 0, w, hh);
+    pdf.save(fileName + '.pdf');
+  } finally {
+    setTimeout(() => iframe.remove(), 500);
+  }
 }
 
 // Botón PDF: genera el reporte premium con el Chrome del navegador (Guardar como PDF). Fallback jsPDF.
@@ -4051,13 +4073,18 @@ async function exportInvestorPdf(posId) {
       theme: p.theme, reinvSource: !!p.reinvSource,
     })),
   };
+  const nameBase = (data.combined && data.inv._accounts)
+    ? data.inv._accounts.map(a => a.name).join(' + ')
+    : data.inv.name;
+  const fileName = (nameBase + ' Portfolio Snapshot').replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, ' ').trim();
   try {
+    toast('Generando PDF…');
     const html = buildReportHtmlClient(payload);
-    printReportHtml(html);
-    toast('Se abrirá el diálogo de impresión → elige "Guardar como PDF"');
+    await renderReportPdf(html, fileName);
+    toast('PDF descargado');
     return;
   } catch (e) {
-    console.warn('[report] print falló, uso jsPDF:', e);
+    console.warn('[report] render falló, uso jsPDF:', e);
     return exportInvestorPdfJsPDF(posId);
   }
 }
