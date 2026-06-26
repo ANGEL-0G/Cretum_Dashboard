@@ -4156,7 +4156,7 @@ td.co{font-weight:700;color:#241f1b}td.acct{color:#9a8f84;font-size:8.5px;max-wi
 <div class="card"><div class="ctitle">Comprometido vs. Account Balance · por empresa</div><div class="leg2">▮ gris = comprometido · ▮ naranja = Account Balance</div>${cvbars}</div>
 </div>
 <div class="sec">Posiciones</div>
-<table><thead><tr>${acctHead}<th>Empresa</th><th>Serie</th><th>Estado</th><th class="n">Acciones</th><th class="n">PPS Entrada</th><th class="n">PPS Actual</th><th class="n">Compromiso</th><th class="n">Comp. ejec.</th><th class="n">MOIC</th></tr></thead><tbody>${posrows}</tbody></table>
+<table><thead><tr>${acctHead}<th>Empresa</th><th>Serie</th><th>Estado</th><th class="n">Acciones</th><th class="n">PPS Entrada</th><th class="n">PPS Actual</th><th class="n">Compromiso</th><th class="n">Account Balance</th><th class="n">MOIC</th></tr></thead><tbody>${posrows}</tbody></table>
 </div>
 <div class="foot">MVP MANAGER · DOCUMENTO INTERNO · ${E(meta.dateStr)}</div>
 </div></body></html>`;
