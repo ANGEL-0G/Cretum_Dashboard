@@ -4085,7 +4085,7 @@ function buildReportHtmlClient(payload) {
   const kpihtml = kpis.map(([l, v, c]) => `<div class="kpi ${c}"><div class="kl">${E(l)}</div><div class="kv">${E(v)}</div></div>`).join('');
   const showAcct = !!meta.combined;
   const rows = pos.filter(p => !p.reinvSource).slice().sort((a, b) => (+b.commitment || 0) - (+a.commitment || 0));
-  const posrows = rows.map(p => { const on = p.estado === 'Activa'; return `<tr>${showAcct ? `<td class="acct" title="${E(p.acct)}">${E(p.acct)}</td>` : ''}<td class="co">${E(p.company)}</td><td class="ser">${E(SS(p.series))}</td><td><span class="badge ${on ? 'on' : 'off'}">${E(p.estado)}</span></td><td class="n">${PP(p.entry_pps)}</td><td class="n">${PP(p.current_pps)}</td><td class="n">${M(p.commitment)}</td><td class="n">${M(p.commitment_actual)}</td><td class="n">${N(p.moic) != null ? (+p.moic).toFixed(2) + 'x' : '—'}</td></tr>`; }).join('');
+  const posrows = rows.map(p => { const on = p.estado === 'Activa'; return `<tr>${showAcct ? `<td class="acct" title="${E(p.acct)}">${E(p.acct)}</td>` : ''}<td class="co">${E(p.company)}</td><td class="ser">${E(SS(p.series))}</td><td><span class="badge ${on ? 'on' : 'off'}">${E(p.estado)}</span></td><td class="n">${p.shares != null ? Number(p.shares).toLocaleString('en-US') : '—'}</td><td class="n">${PP(p.entry_pps)}</td><td class="n">${PP(p.current_pps)}</td><td class="n">${M(p.commitment)}</td><td class="n">${M(p.commitment_actual)}</td><td class="n">${N(p.moic) != null ? (+p.moic).toFixed(2) + 'x' : '—'}</td></tr>`; }).join('');
   const acctHead = showAcct ? '<th>Cuenta</th>' : '';
   return `<!doctype html><html><head><meta charset="utf-8"><style>
 @page{size:Letter;margin:0}
@@ -4156,7 +4156,7 @@ td.co{font-weight:700;color:#241f1b}td.acct{color:#9a8f84;font-size:8.5px;max-wi
 <div class="card"><div class="ctitle">Comprometido vs. Account Balance · por empresa</div><div class="leg2">▮ gris = comprometido · ▮ naranja = Account Balance</div>${cvbars}</div>
 </div>
 <div class="sec">Posiciones</div>
-<table><thead><tr>${acctHead}<th>Empresa</th><th>Serie</th><th>Estado</th><th class="n">PPS Entrada</th><th class="n">PPS Actual</th><th class="n">Compromiso</th><th class="n">Comp. ejec.</th><th class="n">MOIC</th></tr></thead><tbody>${posrows}</tbody></table>
+<table><thead><tr>${acctHead}<th>Empresa</th><th>Serie</th><th>Estado</th><th class="n">Acciones</th><th class="n">PPS Entrada</th><th class="n">PPS Actual</th><th class="n">Compromiso</th><th class="n">Comp. ejec.</th><th class="n">MOIC</th></tr></thead><tbody>${posrows}</tbody></table>
 </div>
 <div class="foot">MVP MANAGER · DOCUMENTO INTERNO · ${E(meta.dateStr)}</div>
 </div></body></html>`;
