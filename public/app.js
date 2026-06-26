@@ -4227,7 +4227,7 @@ async function exportInvestorPdf(posId) {
       acct: p.cuenta || '', company: p.company, series: p.series, estado: p.estado,
       entry_pps: p.entry_pps, current_pps: p.current_pps, commitment: p.commitment,
       commitment_actual: p.commitment_actual, valor: p.valor_estimado, moic: p.moic,
-      theme: p.theme, reinvSource: !!p.reinvSource,
+      shares: p.shares, theme: p.theme, reinvSource: !!p.reinvSource,
     })),
   };
   const nameBase = (data.combined && data.inv._accounts)
