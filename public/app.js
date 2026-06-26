@@ -3879,7 +3879,7 @@ function _chChartXml(spec, idx) {
   const axA = 100000000 + idx * 10, axB = 200000000 + idx * 10;
   const plot = (spec.type === 'pie' || spec.type === 'doughnut') ? _chPie(spec) : _chBar(spec, axA, axB);
   const legend = (spec.type === 'pie' || spec.type === 'doughnut') ? '<c:legend><c:legendPos val="r"/><c:overlay val="0"/></c:legend>' : (spec.series.length > 1 ? '<c:legend><c:legendPos val="t"/><c:overlay val="0"/></c:legend>' : '');
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<c:chartSpace xmlns:c="${C_NS}" xmlns:a="${A_NS}" xmlns:r="${RL_NS}"><c:roundedCorners val="0"/><c:chart>${_chTitle(spec.title)}<c:plotArea><c:layout/>${plot}</c:plotArea>${legend}<c:plotVisOnly val="1"/><c:dispBlanksAs val="gap"/></c:chart></c:chartSpace>`;
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<c:chartSpace xmlns:c="${C_NS}" xmlns:a="${A_NS}" xmlns:r="${RL_NS}"><c:roundedCorners val="0"/><c:chart>${_chTitle(spec.title)}<c:plotArea><c:layout/>${plot}</c:plotArea>${legend}<c:plotVisOnly val="0"/><c:dispBlanksAs val="gap"/></c:chart></c:chartSpace>`;
 }
 function _chEmu(px) { return Math.round(px * 9525); }
 function _chDrawingXml(specs) {
@@ -3941,44 +3941,26 @@ async function exportInvestorXlsx(posId) {
     const thin = { style: 'thin', color: { argb: BORDER } };
     const border = { top: thin, left: thin, bottom: thin, right: thin };
     const cleanSer = s => String(s || '').replace(/MVP Opportunity (Fund VI LLC, )?/i, '').replace(/Series /i, '');
+    const colL = n => { let s = ''; while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = (n - m - 1) / 26; } return s; };
 
-    // ===== Hoja RESUMEN (dashboard) =====
+    // ===== RESUMEN (limpio: KPIs + gráficas, como el header del 360) =====
     const R = wb.addWorksheet('Resumen', { views: [{ showGridLines: false }] });
-    R.mergeCells('A1:G1');
-    R.getCell('A1').value = data.inv.name;
-    R.getCell('A1').font = { size: 22, bold: true, color: { argb: ORANGE } };
-    R.getRow(1).height = 30;
-    R.mergeCells('A2:G2');
-    const subParts = [];
-    if (data.inv._accounts) subParts.push(data.inv._accounts.map(a => a.name).join(' + '));
-    else if (data.inv.titular) subParts.push('Titular: ' + data.inv.titular);
-    if (single && data.pos[0]) subParts.push(data.pos[0].company + ' · ' + data.pos[0].series);
-    else subParts.push(data.pos.length + ' posiciones');
-    subParts.push('Generado ' + new Date().toLocaleDateString('es-MX'));
-    R.getCell('A2').value = subParts.join('   ·   ');
-    R.getCell('A2').font = { size: 10, color: { argb: GRAY } };
-
-    // KPI band (cajas)
-    const kbar = [
-      { l: 'COMPROMISO TOTAL', v: t.totCommit, z: Z.money, c: ORANGE },
-      { l: 'ACCOUNT BALANCE', v: t.totActual, z: Z.money, c: INK },
-      { l: 'ACCOUNT BALANCE + DIST.', v: (+t.totActual || 0) + (+t.totDist || 0), z: Z.money, c: GREEN },
-      { l: 'DISTRIBUIDO', v: t.totDist, z: Z.money, c: INK },
-      { l: 'MOIC', v: t.portMoic, z: Z.moic, c: INK },
-      { l: 'DPI', v: t.dpi, z: Z.moic, c: INK },
-    ];
-    kbar.forEach((k, i) => {
-      const col = i + 1;
-      const lc = R.getCell(4, col); lc.value = k.l; lc.font = { size: 7.5, bold: true, color: { argb: GRAY } }; lc.alignment = { horizontal: 'left' };
-      lc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: CARD } }; lc.border = { top: border.top, left: border.left, right: border.right };
-      const vc = R.getCell(5, col); vc.value = k.v; if (typeof k.v === 'number') vc.numFmt = k.z;
-      vc.font = { size: 13, bold: true, color: { argb: k.c } }; vc.alignment = { horizontal: 'left' };
-      vc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: CARD } }; vc.border = { bottom: border.bottom, left: border.left, right: border.right };
-      R.getColumn(col).width = 18;
-    });
+    R.mergeCells('A1:H1'); R.getCell('A1').value = data.inv.name; R.getCell('A1').font = { size: 22, bold: true, color: { argb: ORANGE } }; R.getRow(1).height = 30;
+    R.mergeCells('A2:H2');
+    const sub = [];
+    if (data.inv._accounts) sub.push(data.inv._accounts.map(a => a.name).join(' + '));
+    else if (data.inv.titular) sub.push('Titular: ' + data.inv.titular);
+    if (single && data.pos[0]) sub.push(data.pos[0].company + ' · ' + data.pos[0].series);
+    else sub.push(data.pos.length + ' posiciones');
+    sub.push('Generado ' + new Date().toLocaleDateString('es-MX'));
+    R.getCell('A2').value = sub.join('   ·   '); R.getCell('A2').font = { size: 10, color: { argb: GRAY } };
+    const kbar = [['COMPROMISO TOTAL', t.totCommit, Z.money, ORANGE], ['ACCOUNT BALANCE', t.totActual, Z.money, INK], ['ACCOUNT BALANCE + DIST.', (+t.totActual || 0) + (+t.totDist || 0), Z.money, GREEN], ['DISTRIBUIDO', t.totDist, Z.money, INK], ['MOIC', t.portMoic, Z.moic, INK], ['DPI', t.dpi, Z.moic, INK]];
+    kbar.forEach((k, i) => { const col = i + 1; const lc = R.getCell(4, col); lc.value = k[0]; lc.font = { size: 7.5, bold: true, color: { argb: GRAY } }; lc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: CARD } }; lc.border = { top: border.top, left: border.left, right: border.right };
+      const vc = R.getCell(5, col); vc.value = k[1]; if (typeof k[1] === 'number') vc.numFmt = k[2]; vc.font = { size: 13, bold: true, color: { argb: k[3] } }; vc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: CARD } }; vc.border = { bottom: border.bottom, left: border.left, right: border.right }; R.getColumn(col).width = 17; });
     R.getRow(5).height = 22;
 
-    // ---- tablas de análisis (alimentan las gráficas) ----
+    // ===== DATOS (oculta) — fuente de las gráficas =====
+    const DT = wb.addWorksheet('Datos', { state: 'hidden' });
     const active = data.pos.filter(p => p.estado === 'Activa');
     const byCo = {};
     active.forEach(p => { const k = p.company; (byCo[k] || (byCo[k] = { c: 0, a: 0, d: 0 })); byCo[k].c += +p.commitment || 0; byCo[k].a += +p.commitment_actual || 0; });
@@ -3987,81 +3969,52 @@ async function exportInvestorXlsx(posId) {
     const byTh = {}; active.forEach(p => { const k = p.theme || companyTheme(p.company); byTh[k] = (byTh[k] || 0) + (+p.commitment_actual || 0); });
     const thArr = Object.entries(byTh).sort((a, b) => b[1] - a[1]);
     const moicArr = active.filter(p => p.moic != null).sort((a, b) => b.moic - a.moic).slice(0, 8);
-    const totA = coArr.reduce((s, [, d]) => s + d.a, 0) || 1;
-
-    let row = 39;
-    const secHdr = (r, txt) => { const c = R.getCell(r, 1); c.value = txt; c.font = { size: 11, bold: true, color: { argb: NAVY } }; };
-    const tblHdr = (r, cols) => cols.forEach((h, i) => { const c = R.getCell(r, i + 1); c.value = h; c.font = { size: 9, bold: true, color: { argb: WHITE } }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } }; c.alignment = { horizontal: i === 0 ? 'left' : 'right' }; c.border = border; });
-
-    secHdr(row, 'ANÁLISIS POR EMPRESA'); row++;
-    const empHdrRow = row; tblHdr(row, ['Empresa', 'Comprometido', 'Account Balance', 'Distribuido', 'MOIC', '% Portafolio']); row++;
-    const empStart = row;
-    coArr.forEach(([nm, d]) => {
-      const moic = d.c > 0 ? (d.a + d.d) / d.c : 0;
-      [nm, d.c, d.a, d.d, moic, d.a / totA].forEach((v, i) => { const c = R.getCell(row, i + 1); c.value = v; c.font = { size: 9, color: { argb: INK } }; c.alignment = { horizontal: i === 0 ? 'left' : 'right' }; c.border = border; if (i >= 1 && i <= 3) c.numFmt = Z.money; if (i === 4) c.numFmt = Z.moic; if (i === 5) c.numFmt = Z.pct; });
-      row++;
-    });
-    const empEnd = row - 1;
-    { const c0 = R.getCell(row, 1); c0.value = 'TOTAL'; c0.font = { size: 9, bold: true, color: { argb: INK } }; c0.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ZEBRA } }; c0.border = border;
-      [['B', Z.money], ['C', Z.money], ['D', Z.money], [null], ['F', Z.pct]].forEach((sp, idx) => { const c = R.getCell(row, idx + 2); c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ZEBRA } }; c.border = border; c.font = { size: 9, bold: true, color: { argb: INK } }; c.alignment = { horizontal: 'right' }; if (sp[0]) { c.value = { formula: `SUM(${sp[0]}${empStart}:${sp[0]}${empEnd})` }; c.numFmt = sp[1]; } }); }
-    row += 2;
-
-    secHdr(row, 'EXPOSICIÓN POR TEMA'); row++;
-    tblHdr(row, ['Tema', 'Account Balance', '% Portafolio']); row++;
-    const thStart = row;
-    thArr.forEach(([nm, v]) => { [nm, v, v / totA].forEach((vv, i) => { const c = R.getCell(row, i + 1); c.value = vv; c.font = { size: 9, color: { argb: INK } }; c.alignment = { horizontal: i === 0 ? 'left' : 'right' }; c.border = border; if (i === 1) c.numFmt = Z.money; if (i === 2) c.numFmt = Z.pct; }); row++; });
-    const thEnd = row - 1; row += 2;
-
-    secHdr(row, 'TOP POSICIONES POR MOIC'); row++;
-    tblHdr(row, ['Posición', 'MOIC']); row++;
-    const moicStart = row;
-    moicArr.forEach(p => { const label = p.company + (p.series ? ' · ' + cleanSer(p.series) : ''); [label, p.moic].forEach((v, i) => { const c = R.getCell(row, i + 1); c.value = v; c.font = { size: 9, color: { argb: INK } }; c.alignment = { horizontal: i === 0 ? 'left' : 'right' }; c.border = border; if (i === 1) c.numFmt = Z.moic; }); row++; });
-    const moicEnd = row - 1;
-
-    R.addConditionalFormatting({ ref: `B${empStart}:B${empEnd}`, rules: [{ type: 'dataBar', cfvo: [{ type: 'min' }, { type: 'max' }], color: { argb: SLATE }, gradient: false }] });
-    R.addConditionalFormatting({ ref: `C${empStart}:C${empEnd}`, rules: [{ type: 'dataBar', cfvo: [{ type: 'min' }, { type: 'max' }], color: { argb: ORANGE }, gradient: false }] });
-    R.addConditionalFormatting({ ref: `E${empStart}:E${empEnd}`, rules: [{ type: 'colorScale', cfvo: [{ type: 'min' }, { type: 'percentile', value: 50 }, { type: 'max' }], color: [{ argb: 'FFF8696B' }, { argb: 'FFFFEB84' }, { argb: 'FF63BE7B' }] }] });
-    R.addConditionalFormatting({ ref: `B${moicStart}:B${moicEnd}`, rules: [{ type: 'dataBar', cfvo: [{ type: 'min' }, { type: 'max' }], color: { argb: GREEN }, gradient: false }] });
-
-    R.getColumn(1).width = 30; R.getColumn(2).width = 18; R.getColumn(3).width = 18; R.getColumn(4).width = 16; R.getColumn(5).width = 10; R.getColumn(6).width = 13; R.getColumn(7).width = 12;
+    DT.getCell('A1').value = 'Empresa'; DT.getCell('B1').value = 'Comprometido'; DT.getCell('C1').value = 'Account Balance';
+    coArr.forEach(([nm, d], i) => { DT.getCell(2 + i, 1).value = nm; DT.getCell(2 + i, 2).value = d.c; DT.getCell(2 + i, 3).value = d.a; });
+    const empN = coArr.length + 1;
+    DT.getCell('F1').value = 'Tema'; DT.getCell('G1').value = 'Account Balance';
+    thArr.forEach(([nm, v], i) => { DT.getCell(2 + i, 6).value = nm; DT.getCell(2 + i, 7).value = v; });
+    const thN = thArr.length + 1;
+    DT.getCell('I1').value = 'Posición'; DT.getCell('J1').value = 'MOIC';
+    moicArr.forEach((p, i) => { DT.getCell(2 + i, 9).value = p.company + (p.series ? ' · ' + cleanSer(p.series) : ''); DT.getCell(2 + i, 10).value = p.moic; });
+    const moN = moicArr.length + 1;
 
     const specs = [
-      { type: 'col', title: 'Comprometido vs. Account Balance · por empresa', anchor: { col: 0, row: 6, w: 470, h: 250 }, cat: `'Resumen'!$A$${empStart}:$A$${empEnd}`, series: [{ name: `'Resumen'!$B$${empHdrRow}`, val: `'Resumen'!$B$${empStart}:$B$${empEnd}`, color: '8A93A6' }, { name: `'Resumen'!$C$${empHdrRow}`, val: `'Resumen'!$C$${empStart}:$C$${empEnd}`, color: 'E8650D' }] },
-      { type: 'doughnut', title: 'Composición por empresa (Account Balance)', anchor: { col: 8, row: 6, w: 400, h: 250 }, cat: `'Resumen'!$A$${empStart}:$A$${empEnd}`, nPoints: coArr.length, pctLabels: true, series: [{ val: `'Resumen'!$C$${empStart}:$C$${empEnd}` }] },
-      { type: 'bar', title: 'MOIC por posición', anchor: { col: 0, row: 21, w: 470, h: 240 }, cat: `'Resumen'!$A$${moicStart}:$A$${moicEnd}`, numFmt: '0.0"x"', series: [{ val: `'Resumen'!$B$${moicStart}:$B$${moicEnd}`, color: '0F9B5A' }] },
-      { type: 'doughnut', title: 'Exposición por tema', anchor: { col: 8, row: 21, w: 400, h: 240 }, cat: `'Resumen'!$A$${thStart}:$A$${thEnd}`, nPoints: thArr.length, pctLabels: true, series: [{ val: `'Resumen'!$B$${thStart}:$B$${thEnd}` }] },
+      { type: 'col', title: 'Comprometido vs. Account Balance · por empresa', anchor: { col: 0, row: 6, w: 480, h: 255 }, cat: `'Datos'!$A$2:$A$${empN}`, series: [{ name: `'Datos'!$B$1`, val: `'Datos'!$B$2:$B$${empN}`, color: '8A93A6' }, { name: `'Datos'!$C$1`, val: `'Datos'!$C$2:$C$${empN}`, color: 'E8650D' }] },
+      { type: 'doughnut', title: 'Composición por empresa', anchor: { col: 8, row: 6, w: 410, h: 255 }, cat: `'Datos'!$A$2:$A$${empN}`, nPoints: coArr.length, pctLabels: true, series: [{ val: `'Datos'!$C$2:$C$${empN}` }] },
+      { type: 'bar', title: 'MOIC por posición', anchor: { col: 0, row: 21, w: 480, h: 250 }, cat: `'Datos'!$I$2:$I$${moN}`, numFmt: '0.0"x"', series: [{ val: `'Datos'!$J$2:$J$${moN}`, color: '0F9B5A' }] },
+      { type: 'doughnut', title: 'Exposición por tema', anchor: { col: 8, row: 21, w: 410, h: 250 }, cat: `'Datos'!$F$2:$F$${thN}`, nPoints: thArr.length, pctLabels: true, series: [{ val: `'Datos'!$G$2:$G$${thN}` }] },
     ];
 
-    // ===== Hoja POSICIONES =====
-    const acctCol = combined;
-    const headers = (acctCol ? ['Cuenta'] : []).concat(['Empresa', 'Serie', 'Estado', 'Compromiso', 'Account Balance', 'Plusvalía', 'Distribuido', 'MOIC', 'TVPI', '% Port.', 'Acciones', 'Entry PPS', 'Current PPS', '# Cartas']);
-    const PS = wb.addWorksheet('Posiciones', { views: [{ state: 'frozen', ySplit: 1, showGridLines: false }] });
-    headers.forEach((h, i) => { const c = PS.getCell(1, i + 1); c.value = h; c.font = { bold: true, color: { argb: WHITE }, size: 10 }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } }; c.alignment = { horizontal: i < (acctCol ? 4 : 3) ? 'left' : 'right', vertical: 'middle' }; });
-    PS.getRow(1).height = 18;
-    const totCommitAll = data.pos.reduce((s, p) => s + (+p.commitment || 0), 0) || 1;
-    const colL = n => { let s = ''; while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = (n - m - 1) / 26; } return s; };
-    data.pos.forEach((p, ri) => {
-      const plus = (+p.commitment_actual || 0) - (+p.commitment || 0);
-      const tvpi = p.commitment > 0 ? ((+p.commitment_actual || 0) + (+p.distribuido || 0)) / p.commitment : null;
-      const vals = (acctCol ? [p.cuenta || '—'] : []).concat([p.company, cleanSer(p.series), p.estado, +p.commitment || 0, +p.commitment_actual || 0, plus, +p.distribuido || 0, p.moic, tvpi, (+p.commitment || 0) / totCommitAll, p.shares, p.entry_pps, p.current_pps, p.n_cartas]);
-      const r = PS.getRow(2 + ri);
-      vals.forEach((v, i) => { const c = r.getCell(i + 1); c.value = (v == null ? null : v); c.font = { size: 9.5, color: { argb: INK } }; c.alignment = { horizontal: i >= (acctCol ? 4 : 3) ? 'right' : 'left' }; if (ri % 2 === 1) c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ZEBRA } }; });
-      const b = acctCol ? 1 : 0;
-      r.getCell(b + 5).numFmt = Z.money; r.getCell(b + 6).numFmt = Z.money; r.getCell(b + 7).numFmt = Z.money; r.getCell(b + 8).numFmt = Z.money;
-      r.getCell(b + 9).numFmt = Z.moic; r.getCell(b + 10).numFmt = Z.moic; r.getCell(b + 11).numFmt = Z.pct; r.getCell(b + 12).numFmt = Z.sh; r.getCell(b + 13).numFmt = Z.money2; r.getCell(b + 14).numFmt = Z.money2;
-    });
-    const lastRow = data.pos.length + 1, baseC = acctCol ? 1 : 0;
-    const tr = PS.getRow(lastRow + 1);
-    tr.getCell(1).value = 'TOTAL'; tr.getCell(1).font = { bold: true, color: { argb: INK } };
-    [5, 6, 7, 8].forEach(off => { const ci = baseC + off; const c = tr.getCell(ci); c.value = { formula: `SUM(${colL(ci)}2:${colL(ci)}${lastRow})` }; c.numFmt = Z.money; c.font = { bold: true, color: { argb: INK } }; c.alignment = { horizontal: 'right' }; });
-    const moicC = colL(baseC + 9), comC = colL(baseC + 5), abC = colL(baseC + 6);
-    PS.addConditionalFormatting({ ref: `${moicC}2:${moicC}${lastRow}`, rules: [{ type: 'colorScale', cfvo: [{ type: 'num', value: 0 }, { type: 'num', value: 1 }, { type: 'max' }], color: [{ argb: 'FFF8696B' }, { argb: 'FFFFEB84' }, { argb: 'FF63BE7B' }] }] });
-    PS.addConditionalFormatting({ ref: `${comC}2:${comC}${lastRow}`, rules: [{ type: 'dataBar', cfvo: [{ type: 'min' }, { type: 'max' }], color: { argb: SLATE }, gradient: false }] });
-    PS.addConditionalFormatting({ ref: `${abC}2:${abC}${lastRow}`, rules: [{ type: 'dataBar', cfvo: [{ type: 'min' }, { type: 'max' }], color: { argb: ORANGE }, gradient: false }] });
-    PS.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: headers.length } };
-    ((acctCol ? [22] : []).concat([24, 22, 11, 15, 16, 14, 14, 9, 9, 9, 12, 12, 12, 9])).forEach((w, i) => PS.getColumn(i + 1).width = w);
+    // ===== POSICIONES (activas / terminadas, como el 360) =====
+    const PS = wb.addWorksheet('Posiciones', { views: [{ showGridLines: false }] });
+    const acct = combined; let pr = 1;
+    const drawSection = (title, rows, cols, fmts) => {
+      const hc = PS.getCell(pr, 1); hc.value = `${title} (${rows.length})`; hc.font = { size: 12, bold: true, color: { argb: NAVY } }; pr++;
+      const headerRow = pr;
+      cols.forEach((h, i) => { const c = PS.getCell(pr, i + 1); c.value = h; c.font = { bold: true, color: { argb: WHITE }, size: 9.5 }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } }; c.alignment = { horizontal: i < (acct ? 3 : 2) ? 'left' : 'right', vertical: 'middle' }; c.border = border; });
+      PS.getRow(pr).height = 17; pr++;
+      const start = pr;
+      rows.forEach((vals, ri) => { vals.forEach((v, i) => { const c = PS.getCell(pr, i + 1); c.value = (v == null ? null : v); c.font = { size: 9.5, color: { argb: INK } }; c.alignment = { horizontal: i < (acct ? 3 : 2) ? 'left' : 'right' }; c.border = border; if (ri % 2 === 1) c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ZEBRA } }; if (fmts[i]) c.numFmt = fmts[i]; }); pr++; });
+      const end = pr - 1; pr += 1;
+      return { headerRow, start, end };
+    };
+    const actCols = (acct ? ['Cuenta'] : []).concat(['Empresa', 'Serie', 'Compromiso', 'Account Balance', 'Distribuido', 'MOIC', 'Acciones', 'PPS Entrada', 'PPS Actual']);
+    const actFmt = (acct ? [null] : []).concat([null, null, Z.money, Z.money, Z.money, Z.moic, Z.sh, Z.money2, Z.money2]);
+    const actRows = active.map(p => (acct ? [p.cuenta || '—'] : []).concat([p.company, cleanSer(p.series), +p.commitment || 0, +p.commitment_actual || 0, +p.distribuido || 0, p.moic, p.shares, p.entry_pps, p.current_pps]));
+    const SA = drawSection('POSICIONES ACTIVAS', actRows, actCols, actFmt);
+    const term = data.pos.filter(p => p.estado !== 'Activa');
+    const termCols = (acct ? ['Cuenta'] : []).concat(['Empresa', 'Serie', 'Compromiso', 'Distribuido', 'MOIC', 'Cerrada']);
+    const termFmt = (acct ? [null] : []).concat([null, null, Z.money, Z.money, Z.moic, null]);
+    const termRows = term.map(p => (acct ? [p.cuenta || '—'] : []).concat([p.company, cleanSer(p.series), +p.commitment || 0, +p.distribuido || 0, p.moic, p.fin || '—']));
+    const ST = term.length ? drawSection('POSICIONES TERMINADAS', termRows, termCols, termFmt) : null;
+    const bA = acct ? 1 : 0;
+    if (actRows.length) { const mC = colL(bA + 7), aC = colL(bA + 5); PS.addConditionalFormatting({ ref: `${mC}${SA.start}:${mC}${SA.end}`, rules: [{ type: 'colorScale', cfvo: [{ type: 'num', value: 0 }, { type: 'num', value: 1 }, { type: 'max' }], color: [{ argb: 'FFF8696B' }, { argb: 'FFFFEB84' }, { argb: 'FF63BE7B' }] }] }); PS.addConditionalFormatting({ ref: `${aC}${SA.start}:${aC}${SA.end}`, rules: [{ type: 'dataBar', cfvo: [{ type: 'min' }, { type: 'max' }], color: { argb: ORANGE }, gradient: false }] }); }
+    if (ST) { const mC = colL(bA + 5), dC = colL(bA + 4); PS.addConditionalFormatting({ ref: `${mC}${ST.start}:${mC}${ST.end}`, rules: [{ type: 'colorScale', cfvo: [{ type: 'num', value: 0 }, { type: 'num', value: 1 }, { type: 'max' }], color: [{ argb: 'FFF8696B' }, { argb: 'FFFFEB84' }, { argb: 'FF63BE7B' }] }] }); PS.addConditionalFormatting({ ref: `${dC}${ST.start}:${dC}${ST.end}`, rules: [{ type: 'dataBar', cfvo: [{ type: 'min' }, { type: 'max' }], color: { argb: GREEN }, gradient: false }] }); }
+    PS.views = [{ state: 'frozen', ySplit: SA.headerRow, showGridLines: false }];
+    ((acct ? [20] : []).concat([24, 20, 15, 16, 14, 9, 12, 12, 12])).forEach((w, i) => PS.getColumn(i + 1).width = w);
 
-    // ===== Hoja RECOMPRAS =====
+    // ===== RECOMPRAS =====
     const reps = [];
     data.pos.forEach(p => (p._dists || []).forEach(d => { if (/reinver|reinvest/i.test(d.notes || '')) reps.push({ ...d, _company: p.company, _series: p.series }); }));
     if (reps.length) {
@@ -4072,18 +4025,16 @@ async function exportInvestorXlsx(posId) {
       reps.forEach(d => { const g = (+d.cash_proceeds || 0) + (+d.value_in_kind || 0); const rv = Math.min(remR, g); remR -= rv; d._g = g; d._r = rv; d._c = g - rv; });
       const RP = wb.addWorksheet('Recompras', { views: [{ state: 'frozen', ySplit: 1, showGridLines: false }] });
       ['Fecha', 'Empresa', 'Serie vendida', 'Acciones', 'Vendido', 'Reinvertido', 'Efectivo neto'].forEach((h, i) => { const c = RP.getCell(1, i + 1); c.value = h; c.font = { bold: true, color: { argb: WHITE }, size: 10 }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } }; c.alignment = { horizontal: i < 3 ? 'left' : 'right' }; });
-      reps.forEach((d, i) => { const r = RP.getRow(2 + i); [d.distribution_date, d._company, cleanSer(d._series), d.shares_distributed, d._g, d._r, d._c].forEach((v, j) => { const c = r.getCell(j + 1); c.value = v; c.font = { size: 9.5, color: { argb: INK } }; c.alignment = { horizontal: j < 3 ? 'left' : 'right' }; if (j === 3) c.numFmt = Z.sh; if (j >= 4) c.numFmt = Z.money; }); });
-      [22, 22, 28, 12, 15, 15, 15].forEach((w, i) => RP.getColumn(i + 1).width = w);
-      RP.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 7 } };
+      reps.forEach((d, i) => { const row = RP.getRow(2 + i); [d.distribution_date, d._company, cleanSer(d._series), d.shares_distributed, d._g, d._r, d._c].forEach((v, j) => { const c = row.getCell(j + 1); c.value = v; c.font = { size: 9.5, color: { argb: INK } }; c.alignment = { horizontal: j < 3 ? 'left' : 'right' }; if (j === 3) c.numFmt = Z.sh; if (j >= 4) c.numFmt = Z.money; }); });
+      [22, 22, 28, 12, 15, 15, 15].forEach((w, i) => RP.getColumn(i + 1).width = w); RP.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 7 } };
     }
 
-    // ===== Hoja DISTRIBUCIONES =====
+    // ===== DISTRIBUCIONES =====
     if (data.letters && data.letters.length) {
-      const D = wb.addWorksheet('Distribuciones', { views: [{ state: 'frozen', ySplit: 1, showGridLines: false }] });
-      ['Empresa', 'Serie', 'Fecha', 'Tipo', 'Acciones', 'PPS', 'Efectivo', 'Total'].forEach((h, i) => { const c = D.getCell(1, i + 1); c.value = h; c.font = { bold: true, color: { argb: WHITE }, size: 10 }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } }; c.alignment = { horizontal: i < 4 ? 'left' : 'right' }; });
-      data.letters.forEach((x, i) => { const r = D.getRow(2 + i); [x.company, cleanSer(x.series), x.fecha, x.tipo, x.shares, x.pps, x.cash, x.total].forEach((v, j) => { const c = r.getCell(j + 1); c.value = v; c.font = { size: 9.5, color: { argb: INK } }; c.alignment = { horizontal: j < 4 ? 'left' : 'right' }; if (j === 4) c.numFmt = Z.sh; if (j === 5) c.numFmt = Z.money2; if (j >= 6) c.numFmt = Z.money; }); });
-      [22, 18, 12, 11, 12, 11, 14, 14].forEach((w, i) => D.getColumn(i + 1).width = w);
-      D.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 8 } };
+      const DD = wb.addWorksheet('Distribuciones', { views: [{ state: 'frozen', ySplit: 1, showGridLines: false }] });
+      ['Empresa', 'Serie', 'Fecha', 'Tipo', 'Acciones', 'PPS', 'Efectivo', 'Total'].forEach((h, i) => { const c = DD.getCell(1, i + 1); c.value = h; c.font = { bold: true, color: { argb: WHITE }, size: 10 }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } }; c.alignment = { horizontal: i < 4 ? 'left' : 'right' }; });
+      data.letters.forEach((x, i) => { const row = DD.getRow(2 + i); [x.company, cleanSer(x.series), x.fecha, x.tipo, x.shares, x.pps, x.cash, x.total].forEach((v, j) => { const c = row.getCell(j + 1); c.value = v; c.font = { size: 9.5, color: { argb: INK } }; c.alignment = { horizontal: j < 4 ? 'left' : 'right' }; if (j === 4) c.numFmt = Z.sh; if (j === 5) c.numFmt = Z.money2; if (j >= 6) c.numFmt = Z.money; }); });
+      [22, 18, 12, 11, 12, 11, 14, 14].forEach((w, i) => DD.getColumn(i + 1).width = w); DD.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 8 } };
     }
 
     const buf = await wb.xlsx.writeBuffer();
