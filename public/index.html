@@ -2161,8 +2161,10 @@ button,input,select{font-family:var(--font)}
      es ancha. (Volvimos de display:block, que rompía el render en móvil.) */
   .db-section{overflow-x:auto;-webkit-overflow-scrolling:touch}
   .db-table{font-size:11px}
-  .db-table th,.db-table td{padding:8px 9px}
-  .db-table .hide-mobile{display:none}
+  /* nowrap: las celdas no se parten, la tabla se ensancha y se DESLIZA dentro
+     de la sección para ver TODAS las columnas (Serie, Acciones, PPS, Carta…) */
+  .db-table th,.db-table td{padding:8px 9px;white-space:nowrap}
+  .db-table .hide-mobile{display:table-cell}
   /* Texto chico de etiquetas: un punto más legible en teléfono */
   .tk-stat-l,.tk-group-n,.db-stat-l{font-size:10.5px}
 }
