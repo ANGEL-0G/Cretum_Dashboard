@@ -1909,23 +1909,22 @@ button,input,select{font-family:var(--font)}
 /* ── Custom dropdown (cdd) ── */
 .cdd{position:relative}
 .cdd-btn{
-  display:flex;align-items:center;gap:8px;
-  padding:8px 12px;min-width:170px;max-width:230px;
+  display:flex;align-items:center;gap:7px;
+  padding:0 11px;height:34px;min-width:0;max-width:220px;
   background:var(--white);border:1.5px solid var(--gray-200);
-  border-radius:var(--r-md);
-  font-size:12px;color:var(--gray-700);font-family:var(--font);
+  border-radius:9px;
+  font-size:12.5px;font-weight:500;color:var(--gray-700);font-family:var(--font);
   cursor:pointer;outline:none;
-  transition:border-color .15s,background .15s,color .15s;
 }
-.cdd-btn:hover{border-color:var(--gray-300)}
-.cdd.open .cdd-btn{border-color:var(--navy)}
-.cdd.active .cdd-btn{background:var(--navy-pale);border-color:var(--navy);color:var(--navy);font-weight:500}
+.cdd-btn:hover{border-color:var(--navy);color:var(--navy);background:var(--navy-ghost)}
+.cdd.open .cdd-btn{border-color:var(--navy);color:var(--navy);background:var(--navy-ghost);box-shadow:0 0 0 3px var(--navy-pale)}
+.cdd.active .cdd-btn{background:var(--navy-pale);border-color:var(--navy);color:var(--navy);font-weight:600}
 .cdd-ico{font-size:11px;color:var(--gray-400);flex-shrink:0;transition:color .15s}
-.cdd.active .cdd-ico{color:var(--navy)}
+.cdd-btn:hover .cdd-ico,.cdd.open .cdd-ico,.cdd.active .cdd-ico{color:var(--navy)}
 .cdd-label{flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cdd-chev{
   margin-left:4px;font-size:9px;color:var(--gray-400);
-  transition:transform .28s cubic-bezier(.34,1.4,.64,1),color .15s;
+  transition:transform .2s cubic-bezier(.23,1,.32,1),color .15s;
 }
 .cdd.open .cdd-chev{transform:rotate(180deg);color:var(--navy)}
 
@@ -1956,32 +1955,32 @@ button,input,select{font-family:var(--font)}
 .cdd-panel{
   position:absolute;top:calc(100% + 6px);left:0;min-width:100%;
   background:var(--white);border:1px solid var(--gray-100);
-  border-radius:var(--r-md);
-  box-shadow:0 12px 32px rgba(0,0,0,.16);
+  border-radius:11px;
+  box-shadow:0 10px 30px rgba(15,23,42,.14),0 2px 8px rgba(15,23,42,.05);
   max-height:280px;overflow-y:auto;
   z-index:60;
-  transform-origin:top center;
+  transform-origin:top left;          /* escala desde el trigger (Emil) */
   opacity:0;visibility:hidden;
-  transform:scale(.95) translateY(-8px);
-  transition:opacity .22s ease,
-             transform .3s cubic-bezier(.34,1.45,.64,1),
-             visibility 0s linear .3s;
+  transform:scale(.96) translateY(-6px);
+  transition:opacity .15s ease,
+             transform .18s cubic-bezier(.23,1,.32,1),
+             visibility 0s linear .18s;
 }
 .cdd.open .cdd-panel{
   opacity:1;visibility:visible;
   transform:scale(1) translateY(0);
-  transition:opacity .22s ease,
-             transform .3s cubic-bezier(.34,1.45,.64,1),
+  transition:opacity .15s ease,
+             transform .18s cubic-bezier(.23,1,.32,1),
              visibility 0s linear 0s;
 }
 .cdd-opt{
   padding:9px 14px;
   font-size:12px;color:var(--gray-700);
   cursor:pointer;
-  transition:background .12s,color .12s,padding-left .2s;
+  transition:background .12s,color .12s,padding-left .18s cubic-bezier(.23,1,.32,1);
   white-space:nowrap;
 }
-.cdd-opt:hover{background:var(--gray-50);padding-left:18px}
+.cdd-opt:hover{background:var(--navy-ghost);color:var(--navy);padding-left:18px}
 .cdd-opt.selected{background:var(--navy-pale);color:var(--navy);font-weight:500}
 .cdd-opt.selected:hover{background:var(--navy-pale)}
 /* Dropdowns de filtro con selección múltiple: checkbox a la izquierda */
