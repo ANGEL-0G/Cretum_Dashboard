@@ -17,20 +17,24 @@
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:var(--font);background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
-  .wrap{max-width:640px;margin:0 auto;padding:30px 18px 64px}
+  .wrap{max-width:640px;margin:0 auto;padding:30px 18px 64px;position:relative;z-index:1}
 
-  /* ── Hero con cuadrados azules desenfocados flotando (estética tipo portal) ── */
-  .hero{background:var(--navy-deep);color:#fff;border-radius:18px;padding:34px 28px 32px;margin-bottom:20px;position:relative;overflow:hidden;min-height:150px}
-  .hero-bg{position:absolute;inset:0;pointer-events:none}
-  .hero-sq{position:absolute;border-radius:18px;filter:blur(26px);will-change:transform}
-  .hero-sq.s1{width:160px;height:160px;top:-54px;left:-34px;background:#3b65b0;opacity:.55;animation:sqf1 17s ease-in-out infinite}
-  .hero-sq.s2{width:120px;height:120px;top:6px;right:-26px;background:#5d8ff5;opacity:.5;animation:sqf2 21s ease-in-out infinite}
-  .hero-sq.s3{width:96px;height:96px;bottom:-44px;left:32%;background:#4a8cff;opacity:.42;animation:sqf3 15s ease-in-out infinite}
-  .hero-sq.s4{width:74px;height:74px;top:34%;left:46%;background:#26477e;opacity:.5;animation:sqf1 19s ease-in-out infinite}
-  .hero-sq.s5{width:120px;height:120px;bottom:-52px;right:16%;background:#6ea0ff;opacity:.38;animation:sqf2 14s ease-in-out infinite}
-  @keyframes sqf1{0%,100%{transform:translate(0,0) rotate(0deg)}50%{transform:translate(42px,32px) rotate(18deg)}}
-  @keyframes sqf2{0%,100%{transform:translate(0,0) rotate(0deg)}50%{transform:translate(-38px,-26px) rotate(-15deg)}}
-  @keyframes sqf3{0%,100%{transform:translate(0,0) rotate(0deg) scale(1)}50%{transform:translate(-26px,22px) rotate(12deg) scale(1.16)}}
+  /* ── Fondo de página: cuadrados azules desenfocados flotando (estética tipo portal) ── */
+  .page-bg{position:fixed;inset:0;overflow:hidden;z-index:0;pointer-events:none}
+  .page-bg span{position:absolute;border-radius:26px;filter:blur(58px);will-change:transform}
+  .page-bg .b1{width:320px;height:320px;top:-90px;left:-100px;background:#8fb0e8;opacity:.55;animation:pbf1 23s ease-in-out infinite}
+  .page-bg .b2{width:260px;height:260px;top:8%;right:-90px;background:#6e95dd;opacity:.5;animation:pbf2 27s ease-in-out infinite}
+  .page-bg .b3{width:220px;height:220px;bottom:-70px;left:8%;background:#a9c2f0;opacity:.5;animation:pbf3 19s ease-in-out infinite}
+  .page-bg .b4{width:180px;height:180px;top:46%;left:42%;background:#5d8ff5;opacity:.34;animation:pbf1 21s ease-in-out infinite}
+  .page-bg .b5{width:240px;height:240px;bottom:-80px;right:6%;background:#9bb8ec;opacity:.46;animation:pbf2 17s ease-in-out infinite}
+  .page-bg .b6{width:150px;height:150px;top:22%;left:14%;background:#7ba3e6;opacity:.4;animation:pbf3 25s ease-in-out infinite}
+  @keyframes pbf1{0%,100%{transform:translate(0,0) rotate(0deg)}50%{transform:translate(60px,46px) rotate(16deg)}}
+  @keyframes pbf2{0%,100%{transform:translate(0,0) rotate(0deg)}50%{transform:translate(-54px,-36px) rotate(-14deg)}}
+  @keyframes pbf3{0%,100%{transform:translate(0,0) rotate(0deg) scale(1)}50%{transform:translate(-34px,30px) rotate(12deg) scale(1.18)}}
+
+  /* ── Hero ── */
+  .hero{background:var(--navy-dark);color:#fff;border-radius:18px;padding:32px 28px 30px;margin-bottom:20px;position:relative;overflow:hidden}
+  .hero::after{content:"";position:absolute;top:-40%;right:-10%;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(91,143,245,.32),transparent 68%);pointer-events:none}
   .hero h1{font-size:22px;font-weight:600;letter-spacing:-.015em;position:relative;z-index:1}
   .hero p{font-size:13.5px;opacity:.85;margin-top:7px;max-width:46ch;line-height:1.55;position:relative;z-index:1}
 
@@ -93,7 +97,7 @@
   @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 
   /* ── Pantallas completas ── */
-  .screen{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px 22px}
+  .screen{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px 22px;position:relative;z-index:1}
   .screen h2{font-size:21px;color:var(--navy);font-weight:600;margin-bottom:9px}
   .screen p{font-size:14px;color:var(--soft);max-width:380px;line-height:1.6}
   .screen .ico{color:var(--navy);opacity:.5;margin-bottom:18px}
@@ -101,7 +105,7 @@
   @keyframes spin{to{transform:rotate(360deg)}}
 
   /* ── Pantalla de éxito (momento de marca) ── */
-  #doneScreen{position:fixed;inset:0;background:linear-gradient(160deg,var(--navy-deep),var(--navy-dark) 60%,#143057);color:#fff;overflow:hidden}
+  #doneScreen{position:fixed;inset:0;z-index:3;background:linear-gradient(160deg,var(--navy-deep),var(--navy-dark) 60%,#143057);color:#fff;overflow:hidden}
   .aurora{position:absolute;inset:0;overflow:hidden;pointer-events:none}
   .aurora span{position:absolute;border-radius:50%;filter:blur(70px);opacity:.55;will-change:transform}
   .aurora .a1{width:380px;height:380px;top:-12%;left:-8%;background:#3b65b0;animation:drift1 16s var(--ease) infinite alternate}
@@ -132,6 +136,11 @@
 </head>
 <body>
 
+<!-- Fondo animado de toda la página -->
+<div class="page-bg" aria-hidden="true">
+  <span class="b1"></span><span class="b2"></span><span class="b3"></span><span class="b4"></span><span class="b5"></span><span class="b6"></span>
+</div>
+
 <!-- Cargando / validando token -->
 <div id="loadingScreen" class="screen"><div class="spin"></div></div>
 
@@ -155,9 +164,6 @@
 <!-- Formulario -->
 <div id="formWrap" class="wrap" style="display:none">
   <div class="hero">
-    <div class="hero-bg" aria-hidden="true">
-      <span class="hero-sq s1"></span><span class="hero-sq s2"></span><span class="hero-sq s3"></span><span class="hero-sq s4"></span><span class="hero-sq s5"></span>
-    </div>
     <h1>Formulario de registro</h1>
     <p id="heroSub">Completa tus datos para iniciar tu inversión con Cretum Partners.</p>
   </div>
