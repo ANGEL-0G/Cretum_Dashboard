@@ -1291,6 +1291,8 @@ button,input,select{font-family:var(--font)}
 [data-theme="dark"][data-org="mvp"] .home-ico-reportes{background:rgba(234,179,8,.24);color:#f5cb3a}
 .home-ico-portal{background:rgba(124,58,237,.13);color:#7c3aed}
 [data-theme="dark"] .home-ico-portal{background:rgba(124,58,237,.24);color:#a98bf0}
+.home-ico-forms{background:rgba(79,110,240,.13);color:#4f6ef0}
+[data-theme="dark"] .home-ico-forms{background:rgba(79,110,240,.24);color:#8a9bff}
 /* En MVP: tono terracota cálido (combina con el naranja, distinto de db/trackers/reportes) */
 [data-org="mvp"] .home-ico-portal{background:rgba(207,91,42,.14);color:#cf5b2a}
 [data-theme="dark"][data-org="mvp"] .home-ico-portal{background:rgba(248,149,64,.22);color:#f89540}
@@ -3456,7 +3458,27 @@ button,input,select{font-family:var(--font)}
   .pt-preview-hint{font-size:11.5px;color:var(--ink-soft,#889)}
   .pt-preview-wrap{margin-top:10px;border:1px solid var(--line,#d7dde8);border-radius:8px;overflow:hidden;background:#fff}
   .pt-preview-frame{width:100%;height:60vh;min-height:360px;border:0;background:#fff;display:block}
+  /* Formularios — utilería del equipo administrativo */
+  .forms-empty{max-width:560px;margin:36px auto;text-align:center;padding:40px 26px;background:var(--white);border:1px solid var(--gray-100);border-radius:var(--r-lg);box-shadow:var(--shadow-sm)}
+  .forms-empty .forms-empty-ico{font-size:38px;color:var(--navy);opacity:.55;display:block;margin-bottom:16px}
+  .forms-empty h3{font-size:17px;font-weight:500;color:var(--navy);margin:0 0 8px}
+  .forms-empty p{font-size:13.5px;color:var(--gray-500);line-height:1.6;margin:0}
 </style>
+
+<!-- VISTA: FORMULARIOS (Cretum) — utilería para el equipo administrativo -->
+<div class="page page-db" id="pageForms">
+  <div class="db-toolbar">
+    <div class="db-title-block"><i class="fa-solid fa-clipboard-list"></i> Formularios</div>
+  </div>
+  <div id="formsContent">
+    <div class="forms-empty">
+      <i class="fa-solid fa-clipboard-list forms-empty-ico"></i>
+      <h3>Utilería del equipo administrativo</h3>
+      <p>Aquí irán los formularios y herramientas útiles para el día a día del equipo. Aún no hay ninguno — vamos a empezar a agregarlos.</p>
+    </div>
+  </div>
+</div>
+
 <div class="page page-db" id="pagePortal">
   <div class="db-toolbar">
     <div class="db-title-block"><i class="fa-solid fa-share-nodes"></i> Portal de clientes</div>

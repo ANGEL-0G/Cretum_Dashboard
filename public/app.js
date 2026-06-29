@@ -1855,6 +1855,9 @@ const ORG_MODULES = {
     { view: 'campaigns', icon: 'fa-bolt', title: 'Campañas',
       desc: 'Ranking de interacción de los LPs y la campaña actual del fondo',
       iconClass: 'home-ico-campaigns' },
+    { view: 'forms', icon: 'fa-clipboard-list', title: 'Formularios',
+      desc: 'Utilería y formularios para el equipo administrativo',
+      iconClass: 'home-ico-forms' },
     { view: 'portal', icon: 'fa-share-nodes', title: 'Portal de clientes',
       desc: 'Sube dashboards externos y da acceso a clientes con su propio usuario',
       iconClass: 'home-ico-portal', editorOrAdmin: true },
@@ -1885,6 +1888,7 @@ const ORG_NAV = {
     { view: 'db',      icon: 'fa-database',    label: 'Base de Datos' },
     { view: 'dropbox', icon: 'fa-dropbox',     label: 'Dropbox', brand: true },
     { view: 'campaigns', icon: 'fa-bolt',      label: 'Campañas' },
+    { view: 'forms',     icon: 'fa-clipboard-list', label: 'Formularios' },
     { view: 'portal',    icon: 'fa-share-nodes', label: 'Portal de clientes', editorOrAdmin: true },
   ],
   mvp: [
@@ -2149,6 +2153,8 @@ function switchView(view, isBack = false) {
   if (pageRep) pageRep.classList.toggle('active', view === 'reports');
   const pagePortal = document.getElementById('pagePortal');
   if (pagePortal) pagePortal.classList.toggle('active', view === 'portal');
+  const pageForms = document.getElementById('pageForms');
+  if (pageForms) pageForms.classList.toggle('active', view === 'forms');
 
   highlightActiveNav();
 
@@ -2162,6 +2168,7 @@ function switchView(view, isBack = false) {
     'fundTrackers': 'Fund Trackers',
     'campaigns':    'Campañas',
     'reports':      'Reportes',
+    'forms':        'Formularios',
     'portal':       'Portal de clientes',
   }[view] || '';
   document.getElementById('headerBrandText').textContent =
