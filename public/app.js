@@ -2190,7 +2190,7 @@ function switchView(view, isBack = false) {
   if (view === 'campaigns') loadCampaigns();
   if (view === 'reports') loadReports();
   if (view === 'portal') { portalOrg = currentOrg || 'cretum'; loadPortalAdmin(); }
-  if (view === 'forms') loadForms();
+  if (view === 'forms') formsBackHome();
   if (view === 'tasks') requestAnimationFrame(tkMoveSliders);   // coloca las pills una vez visible
 
   syncHash();
@@ -2564,6 +2564,20 @@ async function formsApi(body) {
 }
 
 const formUrl = (token) => location.origin + '/form?t=' + encodeURIComponent(token);
+
+// Galería ↔ detalle de un formulario
+function formsBackHome() {
+  const home = document.getElementById('formsHome'), detail = document.getElementById('formsDetail');
+  if (home) home.style.display = 'block';
+  if (detail) detail.style.display = 'none';
+}
+function formsOpen(/* type */) {
+  // Hoy solo existe "registro de cliente"; cuando haya más, este parámetro elegirá cuál.
+  const home = document.getElementById('formsHome'), detail = document.getElementById('formsDetail');
+  if (home) home.style.display = 'none';
+  if (detail) detail.style.display = 'block';
+  loadForms();
+}
 
 async function loadForms() {
   const list = document.getElementById('formsList');

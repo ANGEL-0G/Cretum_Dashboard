@@ -3459,6 +3459,22 @@ button,input,select{font-family:var(--font)}
   .pt-preview-wrap{margin-top:10px;border:1px solid var(--line,#d7dde8);border-radius:8px;overflow:hidden;background:#fff}
   .pt-preview-frame{width:100%;height:60vh;min-height:360px;border:0;background:#fff;display:block}
   /* Formularios — utilería del equipo administrativo */
+  /* Galería de formularios disponibles */
+  .fm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;max-width:780px}
+  .fm-card{display:flex;align-items:center;gap:14px;text-align:left;width:100%;background:var(--white);border:1px solid var(--gray-100);border-radius:var(--r-lg);padding:18px;box-shadow:var(--shadow-sm);cursor:pointer;font-family:inherit;transition:border-color .15s,box-shadow .15s,transform .12s}
+  .fm-card:hover{border-color:var(--navy-light,var(--navy));box-shadow:var(--shadow-md,0 6px 18px -8px rgba(15,23,42,.2))}
+  .fm-card:active{transform:scale(.99)}
+  .fm-card-ico{flex-shrink:0;width:42px;height:42px;display:grid;place-items:center;border-radius:11px;background:var(--navy-pale,#e8eef7);color:var(--navy);font-size:17px}
+  .fm-card-text{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}
+  .fm-card-title{font-size:14.5px;font-weight:500;color:var(--gray-900)}
+  .fm-card-desc{font-size:12.5px;color:var(--gray-500);line-height:1.45}
+  .fm-card-arrow{flex-shrink:0;color:var(--gray-300);font-size:13px;transition:color .15s,transform .15s}
+  .fm-card:hover .fm-card-arrow{color:var(--navy);transform:translateX(2px)}
+  /* Volver a la galería */
+  .fm-back{display:inline-flex;align-items:center;gap:8px;background:none;border:none;color:var(--gray-500);font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;padding:4px 0;margin-bottom:14px;transition:color .15s}
+  .fm-back:hover{color:var(--navy)}
+  .fm-back:hover i{transform:translateX(-2px)}
+  .fm-back i{transition:transform .15s}
   .fm-block{background:var(--white);border:1px solid var(--gray-100);border-radius:var(--r-lg);padding:20px 22px;box-shadow:var(--shadow-sm);max-width:780px}
   .fm-block-title{font-size:15px;font-weight:500;color:var(--navy);margin:0 0 6px;display:flex;align-items:center;gap:9px}
   .fm-block-desc{font-size:13px;color:var(--gray-500);line-height:1.6;margin:0 0 16px;max-width:620px}
@@ -3474,14 +3490,32 @@ button,input,select{font-family:var(--font)}
     <div class="db-title-block"><i class="fa-solid fa-clipboard-list"></i> Formularios</div>
   </div>
 
-  <div class="fm-block">
-    <h3 class="fm-block-title"><i class="fa-solid fa-user-plus"></i> Registro de cliente</h3>
-    <p class="fm-block-desc">Genera un enlace y mándalo a tu cliente. Cuando lo complete, <strong>las respuestas llegan a tu correo</strong> y quedan guardadas aquí. Pide nombre, dirección, contacto, tipo (individual/empresa) y monto de entrada.</p>
-    <div class="fm-new">
-      <input id="formsLabel" class="form-input" placeholder="Etiqueta opcional (ej. Para Juan Pérez)" autocomplete="off" onkeydown="if(event.key==='Enter')formsCreate()">
-      <button class="btn-primary" type="button" onclick="formsCreate()"><i class="fa-solid fa-link"></i> Generar enlace</button>
+  <!-- Galería: un botón por cada formulario disponible -->
+  <div id="formsHome">
+    <div class="fm-grid">
+      <button class="fm-card" type="button" onclick="formsOpen('registro')">
+        <span class="fm-card-ico"><i class="fa-solid fa-user-plus"></i></span>
+        <span class="fm-card-text">
+          <span class="fm-card-title">Registro de cliente</span>
+          <span class="fm-card-desc">Genera un enlace para que un cliente complete sus datos de alta.</span>
+        </span>
+        <i class="fa-solid fa-chevron-right fm-card-arrow"></i>
+      </button>
     </div>
-    <div id="formsList" class="pt-list" style="margin-top:14px"></div>
+  </div>
+
+  <!-- Detalle de un formulario -->
+  <div id="formsDetail" style="display:none">
+    <button class="fm-back" type="button" onclick="formsBackHome()"><i class="fa-solid fa-arrow-left"></i> Formularios</button>
+    <div class="fm-block">
+      <h3 class="fm-block-title"><i class="fa-solid fa-user-plus"></i> Registro de cliente</h3>
+      <p class="fm-block-desc">Genera un enlace y mándalo a tu cliente. Cuando lo complete, <strong>las respuestas llegan a tu correo</strong> y quedan guardadas aquí. Pide nombre, dirección, contacto y tipo (individual/empresa).</p>
+      <div class="fm-new">
+        <input id="formsLabel" class="form-input" placeholder="Etiqueta opcional (ej. Para Juan Pérez)" autocomplete="off" onkeydown="if(event.key==='Enter')formsCreate()">
+        <button class="btn-primary" type="button" onclick="formsCreate()"><i class="fa-solid fa-link"></i> Generar enlace</button>
+      </div>
+      <div id="formsList" class="pt-list" style="margin-top:14px"></div>
+    </div>
   </div>
 </div>
 
