@@ -2190,6 +2190,7 @@ function switchView(view, isBack = false) {
   if (view === 'campaigns') loadCampaigns();
   if (view === 'reports') loadReports();
   if (view === 'portal') { portalOrg = currentOrg || 'cretum'; loadPortalAdmin(); }
+  if (view === 'forms') loadForms();
   if (view === 'tasks') requestAnimationFrame(tkMoveSliders);   // coloca las pills una vez visible
 
   syncHash();
@@ -2544,6 +2545,84 @@ function renderPtUsers() {
       </div>
     </div>`;
   }).join('');
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   FORMULARIOS (admin) — el equipo genera un enlace de registro de cliente.
+   Las respuestas le llegan por correo a quien lo generó (api/forms.js).
+   ═══════════════════════════════════════════════════════════════════════ */
+let formsLinks = [];
+
+async function formsApi(body) {
+  const r = await authedFetch('/api/forms', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
+  return d;
+}
+
+const formUrl = (token) => location.origin + '/form?t=' + encodeURIComponent(token);
+
+async function loadForms() {
+  const list = document.getElementById('formsList');
+  if (list) list.innerHTML = '<div class="pt-empty"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
+  try {
+    const d = await formsApi({ action: 'list' });
+    formsLinks = d.links || [];
+    renderForms();
+  } catch (err) {
+    if (list) list.innerHTML = `<div class="pt-empty">Error: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function renderForms() {
+  const el = document.getElementById('formsList');
+  if (!el) return;
+  if (!formsLinks.length) {
+    el.innerHTML = '<div class="pt-empty">Aún no has generado enlaces. Crea el primero arriba y compártelo con tu cliente.</div>';
+    return;
+  }
+  el.innerHTML = formsLinks.map(l => {
+    const url = formUrl(l.token);
+    const n = l.submissions || 0;
+    return `<div class="pt-item">
+      <div class="nm">${escapeHtml(l.label || 'Registro de cliente')} <span class="pt-badge">${n} respuesta${n === 1 ? '' : 's'}</span></div>
+      <div class="sub">${escapeHtml(url)}</div>
+      <div class="acts">
+        <button class="cdd-btn" onclick="formsCopy('${escapeHtml(url)}')"><i class="fa-solid fa-copy"></i> Copiar enlace</button>
+        <a class="cdd-btn" href="${escapeHtml(url)}" target="_blank" rel="noopener" style="text-decoration:none"><i class="fa-solid fa-up-right-from-square"></i> Abrir</a>
+        <button class="cdd-btn camp-btn-danger" onclick="formsDelete(${l.id})"><i class="fa-solid fa-trash"></i> Eliminar</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function formsCreate() {
+  const inp = document.getElementById('formsLabel');
+  const label = (inp?.value || '').trim();
+  try {
+    await formsApi({ action: 'create', label });
+    if (inp) inp.value = '';
+    toast('Enlace generado');
+    await loadForms();
+  } catch (err) { toast('Error: ' + err.message); }
+}
+
+function formsCopy(url) {
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(url).then(() => toast('Enlace copiado'), () => toast('No se pudo copiar'));
+  } else { toast('No se pudo copiar'); }
+}
+
+async function formsDelete(id) {
+  if (!confirm('¿Eliminar este enlace? Los clientes ya no podrán abrirlo.')) return;
+  try {
+    await formsApi({ action: 'delete', id });
+    toast('Enlace eliminado');
+    await loadForms();
+  } catch (err) { toast('Error: ' + err.message); }
 }
 
 function ptClose(id) { document.getElementById(id).classList.remove('show'); }

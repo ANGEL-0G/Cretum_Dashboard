@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Formulario de registro · Cretum Partners</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#1a3a6b;--navy-mid:#2a4f8f;--navy-dark:#112850;
+    --ink:#1a1f2e;--soft:#6b7589;--line:#e0e4ee;--line2:#eef0f5;
+    --bg:#eef1f7;--white:#fff;--amber:#b07d20;--amber-bg:#fdf3dc;--red:#c0392b;--green:#1a8c5b;
+    --r:10px;--font:'DM Sans',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--font);background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:660px;margin:0 auto;padding:28px 18px 64px}
+
+  .hero{background:linear-gradient(135deg,var(--navy),var(--navy-mid));color:#fff;border-radius:16px;padding:26px 26px 24px;margin-bottom:22px;box-shadow:0 10px 30px rgba(26,58,107,.25)}
+  .hero img{height:30px;display:block;margin-bottom:16px;filter:brightness(0) invert(1)}
+  .hero h1{font-size:21px;font-weight:600;letter-spacing:-.01em}
+  .hero p{font-size:13px;opacity:.85;margin-top:6px}
+
+  .card{background:var(--white);border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:16px;box-shadow:0 1px 3px rgba(15,23,42,.04)}
+  .sec-h{font-size:12px;font-weight:600;color:var(--navy);text-transform:uppercase;letter-spacing:.6px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .field{display:flex;flex-direction:column;gap:6px}
+  .field.full{grid-column:1 / -1}
+  label{font-size:12.5px;font-weight:500;color:var(--soft)}
+  label .req{color:var(--red)}
+  input,select{
+    font-family:var(--font);font-size:14px;color:var(--ink);background:var(--white);
+    border:1.5px solid var(--line);border-radius:var(--r);padding:10px 12px;outline:none;width:100%;
+    transition:border-color .15s,box-shadow .15s;
+  }
+  input:focus,select:focus{border-color:var(--navy);box-shadow:0 0 0 3px rgba(26,58,107,.1)}
+  input::placeholder{color:#aeb6c6}
+  .field.invalid input,.field.invalid select{border-color:var(--red)}
+  .err-msg{font-size:11.5px;color:var(--red);display:none}
+  .field.invalid .err-msg{display:block}
+
+  /* Toggle tipo de inversionista */
+  .seg{display:flex;gap:10px}
+  .seg label{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:13px;border:1.5px solid var(--line);border-radius:var(--r);cursor:pointer;font-size:14px;font-weight:500;color:var(--ink);transition:all .15s;text-transform:none;letter-spacing:0}
+  .seg input{display:none}
+  .seg label:hover{border-color:var(--navy)}
+  .seg label.on{border-color:var(--navy);background:rgba(26,58,107,.06);color:var(--navy)}
+
+  #empresaCard{display:none}
+
+  .notice{background:var(--amber-bg);border:1px solid #f0dca8;border-radius:var(--r);padding:13px 15px;margin-top:6px;display:flex;gap:11px;align-items:flex-start}
+  .notice-ico{color:var(--amber);font-size:17px;flex-shrink:0;line-height:1.3}
+  .notice b{color:#8a6314}
+  .notice span{font-size:12.5px;color:#7a5a1a;line-height:1.55}
+
+  .chk{display:flex;align-items:flex-start;gap:10px;margin-top:14px;cursor:pointer}
+  .chk input{width:18px;height:18px;flex-shrink:0;margin-top:1px;accent-color:var(--navy)}
+  .chk span{font-size:13px;color:var(--ink)}
+
+  .submit{width:100%;padding:15px;background:var(--navy);color:#fff;border:none;border-radius:12px;font-family:var(--font);font-size:15px;font-weight:600;cursor:pointer;margin-top:6px;transition:filter .15s,transform .08s;box-shadow:0 8px 20px rgba(26,58,107,.3)}
+  .submit:hover{filter:brightness(1.08)}
+  .submit:active{transform:translateY(1px)}
+  .submit:disabled{opacity:.6;cursor:not-allowed}
+
+  .foot{text-align:center;font-size:11px;color:var(--soft);margin-top:18px;line-height:1.6}
+
+  /* Estados de pantalla completa (cargando / éxito / error de enlace) */
+  .screen{min-height:70vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px 18px}
+  .screen .big{font-size:48px;margin-bottom:14px}
+  .screen h2{font-size:20px;color:var(--navy);font-weight:600;margin-bottom:8px}
+  .screen p{font-size:14px;color:var(--soft);max-width:380px}
+  .spin{width:34px;height:34px;border:3px solid var(--line);border-top-color:var(--navy);border-radius:50%;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @media (max-width:560px){ .grid{grid-template-columns:1fr} .wrap{padding:20px 14px 48px} .hero{padding:22px} }
+</style>
+</head>
+<body>
+
+<!-- Cargando / validando token -->
+<div id="loadingScreen" class="screen"><div class="spin"></div></div>
+
+<!-- Enlace inválido -->
+<div id="badScreen" class="screen" style="display:none">
+  <div class="big">🔗</div>
+  <h2>Enlace no válido</h2>
+  <p>Este formulario no existe o ya no está disponible. Pídele a tu contacto en Cretum Partners un enlace nuevo.</p>
+</div>
+
+<!-- Éxito -->
+<div id="doneScreen" class="screen" style="display:none">
+  <div class="big">✅</div>
+  <h2>¡Listo, gracias!</h2>
+  <p>Recibimos tu información correctamente. Tu asesor de Cretum Partners se pondrá en contacto contigo.</p>
+</div>
+
+<!-- Formulario -->
+<div id="formWrap" class="wrap" style="display:none">
+  <div class="hero">
+    <img src="/logo.png" alt="Cretum Partners">
+    <h1>Formulario de registro</h1>
+    <p id="heroSub">Completa tus datos para iniciar tu inversión con Cretum Partners.</p>
+  </div>
+
+  <form id="form" novalidate>
+    <div class="card">
+      <div class="sec-h">👤 Datos del inversionista</div>
+      <div class="grid">
+        <div class="field"><label>Nombre(s) <span class="req">*</span></label><input name="nombres" autocomplete="given-name"><div class="err-msg">Obligatorio</div></div>
+        <div class="field"><label>Apellidos <span class="req">*</span></label><input name="apellidos" autocomplete="family-name"><div class="err-msg">Obligatorio</div></div>
+        <div class="field"><label>Correo electrónico <span class="req">*</span></label><input name="email" type="email" autocomplete="email" placeholder="correo@dominio.com"><div class="err-msg">Correo válido obligatorio</div></div>
+        <div class="field"><label>Teléfono <span class="req">*</span></label><input name="telefono" type="tel" autocomplete="tel" placeholder="+52 …"><div class="err-msg">Obligatorio</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="sec-h">📍 Dirección</div>
+      <div class="grid">
+        <div class="field full"><label>Calle <span class="req">*</span></label><input name="calle" autocomplete="address-line1"><div class="err-msg">Obligatorio</div></div>
+        <div class="field"><label>Número <span class="req">*</span></label><input name="numero"><div class="err-msg">Obligatorio</div></div>
+        <div class="field"><label>Código postal <span class="req">*</span></label><input name="codigoPostal" autocomplete="postal-code"><div class="err-msg">Obligatorio</div></div>
+        <div class="field"><label>Estado <span class="req">*</span></label><input name="estado" autocomplete="address-level1"><div class="err-msg">Obligatorio</div></div>
+        <div class="field"><label>País <span class="req">*</span></label><input name="pais" autocomplete="country-name"><div class="err-msg">Obligatorio</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="sec-h">🏷️ Tipo de inversionista</div>
+      <div class="seg" id="tipoSeg">
+        <label class="on" data-tipo="individual"><input type="radio" name="tipo" value="individual" checked> Individual</label>
+        <label data-tipo="empresa"><input type="radio" name="tipo" value="empresa"> Empresa</label>
+      </div>
+    </div>
+
+    <div class="card" id="empresaCard">
+      <div class="sec-h">🏢 Datos de la empresa</div>
+      <div class="grid">
+        <div class="field full"><label>Nombre de la empresa <span class="req">*</span></label><input name="empresaNombre"><div class="err-msg">Obligatorio</div></div>
+        <div class="field full"><label>Dirección de la empresa</label><input name="empresaDireccion" placeholder="Calle, número, ciudad, país"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="sec-h">💰 Inversión</div>
+      <div class="grid">
+        <div class="field full"><label>Monto de entrada <span class="req">*</span></label><input name="monto" inputmode="decimal" placeholder="Ej. $1,000,000 USD"><div class="err-msg">Obligatorio</div></div>
+      </div>
+      <div class="notice">
+        <span class="notice-ico">⚠️</span>
+        <span><b>Importante:</b> el monto de entrada que indiques <b>no podrá cambiarse más adelante</b>. Asegúrate de que sea correcto antes de enviar.</span>
+      </div>
+      <label class="chk"><input type="checkbox" id="confirmMonto"><span>Entiendo y confirmo que el monto de entrada no podrá modificarse después de enviar este formulario.</span></label>
+    </div>
+
+    <button type="submit" class="submit" id="submitBtn">Enviar mi información</button>
+    <div class="foot">🔒 Tus datos se envían de forma segura a tu asesor de Cretum Partners.</div>
+  </form>
+</div>
+
+<script>
+  const token = new URLSearchParams(location.search).get('t') || '';
+  const $ = s => document.querySelector(s);
+  const show = id => { ['loadingScreen','badScreen','doneScreen','formWrap'].forEach(x => { const e = document.getElementById(x); if (e) e.style.display = x === id ? (x === 'formWrap' ? 'block' : 'flex') : 'none'; }); };
+
+  async function api(action, extra) {
+    const r = await fetch('/api/forms', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action, token, ...extra }) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
+    return d;
+  }
+
+  // Toggle Individual / Empresa
+  const empresaCard = $('#empresaCard');
+  $('#tipoSeg').addEventListener('click', e => {
+    const lbl = e.target.closest('label[data-tipo]'); if (!lbl) return;
+    document.querySelectorAll('#tipoSeg label').forEach(l => l.classList.toggle('on', l === lbl));
+    lbl.querySelector('input').checked = true;
+    empresaCard.style.display = lbl.dataset.tipo === 'empresa' ? 'block' : 'none';
+  });
+
+  function collect() {
+    const fd = new FormData($('#form'));
+    const d = Object.fromEntries(fd.entries());
+    Object.keys(d).forEach(k => d[k] = String(d[k]).trim());
+    return d;
+  }
+  function validate(d) {
+    let ok = true;
+    document.querySelectorAll('.field').forEach(f => f.classList.remove('invalid'));
+    const req = ['nombres','apellidos','email','telefono','calle','numero','codigoPostal','estado','pais','monto'];
+    if (d.tipo === 'empresa') req.push('empresaNombre');
+    req.forEach(name => {
+      const inp = document.querySelector(`[name="${name}"]`);
+      if (!inp) return;
+      let bad = !d[name];
+      if (name === 'email' && d.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(d.email)) bad = true;
+      // si el campo está en una tarjeta oculta (empresa en modo individual) no valida
+      if (inp.closest('#empresaCard') && d.tipo !== 'empresa') bad = false;
+      if (bad) { inp.closest('.field')?.classList.add('invalid'); ok = false; }
+    });
+    return ok;
+  }
+
+  $('#form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const d = collect();
+    if (!validate(d)) { document.querySelector('.field.invalid')?.scrollIntoView({ behavior:'smooth', block:'center' }); return; }
+    if (!$('#confirmMonto').checked) { alert('Confirma que entiendes que el monto no podrá cambiarse.'); return; }
+    const btn = $('#submitBtn'); btn.disabled = true; btn.textContent = 'Enviando…';
+    try {
+      await api('submit', { data: d });
+      show('doneScreen');
+    } catch (err) {
+      btn.disabled = false; btn.textContent = 'Enviar mi información';
+      alert('No se pudo enviar: ' + err.message);
+    }
+  });
+
+  // Arranque: valida el token
+  (async () => {
+    if (!token) { show('badScreen'); return; }
+    try {
+      const m = await api('meta');
+      if (!m.ok) { show('badScreen'); return; }
+      if (m.advisor) $('#heroSub').textContent = `${m.advisor} de Cretum Partners te invita a completar tus datos para iniciar tu inversión.`;
+      show('formWrap');
+    } catch { show('badScreen'); }
+  })();
+</script>
+</body>
+</html>

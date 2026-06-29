@@ -3459,10 +3459,13 @@ button,input,select{font-family:var(--font)}
   .pt-preview-wrap{margin-top:10px;border:1px solid var(--line,#d7dde8);border-radius:8px;overflow:hidden;background:#fff}
   .pt-preview-frame{width:100%;height:60vh;min-height:360px;border:0;background:#fff;display:block}
   /* Formularios — utilería del equipo administrativo */
-  .forms-empty{max-width:560px;margin:36px auto;text-align:center;padding:40px 26px;background:var(--white);border:1px solid var(--gray-100);border-radius:var(--r-lg);box-shadow:var(--shadow-sm)}
-  .forms-empty .forms-empty-ico{font-size:38px;color:var(--navy);opacity:.55;display:block;margin-bottom:16px}
-  .forms-empty h3{font-size:17px;font-weight:500;color:var(--navy);margin:0 0 8px}
-  .forms-empty p{font-size:13.5px;color:var(--gray-500);line-height:1.6;margin:0}
+  .fm-block{background:var(--white);border:1px solid var(--gray-100);border-radius:var(--r-lg);padding:20px 22px;box-shadow:var(--shadow-sm);max-width:780px}
+  .fm-block-title{font-size:15px;font-weight:500;color:var(--navy);margin:0 0 6px;display:flex;align-items:center;gap:9px}
+  .fm-block-desc{font-size:13px;color:var(--gray-500);line-height:1.6;margin:0 0 16px;max-width:620px}
+  .fm-new{display:flex;gap:10px;flex-wrap:wrap}
+  .fm-new .form-input{flex:1;min-width:220px}
+  .fm-new .btn-primary{flex-shrink:0}
+  @media (max-width:560px){ .fm-new .btn-primary{flex:1 1 100%;justify-content:center} }
 </style>
 
 <!-- VISTA: FORMULARIOS (Cretum) — utilería para el equipo administrativo -->
@@ -3470,12 +3473,15 @@ button,input,select{font-family:var(--font)}
   <div class="db-toolbar">
     <div class="db-title-block"><i class="fa-solid fa-clipboard-list"></i> Formularios</div>
   </div>
-  <div id="formsContent">
-    <div class="forms-empty">
-      <i class="fa-solid fa-clipboard-list forms-empty-ico"></i>
-      <h3>Utilería del equipo administrativo</h3>
-      <p>Aquí irán los formularios y herramientas útiles para el día a día del equipo. Aún no hay ninguno — vamos a empezar a agregarlos.</p>
+
+  <div class="fm-block">
+    <h3 class="fm-block-title"><i class="fa-solid fa-user-plus"></i> Registro de cliente</h3>
+    <p class="fm-block-desc">Genera un enlace y mándalo a tu cliente. Cuando lo complete, <strong>las respuestas llegan a tu correo</strong> y quedan guardadas aquí. Pide nombre, dirección, contacto, tipo (individual/empresa) y monto de entrada.</p>
+    <div class="fm-new">
+      <input id="formsLabel" class="form-input" placeholder="Etiqueta opcional (ej. Para Juan Pérez)" autocomplete="off" onkeydown="if(event.key==='Enter')formsCreate()">
+      <button class="btn-primary" type="button" onclick="formsCreate()"><i class="fa-solid fa-link"></i> Generar enlace</button>
     </div>
+    <div id="formsList" class="pt-list" style="margin-top:14px"></div>
   </div>
 </div>
 
