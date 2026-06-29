@@ -89,6 +89,7 @@ async function enterApp(user) {
   applyOrgTheme();
   renderNavList();
   applyRoute();
+  armBackTrap();   // captura el botón "atrás" del teléfono dentro de la app
 
   loadData();
 }
@@ -2204,8 +2205,11 @@ function syncHash() {
     ? '#/'
     : `#${currentOrg}/${currentView}`;
   if (location.hash === target) return;
-  suppressHashChange = true;   // evita que nuestro propio cambio dispare applyRoute
-  location.hash = target;
+  // replaceState: actualiza la URL para persistir la vista al refrescar SIN crear
+  // una entrada de historial. El botón "atrás" lo maneja el trap + viewHistory
+  // (ver manejo de popstate), no el historial de hashes.
+  try { history.replaceState(history.state, '', target); }
+  catch { suppressHashChange = true; location.hash = target; }
 }
 
 function applyRoute() {
@@ -2228,23 +2232,73 @@ function applyRoute() {
   }
 }
 
-// Back/forward del navegador
-window.addEventListener('hashchange', () => {
-  if (suppressHashChange) { suppressHashChange = false; return; }
-  if (!currentUser) return;   // sin sesión no navegamos
-  applyRoute();
-});
+// La navegación interna usa replaceState + el trap del botón "atrás" (popstate),
+// así que NO reaccionamos a hashchange en runtime (pelearía con ese manejo).
+// El hash solo persiste la vista para restaurarla al refrescar (applyRoute en el init).
+window.addEventListener('hashchange', () => { suppressHashChange = false; });
+
+// Cierra la capa "más encima" (modal, detalle, drawer) si hay alguna abierta.
+// Devuelve true si cerró algo. Es el orden en que "atrás" debe deshacerlas.
+function dismissTopLayer() {
+  const q = id => document.getElementById(id);
+  // 1) Drawer de navegación
+  if (q('navDrawer')?.classList.contains('open')) { closeNav(); return true; }
+  // 2) Modales con limpieza propia
+  if (q('taskModal')?.classList.contains('show'))   { closeTaskModal();   return true; }
+  if (q('assignModal')?.classList.contains('show')) { closeAssignModal(); return true; }
+  if (q('confirmModal')?.classList.contains('show')) { closeConfirm(false); return true; }  // = cancelar (resuelve la promesa)
+  // 3) Cualquier otro modal/overlay visible (campañas, portal, MFA, confirmaciones…)
+  const overlays = document.querySelectorAll('.camp-modal-backdrop.show, .modal-backdrop.show, .mvp-snap-modal.show');
+  if (overlays.length) { overlays[overlays.length - 1].classList.remove('show'); return true; }
+  // 4) Detalle de base de datos
+  if (currentView === 'db' && q('dbDetail')?.classList.contains('show')) { closeDetail(); return true; }
+  // 5) Detalle de fund tracker
+  if (q('ftDetail')?.classList.contains('show')) { q('ftDetail').classList.remove('show'); return true; }
+  // 6) Detalle de un formulario → vuelve a la galería
+  if (currentView === 'forms' && q('formsDetail') && q('formsDetail').style.display !== 'none') {
+    formsBackHome(); return true;
+  }
+  return false;
+}
 
 function goBack() {
-  // Caso especial: si estamos en detalle de DB, cerrar detalle primero
-  if (currentView === 'db' && document.getElementById('dbDetail').classList.contains('show')) {
-    closeDetail();
-    return;
-  }
+  if (dismissTopLayer()) return;
   if (viewHistory.length === 0) return;
   const prev = viewHistory.pop();
   switchView(prev, true);
 }
+
+/* ── Botón "atrás" del teléfono (Android) ──────────────────────────────────
+   Sin esto, "atrás" salía de la app/al menú. Mantenemos un estado "trampa" en
+   el historial: cada "atrás" lo consume y aquí decidimos qué hacer, sin salir.
+   Orden: bajar el teclado → cerrar capa abierta → pantalla anterior → salir. */
+let backTrapArmed = false;
+function armBackTrap() {
+  try { history.pushState({ _trap: 1 }, ''); backTrapArmed = true; } catch {}
+}
+function isTextEntry(el) {
+  if (!el) return false;
+  if (el.tagName === 'TEXTAREA') return true;
+  if (el.isContentEditable) return true;
+  if (el.tagName === 'INPUT') {
+    const t = (el.type || 'text').toLowerCase();
+    return !['checkbox', 'radio', 'button', 'submit', 'reset', 'file', 'range', 'color'].includes(t);
+  }
+  return false;
+}
+window.addEventListener('popstate', () => {
+  if (!currentUser) return;          // sin sesión no interceptamos (pantalla de login)
+  backTrapArmed = false;             // la trampa se consumió con este "atrás"
+  // 1) Teclado abierto → bájalo y quédate en la pantalla
+  if (isTextEntry(document.activeElement)) { document.activeElement.blur(); armBackTrap(); return; }
+  // 2) Capa abierta → ciérrala y quédate
+  if (dismissTopLayer()) { armBackTrap(); return; }
+  // 3) Pantalla inmediatamente anterior dentro de la app
+  if (viewHistory.length > 0) { switchView(viewHistory.pop(), true); armBackTrap(); return; }
+  // 4) Sin historial pero no estamos en la raíz → al inicio de la empresa
+  if (currentOrg && currentView !== 'home' && currentView !== 'selector') { switchView('home', true); armBackTrap(); return; }
+  // 5) Raíz: no re-armamos → el siguiente "atrás" sale de la app
+});
 
 /* "Regresar a Menú": siempre lleva al selector de empresas (botones MVP / Cretum),
    sin importar la vista. (Antes iba a 'home' desde sub-vistas, igual que la flecha atrás.) */
