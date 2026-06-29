@@ -3223,6 +3223,20 @@ document.addEventListener('click', (e) => {
   }
 });
 
+// Móvil: al dar "Ir/Enter" en un buscador, cierra el teclado (los resultados ya
+// filtran en vivo, así que no hay que "enviar" nada — solo quitar el foco baja
+// el teclado del sistema). Cubre los buscadores y los filtros con búsqueda.
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
+  const t = e.target;
+  if (t && t.matches && t.matches('.db-search-inp, .cdd-search input')) {
+    e.preventDefault();
+    t.blur();
+  }
+});
+// Pista de tecla "Buscar" en el teclado móvil para los buscadores
+document.querySelectorAll('.db-search-inp').forEach(i => i.setAttribute('enterkeyhint', 'search'));
+
 function clearFilters() {
   document.getElementById('dbSearch').value = '';
   ['ddCompany', 'ddSeries', 'ddTitular'].forEach(id => {
