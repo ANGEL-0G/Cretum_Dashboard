@@ -2272,10 +2272,18 @@ button,input,select{font-family:var(--font)}
 
 /* Touch devices: sin hover, mostrar siempre el botón de borrar */
 @media (hover:none){
+  /* Sin hover en táctil: revela los controles que se escondían al no poder pasar el mouse */
   .kb-del{opacity:1}
+  .camp-row-acts{opacity:1}
+  .camp-mth-del{opacity:.6}
   .kb-card:hover{transform:none}
   .list-item:hover,.tl-item:hover{transform:none}
   .tk-stat:hover{transform:none}
+  /* Áreas de toque más grandes (los íconos eran muy chicos para el dedo) */
+  .li-chk{width:22px;height:22px}
+  .li-del,.camp-row-act,.ctbl-act,.db-contact-del,.kb-del{
+    display:inline-flex;align-items:center;justify-content:center;min-width:34px;min-height:34px;
+  }
 }
 
 /* Tablets */
