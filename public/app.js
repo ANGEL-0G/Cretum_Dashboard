@@ -89,7 +89,6 @@ async function enterApp(user) {
   applyOrgTheme();
   renderNavList();
   applyRoute();
-  ensureBackTrap();   // captura el botón "atrás" del teléfono dentro de la app
 
   loadData();
 }
@@ -2195,7 +2194,6 @@ function switchView(view, isBack = false) {
   if (view === 'tasks') requestAnimationFrame(tkMoveSliders);   // coloca las pills una vez visible
 
   syncHash();
-  ensureBackTrap();   // garantiza la trampa del botón "atrás" tras cada navegación
 }
 
 /* ── Routing por hash (#org/vista) — persiste la vista al refrescar ── */
@@ -2206,11 +2204,11 @@ function syncHash() {
     ? '#/'
     : `#${currentOrg}/${currentView}`;
   if (location.hash === target) return;
-  // replaceState: actualiza la URL para persistir la vista al refrescar SIN crear
-  // una entrada de historial. El botón "atrás" lo maneja el trap + viewHistory
-  // (ver manejo de popstate), no el historial de hashes.
-  try { history.replaceState(history.state, '', target); }
-  catch { suppressHashChange = true; location.hash = target; }
+  // location.hash crea una entrada real en el historial: así el botón "atrás"
+  // del teléfono navega vista por vista de forma nativa (y nunca se sale de la
+  // app desde una pantalla profunda). El back lo maneja hashchange → applyRoute.
+  suppressHashChange = true;   // evita que nuestro propio cambio dispare applyRoute
+  location.hash = target;
 }
 
 function applyRoute() {
@@ -2233,10 +2231,16 @@ function applyRoute() {
   }
 }
 
-// La navegación interna usa replaceState + el trap del botón "atrás" (popstate),
-// así que NO reaccionamos a hashchange en runtime (pelearía con ese manejo).
-// El hash solo persiste la vista para restaurarla al refrescar (applyRoute en el init).
-window.addEventListener('hashchange', () => { suppressHashChange = false; });
+// Back/forward del navegador (incluye el botón "atrás" del teléfono): cada vista
+// es una entrada de historial, así que "atrás" cambia el hash → navegamos a esa vista.
+window.addEventListener('hashchange', () => {
+  if (suppressHashChange) { suppressHashChange = false; return; }
+  if (!currentUser) return;   // sin sesión no navegamos
+  // Si hay una capa abierta (modal/detalle), el "atrás" la cierra primero
+  // en vez de cambiar de vista, y restauramos el hash de la vista actual.
+  if (dismissTopLayer()) { suppressHashChange = true; history.forward(); return; }
+  applyRoute();
+});
 
 // Cierra la capa "más encima" (modal, detalle, drawer) si hay alguna abierta.
 // Devuelve true si cerró algo. Es el orden en que "atrás" debe deshacerlas.
@@ -2268,48 +2272,6 @@ function goBack() {
   const prev = viewHistory.pop();
   switchView(prev, true);
 }
-
-/* ── Botón "atrás" del teléfono (Android) ──────────────────────────────────
-   Sin esto, "atrás" salía de la app/al menú. Mantenemos un estado "trampa" en
-   el historial: cada "atrás" lo consume y aquí decidimos qué hacer, sin salir.
-   Orden: bajar el teclado → cerrar capa abierta → pantalla anterior → salir. */
-let backTrapArmed = false;
-function armBackTrap() {
-  try { history.pushState({ _trap: 1 }, ''); backTrapArmed = true; } catch {}
-}
-// Garantiza que haya EXACTAMENTE una trampa arriba del historial (sin acumular).
-// Idempotente: si la entrada actual ya es la trampa, no hace nada. Si se perdió
-// (p.ej. tras un back en la raíz en versiones viejas), la restablece. Así el
-// botón "atrás" del teléfono nunca puede salirse de la app por accidente.
-function ensureBackTrap() {
-  if (!currentUser) return;
-  if (history.state && history.state._trap) return;
-  armBackTrap();
-}
-function isTextEntry(el) {
-  if (!el) return false;
-  if (el.tagName === 'TEXTAREA') return true;
-  if (el.isContentEditable) return true;
-  if (el.tagName === 'INPUT') {
-    const t = (el.type || 'text').toLowerCase();
-    return !['checkbox', 'radio', 'button', 'submit', 'reset', 'file', 'range', 'color'].includes(t);
-  }
-  return false;
-}
-window.addEventListener('popstate', () => {
-  if (!currentUser) return;          // sin sesión no interceptamos (pantalla de login)
-  backTrapArmed = false;             // la trampa se consumió con este "atrás"
-  // 1) Teclado abierto → bájalo y quédate en la pantalla
-  if (isTextEntry(document.activeElement)) { document.activeElement.blur(); ensureBackTrap(); return; }
-  // 2) Capa abierta → ciérrala y quédate
-  if (dismissTopLayer()) { ensureBackTrap(); return; }
-  // 3) Pantalla inmediatamente anterior dentro de la app (switchView re-arma la trampa)
-  if (viewHistory.length > 0) { switchView(viewHistory.pop(), true); ensureBackTrap(); return; }
-  // 4) Sin historial pero no estamos en la raíz → al inicio de la empresa
-  if (currentOrg && currentView !== 'home' && currentView !== 'selector') { switchView('home', true); ensureBackTrap(); return; }
-  // 5) Raíz: re-armamos igual para NO salirnos solos de la app (el "atrás" se queda aquí)
-  ensureBackTrap();
-});
 
 /* "Regresar a Menú": siempre lleva al selector de empresas (botones MVP / Cretum),
    sin importar la vista. (Antes iba a 'home' desde sub-vistas, igual que la flecha atrás.) */
