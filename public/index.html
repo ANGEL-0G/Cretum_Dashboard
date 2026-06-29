@@ -32,6 +32,10 @@
   --shadow-sm:0 1px 4px rgba(26,58,107,.08);--shadow-md:0 4px 16px rgba(26,58,107,.12);
 }
 html,body{min-height:100%;font-family:var(--font);background:var(--gray-50);color:var(--gray-900);font-size:14px;transition:background-color .25s ease, color .25s ease}
+/* Evita el scroll horizontal de toda la página (al deslizar derecha salía
+   un espacio en blanco). 'clip' recorta sin crear contenedor de scroll, así
+   que NO rompe el sticky ni el scroll interno de tablas (.db-list-wrap). */
+html,body{overflow-x:clip;max-width:100%}
 
 /* ═══════════════════════════════════════════
    MODO OSCURO — negro + acentos según org
