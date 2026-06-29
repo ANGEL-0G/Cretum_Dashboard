@@ -24,6 +24,10 @@ import { authenticate } from './_lib/auth.js';
 import { getSupabaseAdmin } from './_lib/supabase.js';
 import { sendEmail, notifyAdminOfFailure } from './_lib/email.js';
 
+// Copia de archivo: además del remitente, las respuestas llegan a este buzón
+// (tiene etiqueta/regla para clasificarlas).
+const REPORTS_EMAIL = 'reportescretumpartners@gmail.com';
+
 const esc = (s) => String(s == null ? '' : s)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -49,12 +53,7 @@ function buildEmailHtml(d, advisorName) {
       ${row('Dirección', dir)}
     </table>
     ${empresa}
-    <h3 style="font-size:14px;color:#17436b;margin:20px 0 6px">Inversión</h3>
-    <table style="border-collapse:collapse">${row('Monto de entrada', d.monto)}</table>
-    <p style="font-size:11.5px;color:#b07d20;background:#fdf3dc;border-radius:8px;padding:10px 12px;margin-top:14px">
-      El inversionista confirmó que entiende que <strong>el monto de entrada no podrá cambiarse más adelante</strong>.
-    </p>
-    <p style="font-size:11px;color:#9aa3b5;margin-top:16px">Recibido vía Cretum Desk · ${new Date().toLocaleString('es-MX')}</p>
+    <p style="font-size:11px;color:#9aa3b5;margin-top:20px">Recibido vía Cretum Desk · ${new Date().toLocaleString('es-MX')}</p>
   </div>`;
 }
 
@@ -81,7 +80,7 @@ export default async function handler(req, res) {
       const { data: link } = await admin.from('form_links').select('*').eq('token', token).maybeSingle();
       if (!link) return res.status(404).json({ error: 'Enlace no válido o expirado' });
       // Validación mínima de obligatorios
-      const req2 = ['nombres', 'apellidos', 'pais', 'estado', 'calle', 'codigoPostal', 'numero', 'telefono', 'email', 'tipo', 'monto'];
+      const req2 = ['nombres', 'apellidos', 'pais', 'estado', 'calle', 'codigoPostal', 'numero', 'telefono', 'email', 'tipo'];
       const missing = req2.filter(k => !String(d[k] || '').trim());
       if (d.tipo === 'empresa' && !String(d.empresaNombre || '').trim()) missing.push('empresaNombre');
       if (missing.length) return res.status(400).json({ error: 'Faltan campos obligatorios' });
@@ -92,9 +91,11 @@ export default async function handler(req, res) {
 
       // Envía el correo al remitente
       let emailed = false;
+      // Va al remitente y, siempre, al buzón de reportes (sin duplicar si coinciden)
+      const recipients = [...new Set([link.recipient_email, REPORTS_EMAIL].filter(Boolean))];
       try {
         await sendEmail(
-          link.recipient_email,
+          recipients,
           `Formulario de cliente — ${d.nombres} ${d.apellidos}`,
           buildEmailHtml(d, link.recipient_name),
         );
@@ -102,7 +103,7 @@ export default async function handler(req, res) {
         if (sub?.id) await admin.from('form_submissions').update({ emailed: true }).eq('id', sub.id);
       } catch (mailErr) {
         // No perdemos la respuesta (queda guardada); avisamos al admin del fallo de correo
-        await notifyAdminOfFailure({ context: 'forms submit', recipient: link.recipient_email, error: mailErr.message });
+        await notifyAdminOfFailure({ context: 'forms submit', recipient: recipients.join(', '), error: mailErr.message });
       }
       return res.status(200).json({ ok: true, emailed });
     }

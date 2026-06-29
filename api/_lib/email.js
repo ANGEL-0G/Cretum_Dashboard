@@ -17,7 +17,7 @@ export async function sendEmail(to, subject, html) {
     },
     body: JSON.stringify({
       from: FROM_ADDRESS,
-      to: [to],
+      to: Array.isArray(to) ? to : [to],
       subject,
       html,
     }),

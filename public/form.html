@@ -66,15 +66,6 @@
   .reveal.open{grid-template-rows:1fr;opacity:1}
   .reveal > div{overflow:hidden;min-height:0}
 
-  /* ── Aviso del monto ── */
-  .notice{background:var(--amber-bg);border:1px solid #f0dca8;border-radius:var(--r);padding:13px 15px;margin-top:14px;display:flex;gap:11px;align-items:flex-start}
-  .notice svg{color:var(--amber);flex-shrink:0;margin-top:1px}
-  .notice b{color:#8a6314}
-  .notice span{font-size:12.5px;color:#7a5a1a;line-height:1.55}
-  .chk{display:flex;align-items:flex-start;gap:11px;margin-top:14px;cursor:pointer;user-select:none}
-  .chk input{width:18px;height:18px;flex-shrink:0;margin-top:1px;accent-color:var(--navy);cursor:pointer}
-  .chk span{font-size:13px;color:var(--ink);line-height:1.5}
-
   /* ── Botón enviar ── */
   .submit{width:100%;height:52px;background:var(--navy);color:#fff;border:none;border-radius:13px;font-family:var(--font);font-size:15px;font-weight:600;cursor:pointer;margin-top:22px;transition:background .16s var(--ease),transform .12s var(--ease),box-shadow .16s var(--ease);box-shadow:0 6px 18px -6px rgba(26,58,107,.5)}
   .submit:hover{background:var(--navy-mid)}
@@ -201,18 +192,6 @@
       </div></div>
     </div>
 
-    <div class="sec">
-      <div class="sec-h">Inversión</div>
-      <div class="grid">
-        <div class="fld full"><input name="monto" inputmode="decimal" placeholder=" "><label>Monto de entrada<span class="req">*</span></label><small class="err">Obligatorio</small></div>
-      </div>
-      <div class="notice">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        <span><b>Importante:</b> el monto de entrada que indiques <b>no podrá cambiarse más adelante</b>. Asegúrate de que sea correcto antes de enviar.</span>
-      </div>
-      <label class="chk"><input type="checkbox" id="confirmMonto"><span>Entiendo y confirmo que el monto de entrada no podrá modificarse después de enviar este formulario.</span></label>
-    </div>
-
     <button type="submit" class="submit" id="submitBtn">Enviar mi información</button>
     <div class="foot">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
@@ -256,7 +235,7 @@
   function validate(d) {
     let ok = true;
     document.querySelectorAll('.fld').forEach(f => f.classList.remove('invalid'));
-    const req = ['nombres','apellidos','email','telefono','calle','numero','codigoPostal','estado','pais','monto'];
+    const req = ['nombres','apellidos','email','telefono','calle','numero','codigoPostal','estado','pais'];
     if (d.tipo === 'empresa') req.push('empresaNombre');
     req.forEach(name => {
       const inp = document.querySelector(`[name="${name}"]`);
@@ -272,7 +251,6 @@
     e.preventDefault();
     const d = collect();
     if (!validate(d)) { document.querySelector('.fld.invalid')?.scrollIntoView({ behavior:'smooth', block:'center' }); return; }
-    if (!$('#confirmMonto').checked) { alert('Confirma que entiendes que el monto no podrá cambiarse.'); return; }
     const btn = $('#submitBtn'); btn.disabled = true; btn.textContent = 'Enviando…';
     try {
       await api('submit', { data: d });
