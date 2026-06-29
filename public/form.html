@@ -5,75 +5,130 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Formulario de registro · Cretum Partners</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
 <style>
   :root{
-    --navy:#1a3a6b;--navy-mid:#2a4f8f;--navy-dark:#112850;
-    --ink:#1a1f2e;--soft:#6b7589;--line:#e0e4ee;--line2:#eef0f5;
+    --navy:#1a3a6b;--navy-mid:#2a4f8f;--navy-dark:#0f2547;--navy-deep:#0a1b36;
+    --ink:#1a1f2e;--soft:#6b7589;--line:#dde1ec;--line2:#eef0f5;
     --bg:#eef1f7;--white:#fff;--amber:#b07d20;--amber-bg:#fdf3dc;--red:#c0392b;--green:#1a8c5b;
-    --r:10px;--font:'DM Sans',system-ui,sans-serif;
+    --r:12px;--font:'DM Sans',system-ui,sans-serif;--serif:'DM Serif Display',Georgia,serif;
+    --ease:cubic-bezier(.23,1,.32,1);
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:var(--font);background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
-  .wrap{max-width:660px;margin:0 auto;padding:28px 18px 64px}
+  .wrap{max-width:640px;margin:0 auto;padding:30px 18px 64px}
 
-  .hero{background:linear-gradient(135deg,var(--navy),var(--navy-mid));color:#fff;border-radius:16px;padding:26px 26px 24px;margin-bottom:22px;box-shadow:0 10px 30px rgba(26,58,107,.25)}
-  .hero img{height:30px;display:block;margin-bottom:16px;filter:brightness(0) invert(1)}
-  .hero h1{font-size:21px;font-weight:600;letter-spacing:-.01em}
-  .hero p{font-size:13px;opacity:.85;margin-top:6px}
+  /* ── Hero ── */
+  .hero{background:var(--navy-dark);color:#fff;border-radius:18px;padding:28px 28px 26px;margin-bottom:20px;position:relative;overflow:hidden}
+  .hero::after{content:"";position:absolute;top:-40%;right:-10%;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(91,143,245,.32),transparent 68%);pointer-events:none}
+  .hero img{height:28px;display:block;margin-bottom:18px;filter:brightness(0) invert(1);position:relative}
+  .hero h1{font-size:22px;font-weight:600;letter-spacing:-.015em;position:relative}
+  .hero p{font-size:13.5px;opacity:.82;margin-top:7px;max-width:46ch;line-height:1.55;position:relative}
 
-  .card{background:var(--white);border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:16px;box-shadow:0 1px 3px rgba(15,23,42,.04)}
-  .sec-h{font-size:12px;font-weight:600;color:var(--navy);text-transform:uppercase;letter-spacing:.6px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+  /* ── Panel del formulario ── */
+  .panel{background:var(--white);border:1px solid var(--line);border-radius:18px;padding:8px 24px 26px;box-shadow:0 1px 2px rgba(15,23,42,.04),0 12px 32px -18px rgba(15,23,42,.18)}
+  .sec{padding:22px 0 4px;border-top:1px solid var(--line2)}
+  .sec:first-child{border-top:none}
+  .sec-h{font-size:13px;font-weight:600;color:var(--navy);margin-bottom:16px;letter-spacing:-.01em}
 
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-  .field{display:flex;flex-direction:column;gap:6px}
-  .field.full{grid-column:1 / -1}
-  label{font-size:12.5px;font-weight:500;color:var(--soft)}
-  label .req{color:var(--red)}
-  input,select{
-    font-family:var(--font);font-size:14px;color:var(--ink);background:var(--white);
-    border:1.5px solid var(--line);border-radius:var(--r);padding:10px 12px;outline:none;width:100%;
-    transition:border-color .15s,box-shadow .15s;
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+  .fld{position:relative}
+  .fld.full{grid-column:1 / -1}
+  .fld input{
+    width:100%;height:56px;padding:23px 15px 9px;font-family:var(--font);font-size:15px;color:var(--ink);
+    background:var(--white);border:1.5px solid var(--line);border-radius:var(--r);outline:none;
+    transition:border-color .18s var(--ease),box-shadow .18s var(--ease);
   }
-  input:focus,select:focus{border-color:var(--navy);box-shadow:0 0 0 3px rgba(26,58,107,.1)}
-  input::placeholder{color:#aeb6c6}
-  .field.invalid input,.field.invalid select{border-color:var(--red)}
-  .err-msg{font-size:11.5px;color:var(--red);display:none}
-  .field.invalid .err-msg{display:block}
+  .fld label{
+    position:absolute;left:16px;top:18px;font-size:15px;color:var(--soft);pointer-events:none;
+    transform-origin:left center;transition:transform .2s var(--ease),color .2s var(--ease);
+  }
+  .fld label .req{color:var(--red);margin-left:1px}
+  .fld input:focus{border-color:var(--navy);box-shadow:0 0 0 4px rgba(26,58,107,.1)}
+  .fld input:focus + label,
+  .fld input:not(:placeholder-shown) + label{transform:translateY(-11px) scale(.76);color:var(--navy)}
+  .fld.invalid input{border-color:var(--red)}
+  .fld.invalid input:focus{box-shadow:0 0 0 4px rgba(192,57,43,.12)}
+  .fld.invalid label,.fld.invalid input:not(:placeholder-shown) + label{color:var(--red)}
+  .err{display:none;font-size:11.5px;color:var(--red);margin:5px 2px 0}
+  .fld.invalid .err{display:block}
 
-  /* Toggle tipo de inversionista */
-  .seg{display:flex;gap:10px}
-  .seg label{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:13px;border:1.5px solid var(--line);border-radius:var(--r);cursor:pointer;font-size:14px;font-weight:500;color:var(--ink);transition:all .15s;text-transform:none;letter-spacing:0}
-  .seg input{display:none}
-  .seg label:hover{border-color:var(--navy)}
-  .seg label.on{border-color:var(--navy);background:rgba(26,58,107,.06);color:var(--navy)}
+  /* ── Toggle individual / empresa con pill deslizante ── */
+  .seg{position:relative;display:flex;background:var(--line2);border-radius:12px;padding:4px;gap:0}
+  .seg-pill{position:absolute;top:4px;left:4px;width:calc(50% - 4px);height:calc(100% - 8px);background:var(--white);border-radius:9px;box-shadow:0 1px 4px rgba(15,23,42,.1);transition:transform .26s var(--ease)}
+  .seg[data-active="empresa"] .seg-pill{transform:translateX(100%)}
+  .seg-opt{position:relative;flex:1;border:none;background:none;font-family:var(--font);font-size:14px;font-weight:500;color:var(--soft);padding:11px;cursor:pointer;border-radius:9px;transition:color .22s var(--ease);z-index:1}
+  .seg-opt.on{color:var(--navy)}
 
-  #empresaCard{display:none}
+  /* ── Revelado de empresa ── */
+  .reveal{display:grid;grid-template-rows:0fr;opacity:0;transition:grid-template-rows .28s var(--ease),opacity .24s var(--ease)}
+  .reveal.open{grid-template-rows:1fr;opacity:1}
+  .reveal > div{overflow:hidden;min-height:0}
 
-  .notice{background:var(--amber-bg);border:1px solid #f0dca8;border-radius:var(--r);padding:13px 15px;margin-top:6px;display:flex;gap:11px;align-items:flex-start}
-  .notice-ico{color:var(--amber);font-size:17px;flex-shrink:0;line-height:1.3}
+  /* ── Aviso del monto ── */
+  .notice{background:var(--amber-bg);border:1px solid #f0dca8;border-radius:var(--r);padding:13px 15px;margin-top:14px;display:flex;gap:11px;align-items:flex-start}
+  .notice svg{color:var(--amber);flex-shrink:0;margin-top:1px}
   .notice b{color:#8a6314}
   .notice span{font-size:12.5px;color:#7a5a1a;line-height:1.55}
+  .chk{display:flex;align-items:flex-start;gap:11px;margin-top:14px;cursor:pointer;user-select:none}
+  .chk input{width:18px;height:18px;flex-shrink:0;margin-top:1px;accent-color:var(--navy);cursor:pointer}
+  .chk span{font-size:13px;color:var(--ink);line-height:1.5}
 
-  .chk{display:flex;align-items:flex-start;gap:10px;margin-top:14px;cursor:pointer}
-  .chk input{width:18px;height:18px;flex-shrink:0;margin-top:1px;accent-color:var(--navy)}
-  .chk span{font-size:13px;color:var(--ink)}
+  /* ── Botón enviar ── */
+  .submit{width:100%;height:52px;background:var(--navy);color:#fff;border:none;border-radius:13px;font-family:var(--font);font-size:15px;font-weight:600;cursor:pointer;margin-top:22px;transition:background .16s var(--ease),transform .12s var(--ease),box-shadow .16s var(--ease);box-shadow:0 6px 18px -6px rgba(26,58,107,.5)}
+  .submit:hover{background:var(--navy-mid)}
+  .submit:active{transform:scale(.985)}
+  .submit:disabled{opacity:.55;cursor:not-allowed;transform:none}
+  .foot{display:flex;align-items:center;justify-content:center;gap:7px;text-align:center;font-size:11.5px;color:var(--soft);margin-top:18px}
+  .foot svg{flex-shrink:0;opacity:.7}
 
-  .submit{width:100%;padding:15px;background:var(--navy);color:#fff;border:none;border-radius:12px;font-family:var(--font);font-size:15px;font-weight:600;cursor:pointer;margin-top:6px;transition:filter .15s,transform .08s;box-shadow:0 8px 20px rgba(26,58,107,.3)}
-  .submit:hover{filter:brightness(1.08)}
-  .submit:active{transform:translateY(1px)}
-  .submit:disabled{opacity:.6;cursor:not-allowed}
+  /* ── Entrada escalonada de secciones ── */
+  .reveal-in .sec,.reveal-in .submit,.reveal-in .foot{opacity:0;animation:rise .5s var(--ease) forwards}
+  .reveal-in .sec:nth-child(1){animation-delay:.04s}
+  .reveal-in .sec:nth-child(2){animation-delay:.1s}
+  .reveal-in .sec:nth-child(3){animation-delay:.16s}
+  .reveal-in .sec:nth-child(4){animation-delay:.22s}
+  .reveal-in .sec:nth-child(5){animation-delay:.28s}
+  .reveal-in .submit{animation-delay:.32s}.reveal-in .foot{animation-delay:.36s}
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 
-  .foot{text-align:center;font-size:11px;color:var(--soft);margin-top:18px;line-height:1.6}
-
-  /* Estados de pantalla completa (cargando / éxito / error de enlace) */
-  .screen{min-height:70vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px 18px}
-  .screen .big{font-size:48px;margin-bottom:14px}
-  .screen h2{font-size:20px;color:var(--navy);font-weight:600;margin-bottom:8px}
-  .screen p{font-size:14px;color:var(--soft);max-width:380px}
+  /* ── Pantallas completas ── */
+  .screen{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px 22px}
+  .screen h2{font-size:21px;color:var(--navy);font-weight:600;margin-bottom:9px}
+  .screen p{font-size:14px;color:var(--soft);max-width:380px;line-height:1.6}
+  .screen .ico{color:var(--navy);opacity:.5;margin-bottom:18px}
   .spin{width:34px;height:34px;border:3px solid var(--line);border-top-color:var(--navy);border-radius:50%;animation:spin .8s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
-  @media (max-width:560px){ .grid{grid-template-columns:1fr} .wrap{padding:20px 14px 48px} .hero{padding:22px} }
+
+  /* ── Pantalla de éxito (momento de marca) ── */
+  #doneScreen{position:fixed;inset:0;background:linear-gradient(160deg,var(--navy-deep),var(--navy-dark) 60%,#143057);color:#fff;overflow:hidden}
+  .aurora{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+  .aurora span{position:absolute;border-radius:50%;filter:blur(70px);opacity:.55;will-change:transform}
+  .aurora .a1{width:380px;height:380px;top:-12%;left:-8%;background:#3b65b0;animation:drift1 16s var(--ease) infinite alternate}
+  .aurora .a2{width:340px;height:340px;bottom:-14%;right:-6%;background:#5d8ff5;animation:drift2 19s var(--ease) infinite alternate}
+  .aurora .a3{width:280px;height:280px;top:40%;left:55%;background:#26477e;opacity:.45;animation:drift3 22s var(--ease) infinite alternate}
+  @keyframes drift1{to{transform:translate(60px,50px) scale(1.15)}}
+  @keyframes drift2{to{transform:translate(-50px,-40px) scale(1.1)}}
+  @keyframes drift3{to{transform:translate(-40px,30px) scale(1.2)}}
+  .done-in{position:relative;z-index:1;text-align:center;padding:30px 24px;max-width:440px}
+  .done-in h2{font-family:var(--serif);font-size:clamp(40px,9vw,62px);font-weight:400;line-height:1.02;letter-spacing:-.01em;color:#fff;margin:18px 0 14px;opacity:0;animation:riseB .7s var(--ease) .35s forwards}
+  .done-in p{font-size:15px;color:rgba(255,255,255,.78);line-height:1.6;max-width:36ch;margin:0 auto;opacity:0;animation:riseB .7s var(--ease) .5s forwards}
+  @keyframes riseB{from{opacity:0;transform:translateY(16px);filter:blur(4px)}to{opacity:1;transform:translateY(0);filter:blur(0)}}
+
+  .check{width:72px;height:72px;display:block;margin:0 auto}
+  .check circle{stroke:rgba(255,255,255,.9);stroke-width:2.5;fill:none;stroke-dasharray:151;stroke-dashoffset:151;animation:draw .6s var(--ease) .25s forwards}
+  .check path{stroke:#fff;stroke-width:3.5;fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:40;stroke-dashoffset:40;animation:draw .4s var(--ease) .7s forwards}
+  @keyframes draw{to{stroke-dashoffset:0}}
+
+  @media (max-width:560px){ .grid{grid-template-columns:1fr} .wrap{padding:22px 14px 48px} .hero{padding:24px} .panel{padding:6px 18px 22px} }
+
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.001s!important;animation-delay:0s!important;transition-duration:.001s!important}
+    .reveal-in .sec,.reveal-in .submit,.reveal-in .foot,.done-in h2,.done-in p{opacity:1}
+    .check circle,.check path{stroke-dashoffset:0}
+    .spin{animation:spin .8s linear infinite!important}
+  }
 </style>
 </head>
 <body>
@@ -83,16 +138,19 @@
 
 <!-- Enlace inválido -->
 <div id="badScreen" class="screen" style="display:none">
-  <div class="big">🔗</div>
+  <svg class="ico" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
   <h2>Enlace no válido</h2>
   <p>Este formulario no existe o ya no está disponible. Pídele a tu contacto en Cretum Partners un enlace nuevo.</p>
 </div>
 
 <!-- Éxito -->
 <div id="doneScreen" class="screen" style="display:none">
-  <div class="big">✅</div>
-  <h2>¡Listo, gracias!</h2>
-  <p>Recibimos tu información correctamente. Tu asesor de Cretum Partners se pondrá en contacto contigo.</p>
+  <div class="aurora"><span class="a1"></span><span class="a2"></span><span class="a3"></span></div>
+  <div class="done-in">
+    <svg class="check" viewBox="0 0 52 52"><circle cx="26" cy="26" r="24"/><path d="M15 27l7.5 7.5L38 19"/></svg>
+    <h2>Gracias.</h2>
+    <p>Recibimos tu información correctamente. Tu asesor de Cretum Partners se pondrá en contacto contigo en breve.</p>
+  </div>
 </div>
 
 <!-- Formulario -->
@@ -103,58 +161,63 @@
     <p id="heroSub">Completa tus datos para iniciar tu inversión con Cretum Partners.</p>
   </div>
 
-  <form id="form" novalidate>
-    <div class="card">
-      <div class="sec-h">👤 Datos del inversionista</div>
+  <form id="form" class="panel" novalidate>
+    <div class="sec">
+      <div class="sec-h">Datos del inversionista</div>
       <div class="grid">
-        <div class="field"><label>Nombre(s) <span class="req">*</span></label><input name="nombres" autocomplete="given-name"><div class="err-msg">Obligatorio</div></div>
-        <div class="field"><label>Apellidos <span class="req">*</span></label><input name="apellidos" autocomplete="family-name"><div class="err-msg">Obligatorio</div></div>
-        <div class="field"><label>Correo electrónico <span class="req">*</span></label><input name="email" type="email" autocomplete="email" placeholder="correo@dominio.com"><div class="err-msg">Correo válido obligatorio</div></div>
-        <div class="field"><label>Teléfono <span class="req">*</span></label><input name="telefono" type="tel" autocomplete="tel" placeholder="+52 …"><div class="err-msg">Obligatorio</div></div>
+        <div class="fld"><input name="nombres" placeholder=" " autocomplete="given-name"><label>Nombre(s)<span class="req">*</span></label><small class="err">Obligatorio</small></div>
+        <div class="fld"><input name="apellidos" placeholder=" " autocomplete="family-name"><label>Apellidos<span class="req">*</span></label><small class="err">Obligatorio</small></div>
+        <div class="fld"><input name="email" type="email" placeholder=" " autocomplete="email"><label>Correo electrónico<span class="req">*</span></label><small class="err">Ingresa un correo válido</small></div>
+        <div class="fld"><input name="telefono" type="tel" placeholder=" " autocomplete="tel"><label>Teléfono<span class="req">*</span></label><small class="err">Obligatorio</small></div>
       </div>
     </div>
 
-    <div class="card">
-      <div class="sec-h">📍 Dirección</div>
+    <div class="sec">
+      <div class="sec-h">Dirección</div>
       <div class="grid">
-        <div class="field full"><label>Calle <span class="req">*</span></label><input name="calle" autocomplete="address-line1"><div class="err-msg">Obligatorio</div></div>
-        <div class="field"><label>Número <span class="req">*</span></label><input name="numero"><div class="err-msg">Obligatorio</div></div>
-        <div class="field"><label>Código postal <span class="req">*</span></label><input name="codigoPostal" autocomplete="postal-code"><div class="err-msg">Obligatorio</div></div>
-        <div class="field"><label>Estado <span class="req">*</span></label><input name="estado" autocomplete="address-level1"><div class="err-msg">Obligatorio</div></div>
-        <div class="field"><label>País <span class="req">*</span></label><input name="pais" autocomplete="country-name"><div class="err-msg">Obligatorio</div></div>
+        <div class="fld full"><input name="calle" placeholder=" " autocomplete="address-line1"><label>Calle<span class="req">*</span></label><small class="err">Obligatorio</small></div>
+        <div class="fld"><input name="numero" placeholder=" "><label>Número<span class="req">*</span></label><small class="err">Obligatorio</small></div>
+        <div class="fld"><input name="codigoPostal" placeholder=" " autocomplete="postal-code"><label>Código postal<span class="req">*</span></label><small class="err">Obligatorio</small></div>
+        <div class="fld"><input name="estado" placeholder=" " autocomplete="address-level1"><label>Estado<span class="req">*</span></label><small class="err">Obligatorio</small></div>
+        <div class="fld"><input name="pais" placeholder=" " autocomplete="country-name"><label>País<span class="req">*</span></label><small class="err">Obligatorio</small></div>
       </div>
     </div>
 
-    <div class="card">
-      <div class="sec-h">🏷️ Tipo de inversionista</div>
-      <div class="seg" id="tipoSeg">
-        <label class="on" data-tipo="individual"><input type="radio" name="tipo" value="individual" checked> Individual</label>
-        <label data-tipo="empresa"><input type="radio" name="tipo" value="empresa"> Empresa</label>
+    <div class="sec">
+      <div class="sec-h">Tipo de inversionista</div>
+      <div class="seg" id="tipoSeg" data-active="individual">
+        <span class="seg-pill"></span>
+        <button type="button" class="seg-opt on" data-tipo="individual">Individual</button>
+        <button type="button" class="seg-opt" data-tipo="empresa">Empresa</button>
       </div>
+      <input type="hidden" name="tipo" value="individual">
+      <div class="reveal" id="empresaReveal"><div>
+        <div style="padding-top:16px">
+          <div class="grid">
+            <div class="fld full"><input name="empresaNombre" placeholder=" "><label>Nombre de la empresa<span class="req">*</span></label><small class="err">Obligatorio</small></div>
+            <div class="fld full"><input name="empresaDireccion" placeholder=" "><label>Dirección de la empresa</label></div>
+          </div>
+        </div>
+      </div></div>
     </div>
 
-    <div class="card" id="empresaCard">
-      <div class="sec-h">🏢 Datos de la empresa</div>
+    <div class="sec">
+      <div class="sec-h">Inversión</div>
       <div class="grid">
-        <div class="field full"><label>Nombre de la empresa <span class="req">*</span></label><input name="empresaNombre"><div class="err-msg">Obligatorio</div></div>
-        <div class="field full"><label>Dirección de la empresa</label><input name="empresaDireccion" placeholder="Calle, número, ciudad, país"></div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="sec-h">💰 Inversión</div>
-      <div class="grid">
-        <div class="field full"><label>Monto de entrada <span class="req">*</span></label><input name="monto" inputmode="decimal" placeholder="Ej. $1,000,000 USD"><div class="err-msg">Obligatorio</div></div>
+        <div class="fld full"><input name="monto" inputmode="decimal" placeholder=" "><label>Monto de entrada<span class="req">*</span></label><small class="err">Obligatorio</small></div>
       </div>
       <div class="notice">
-        <span class="notice-ico">⚠️</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         <span><b>Importante:</b> el monto de entrada que indiques <b>no podrá cambiarse más adelante</b>. Asegúrate de que sea correcto antes de enviar.</span>
       </div>
       <label class="chk"><input type="checkbox" id="confirmMonto"><span>Entiendo y confirmo que el monto de entrada no podrá modificarse después de enviar este formulario.</span></label>
     </div>
 
     <button type="submit" class="submit" id="submitBtn">Enviar mi información</button>
-    <div class="foot">🔒 Tus datos se envían de forma segura a tu asesor de Cretum Partners.</div>
+    <div class="foot">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      Tus datos se envían de forma segura a tu asesor de Cretum Partners.
+    </div>
   </form>
 </div>
 
@@ -171,13 +234,18 @@
   }
 
   // Toggle Individual / Empresa
-  const empresaCard = $('#empresaCard');
-  $('#tipoSeg').addEventListener('click', e => {
-    const lbl = e.target.closest('label[data-tipo]'); if (!lbl) return;
-    document.querySelectorAll('#tipoSeg label').forEach(l => l.classList.toggle('on', l === lbl));
-    lbl.querySelector('input').checked = true;
-    empresaCard.style.display = lbl.dataset.tipo === 'empresa' ? 'block' : 'none';
+  const seg = $('#tipoSeg'), tipoInput = $('[name="tipo"]'), empresaReveal = $('#empresaReveal');
+  seg.addEventListener('click', e => {
+    const opt = e.target.closest('.seg-opt'); if (!opt) return;
+    const tipo = opt.dataset.tipo;
+    seg.dataset.active = tipo;
+    tipoInput.value = tipo;
+    seg.querySelectorAll('.seg-opt').forEach(o => o.classList.toggle('on', o === opt));
+    empresaReveal.classList.toggle('open', tipo === 'empresa');
   });
+
+  // Limpia el estado de error al escribir
+  $('#form').addEventListener('input', e => { e.target.closest('.fld')?.classList.remove('invalid'); });
 
   function collect() {
     const fd = new FormData($('#form'));
@@ -187,7 +255,7 @@
   }
   function validate(d) {
     let ok = true;
-    document.querySelectorAll('.field').forEach(f => f.classList.remove('invalid'));
+    document.querySelectorAll('.fld').forEach(f => f.classList.remove('invalid'));
     const req = ['nombres','apellidos','email','telefono','calle','numero','codigoPostal','estado','pais','monto'];
     if (d.tipo === 'empresa') req.push('empresaNombre');
     req.forEach(name => {
@@ -195,9 +263,7 @@
       if (!inp) return;
       let bad = !d[name];
       if (name === 'email' && d.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(d.email)) bad = true;
-      // si el campo está en una tarjeta oculta (empresa en modo individual) no valida
-      if (inp.closest('#empresaCard') && d.tipo !== 'empresa') bad = false;
-      if (bad) { inp.closest('.field')?.classList.add('invalid'); ok = false; }
+      if (bad) { inp.closest('.fld')?.classList.add('invalid'); ok = false; }
     });
     return ok;
   }
@@ -205,7 +271,7 @@
   $('#form').addEventListener('submit', async e => {
     e.preventDefault();
     const d = collect();
-    if (!validate(d)) { document.querySelector('.field.invalid')?.scrollIntoView({ behavior:'smooth', block:'center' }); return; }
+    if (!validate(d)) { document.querySelector('.fld.invalid')?.scrollIntoView({ behavior:'smooth', block:'center' }); return; }
     if (!$('#confirmMonto').checked) { alert('Confirma que entiendes que el monto no podrá cambiarse.'); return; }
     const btn = $('#submitBtn'); btn.disabled = true; btn.textContent = 'Enviando…';
     try {
@@ -225,6 +291,7 @@
       if (!m.ok) { show('badScreen'); return; }
       if (m.advisor) $('#heroSub').textContent = `${m.advisor} de Cretum Partners te invita a completar tus datos para iniciar tu inversión.`;
       show('formWrap');
+      requestAnimationFrame(() => $('#formWrap').classList.add('reveal-in'));
     } catch { show('badScreen'); }
   })();
 </script>
