@@ -2005,14 +2005,18 @@ button,input,select{font-family:var(--font)}
 /* Filtros de BD (escritorio Y móvil): botón CUADRADO con solo el ícono; al
    abrir (o cuando hay filtro activo) se expande revelando el tipo/valor del
    filtro. La etiqueta anima su max-width → la expansión se siente fluida. */
-.db-cdd .cdd-btn{padding:0 10px;height:34px;min-width:34px;justify-content:center;gap:0}
-.db-cdd .cdd-ico{font-size:13px}
-.db-cdd .cdd-chev{display:none}
-.db-cdd .cdd-label{
-  max-width:0;opacity:0;margin-left:0;overflow:hidden;white-space:nowrap;
-  transition:max-width .24s cubic-bezier(.23,1,.32,1),opacity .16s ease,margin-left .2s ease;
+.db-cdd .cdd-btn{padding:0 11px;height:34px;gap:7px;min-width:0;max-width:none}
+.db-cdd .cdd-ico{font-size:12px}
+.db-cdd .cdd-label{flex:0 1 auto}            /* nombre corto, pastilla a su medida */
+.db-cdd .cdd-chev{margin-left:2px}
+/* Badge de conteo: aparece solo cuando el filtro está activo */
+.cdd-count{
+  display:none;min-width:18px;height:18px;padding:0 5px;border-radius:9px;
+  background:var(--navy);color:#fff;font-size:10.5px;font-weight:700;
+  font-family:var(--mono);align-items:center;justify-content:center;line-height:1;
 }
-.db-cdd.open .cdd-label,.db-cdd.active .cdd-label{max-width:180px;opacity:1;margin-left:7px}
+.cdd.active .cdd-count{display:inline-flex}
+[data-theme="dark"] .cdd-count{color:#0a0a0a}
 [data-theme="dark"] .cdd.active .cdd-btn{background:var(--navy-pale)}
 [data-theme="dark"] .cdd-panel{background:#1a1a1a;border-color:#262626}
 [data-theme="dark"] .cdd-opt:hover{background:rgba(255,255,255,.05)}
@@ -2797,7 +2801,8 @@ button,input,select{font-family:var(--font)}
       <div class="cdd db-cdd cdd-multi" id="ddCompany" data-value="">
         <button class="cdd-btn" type="button" onclick="cddToggle('ddCompany')">
           <i class="fa-solid fa-building cdd-ico"></i>
-          <span class="cdd-label">Todas las empresas</span>
+          <span class="cdd-label">Empresa</span>
+          <span class="cdd-count"></span>
           <i class="fa-solid fa-chevron-down cdd-chev"></i>
         </button>
         <div class="cdd-panel" id="ddCompanyPanel"></div>
@@ -2805,7 +2810,8 @@ button,input,select{font-family:var(--font)}
       <div class="cdd db-cdd cdd-multi" id="ddSeries" data-value="">
         <button class="cdd-btn" type="button" onclick="cddToggle('ddSeries')">
           <i class="fa-solid fa-layer-group cdd-ico"></i>
-          <span class="cdd-label">Todas las series</span>
+          <span class="cdd-label">Serie</span>
+          <span class="cdd-count"></span>
           <i class="fa-solid fa-chevron-down cdd-chev"></i>
         </button>
         <div class="cdd-panel" id="ddSeriesPanel"></div>
@@ -2813,7 +2819,8 @@ button,input,select{font-family:var(--font)}
       <div class="cdd db-cdd cdd-multi" id="ddTitular" data-value="">
         <button class="cdd-btn" type="button" onclick="cddToggle('ddTitular')">
           <i class="fa-solid fa-user-tag cdd-ico"></i>
-          <span class="cdd-label">Todos los titulares</span>
+          <span class="cdd-label">Titular</span>
+          <span class="cdd-count"></span>
           <i class="fa-solid fa-chevron-down cdd-chev"></i>
         </button>
         <div class="cdd-panel" id="ddTitularPanel"></div>

@@ -3092,15 +3092,13 @@ function cddValues(id) {
   return [...cdd.querySelectorAll('.cdd-opt.selected')].map(o => o.dataset.value).filter(Boolean);
 }
 
-// Actualiza el texto del botón según cuántas opciones haya seleccionadas
+// El nombre del filtro queda fijo en el botón ("Empresa", "Serie", "Titular");
+// aquí solo marcamos activo y mostramos cuántas opciones hay seleccionadas (badge).
 function updateCddLabel(cdd) {
-  const labelEl = cdd.querySelector('.cdd-label');
-  const allOpt = cdd.querySelector('.cdd-opt[data-value=""]');
-  const def = (allOpt && allOpt.textContent.trim()) || (labelEl ? labelEl.textContent : '');
+  const countEl = cdd.querySelector('.cdd-count');
   const sel = [...cdd.querySelectorAll('.cdd-opt.selected')].filter(o => o.dataset.value);
-  if (!sel.length) { labelEl.textContent = def; cdd.classList.remove('active'); }
-  else if (sel.length === 1) { labelEl.textContent = sel[0].textContent.trim(); cdd.classList.add('active'); }
-  else { labelEl.textContent = sel.length + ' seleccionadas'; cdd.classList.add('active'); }
+  cdd.classList.toggle('active', sel.length > 0);
+  if (countEl) countEl.textContent = sel.length ? String(sel.length) : '';
 }
 
 // Click en una opción de un dropdown multi: alterna sin cerrar el panel
