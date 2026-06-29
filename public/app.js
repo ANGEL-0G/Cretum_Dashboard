@@ -5145,6 +5145,8 @@ function renderInvestorDetail(inv, contacts, positions) {
         ${canEditTitular ? `<button class="cdd-btn" style="margin-top:4px" onclick="contactAdd(${inv.id})"><i class="fa-solid fa-user-plus"></i> Añadir contacto</button>` : ''}
       </div>` : ''}
 
+    ${exposicion}
+    ${eventos}
     ${(activePositions.length || terminatedPositions.length) ? `
       <div class="db-pos-toolbar">
         <div class="db-pos-toolbar-label">Columnas de posiciones</div>
@@ -5157,9 +5159,6 @@ function renderInvestorDetail(inv, contacts, positions) {
           <div class="cdd-panel" id="ddPosColsPanel"></div>
         </div>
       </div>` : ''}
-
-    ${exposicion}
-    ${eventos}
     ${renderPositionsBlock('Posiciones activas', activePositions, combined)}
     ${renderPositionsBlock('Posiciones terminadas', terminatedPositions, combined)}
 
