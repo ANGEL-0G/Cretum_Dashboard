@@ -2156,9 +2156,11 @@ button,input,select{font-family:var(--font)}
   .db-detail-export .dbx-btn{flex:1;justify-content:center}
   .db-row{padding:11px 13px;gap:10px}
   .db-row-meta{gap:9px}
-  /* Tablas de distribuciones/empresa: scroll horizontal propio en vez de
-     cortarse (antes desbordaban la página; con overflow-x:clip se recortaban) */
-  .db-table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap;font-size:11px}
+  /* La sección lleva el scroll horizontal; la tabla sigue normal (width:100%):
+     se ve completa cuando es angosta y se desliza dentro de la sección cuando
+     es ancha. (Volvimos de display:block, que rompía el render en móvil.) */
+  .db-section{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .db-table{font-size:11px}
   .db-table th,.db-table td{padding:8px 9px}
   .db-table .hide-mobile{display:none}
   /* Texto chico de etiquetas: un punto más legible en teléfono */
