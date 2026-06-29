@@ -2252,8 +2252,8 @@ function dismissTopLayer() {
   if (overlays.length) { overlays[overlays.length - 1].classList.remove('show'); return true; }
   // 4) Detalle de base de datos
   if (currentView === 'db' && q('dbDetail')?.classList.contains('show')) { closeDetail(); return true; }
-  // 5) Detalle de fund tracker
-  if (q('ftDetail')?.classList.contains('show')) { q('ftDetail').classList.remove('show'); return true; }
+  // 5) Detalle de fund tracker → vuelve a la lista de fondos
+  if (q('ftDetail')?.classList.contains('show')) { closeFundTracker(); return true; }
   // 6) Detalle de un formulario → vuelve a la galería
   if (currentView === 'forms' && q('formsDetail') && q('formsDetail').style.display !== 'none') {
     formsBackHome(); return true;
@@ -2297,7 +2297,8 @@ window.addEventListener('popstate', () => {
   if (viewHistory.length > 0) { switchView(viewHistory.pop(), true); armBackTrap(); return; }
   // 4) Sin historial pero no estamos en la raíz → al inicio de la empresa
   if (currentOrg && currentView !== 'home' && currentView !== 'selector') { switchView('home', true); armBackTrap(); return; }
-  // 5) Raíz: no re-armamos → el siguiente "atrás" sale de la app
+  // 5) Raíz: re-armamos igual para NO salirnos solos de la app (el "atrás" se queda aquí)
+  armBackTrap();
 });
 
 /* "Regresar a Menú": siempre lleva al selector de empresas (botones MVP / Cretum),
