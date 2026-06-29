@@ -89,7 +89,7 @@ async function enterApp(user) {
   applyOrgTheme();
   renderNavList();
   applyRoute();
-  armBackTrap();   // captura el botón "atrás" del teléfono dentro de la app
+  ensureBackTrap();   // captura el botón "atrás" del teléfono dentro de la app
 
   loadData();
 }
@@ -2195,6 +2195,7 @@ function switchView(view, isBack = false) {
   if (view === 'tasks') requestAnimationFrame(tkMoveSliders);   // coloca las pills una vez visible
 
   syncHash();
+  ensureBackTrap();   // garantiza la trampa del botón "atrás" tras cada navegación
 }
 
 /* ── Routing por hash (#org/vista) — persiste la vista al refrescar ── */
@@ -2276,6 +2277,15 @@ let backTrapArmed = false;
 function armBackTrap() {
   try { history.pushState({ _trap: 1 }, ''); backTrapArmed = true; } catch {}
 }
+// Garantiza que haya EXACTAMENTE una trampa arriba del historial (sin acumular).
+// Idempotente: si la entrada actual ya es la trampa, no hace nada. Si se perdió
+// (p.ej. tras un back en la raíz en versiones viejas), la restablece. Así el
+// botón "atrás" del teléfono nunca puede salirse de la app por accidente.
+function ensureBackTrap() {
+  if (!currentUser) return;
+  if (history.state && history.state._trap) return;
+  armBackTrap();
+}
 function isTextEntry(el) {
   if (!el) return false;
   if (el.tagName === 'TEXTAREA') return true;
@@ -2290,15 +2300,15 @@ window.addEventListener('popstate', () => {
   if (!currentUser) return;          // sin sesión no interceptamos (pantalla de login)
   backTrapArmed = false;             // la trampa se consumió con este "atrás"
   // 1) Teclado abierto → bájalo y quédate en la pantalla
-  if (isTextEntry(document.activeElement)) { document.activeElement.blur(); armBackTrap(); return; }
+  if (isTextEntry(document.activeElement)) { document.activeElement.blur(); ensureBackTrap(); return; }
   // 2) Capa abierta → ciérrala y quédate
-  if (dismissTopLayer()) { armBackTrap(); return; }
-  // 3) Pantalla inmediatamente anterior dentro de la app
-  if (viewHistory.length > 0) { switchView(viewHistory.pop(), true); armBackTrap(); return; }
+  if (dismissTopLayer()) { ensureBackTrap(); return; }
+  // 3) Pantalla inmediatamente anterior dentro de la app (switchView re-arma la trampa)
+  if (viewHistory.length > 0) { switchView(viewHistory.pop(), true); ensureBackTrap(); return; }
   // 4) Sin historial pero no estamos en la raíz → al inicio de la empresa
-  if (currentOrg && currentView !== 'home' && currentView !== 'selector') { switchView('home', true); armBackTrap(); return; }
+  if (currentOrg && currentView !== 'home' && currentView !== 'selector') { switchView('home', true); ensureBackTrap(); return; }
   // 5) Raíz: re-armamos igual para NO salirnos solos de la app (el "atrás" se queda aquí)
-  armBackTrap();
+  ensureBackTrap();
 });
 
 /* "Regresar a Menú": siempre lleva al selector de empresas (botones MVP / Cretum),
