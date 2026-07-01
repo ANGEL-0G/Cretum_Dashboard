@@ -4413,11 +4413,12 @@ async function renderReportPdf(html, fileName) {
   }
 }
 
-// Botón PDF: genera el reporte premium con el Chrome del navegador (Guardar como PDF). Fallback jsPDF.
-async function exportInvestorPdf(posId) {
+// Arma el payload del reporte premium (compartido por los botones PDF y HTML).
+// Devuelve null si no hay inversionista abierto o no se encontró la posición.
+function buildInvestorReportPayload(posId) {
   const data = buildInvestorExport(posId);
-  if (!data) { toast('Abre un inversionista primero'); return; }
-  if (posId != null && !data.pos.length) { toast('No encontré esa posición'); return; }
+  if (!data) { toast('Abre un inversionista primero'); return null; }
+  if (posId != null && !data.pos.length) { toast('No encontré esa posición'); return null; }
   const single = posId != null;
   const t = data.totals;
   const shown = data.pos.filter(p => !p.reinvSource);
@@ -4452,15 +4453,45 @@ async function exportInvestorPdf(posId) {
     ? data.inv._accounts.map(a => a.name).join(' + ')
     : data.inv.name;
   const fileName = (nameBase + ' Portfolio Snapshot').replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, ' ').trim();
+  return { payload, fileName };
+}
+
+// Botón PDF: genera el reporte premium con el Chrome del navegador (Guardar como PDF). Fallback jsPDF.
+async function exportInvestorPdf(posId) {
+  const built = buildInvestorReportPayload(posId);
+  if (!built) return;
   try {
     toast('Generando PDF…');
-    const html = buildReportHtmlClient(payload);
-    await renderReportPdf(html, fileName);
+    const html = buildReportHtmlClient(built.payload);
+    await renderReportPdf(html, built.fileName);
     toast('PDF descargado');
     return;
   } catch (e) {
     console.warn('[report] render falló, uso jsPDF:', e);
     return exportInvestorPdfJsPDF(posId);
+  }
+}
+
+// Botón HTML: descarga el mismo reporte premium como archivo .html standalone
+// (para compartir al inversionista — se abre en cualquier navegador, sin depender del portal).
+function exportInvestorHtml(posId) {
+  const built = buildInvestorReportPayload(posId);
+  if (!built) return;
+  try {
+    let html = buildReportHtmlClient(built.payload);
+    // El archivo vive fuera del portal: fuentes con URL absoluta (cargan si hay internet,
+    // con fallback de sistema si no) + título + página centrada con fondo suave.
+    html = html.replace(/url\('\/fonts\//g, `url('${location.origin}/fonts/`);
+    html = html.replace('<head><meta charset="utf-8">',
+      `<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${built.payload.meta.title} — Portfolio Snapshot</title>`);
+    html = html.replace('</head>',
+      '<style>body{background:#eceae6;display:flex;justify-content:center;padding:26px 0}.page{background:#fff;box-shadow:0 2px 18px rgba(0,0,0,.10);border-radius:6px;overflow:hidden}@media(max-width:860px){body{padding:0}.page{width:100%;border-radius:0}}</style></head>');
+    html = html.replace('MVP MANAGER · DOCUMENTO INTERNO', 'MVP MANAGER · CONFIDENCIAL · PREPARADO PARA EL INVERSIONISTA');
+    downloadBlob(new Blob([html], { type: 'text/html;charset=utf-8' }), built.fileName + '.html');
+    toast('HTML descargado');
+  } catch (e) {
+    console.warn('[report] export HTML falló:', e);
+    toast('Error al generar HTML: ' + e.message);
   }
 }
 
@@ -5284,6 +5315,7 @@ function renderInvestorDetail(inv, contacts, positions) {
         <div class="db-detail-export">
           <button class="dbx-btn" onclick="exportInvestorXlsx()" title="Exportar todo su detalle a Excel"><i class="fa-solid fa-file-excel"></i> Excel</button>
           <button class="dbx-btn pdf" onclick="exportInvestorPdf()" title="Exportar todo su detalle a PDF"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+          <button class="dbx-btn html" onclick="exportInvestorHtml()" title="Descargar el perfil como reporte HTML para compartir"><i class="fa-solid fa-file-code"></i> HTML</button>
         </div>
       </div>
       ${combined
