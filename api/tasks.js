@@ -9,7 +9,7 @@
  */
 
 import { getRedis } from './_lib/redis.js';
-import { authenticate } from './_lib/auth.js';
+import { authenticate, getUserRole } from './_lib/auth.js';
 
 const SEED = { simple: [], progress: [], assigned: [], invites: [] };
 
@@ -57,6 +57,12 @@ export default async function handler(req, res) {
 
   if (req.method === 'POST') {
     try {
+      // Solo editores y admins pueden guardar (crear/editar) tareas.
+      // Las tareas viven en un blob compartido; un viewer no debe sobrescribirlo.
+      const role = await getUserRole(user.id);
+      if (role !== 'editor' && role !== 'admin') {
+        return res.status(403).json({ error: 'Solo editores y admins pueden modificar tareas' });
+      }
       const body = req.body;
       if (!body || typeof body !== 'object') {
         return res.status(400).json({ error: 'Body inválido' });

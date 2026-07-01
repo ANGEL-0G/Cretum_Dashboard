@@ -6,8 +6,8 @@
 <title>Cretum Dashboard</title>
 <link rel="icon" type="image/png" href="/logo-icon.png">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha384-/o6I2CkkWC//PSjvWC/eYN7l3xM3tJm8ZzVkCOfp//W05QcE3mlGskpoHB6XqI+B" crossorigin="anonymous" referrerpolicy="no-referrer">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.0/dist/umd/supabase.min.js" integrity="sha384-DjOvX/sJLsmbMrw4wTvf6l3kiGBjdxyOO6X2MTFwOOXGkjN/mE08BoDzrpaaIjil" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script>
   // Aplicar tema antes de renderizar (evita FOUC en modo oscuro)
   (function() {
@@ -3546,12 +3546,12 @@ button,input,select{font-family:var(--font)}
   <div class="pt-grid">
     <div class="pt-col">
       <h3><span><i class="fa-solid fa-display"></i> Dashboards</span>
-        <button class="btn-primary" type="button" onclick="ptDashOpen()" style="padding:6px 12px;font-size:12.5px"><i class="fa-solid fa-plus"></i> Nuevo</button></h3>
+        <button class="btn-primary" id="ptNewDashBtn" type="button" onclick="ptDashOpen()" style="padding:6px 12px;font-size:12.5px"><i class="fa-solid fa-plus"></i> Nuevo</button></h3>
       <div class="pt-list" id="ptDashList"></div>
     </div>
     <div class="pt-col">
       <h3><span><i class="fa-solid fa-key"></i> Accesos</span>
-        <button class="btn-primary" type="button" onclick="ptUserOpen()" style="padding:6px 12px;font-size:12.5px"><i class="fa-solid fa-user-plus"></i> Nuevo</button></h3>
+        <button class="btn-primary" id="ptNewUserBtn" type="button" onclick="ptUserOpen()" style="padding:6px 12px;font-size:12.5px"><i class="fa-solid fa-user-plus"></i> Nuevo</button></h3>
       <div class="pt-list" id="ptUserList"></div>
     </div>
   </div>
@@ -3936,6 +3936,6 @@ button,input,select{font-family:var(--font)}
   </div>
 </div>
 
-<script src="/app.js?v=20260629-sec"></script>
+<script src="/app.js?v=20260629-sec2"></script>
 </body>
 </html>

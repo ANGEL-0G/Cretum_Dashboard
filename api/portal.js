@@ -20,6 +20,23 @@
 import crypto from 'crypto';
 import { getSupabaseAdmin, supabaseUrl } from './_lib/supabase.js';
 import { authenticate, bearerToken } from './_lib/auth.js';
+import { getRedis } from './_lib/redis.js';
+
+// Rate limit contra fuerza bruta del login público. Cuenta intentos por clave
+// en una ventana; si se pasa, bloquea. Ante falta de Redis o error, NO bloquea
+// (no queremos tumbar el login por un problema de infraestructura).
+async function rateLimit(key, max, windowSec) {
+  const r = getRedis();
+  if (!r) return true;
+  try {
+    const n = await r.incr(key);
+    if (n === 1) await r.expire(key, windowSec);
+    return n <= max;
+  } catch { return true; }
+}
+function clientIp(req) {
+  return String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'na';
+}
 
 /* ── Password hashing (scrypt nativo) ── */
 function hashPassword(pw) {
@@ -86,11 +103,18 @@ export default async function handler(req, res) {
       const username = String(req.body.username || '').trim().toLowerCase();
       const password = String(req.body.password || '');
       if (!username || !password) return res.status(400).json({ error: 'Faltan credenciales' });
+      // Rate limit ANTES del scrypt: por IP (amplio) y por usuario+org (estricto).
+      const okIp = await rateLimit(`portal:rl:ip:${clientIp(req)}`, 40, 600);        // 40 / 10 min por IP
+      const okUser = await rateLimit(`portal:rl:u:${org}:${username}`, 8, 600);      // 8 / 10 min por usuario
+      if (!okIp || !okUser) {
+        return res.status(429).json({ error: 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.' });
+      }
       const { data: u } = await sb.from('portal_users')
         .select('id, password_hash, active, label').eq('username', username).eq('org', org).maybeSingle();
       // Mismo mensaje y trabajo similar exista o no el usuario (anti-enumeración)
       const ok = u && u.active && verifyPassword(password, u.password_hash);
       if (!ok) return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
+      try { const r = getRedis(); if (r) await r.del(`portal:rl:u:${org}:${username}`); } catch {}  // login OK → limpia el contador
       const { data: acc } = await sb.from('portal_access')
         .select('portal_dashboards(slug, title, org)').eq('user_id', u.id);
       const dashboards = (acc || []).map(a => a.portal_dashboards).filter(Boolean)
@@ -119,20 +143,18 @@ export default async function handler(req, res) {
       return res.status(200).json({ title: dash.title, html: dash.html });
     }
 
-    /* ───────── ADMIN (requiere rol admin en la app interna) ───────── */
-    if (!action.startsWith('admin') && !['save_dashboard', 'delete_dashboard', 'get_dashboard', 'save_user', 'delete_user'].includes(action)) {
+    /* ───────── ACCIONES INTERNAS (requieren sesión de la app) ───────── */
+    const KNOWN = ['admin_list', 'get_dashboard', 'save_dashboard', 'delete_dashboard', 'save_user', 'delete_user'];
+    if (!KNOWN.includes(action)) {
       return res.status(400).json({ error: `Acción inválida: ${action}` });
     }
-    if (!(await canManage(req))) return res.status(403).json({ error: 'Solo editores o admins' });
+    // Toda acción interna exige sesión de Supabase.
+    if (!(await authenticate(req))) return res.status(401).json({ error: 'No autorizado' });
 
     const org = reqOrg(req);
 
-    if (action === 'get_dashboard') {
-      const { data } = await sb.from('portal_dashboards').select('id, slug, title, html').eq('id', req.body.id).eq('org', org).maybeSingle();
-      if (!data) return res.status(404).json({ error: 'No encontrado' });
-      return res.status(200).json(data);
-    }
-
+    // LECTURA visible para todo el equipo (incluidos viewers): lista de
+    // dashboards y accesos. NUNCA incluye password_hash (no se selecciona).
     if (action === 'admin_list') {
       const [{ data: dashboards }, { data: users }, { data: access }] = await Promise.all([
         sb.from('portal_dashboards').select('id, slug, title, updated_at').eq('org', org).order('title'),
@@ -140,6 +162,15 @@ export default async function handler(req, res) {
         sb.from('portal_access').select('user_id, dashboard_id'),
       ]);
       return res.status(200).json({ dashboards: dashboards || [], users: users || [], access: access || [] });
+    }
+
+    // De aquí en adelante: crear/editar/borrar → solo editores/admins (no viewers).
+    if (!(await canManage(req))) return res.status(403).json({ error: 'Solo editores o admins' });
+
+    if (action === 'get_dashboard') {
+      const { data } = await sb.from('portal_dashboards').select('id, slug, title, html').eq('id', req.body.id).eq('org', org).maybeSingle();
+      if (!data) return res.status(404).json({ error: 'No encontrado' });
+      return res.status(200).json(data);
     }
 
     if (action === 'save_dashboard') {
@@ -201,11 +232,11 @@ export default async function handler(req, res) {
 
     return res.status(400).json({ error: `Acción inválida: ${action}` });
   } catch (err) {
-    console.error('[portal]', err);
+    console.error('[portal]', err);   // detalle en logs, no al cliente
     // Violación de unique (slug/username duplicado)
     if (String(err.message).includes('duplicate')) {
       return res.status(409).json({ error: 'Ya existe un registro con ese slug/usuario' });
     }
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: 'No se pudo completar la operación' });
   }
 }

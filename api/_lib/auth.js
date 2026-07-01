@@ -5,7 +5,7 @@
  * validación contra Supabase (tasks.js, reminder.js, dropbox.js).
  */
 
-import { getSupabase } from './supabase.js';
+import { getSupabase, getSupabaseAdmin } from './supabase.js';
 
 /** Extrae el token crudo del header Authorization (o '' si no hay). */
 export function bearerToken(req) {
@@ -25,4 +25,15 @@ export async function authenticate(req) {
   const { data, error } = await sb.auth.getUser(token);
   if (error || !data?.user) return null;
   return data.user;
+}
+
+/**
+ * Rol de un usuario ('viewer' | 'editor' | 'admin' | null). Lee `profiles` con
+ * service role (omite RLS). Úsalo para autorizar acciones de escritura.
+ */
+export async function getUserRole(userId) {
+  const admin = getSupabaseAdmin();
+  if (!admin || !userId) return null;
+  const { data } = await admin.from('profiles').select('role').eq('id', userId).maybeSingle();
+  return data?.role || null;
 }

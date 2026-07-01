@@ -435,6 +435,10 @@ async function loadData() {
 
 async function saveData() {
   if (!currentUser) return;
+  // Solo editores/admins guardan (el backend también lo exige). Usamos el rol
+  // REAL (no el simulado por "Ver como") para no meter a un viewer en un bucle
+  // de reintentos con error 403.
+  if (roleReal && roleReal !== 'editor' && roleReal !== 'admin') return;
   setSyncStatus('saving');
   try {
     const r = await authedFetch('/api/tasks', {
@@ -1864,7 +1868,7 @@ const ORG_MODULES = {
       iconClass: 'home-ico-forms' },
     { view: 'portal', icon: 'fa-share-nodes', title: 'Portal de clientes',
       desc: 'Sube dashboards externos y da acceso a clientes con su propio usuario',
-      iconClass: 'home-ico-portal', editorOrAdmin: true },
+      iconClass: 'home-ico-portal' },
   ],
   mvp: [
     { view: 'db', icon: 'fa-database', title: 'Base de Datos',
@@ -1878,7 +1882,7 @@ const ORG_MODULES = {
       iconClass: 'home-ico-reportes' },
     { view: 'portal', icon: 'fa-share-nodes', title: 'Portal de clientes',
       desc: 'Sube dashboards de MVP y da acceso a clientes con su propio usuario',
-      iconClass: 'home-ico-portal', editorOrAdmin: true },
+      iconClass: 'home-ico-portal' },
     { view: 'altareturn', icon: 'fa-chart-line', title: 'Altareturn',
       desc: 'Ingesta y consulta de documentos del portafolio MVP',
       iconClass: 'home-ico-reports', disabled: true },
@@ -1893,14 +1897,14 @@ const ORG_NAV = {
     { view: 'dropbox', icon: 'fa-dropbox',     label: 'Dropbox', brand: true },
     { view: 'campaigns', icon: 'fa-bolt',      label: 'Campañas' },
     { view: 'forms',     icon: 'fa-clipboard-list', label: 'Formularios' },
-    { view: 'portal',    icon: 'fa-share-nodes', label: 'Portal de clientes', editorOrAdmin: true },
+    { view: 'portal',    icon: 'fa-share-nodes', label: 'Portal de clientes' },
   ],
   mvp: [
     { view: 'home',         icon: 'fa-house',         label: 'Inicio' },
     { view: 'db',           icon: 'fa-database',      label: 'Base de Datos' },
     { view: 'fundTrackers', icon: 'fa-chart-column',  label: 'Fund Trackers' },
     { view: 'reports',      icon: 'fa-chart-pie',     label: 'Reportes' },
-    { view: 'portal',       icon: 'fa-share-nodes',   label: 'Portal de clientes', editorOrAdmin: true },
+    { view: 'portal',       icon: 'fa-share-nodes',   label: 'Portal de clientes' },
   ],
 };
 
@@ -2523,6 +2527,10 @@ function fuzzyMatch(q, text, threshold) {
 let ptDashboards = [], ptUsers = [], ptAccess = [];
 let portalOrg = 'cretum';   // empresa que se gestiona en el módulo Portal (según currentOrg)
 
+// Todo el equipo VE los dashboards y accesos (sin contraseñas); solo editores/
+// admins pueden crear/editar/borrar. El backend lo exige igual (canManage).
+const ptCanManage = () => currentProfile?.role === 'admin' || currentProfile?.role === 'editor';
+
 async function portalApi(body) {
   const r = await authedFetch('/api/portal', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -2538,6 +2546,10 @@ async function loadPortalAdmin() {
   const base = portalOrg === 'mvp' ? '/portal-mvp' : '/portal';
   const openLink = document.getElementById('ptOpenLink'); if (openLink) openLink.href = base;
   const urlText = document.getElementById('ptUrlText'); if (urlText) urlText.textContent = 'cretumdesk.com' + base;
+  // Botones "Nuevo": solo editores/admins (viewers ven la lista en modo lectura)
+  const manage = ptCanManage();
+  const nd = document.getElementById('ptNewDashBtn'); if (nd) nd.style.display = manage ? '' : 'none';
+  const nu = document.getElementById('ptNewUserBtn'); if (nu) nu.style.display = manage ? '' : 'none';
   const dl = document.getElementById('ptDashList'), ul = document.getElementById('ptUserList');
   if (dl) dl.innerHTML = '<div class="pt-empty"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
   try {
@@ -2551,32 +2563,34 @@ async function loadPortalAdmin() {
 
 function renderPtDashboards() {
   const el = document.getElementById('ptDashList');
-  if (!ptDashboards.length) { el.innerHTML = '<div class="pt-empty">Aún no hay dashboards. Crea el primero.</div>'; return; }
+  if (!ptDashboards.length) { el.innerHTML = `<div class="pt-empty">Aún no hay dashboards.${ptCanManage() ? ' Crea el primero.' : ''}</div>`; return; }
   const base = portalOrg === 'mvp' ? '/portal-mvp' : '/portal';
+  const manage = ptCanManage();
   el.innerHTML = ptDashboards.map(d => `<div class="pt-item">
     <div class="nm">${escapeHtml(d.title)}</div>
     <div class="sub">${base} · ${escapeHtml(d.slug)}</div>
     <div class="acts">
       <button class="cdd-btn" onclick="ptDashView(${d.id})"><i class="fa-solid fa-eye"></i> Previsualizar</button>
-      <button class="cdd-btn" onclick="ptDashOpen(${d.id})"><i class="fa-solid fa-pen"></i> Editar</button>
-      <button class="cdd-btn camp-btn-danger" onclick="ptDashDelete(${d.id})"><i class="fa-solid fa-trash"></i> Eliminar</button>
+      ${manage ? `<button class="cdd-btn" onclick="ptDashOpen(${d.id})"><i class="fa-solid fa-pen"></i> Editar</button>
+      <button class="cdd-btn camp-btn-danger" onclick="ptDashDelete(${d.id})"><i class="fa-solid fa-trash"></i> Eliminar</button>` : ''}
     </div>
   </div>`).join('');
 }
 
 function renderPtUsers() {
   const el = document.getElementById('ptUserList');
-  if (!ptUsers.length) { el.innerHTML = '<div class="pt-empty">Aún no hay accesos. Crea el primero.</div>'; return; }
+  if (!ptUsers.length) { el.innerHTML = `<div class="pt-empty">Aún no hay accesos.${ptCanManage() ? ' Crea el primero.' : ''}</div>`; return; }
   const countFor = (uid) => ptAccess.filter(a => a.user_id === uid).length;
+  const manage = ptCanManage();
   el.innerHTML = ptUsers.map(u => {
     const n = countFor(u.id);
     return `<div class="pt-item">
       <div class="nm">${escapeHtml(u.label || u.username)} ${u.active ? '' : '<span class="pt-badge off">inactivo</span>'}</div>
       <div class="sub">usuario: ${escapeHtml(u.username)} · <span class="pt-badge">${n} dashboard${n === 1 ? '' : 's'}</span></div>
-      <div class="acts">
+      ${manage ? `<div class="acts">
         <button class="cdd-btn" onclick="ptUserOpen(${u.id})"><i class="fa-solid fa-pen"></i> Editar</button>
         <button class="cdd-btn camp-btn-danger" onclick="ptUserDelete(${u.id})"><i class="fa-solid fa-trash"></i> Eliminar</button>
-      </div>
+      </div>` : ''}
     </div>`;
   }).join('');
 }
@@ -3525,6 +3539,18 @@ function jsArg(s) {
    EXPORT — PDF / CSV / Excel (respeta filtros y columnas visibles)
 ═══════════════════════════════════════════ */
 
+// Hashes SRI de las librerías de export (jsdelivr, versiones fijas). Si el CDN
+// se comprometiera y sirviera un archivo alterado, el navegador lo rechaza.
+const SCRIPT_SRI = {
+  'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js': 'sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4',
+  'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js': 'sha384-Pqp51FUN2/qzfxZxBCtF0stpc9ONI6MYZpVqmo8m20SoaQCzf+arZvACkLkirlPz',
+  'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js': 'sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H',
+  'https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js': 'sha384-fCAW/rDWORTbQXSiB7mOg0QtQ5c+r0f544y6XoKjuVva0nMBlCpNUjiFeG5iMdS3',
+  'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js': 'sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk',
+  'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js': 'sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw',
+  'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js': 'sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG',
+};
+
 // Carga un <script> externo una sola vez (lazy-load de librerías de export).
 function loadScript(src) {
   return new Promise((resolve, reject) => {
@@ -3532,6 +3558,7 @@ function loadScript(src) {
     const s = document.createElement('script');
     s.src = src;
     s.dataset.src = src;
+    if (SCRIPT_SRI[src]) { s.integrity = SCRIPT_SRI[src]; s.crossOrigin = 'anonymous'; s.referrerPolicy = 'no-referrer'; }
     s.onload = () => resolve();
     s.onerror = () => reject(new Error('No se pudo cargar la librería de export'));
     document.head.appendChild(s);
