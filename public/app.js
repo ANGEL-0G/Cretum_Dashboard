@@ -4530,6 +4530,11 @@ function exportInvestorHtml() {
   try {
     // 1) Fuera controles internos (export, picker de columnas, edición)
     clone.querySelectorAll('.db-detail-export, .db-pos-toolbar, .db-contact-del, .cdd, button').forEach(el => el.remove());
+    // Fuera la sección de Contactos (dato interno, no aporta al inversionista)
+    clone.querySelectorAll('.db-section').forEach(sec => {
+      const h = sec.querySelector('.db-section-h');
+      if (h && h.textContent.trim() === 'Contactos') sec.remove();
+    });
 
     // 2) Inputs de edición (titular / contactos) → texto plano
     clone.querySelectorAll('input').forEach(inp => {
