@@ -255,7 +255,8 @@ export default async function handler(req, res) {
       }
       return res.status(200).json({ ok: true, mode: 'cron', sentAt: new Date().toISOString(), todayDow, nowHour, honorHour, results });
     } catch (err) {
-      return res.status(500).json({ error: err.message });
+      console.error('[reminder cron]', err);
+      return res.status(500).json({ error: 'No se pudo enviar el resumen (cron)' });
     }
   }
 
@@ -283,6 +284,7 @@ export default async function handler(req, res) {
     const result = await sendForUser({ id: user.id, email: user.email, displayName }, tasks);
     return res.status(200).json({ ok: true, mode: 'user', sentTo: result.recipient, id: result.id });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    console.error('[reminder user]', err);
+    return res.status(500).json({ error: 'No se pudo enviar el resumen' });
   }
 }

@@ -11,7 +11,7 @@
  *   - 'meta'    { token }                      → { ok, advisor }
  *   - 'submit'  { token, data }                → { ok }
  *  Admin (JWT de equipo):
- *   - 'create'  { label }                      → { ok, token, link }
+ *   - 'create'  { label }                      → { ok, token }  (el front arma la URL)
  *   - 'list'                                   → { links: [...] }
  *   - 'delete'  { id }                         → { ok }
  *
@@ -178,7 +178,7 @@ export default async function handler(req, res) {
 
     return res.status(400).json({ error: 'Acción no reconocida' });
   } catch (err) {
-    console.error('[api/forms]', err);
-    return res.status(500).json({ error: err.message });
+    console.error('[api/forms]', err);   // detalle en logs, no al cliente (submit es público)
+    return res.status(500).json({ error: 'No se pudo completar la operación' });
   }
 }

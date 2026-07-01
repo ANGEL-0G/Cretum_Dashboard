@@ -48,7 +48,8 @@ async function loadAllProfiles() {
     // almacenado que roba sesiones). USERS solo se lee dentro de plantillas,
     // nunca en textContent, así que escapar en un punto los cubre todos.
     USERS[p.id] = {
-      name: escapeHtml(p.full_name),
+      name: escapeHtml(p.full_name),           // para interpolar en innerHTML
+      nameRaw: p.full_name || '',              // para textContent (toast/confirm), sin entidades
       initials: escapeHtml(p.initials || (p.full_name || '?').slice(0, 2).toUpperCase()),
       role: p.role,
     };
@@ -1166,7 +1167,7 @@ function toggle(id, kind) {
 async function deleteAssigned(id) {
   const a = state.assigned.find(x => x.id === id);
   if (!a) return;
-  const targetName = USERS[a.to]?.name || a.to;
+  const targetName = USERS[a.to]?.nameRaw || a.to;   // va a showConfirm (textContent), sin escapar
   const msg = a.accepted
     ? `"${a.name}" ya no aparecerá en tu lista. ${targetName} conservará su copia de la tarea.`
     : `Se cancelará la invitación enviada a ${targetName} de "${a.name}".`;
@@ -1452,7 +1453,7 @@ async function notifyAssignment(payload) {
     });
     const data = await r.json().catch(() => ({}));
     if (!data.ok) {
-      const name = USERS[payload.recipientUserId]?.name || 'el destinatario';
+      const name = USERS[payload.recipientUserId]?.nameRaw || 'el destinatario';
       toast(`⚠️ No pudimos avisar a ${name} por email`);
     }
   } catch (err) {
@@ -1483,8 +1484,6 @@ function doAssign() {
     note = document.getElementById('aNote').value.trim();
   }
 
-  const actorName = currentProfile?.full_name || 'Alguien';
-
   assignees.forEach(to => {
     // Si ya hay invite pendiente del mismo asignador → mismo destinatario → misma tarea, no spam
     const alreadyPending = state.invites.some(iv =>
@@ -1501,7 +1500,6 @@ function doAssign() {
       notifyAssignment({
         type: 'new_assignment',
         recipientUserId: to,
-        actorName,
         taskName: n,
         due,
       });
@@ -1557,7 +1555,6 @@ function acceptInvite(id) {
     notifyAssignment({
       type: 'accepted',
       recipientUserId: inviterId,
-      actorName: currentProfile?.full_name || 'Alguien',
       taskName,
     });
   }
@@ -1575,7 +1572,6 @@ function declineInvite(id) {
     notifyAssignment({
       type: 'declined',
       recipientUserId: inviterId,
-      actorName: currentProfile?.full_name || 'Alguien',
       taskName,
     });
   }
@@ -1693,6 +1689,7 @@ async function saveProfileName(newName) {
     currentProfile.initials = initials;
     if (USERS[currentUser]) {
       USERS[currentUser].name = escapeHtml(trimmed);           // mismo escape que en loadAllProfiles
+      USERS[currentUser].nameRaw = trimmed;
       USERS[currentUser].initials = escapeHtml(initials);
     }
     document.getElementById('headerAv').textContent = initials;

@@ -51,7 +51,8 @@ export default async function handler(req, res) {
       const data = await store.get();
       return res.status(200).json(data);
     } catch (err) {
-      return res.status(500).json({ error: 'Error leyendo datos', detail: err.message });
+      console.error('[tasks GET]', err);
+      return res.status(500).json({ error: 'Error leyendo datos' });
     }
   }
 
@@ -76,7 +77,8 @@ export default async function handler(req, res) {
       await store.set(clean);
       return res.status(200).json({ ok: true });
     } catch (err) {
-      return res.status(500).json({ error: 'Error guardando datos', detail: err.message });
+      console.error('[tasks POST]', err);
+      return res.status(500).json({ error: 'Error guardando datos' });
     }
   }
 

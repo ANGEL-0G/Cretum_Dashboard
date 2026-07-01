@@ -46,7 +46,8 @@ export default async function handler(req, res) {
       return res.status(403).json({ error: 'Solo admins pueden sincronizar el Sheets' });
     }
   } catch (err) {
-    return res.status(500).json({ error: 'No se pudo verificar el rol: ' + err.message });
+    console.error('[sheets] verificando rol', err);
+    return res.status(500).json({ error: 'No se pudo verificar el rol' });
   }
 
   const { header, rows, meses, cancelados, destacados } = req.body || {};
@@ -88,6 +89,6 @@ export default async function handler(req, res) {
     return res.status(200).json(data);
   } catch (err) {
     console.error('[sheets]', err);
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: 'No se pudo sincronizar con Google Sheets' });
   }
 }

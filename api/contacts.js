@@ -121,7 +121,7 @@ export default async function handler(req, res) {
 
     return res.status(400).json({ error: 'Acción no reconocida' });
   } catch (err) {
-    console.error('[api/contacts]', err);
-    return res.status(500).json({ error: err.message });
+    console.error('[api/contacts]', err);   // detalle en logs, no al cliente
+    return res.status(500).json({ error: 'No se pudo completar la operación' });
   }
 }
