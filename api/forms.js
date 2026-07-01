@@ -157,12 +157,13 @@ export default async function handler(req, res) {
         .select('id, token, label, recipient_email, created_at')
         .eq('created_by', user.id).order('created_at', { ascending: false });
       if (error) throw error;
-      // Conteo de respuestas por enlace
-      const ids = (links || []).map(l => l.id);
+      // Conteo de respuestas por enlace: agregado en SQL (form_link_counts),
+      // no bajamos filas de submissions solo para contarlas.
       const counts = {};
-      if (ids.length) {
-        const { data: subs } = await admin.from('form_submissions').select('link_id').in('link_id', ids);
-        (subs || []).forEach(s => { counts[s.link_id] = (counts[s.link_id] || 0) + 1; });
+      if ((links || []).length) {
+        const { data: rows, error: cntErr } = await admin.rpc('form_link_counts', { p_user: user.id });
+        if (cntErr) throw cntErr;
+        (rows || []).forEach(r => { counts[r.link_id] = +r.n; });
       }
       return res.status(200).json({ links: (links || []).map(l => ({ ...l, submissions: counts[l.id] || 0 })) });
     }

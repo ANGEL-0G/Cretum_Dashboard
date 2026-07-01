@@ -5134,6 +5134,16 @@ function buildLp360(positions, investorIds) {
       const theme = isFund ? 'Fondos All-Star' : companyTheme(p.companies?.name);
       byThH[theme] = (byThH[theme] || 0) + val;
     });
+    // Mismo neteo que loadDb: el capital reciclado 22F→26A QP es SpaceX;
+    // restarlo de su bucket para no contar dos veces el mismo dinero.
+    if (net.recycledPaidIn > 0) {
+      const spx = positions.find(p => p.companies?.id === 27);
+      if (spx) {
+        const lbl = spx.companies?.name || '—', th = companyTheme(lbl);
+        if (byCoH[lbl]) { byCoH[lbl] -= net.recycledPaidIn; if (byCoH[lbl] <= 0) delete byCoH[lbl]; }
+        if (byThH[th])  { byThH[th]  -= net.recycledPaidIn; if (byThH[th]  <= 0) delete byThH[th]; }
+      }
+    }
     companyExp = Object.entries(byCoH).sort((a, b) => b[1] - a[1]);
     themeExp = Object.entries(byThH).sort((a, b) => b[1] - a[1]);
     expoBasis = 'commitment';
