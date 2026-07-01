@@ -4485,22 +4485,146 @@ async function exportInvestorPdf(posId) {
   }
 }
 
-// Botón HTML: descarga el mismo reporte premium como archivo .html standalone
-// (para compartir al inversionista — se abre en cualquier navegador, sin depender del portal).
-function exportInvestorHtml(posId) {
-  const built = buildInvestorReportPayload(posId);
-  if (!built) return;
+// Botón HTML: descarga el perfil del inversionista TAL COMO SE VE EN EL PORTAL como
+// archivo .html standalone e interactivo (tablas ordenables, popups de info, imprimir).
+// Clona el DOM ya renderizado (mismo estilo y contenido, siempre en sync con el portal),
+// quita los controles de edición y embebe el CSS del portal + un script propio.
+function exportInvestorHtml() {
+  if (!lastInvestorDetail) { toast('Abre un inversionista primero'); return; }
+  const { inv, contacts, positions } = lastInvestorDetail;
+  let clone;
+  const savedCols = dbPosVisibleCols;
   try {
-    let html = buildReportHtmlClient(built.payload);
-    // El archivo vive fuera del portal: fuentes con URL absoluta (cargan si hay internet,
-    // con fallback de sistema si no) + título + página centrada con fondo suave.
-    html = html.replace(/url\('\/fonts\//g, `url('${location.origin}/fonts/`);
-    html = html.replace('<head><meta charset="utf-8">',
-      `<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${built.payload.meta.title} — Portfolio Snapshot</title>`);
-    html = html.replace('</head>',
-      '<style>body{background:#eceae6;display:flex;justify-content:center;padding:26px 0}.page{background:#fff;box-shadow:0 2px 18px rgba(0,0,0,.10);border-radius:6px;overflow:hidden}@media(max-width:860px){body{padding:0}.page{width:100%;border-radius:0}}</style></head>');
-    html = html.replace('MVP MANAGER · DOCUMENTO INTERNO', 'MVP MANAGER · CONFIDENCIAL · PREPARADO PARA EL INVERSIONISTA');
-    downloadBlob(new Blob([html], { type: 'text/html;charset=utf-8' }), built.fileName + '.html');
+    // Render temporal con TODAS las columnas (el archivo lleva el detalle completo)
+    dbPosVisibleCols = new Set(POSITION_COLUMNS.map(c => c.key));
+    renderInvestorDetail(inv, contacts, positions);
+    clone = document.getElementById('dbDetailContent').cloneNode(true);
+  } finally {
+    dbPosVisibleCols = savedCols;
+    renderInvestorDetail(inv, contacts, positions);   // restaurar la vista del usuario
+  }
+  try {
+    // 1) Fuera controles internos (export, picker de columnas, edición)
+    clone.querySelectorAll('.db-detail-export, .db-pos-toolbar, .db-contact-del, .cdd, button').forEach(el => el.remove());
+
+    // 2) Inputs de edición (titular / contactos) → texto plano
+    clone.querySelectorAll('input').forEach(inp => {
+      const el = document.createElement(inp.classList.contains('db-titular-inp') ? 'span' : 'div');
+      el.className = inp.classList.contains('db-titular-inp') ? 'db-titular-val'
+        : (inp.classList.contains('ml') ? 'db-contact-mail' : 'db-contact-name');
+      el.textContent = (inp.value || '').trim() || '—';
+      inp.replaceWith(el);
+    });
+
+    // 3) Donut por tema: canvas (Chart.js) → SVG estático con la MISMA data y paleta
+    const cv = clone.querySelector('#lpThemeChart');
+    if (cv) {
+      let svg = '';
+      if (_lp360 && _lp360.themeExp && _lp360.themeExp.length) {
+        const items = _lp360.themeExp;
+        const colors = ['#e8650d', '#1a3a6b', '#0f9b5a', '#9b59b6', '#e1b12c', '#3b65b0', '#c0392b', '#16a085'];
+        const tot = items.reduce((s, [, v]) => s + v, 0) || 1;
+        const size = 220, stroke = 42, r = (size - stroke) / 2, c = size / 2, C = 2 * Math.PI * r;
+        let off = 0, segs = '';
+        items.forEach(([, v], i) => {
+          const seg = v / tot * C;
+          segs += `<circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="${colors[i % colors.length]}" stroke-width="${stroke}" stroke-dasharray="${seg.toFixed(2)} ${(C - seg).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}" transform="rotate(-90 ${c} ${c})"/>`;
+          off += seg;
+        });
+        const leg = items.map(([l, v], i) =>
+          `<span class="xp-leg"><span class="xp-dot" style="background:${colors[i % colors.length]}"></span>${escapeHtml(l)} <b>${(v / tot * 100).toFixed(0)}%</b></span>`).join('');
+        svg = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${segs}</svg><div class="xp-legend">${leg}</div>`;
+      }
+      const wrap = document.createElement('div');
+      wrap.className = 'xp-donut';
+      wrap.innerHTML = svg;
+      cv.replaceWith(wrap);
+    }
+
+    // 4) Sin handlers inline del portal (el archivo trae su propio script)
+    clone.querySelectorAll('*').forEach(el => {
+      [...el.attributes].forEach(a => { if (a.name.startsWith('on')) el.removeAttribute(a.name); });
+      el.removeAttribute('contenteditable');
+    });
+
+    // 5) CSS del portal (mismo estilo, siempre en sync) + links de fuentes/iconos
+    let css = '';
+    for (const sheet of document.styleSheets) {
+      try { for (const r of sheet.cssRules) css += r.cssText + '\n'; } catch (e) { /* cross-origin: va por <link> */ }
+    }
+    const extLinks = [...document.querySelectorAll('link[rel="stylesheet"]')]
+      .map(l => l.href).filter(h => /^https?:\/\//.test(h))
+      .map(h => `<link rel="stylesheet" href="${h}">`).join('\n');
+
+    const dateStr = new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' });
+    const title = `${inv.name} — Perfil del inversionista`;
+    const exportCss = `
+body.xport{overflow:auto!important;display:block!important;margin:0!important;padding:0!important;background:var(--gray-50,#f7f8fb)!important}
+body.xport>.xp-top{position:sticky;top:0;z-index:60;display:flex;align-items:center;gap:14px;background:linear-gradient(90deg,#e8650d,#ef8a3c);color:#fff;padding:12px 24px;font-family:inherit}
+.xp-top .xp-brand{font-weight:700;font-size:15px;letter-spacing:.2px}
+.xp-top .xp-date{font-size:12px;opacity:.9}
+.xp-top .xp-print{margin-left:auto;border:1.5px solid rgba(255,255,255,.55);background:rgba(255,255,255,.14);color:#fff;border-radius:9px;padding:7px 15px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit}
+.xp-top .xp-print:hover{background:rgba(255,255,255,.26)}
+body.xport .xp-wrap{max-width:1180px;margin:0 auto;padding:24px 26px 10px}
+body.xport #dbDetail,body.xport #dbDetailContent{display:block!important;position:static!important;width:auto!important;max-width:none!important;height:auto!important;overflow:visible!important;border:none!important;box-shadow:none!important;background:transparent!important}
+.xp-donut{display:flex;flex-direction:column;align-items:center;gap:12px;padding-top:6px}
+.xp-legend{display:flex;flex-wrap:wrap;gap:7px 16px;justify-content:center;font-size:11.5px;max-width:280px}
+.xp-dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+body.xport .db-table thead th{cursor:pointer;user-select:none}
+body.xport .db-table thead th:hover{color:var(--orange,#e8650d)}
+body.xport .db-table thead th .xp-arrow{font-size:9px;margin-left:4px;opacity:.7}
+.xp-foot{max-width:1180px;margin:6px auto 34px;padding:0 26px;font-size:10.5px;letter-spacing:1.2px;color:#9aa1ad;text-transform:uppercase}
+@media print{body.xport>.xp-top{position:static}.xp-top .xp-print{display:none}}
+`;
+    const script = `
+document.addEventListener('click', function(e){
+  var ic = e.target.closest('.info-ic');
+  document.querySelectorAll('.info-ic.open').forEach(function(el){ if (el !== ic) el.classList.remove('open'); });
+  if (ic) ic.classList.toggle('open');
+});
+function xpVal(td){
+  var t = (td && td.textContent || '').trim();
+  if (t === '\\u2014' || t === '-' || t === '') return null;
+  var n = t.replace(/[$,\\s]/g,'').replace(/[x%]$/i,'');
+  var m = n.match(/^-?\\d+(\\.\\d+)?([KMB])?$/i);
+  if (m) return parseFloat(n) * ({K:1e3,M:1e6,B:1e9}[(m[2]||'').toUpperCase()] || 1);
+  var d = Date.parse(t);
+  if (!isNaN(d) && /\\d{4}/.test(t)) return d;
+  return t.toLowerCase();
+}
+document.querySelectorAll('table.db-table').forEach(function(tb){
+  tb.querySelectorAll('thead th').forEach(function(th, i){
+    th.title = 'Ordenar por esta columna';
+    th.addEventListener('click', function(){
+      var tbody = tb.querySelector('tbody'); if (!tbody) return;
+      var dir = th._d = -(th._d || -1);
+      tb.querySelectorAll('thead th .xp-arrow').forEach(function(a){ a.remove(); });
+      var ar = document.createElement('span'); ar.className = 'xp-arrow'; ar.textContent = dir > 0 ? '\\u25B2' : '\\u25BC'; th.appendChild(ar);
+      Array.prototype.slice.call(tbody.rows).map(function(r){ return [xpVal(r.cells[i]), r]; })
+        .sort(function(a, b){
+          if (a[0] === null) return 1; if (b[0] === null) return -1;
+          return a[0] < b[0] ? -dir : a[0] > b[0] ? dir : 0;
+        })
+        .forEach(function(p){ tbody.appendChild(p[1]); });
+    });
+  });
+});
+`;
+    const html = `<!doctype html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${escapeHtml(title)}</title>
+${extLinks}
+<style>${css}</style>
+<style>${exportCss}</style>
+</head><body class="xport">
+<div class="xp-top"><span class="xp-brand"><i class="fa-solid fa-chart-pie"></i> MVP · Perfil del inversionista</span><span class="xp-date">Generado ${escapeHtml(dateStr)}</span><button class="xp-print" onclick="window.print()"><i class="fa-solid fa-print"></i> Imprimir / PDF</button></div>
+<div class="xp-wrap"><div class="db-detail" id="dbDetail"><div class="db-detail-content" id="dbDetailContent">${clone.innerHTML}</div></div></div>
+<div class="xp-foot">MVP Manager · Confidencial · Preparado para el inversionista · ${escapeHtml(dateStr)}</div>
+<script>${script}<\/script>
+</body></html>`;
+
+    const fileName = (inv.name + ' Perfil Inversionista').replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, ' ').trim();
+    downloadBlob(new Blob([html], { type: 'text/html;charset=utf-8' }), fileName + '.html');
     toast('HTML descargado');
   } catch (e) {
     console.warn('[report] export HTML falló:', e);
