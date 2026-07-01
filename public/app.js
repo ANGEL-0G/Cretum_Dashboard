@@ -4226,7 +4226,7 @@ const REPORT_FONT_FACES = [
 ].map(([f, w, file]) => `@font-face{font-family:'${f}';font-weight:${w};src:url('/fonts/${file}') format('truetype');}`).join('\n');
 
 function buildReportHtmlClient(payload) {
-  const { meta, totals, pos } = payload;
+  const { meta, totals, pos, dists = [] } = payload;
   const PAL = ['#E8650D', '#3F3A36', '#E8A05A', '#8A8079', '#C25A2A', '#B89160', '#A9A29A', '#6E665F', '#D98F4E', '#cabfb4'];
   const E = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const N = (v) => { const x = Number(v); return Number.isFinite(x) ? x : null; };
@@ -4255,8 +4255,11 @@ function buildReportHtmlClient(payload) {
   const kpihtml = kpis.map(([l, v, c]) => `<div class="kpi ${c}"><div class="kl">${E(l)}</div><div class="kv">${E(v)}</div></div>`).join('');
   const showAcct = !!meta.combined;
   const rows = pos.filter(p => !p.reinvSource).slice().sort((a, b) => (+b.commitment || 0) - (+a.commitment || 0));
-  const posrows = rows.map(p => { const on = p.estado === 'Activa'; return `<tr>${showAcct ? `<td class="acct" title="${E(p.acct)}">${E(p.acct)}</td>` : ''}<td class="co">${E(p.company)}</td><td class="ser">${E(SS(p.series))}</td><td><span class="badge ${on ? 'on' : 'off'}">${E(p.estado)}</span></td><td class="n">${p.shares != null ? Number(p.shares).toLocaleString('en-US') : '—'}</td><td class="n">${PP(p.entry_pps)}</td><td class="n">${PP(p.current_pps)}</td><td class="n">${M(p.commitment)}</td><td class="n">${M(p.commitment_actual)}</td><td class="n">${N(p.moic) != null ? (+p.moic).toFixed(2) + 'x' : '—'}</td></tr>`; }).join('');
+  const posrows = rows.map(p => { const on = p.estado === 'Activa'; return `<tr>${showAcct ? `<td class="acct" title="${E(p.acct)}">${E(p.acct)}</td>` : ''}<td class="co">${E(p.company)}</td><td class="ser">${E(SS(p.series))}</td><td><span class="badge ${on ? 'on' : 'off'}">${E(p.estado)}</span></td><td class="n">${p.shares != null ? Number(p.shares).toLocaleString('en-US') : '—'}</td><td class="n">${PP(p.entry_pps)}</td><td class="n">${PP(p.current_pps)}</td><td class="n">${M(p.commitment)}</td><td class="n">${M(p.commitment_actual)}</td><td class="n">${p.distribuido ? M(p.distribuido) : '—'}</td><td class="n">${N(p.moic) != null ? (+p.moic).toFixed(2) + 'x' : '—'}</td></tr>`; }).join('');
   const acctHead = showAcct ? '<th>Cuenta</th>' : '';
+  // Sección de distribuciones (todas): fecha, subyacente, tipo (efectivo/especie), montos
+  const distSection = dists.length ? `<div class="sec">Distribuciones</div>
+<table><thead><tr><th>Fecha</th><th>Empresa</th><th>Subyacente</th><th>Tipo</th><th class="n">Acciones</th><th class="n">PPS</th><th class="n">Efectivo</th><th class="n">En especie</th><th class="n">Total</th></tr></thead><tbody>${dists.map(d => `<tr><td>${E(d.fecha || '—')}</td><td class="co">${E(d.company)}</td><td class="ser">${E(d.subyacente || '—')}</td><td>${E(d.tipo)}</td><td class="n">${d.shares != null ? Number(d.shares).toLocaleString('en-US') : '—'}</td><td class="n">${PP(d.pps)}</td><td class="n">${d.cash != null ? M(d.cash) : '—'}</td><td class="n">${d.especie != null ? M(d.especie) : '—'}</td><td class="n">${M(d.total)}</td></tr>`).join('')}</tbody></table>` : '';
   return `<!doctype html><html><head><meta charset="utf-8"><style>
 @page{size:Letter;margin:0}
 ${REPORT_FONT_FACES}
@@ -4326,7 +4329,8 @@ td.co{font-weight:700;color:#241f1b}td.acct{color:#9a8f84;font-size:8.5px;max-wi
 <div class="card"><div class="ctitle">Comprometido vs. Account Balance · por empresa</div><div class="leg2">▮ gris = comprometido · ▮ naranja = Account Balance</div>${cvbars}</div>
 </div>
 <div class="sec">Posiciones</div>
-<table><thead><tr>${acctHead}<th>Empresa</th><th>Serie</th><th>Estado</th><th class="n">Acciones</th><th class="n">PPS Entrada</th><th class="n">PPS Actual</th><th class="n">Compromiso</th><th class="n">Account Balance</th><th class="n">MOIC</th></tr></thead><tbody>${posrows}</tbody></table>
+<table><thead><tr>${acctHead}<th>Empresa</th><th>Serie</th><th>Estado</th><th class="n">Acciones</th><th class="n">PPS Entrada</th><th class="n">PPS Actual</th><th class="n">Compromiso</th><th class="n">Account Balance</th><th class="n">Distribuido</th><th class="n">MOIC</th></tr></thead><tbody>${posrows}</tbody></table>
+${distSection}
 </div>
 <div class="foot">MVP MANAGER · DOCUMENTO INTERNO · ${E(meta.dateStr)}</div>
 </div></body></html>`;
@@ -4361,9 +4365,22 @@ async function renderReportPdf(html, fileName) {
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'letter' });
     const pageW = pdf.internal.pageSize.getWidth(), pageH = pdf.internal.pageSize.getHeight();
-    let w = pageW, hh = canvas.height * pageW / canvas.width;
-    if (hh > pageH) { hh = pageH; w = canvas.width * pageH / canvas.height; }
-    pdf.addImage(canvas.toDataURL('image/jpeg', 0.94), 'JPEG', (pageW - w) / 2, 0, w, hh);
+    const imgData = canvas.toDataURL('image/jpeg', 0.94);
+    const imgH = canvas.height * pageW / canvas.width;   // altura total a ancho de página
+    if (imgH <= pageH + 1) {
+      pdf.addImage(imgData, 'JPEG', 0, 0, pageW, imgH);
+    } else {
+      // Reparte la imagen alta en varias páginas (mismo bitmap, desplazado por página)
+      let pos = 0, heightLeft = imgH;
+      pdf.addImage(imgData, 'JPEG', 0, pos, pageW, imgH);
+      heightLeft -= pageH;
+      while (heightLeft > 0) {
+        pos -= pageH;
+        pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, pos, pageW, imgH);
+        heightLeft -= pageH;
+      }
+    }
     pdf.save(fileName + '.pdf');
   } finally {
     setTimeout(() => iframe.remove(), 500);
@@ -4398,6 +4415,11 @@ async function exportInvestorPdf(posId) {
       entry_pps: p.entry_pps, current_pps: p.current_pps, commitment: p.commitment,
       commitment_actual: p.commitment_actual, valor: p.valor_estimado, moic: p.moic,
       shares: p.shares, theme: p.theme, reinvSource: !!p.reinvSource,
+      distribuido: p.distribuido,
+    })),
+    dists: (data.letters || []).map(x => ({
+      fecha: x.fecha, company: x.company, subyacente: x.subyacente, tipo: x.tipo,
+      shares: x.shares, pps: x.pps, cash: x.cash, especie: x.especie, total: x.total,
     })),
   };
   const nameBase = (data.combined && data.inv._accounts)
