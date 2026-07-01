@@ -4365,24 +4365,45 @@ async function renderReportPdf(html, fileName) {
     try { await document.fonts.ready; } catch (e) { /* noop */ }
     await loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js');
     await loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
-    const canvas = await window.html2canvas(el, { scale: 2.5, backgroundColor: '#ffffff', width: 816, height: h, windowWidth: 816, useCORS: true, logging: false });
+    const SCALE = 2.5;   // debe coincidir con canvas.width = 816 * SCALE
+    const canvas = await window.html2canvas(el, { scale: SCALE, backgroundColor: '#ffffff', width: 816, height: h, windowWidth: 816, useCORS: true, logging: false });
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'letter' });
     const pageW = pdf.internal.pageSize.getWidth(), pageH = pdf.internal.pageSize.getHeight();
-    const imgData = canvas.toDataURL('image/jpeg', 0.94);
-    const imgH = canvas.height * pageW / canvas.width;   // altura total a ancho de página
-    if (imgH <= pageH + 1) {
-      pdf.addImage(imgData, 'JPEG', 0, 0, pageW, imgH);
+    const ptPerPx = pageW / canvas.width;          // px de canvas → pt
+    const pageHpx = pageH / ptPerPx;               // altura de una página en px de canvas
+    if (canvas.height <= pageHpx + 2) {
+      // Cabe en una sola página
+      pdf.addImage(canvas.toDataURL('image/jpeg', 0.94), 'JPEG', 0, 0, pageW, canvas.height * ptPerPx);
     } else {
-      // Reparte la imagen alta en varias páginas (mismo bitmap, desplazado por página)
-      let pos = 0, heightLeft = imgH;
-      pdf.addImage(imgData, 'JPEG', 0, pos, pageW, imgH);
-      heightLeft -= pageH;
-      while (heightLeft > 0) {
-        pos -= pageH;
-        pdf.addPage();
-        pdf.addImage(imgData, 'JPEG', 0, pos, pageW, imgH);
-        heightLeft -= pageH;
+      // Cortes "seguros": el fondo (bottom) de cada fila y bloque, para NO partir una fila a la mitad
+      const pageTop = el.getBoundingClientRect().top;
+      const safe = [];
+      el.querySelectorAll('tr, .kpis, .grid2, .hero, .sec, .card').forEach(n => {
+        const b = (n.getBoundingClientRect().bottom - pageTop) * SCALE;
+        if (b > 1 && b < canvas.height) safe.push(b);
+      });
+      safe.push(canvas.height);
+      safe.sort((a, b) => a - b);
+      let y0 = 0, first = true;
+      while (y0 < canvas.height - 1) {
+        const target = y0 + pageHpx;
+        let y1;
+        if (target >= canvas.height) y1 = canvas.height;
+        else {
+          const cand = safe.filter(s => s > y0 + 20 && s <= target);
+          y1 = cand.length ? cand[cand.length - 1] : target;   // bloque más alto que una página → corte forzado
+        }
+        const sliceH = Math.max(1, Math.round(y1 - y0));
+        const tmp = document.createElement('canvas');
+        tmp.width = canvas.width; tmp.height = sliceH;
+        const ctx = tmp.getContext('2d');
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, tmp.width, tmp.height);
+        ctx.drawImage(canvas, 0, y0, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+        if (!first) pdf.addPage();
+        pdf.addImage(tmp.toDataURL('image/jpeg', 0.94), 'JPEG', 0, 0, pageW, sliceH * ptPerPx);
+        first = false;
+        y0 = y1;
       }
     }
     pdf.save(fileName + '.pdf');
