@@ -8,12 +8,19 @@
  *      con el botón "Enviar resumen ahora"; envía solo al usuario autenticado.
  */
 
+import { timingSafeEqual } from 'crypto';
 import { getRedis } from './_lib/redis.js';
 import { getSupabase, getSupabaseAdmin } from './_lib/supabase.js';
 import { bearerToken } from './_lib/auth.js';
 import { sendEmail } from './_lib/email.js';
 
 const APP_URL = 'https://cretumdesk.com';
+
+// Comparación en tiempo constante (evita distinguir el secreto por timing)
+function safeEq(a, b) {
+  const ba = Buffer.from(String(a || '')), bb = Buffer.from(String(b || ''));
+  return ba.length === bb.length && timingSafeEqual(ba, bb);
+}
 
 const SEED = { simple: [], progress: [], assigned: [], invites: [] };
 
@@ -195,8 +202,8 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Supabase no configurado' });
   }
 
-  // Modo 1: cron (CRON_SECRET)
-  if (process.env.CRON_SECRET && token === process.env.CRON_SECRET) {
+  // Modo 1: cron (CRON_SECRET) — comparación timing-safe
+  if (process.env.CRON_SECRET && safeEq(token, process.env.CRON_SECRET)) {
     if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
       return res.status(500).json({ error: 'SUPABASE_SERVICE_ROLE_KEY no configurada' });
     }

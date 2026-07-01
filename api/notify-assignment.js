@@ -130,18 +130,25 @@ export default async function handler(req, res) {
   const user = await authenticate(req);
   if (!user) return res.status(401).json({ error: 'No autorizado' });
 
-  const { type, recipientUserId, actorName, taskName, due } = req.body || {};
-  if (!type || !recipientUserId || !actorName || !taskName) {
-    return res.status(400).json({ error: 'Faltan parámetros (type, recipientUserId, actorName, taskName)' });
+  const { type, recipientUserId, taskName, due } = req.body || {};
+  if (!type || !recipientUserId || !taskName) {
+    return res.status(400).json({ error: 'Faltan parámetros (type, recipientUserId, taskName)' });
   }
   if (!ALLOWED_TYPES.has(type)) {
     return res.status(400).json({ error: `Tipo inválido: ${type}` });
   }
+  // Recorta el título a un tamaño razonable (va en el subject y en el HTML)
+  const safeTaskName = String(taskName).replace(/[\r\n]+/g, ' ').slice(0, 200);
 
   const sbAdmin = getSupabaseAdmin();
   if (!sbAdmin) {
     return res.status(500).json({ error: 'SUPABASE_SERVICE_ROLE_KEY no configurada' });
   }
+
+  // El nombre del actor se DERIVA del perfil del usuario autenticado, nunca del
+  // body: así nadie puede mandar correos suplantando a otra persona (phishing).
+  const { data: actorProf } = await sbAdmin.from('profiles').select('full_name').eq('id', user.id).single();
+  const actorName = (actorProf?.full_name || 'Un compañero').replace(/[\r\n]+/g, ' ').slice(0, 120);
 
   // Resolver el email del destinatario (UUID → email vía Supabase Auth)
   let recipientEmail;
@@ -159,17 +166,19 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: false, error: 'No se pudo resolver el email del destinatario' });
   }
 
-  const { subject, html } = buildEmail(type, { actorName, taskName, due });
+  const { subject, html } = buildEmail(type, { actorName, taskName: safeTaskName, due });
 
   try {
     const r = await sendEmail(recipientEmail, subject, html);
-    return res.status(200).json({ ok: true, id: r.id, recipient: recipientEmail });
+    // No devolvemos el email del destinatario: el cliente solo manda un UUID,
+    // así que exponerlo convertiría el endpoint en un oráculo UUID→email.
+    return res.status(200).json({ ok: true, id: r.id });
   } catch (err) {
     await notifyAdminOfFailure({
       context: type,
       recipient: recipientEmail,
       error: err.message,
     });
-    return res.status(200).json({ ok: false, error: err.message, recipient: recipientEmail });
+    return res.status(200).json({ ok: false, error: 'No se pudo enviar la notificación' });
   }
 }

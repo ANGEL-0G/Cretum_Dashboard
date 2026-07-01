@@ -43,9 +43,13 @@ async function loadAllProfiles() {
   if (error) throw error;
   USERS = {};
   data.forEach(p => {
+    // Escapamos aquí (en la fuente): USERS[x].name/initials se interpolan en
+    // muchos innerHTML. Un usuario podría fijar su full_name a HTML/JS (XSS
+    // almacenado que roba sesiones). USERS solo se lee dentro de plantillas,
+    // nunca en textContent, así que escapar en un punto los cubre todos.
     USERS[p.id] = {
-      name: p.full_name,
-      initials: p.initials || (p.full_name || '?').slice(0,2).toUpperCase(),
+      name: escapeHtml(p.full_name),
+      initials: escapeHtml(p.initials || (p.full_name || '?').slice(0, 2).toUpperCase()),
       role: p.role,
     };
   });
@@ -515,7 +519,7 @@ function render() {
     <div class="tk-invite">
       <div class="tk-invite-info">
         <div class="tk-invite-from"><i class="fa-solid fa-user-plus"></i> ${USERS[iv.from]?.name || iv.from} te asignó una tarea${isProg ? ' con progreso' : ''}</div>
-        <div class="tk-invite-name">${iv.name}</div>
+        <div class="tk-invite-name">${escapeHtml(iv.name)}</div>
         <div class="tk-invite-due">${iv.due ? 'Vence ' + fmtD(iv.due) + ' · ' : ''}${iv.prio} prioridad${progLbl}</div>
       </div>
       <button class="inv-accept" onclick="acceptInvite('${iv.id}')">Aceptar</button>
@@ -588,7 +592,7 @@ function tkRow(t, i) {
   if (t.kind === 'simple') return `
     <div class="list-item ${done ? 'done-item' : ''}${enter}" data-tid="${t.id}" ${delay}>
       <div class="li-chk ${done ? 'on' : ''}" onclick="toggle('${t.id}','simple')">✓</div>
-      <div class="li-name">${t.name}</div>
+      <div class="li-name">${escapeHtml(t.name)}</div>
       <div class="li-meta">
         ${t.due ? `<span class="li-due ${od ? 'od' : ''}">${fmtD(t.due)}</span>` : ''}
         <span class="li-prio ${prioC(t.prio)}">${t.prio}</span>
@@ -602,7 +606,7 @@ function tkRow(t, i) {
     <div class="list-item ${done ? 'done-item' : ''}${enter}" data-tid="${t.id}" ${delay}>
       <div class="li-chk ${done ? 'on' : ''}">✓</div>
       <div style="flex:1;min-width:0">
-        <div class="li-name ${done ? 'struck' : ''}">${t.name}</div>
+        <div class="li-name ${done ? 'struck' : ''}">${escapeHtml(t.name)}</div>
         <div class="li-prog">
           <div class="li-prog-bar"><div class="li-prog-fill" style="width:${p}%"></div></div>
           <span>${t.done}/${t.total} ${t.unit} · ${p}%</span>
@@ -796,7 +800,7 @@ function buildKanban() {
             ${p !== null ? `
               <div class="kb-prog-label">${t.done}/${t.total} ${t.unit}</div>
               <div class="kb-prog"><div class="kb-prog-fill ${done ? 'complete' : ''}" style="width:${p}%"></div></div>` : ''}
-            <div class="kb-card-name ${done ? 'struck' : ''}">${t.name}</div>
+            <div class="kb-card-name ${done ? 'struck' : ''}">${escapeHtml(t.name)}</div>
             <div class="kb-card-foot">
               ${t.due ? `<span class="kb-due ${od ? 'od' : ''}"><i class="fa-regular fa-calendar" style="font-size:10px"></i> ${fmtD(t.due)}</span>` : ''}
               <span class="kb-prio ${prioC(t.prio)}">${t.prio}</span>
@@ -856,7 +860,7 @@ function buildTimeline() {
             ? `<div class="li-chk ${done ? 'on' : ''}" onclick="toggle('${t.id}','simple')">✓</div>`
             : ''}
           <div style="flex:1;min-width:0">
-            <div class="tl-name ${done ? 'struck' : ''}">${t.name}</div>
+            <div class="tl-name ${done ? 'struck' : ''}">${escapeHtml(t.name)}</div>
             ${p !== null ? `
               <div style="margin-top:5px">
                 <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--gray-400);margin-bottom:2px">
@@ -939,7 +943,7 @@ function renderEquipo() {
       <div class="team-item">
         <div class="team-av">${USERS[a.to]?.initials || a.to.slice(0,2).toUpperCase()}</div>
         <div style="flex:1;min-width:0">
-          <div class="team-name">${a.name}</div>
+          <div class="team-name">${escapeHtml(a.name)}</div>
           <div class="team-sub">→ ${USERS[a.to]?.name || a.to} · ${a.due ? fmtD(a.due) : 'Sin fecha'} · ${a.prio}</div>
           ${progressBar}
         </div>
@@ -1022,7 +1026,7 @@ function renderOtros() {
             : `<span style="color:var(--gray-400)"><i class="fa-regular fa-calendar"></i>Sin fecha</span>`;
           return `
             <div class="om-task">
-              <div class="om-task-name">${t.name}${progLbl}</div>
+              <div class="om-task-name">${escapeHtml(t.name)}${progLbl}</div>
               <div class="om-task-meta">
                 ${dueHtml}
                 <span class="om-prio ${prioCls}">${t.prio}</span>
@@ -1684,8 +1688,8 @@ async function saveProfileName(newName) {
     currentProfile.full_name = trimmed;
     currentProfile.initials = initials;
     if (USERS[currentUser]) {
-      USERS[currentUser].name = trimmed;
-      USERS[currentUser].initials = initials;
+      USERS[currentUser].name = escapeHtml(trimmed);           // mismo escape que en loadAllProfiles
+      USERS[currentUser].initials = escapeHtml(initials);
     }
     document.getElementById('headerAv').textContent = initials;
     document.getElementById('headerUser').textContent = trimmed;
@@ -3506,6 +3510,15 @@ function renderDbList() {
 
 function escapeHtml(s) {
   return String(s || '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+// Valor seguro dentro de onclick="fn('...')": primero escapa para string JS
+// (\, ', saltos) y luego para atributo HTML. Evita que datos como emails con
+// comilla rompan el string y ejecuten código (XSS por atributo).
+function jsArg(s) {
+  return String(s == null ? '' : s)
+    .replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r?\n/g, ' ')
+    .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 /* ═══════════════════════════════════════════
@@ -7422,11 +7435,11 @@ function renderCampaigns() {
     return `<tr class="${c.cancelado ? 'camp-row-cancel' : ''}">
       <td class="camp-name">
         <span class="camp-row-acts">
-          <button class="camp-row-act" title="Editar contacto" onclick="campEditContactOpen('${c.email}')"><i class="fa-solid fa-pen"></i></button>
-          <button class="camp-row-act" title="${c.cancelado ? 'Reactivar (quitar cancelado)' : 'Marcar como cancelado'}" onclick="campToggleCancel('${c.email}')"><i class="fa-solid ${c.cancelado ? 'fa-rotate-left' : 'fa-ban'}"></i></button>
-          <button class="camp-row-act camp-row-del" title="Borrar contacto" onclick="campDeleteContact('${c.email}')"><i class="fa-solid fa-xmark"></i></button>
+          <button class="camp-row-act" title="Editar contacto" onclick="campEditContactOpen('${jsArg(c.email)}')"><i class="fa-solid fa-pen"></i></button>
+          <button class="camp-row-act" title="${c.cancelado ? 'Reactivar (quitar cancelado)' : 'Marcar como cancelado'}" onclick="campToggleCancel('${jsArg(c.email)}')"><i class="fa-solid ${c.cancelado ? 'fa-rotate-left' : 'fa-ban'}"></i></button>
+          <button class="camp-row-act camp-row-del" title="Borrar contacto" onclick="campDeleteContact('${jsArg(c.email)}')"><i class="fa-solid fa-xmark"></i></button>
         </span>
-        <div class="camp-name-main" onclick="campLpOpenEmail('${c.email}')" title="Ver detalle de interacción">${nombre}${c.cancelado ? ' <span class="camp-cancel-badge">CANCELÓ</span>' : ''}</div>
+        <div class="camp-name-main" onclick="campLpOpenEmail('${jsArg(c.email)}')" title="Ver detalle de interacción">${nombre}${c.cancelado ? ' <span class="camp-cancel-badge">CANCELÓ</span>' : ''}</div>
         <div class="camp-name-sub">${escapeHtml(c.email)}${c.responsable ? ' · ' + escapeHtml(c.responsable) : ''}</div>
       </td>
       <td class="camp-total">${vistos}</td>
@@ -7684,7 +7697,7 @@ function aperturaRender() {
   list.innerHTML = aperturaContacts.map(c => `<div class="apertura-row">
     <span class="apertura-mail">${escapeHtml(c.email)}</span>
     ${c.nombre ? `<span class="apertura-nom">${escapeHtml(c.nombre)}</span>` : ''}
-    <button class="camp-row-act camp-row-del" title="Quitar de la lista" onclick="aperturaRemove('${c.email}')"><i class="fa-solid fa-xmark"></i></button>
+    <button class="camp-row-act camp-row-del" title="Quitar de la lista" onclick="aperturaRemove('${jsArg(c.email)}')"><i class="fa-solid fa-xmark"></i></button>
   </div>`).join('');
 }
 

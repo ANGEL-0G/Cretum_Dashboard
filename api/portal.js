@@ -104,6 +104,10 @@ export default async function handler(req, res) {
     if (action === 'view') {
       const payload = verifyTokenStr(req.body.token, secret);
       if (!payload) return res.status(401).json({ error: 'Sesión expirada — vuelve a entrar' });
+      // Revalida que el usuario siga activo: si se desactivó, el token deja de servir
+      // de inmediato (no espera a que expire a las 12h).
+      const { data: pu } = await sb.from('portal_users').select('active').eq('id', payload.uid).maybeSingle();
+      if (!pu || !pu.active) return res.status(401).json({ error: 'Acceso desactivado — contacta a tu asesor' });
       const org = reqOrg(req);
       const slug = String(req.body.slug || '');
       const { data: dash } = await sb.from('portal_dashboards')

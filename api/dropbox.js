@@ -87,6 +87,19 @@ function joinPath(root, path) {
   return full === '/' || full === '' ? '' : full;
 }
 
+// Confinamiento: list/search ya listan solo dentro del root, pero devuelven
+// rutas absolutas que luego se usan en link/thumbnail/preview/download. Sin
+// esta validación, un usuario podría pedir una ruta absoluta ARBITRARIA y
+// sacar archivos del Dropbox de la cuenta admin fuera de la carpeta compartida.
+function underRoot(path, root) {
+  const r = (root || '').replace(/\/$/, '');
+  if (!r) return true;                          // sin root configurado no hay confinamiento
+  const p = String(path || '');
+  if (p.includes('..')) return false;           // Dropbox no resuelve '..', pero por si acaso
+  const pl = p.toLowerCase(), rl = r.toLowerCase();   // Dropbox es case-insensitive
+  return pl === rl || pl.startsWith(rl + '/');
+}
+
 function normalizeEntry(e) {
   return {
     type: e['.tag'],                   // 'folder' | 'file'
@@ -187,6 +200,7 @@ export default async function handler(req, res) {
     if (action === 'link') {
       const path = (req.query.path || '').toString();
       if (!path) return res.status(400).json({ error: 'path requerido' });
+      if (!underRoot(path, root)) return res.status(403).json({ error: 'Ruta fuera del alcance permitido' });
       const data = await dbxJson('/2/files/get_temporary_link', { path }, accessToken);
       return res.status(200).json({ link: data.link, name: data.metadata?.name });
     }
@@ -195,6 +209,7 @@ export default async function handler(req, res) {
       const path = (req.query.path || '').toString();
       const size = (req.query.size || 'w256h256').toString();
       if (!path) return res.status(400).json({ error: 'path requerido' });
+      if (!underRoot(path, root)) return res.status(403).json({ error: 'Ruta fuera del alcance permitido' });
       const validSizes = ['w32h32','w64h64','w128h128','w256h256','w480h320','w640h480','w960h640','w1024h768','w2048h1536'];
       const sizeTag = validSizes.includes(size) ? size : 'w256h256';
       const dbxRes = await dbxContent('/2/files/get_thumbnail_v2', {
@@ -212,6 +227,7 @@ export default async function handler(req, res) {
     if (action === 'preview') {
       const path = (req.query.path || '').toString();
       if (!path) return res.status(400).json({ error: 'path requerido' });
+      if (!underRoot(path, root)) return res.status(403).json({ error: 'Ruta fuera del alcance permitido' });
       const dbxRes = await dbxContent('/2/files/get_preview', { path }, accessToken);
       const buf = Buffer.from(await dbxRes.arrayBuffer());
       res.setHeader('Content-Type', 'application/pdf');
@@ -224,6 +240,7 @@ export default async function handler(req, res) {
     if (action === 'download') {
       const path = (req.query.path || '').toString();
       if (!path) return res.status(400).json({ error: 'path requerido' });
+      if (!underRoot(path, root)) return res.status(403).json({ error: 'Ruta fuera del alcance permitido' });
       const dbxRes = await dbxContent('/2/files/download', { path }, accessToken);
       const buf = Buffer.from(await dbxRes.arrayBuffer());
       const ext = (path.split('.').pop() || '').toLowerCase();
@@ -247,7 +264,7 @@ export default async function handler(req, res) {
 
     return res.status(400).json({ error: `action inválida: ${action}` });
   } catch (err) {
-    console.error('[dropbox]', err);
-    return res.status(500).json({ error: err.message });
+    console.error('[dropbox]', err);   // detalle en logs del servidor, no al cliente
+    return res.status(500).json({ error: 'No se pudo completar la operación en Dropbox' });
   }
 }
