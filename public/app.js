@@ -2140,6 +2140,9 @@ function switchView(view, isBack = false) {
     }
   }
 
+  // Al salir de la Base de Datos, olvida el detalle recordado (volver = lista)
+  if (view !== 'db') forgetDbDetail();
+
   currentView = view;
   document.getElementById('pageSelector').classList.toggle('active', view === 'selector');
   document.getElementById('pageTasks').style.display = view === 'tasks' ? '' : 'none';
@@ -3168,6 +3171,7 @@ async function loadDb() {
     populateFilters();
     renderColumnPicker();
     renderDbList();
+    restoreDbDetailFromSession();   // reabre el inversionista/empresa si se recargó dentro de un detalle
   } catch (err) {
     console.error(err);
     list.innerHTML = `<div class="db-error">Error: ${err.message}</div>`;
@@ -4589,9 +4593,23 @@ async function exportInvestorPdfJsPDF(posId) {
   }
 }
 
+// ── Recordar el detalle abierto (por pestaña) para restaurarlo al recargar ──
+const DB_DETAIL_KEY = 'dbOpenDetail';
+function rememberDbDetail(obj) { try { sessionStorage.setItem(DB_DETAIL_KEY, JSON.stringify(obj)); } catch {} }
+function forgetDbDetail() { try { sessionStorage.removeItem(DB_DETAIL_KEY); } catch {} }
+function restoreDbDetailFromSession() {
+  let obj = null;
+  try { obj = JSON.parse(sessionStorage.getItem(DB_DETAIL_KEY) || 'null'); } catch { obj = null; }
+  if (!obj) return;
+  if (obj.t === 'inv' && obj.id != null) openInvestor(obj.id);
+  else if (obj.t === 'grp' && Array.isArray(obj.ids) && obj.ids.length) openInvestorGroup(obj.ids);
+  else if (obj.t === 'co' && obj.id != null) openCompany(obj.id);
+}
+
 async function openInvestor(id) {
   const inv = dbInvestors.find(x => x.id === id);
   if (!inv) return;
+  rememberDbDetail({ t: 'inv', id });
   showDetailLoading();
   try {
     const [{ data: contacts }, { data: positions }] = await Promise.all([
@@ -4617,6 +4635,7 @@ async function openInvestorGroup(ids) {
   if (ids.length === 1) return openInvestor(ids[0]);
   const invs = ids.map(id => dbInvestors.find(x => x.id === id)).filter(Boolean);
   if (!invs.length) return;
+  rememberDbDetail({ t: 'grp', ids });
   showDetailLoading();
   try {
     const [{ data: contacts }, { data: positions }] = await Promise.all([
@@ -4690,6 +4709,7 @@ async function contactDelete(id) {
 async function openCompany(id) {
   const co = dbCompanies.find(x => x.id === id);
   if (!co) return;
+  rememberDbDetail({ t: 'co', id });
   showDetailLoading();
   try {
     const { data: positions } = await sb.from('investments')
@@ -4714,6 +4734,7 @@ function showDetailLoading() {
 }
 
 function closeDetail() {
+  forgetDbDetail();
   document.getElementById('dbDetail').classList.remove('show');
   document.getElementById('dbList').style.display = '';
   const tbExport = document.getElementById('ddExport');
@@ -5074,8 +5095,27 @@ function buildLp360(positions, investorIds) {
     const theme = isFund ? 'Fondos All-Star' : companyTheme(p.companies?.name);
     byTheme[theme] = (byTheme[theme] || 0) + val;
   });
-  const companyExp = Object.entries(byCo).sort((a, b) => b[1] - a[1]);
-  const themeExp = Object.entries(byTheme).sort((a, b) => b[1] - a[1]);
+  let companyExp = Object.entries(byCo).sort((a, b) => b[1] - a[1]);
+  let themeExp = Object.entries(byTheme).sort((a, b) => b[1] - a[1]);
+  // Si el portafolio está totalmente distribuido (sin posiciones activas), la
+  // exposición por NAV queda vacía → las gráficas no cargarían. Caemos a la
+  // composición histórica por compromiso para que siempre haya algo que mostrar.
+  let expoBasis = 'nav';
+  if (!companyExp.length && positions.length) {
+    const byCoH = {}, byThH = {};
+    positions.forEach(p => {
+      const val = num(p.commitment);
+      if (!val) return;
+      const isFund = p.companies?.id === 10;
+      const label = isFund ? (p.series?.name || 'Fondo').replace('MVP ', '') : (p.companies?.name || '—');
+      byCoH[label] = (byCoH[label] || 0) + val;
+      const theme = isFund ? 'Fondos All-Star' : companyTheme(p.companies?.name);
+      byThH[theme] = (byThH[theme] || 0) + val;
+    });
+    companyExp = Object.entries(byCoH).sort((a, b) => b[1] - a[1]);
+    themeExp = Object.entries(byThH).sort((a, b) => b[1] - a[1]);
+    expoBasis = 'commitment';
+  }
   const spxPos = active.filter(p => p.companies?.id === 27 || /All-Star Fund (IV|V)/i.test(p.series?.name || ''));
   let lockup = null;
   if (spxPos.length) {
@@ -5093,7 +5133,7 @@ function buildLp360(positions, investorIds) {
     lockup = { blocks, next: nextB || null, detail: spxLockupDetail(spxPos) };
   }
   _lp360 = { companyExp, themeExp };
-  return { moic, distrib, dpi, nActive: active.length, committedNet, navActive, companyExp, themeExp, lockup, hasSpx: spxPos.length > 0 };
+  return { moic, distrib, dpi, nActive: active.length, committedNet, navActive, companyExp, themeExp, expoBasis, lockup, hasSpx: spxPos.length > 0 };
 }
 async function draw360Theme() {
   const cv = document.getElementById('lpThemeChart');
@@ -5181,11 +5221,12 @@ function renderInvestorDetail(inv, contacts, positions) {
     ${_lpkpi('Posiciones activas', String(_lp.nActive), '', LP_KPI_INFO.posActivas, true)}
   </div>`;
   const _maxCo = _lp.companyExp.length ? _lp.companyExp[0][1] : 1;
+  const _expoNav = _lp.expoBasis !== 'commitment';   // false = portafolio totalmente distribuido (histórico)
   const exposicion = _lp.companyExp.length ? `<div class="db-section">
-    <div class="db-section-h">Exposición del portafolio</div>
+    <div class="db-section-h">Exposición del portafolio${_expoNav ? '' : ' · histórico'}</div>
     <div class="lp-expo">
       <div class="lp-expo-bars">
-        <div class="lp-expo-sub">Por empresa / fondo · NAV activo</div>
+        <div class="lp-expo-sub">Por empresa / fondo · ${_expoNav ? 'NAV activo' : 'por compromiso'}</div>
         ${_lp.companyExp.slice(0, 8).map(([nm, v]) => `<div class="lp-bar-row"><span class="lp-bar-name" title="${escapeHtml(nm)}">${escapeHtml(nm)}</span><div class="lp-bar"><div class="lp-bar-fill" style="width:${(v / _maxCo * 100).toFixed(1)}%"></div></div><span class="lp-bar-val">${fmtUsdShort(v)}</span></div>`).join('')}
       </div>
       <div class="lp-expo-donut">
