@@ -4376,10 +4376,11 @@ async function renderReportPdf(html, fileName) {
       // Cabe en una sola página
       pdf.addImage(canvas.toDataURL('image/jpeg', 0.94), 'JPEG', 0, 0, pageW, canvas.height * ptPerPx);
     } else {
-      // Cortes "seguros": el fondo (bottom) de cada fila y bloque, para NO partir una fila a la mitad
+      // Cortes "seguros": el fondo (bottom) de cada fila y bloque, para NO partir una fila a la mitad.
+      // Solo tbody tr (no thead): cortar justo tras el encabezado dejaría un header huérfano al pie.
       const pageTop = el.getBoundingClientRect().top;
       const safe = [];
-      el.querySelectorAll('tr, .kpis, .grid2, .hero, .sec, .card').forEach(n => {
+      el.querySelectorAll('tbody tr, .kpis, .grid2, .hero, .sec, .card').forEach(n => {
         const b = (n.getBoundingClientRect().bottom - pageTop) * SCALE;
         if (b > 1 && b < canvas.height) safe.push(b);
       });

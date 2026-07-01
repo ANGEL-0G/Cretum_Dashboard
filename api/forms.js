@@ -28,6 +28,15 @@ import { sendEmail, notifyAdminOfFailure } from './_lib/email.js';
 // (tiene etiqueta/regla para clasificarlas).
 const REPORTS_EMAIL = 'reportescretumpartners@gmail.com';
 
+// El endpoint de submit es público (solo token): whitelist de campos + topes
+// para que nadie guarde claves arbitrarias ni payloads gigantes en la BD.
+const FORM_FIELDS = ['nombres', 'apellidos', 'email', 'telefono', 'calle', 'numero',
+  'codigoPostal', 'estado', 'pais', 'tipo', 'empresaNombre', 'empresaDireccion'];
+const MAX_FIELD_LEN = 300;
+// Anti-spam: cada respuesta dispara correos; un token filtrado no debe poder
+// mandar infinitos. Tope holgado (un cliente real llena el formulario 1-2 veces).
+const MAX_SUBMISSIONS_PER_LINK = 100;
+
 const esc = (s) => String(s == null ? '' : s)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -53,7 +62,7 @@ function buildEmailHtml(d, advisorName) {
       ${row('Dirección', dir)}
     </table>
     ${empresa}
-    <p style="font-size:11px;color:#9aa3b5;margin-top:20px">Recibido vía Cretum Desk · ${new Date().toLocaleString('es-MX')}</p>
+    <p style="font-size:11px;color:#9aa3b5;margin-top:20px">Recibido vía Cretum Desk · ${new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' })}</p>
   </div>`;
 }
 
@@ -76,18 +85,36 @@ export default async function handler(req, res) {
 
     if (action === 'submit') {
       const token = String(body.token || '').trim();
-      const d = body.data || {};
-      const { data: link } = await admin.from('form_links').select('*').eq('token', token).maybeSingle();
+      const raw = body.data || {};
+      const { data: link } = await admin.from('form_links')
+        .select('id, recipient_email, recipient_name').eq('token', token).maybeSingle();
       if (!link) return res.status(404).json({ error: 'Enlace no válido o expirado' });
-      // Validación mínima de obligatorios
-      const req2 = ['nombres', 'apellidos', 'pais', 'estado', 'calle', 'codigoPostal', 'numero', 'telefono', 'email', 'tipo'];
-      const missing = req2.filter(k => !String(d[k] || '').trim());
-      if (d.tipo === 'empresa' && !String(d.empresaNombre || '').trim()) missing.push('empresaNombre');
-      if (missing.length) return res.status(400).json({ error: 'Faltan campos obligatorios' });
 
-      // Guarda la respuesta
-      const { data: sub } = await admin.from('form_submissions')
+      // Whitelist + trim + tope de longitud: solo guardamos los campos del formulario
+      const d = {};
+      FORM_FIELDS.forEach(k => { const v = String(raw[k] ?? '').trim(); if (v) d[k] = v.slice(0, MAX_FIELD_LEN); });
+      if (d.email) d.email = d.email.toLowerCase().replace(/\s+/g, '');   // convención: email normalizado
+
+      // Validación de obligatorios (los valores ya vienen trim + no vacíos)
+      const req2 = ['nombres', 'apellidos', 'pais', 'estado', 'calle', 'codigoPostal', 'numero', 'telefono', 'email', 'tipo'];
+      const missing = req2.filter(k => !d[k]);
+      if (d.tipo === 'empresa' && !d.empresaNombre) missing.push('empresaNombre');
+      if (missing.length) return res.status(400).json({ error: 'Faltan campos obligatorios' });
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(d.email)) return res.status(400).json({ error: 'Correo no válido' });
+      if (d.tipo !== 'empresa' && d.tipo !== 'individual') return res.status(400).json({ error: 'Tipo no válido' });
+
+      // Anti-spam: tope de respuestas por enlace
+      const { count } = await admin.from('form_submissions')
+        .select('id', { count: 'exact', head: true }).eq('link_id', link.id);
+      if ((count || 0) >= MAX_SUBMISSIONS_PER_LINK) {
+        return res.status(429).json({ error: 'Este enlace ya no acepta más respuestas; pide uno nuevo a tu contacto.' });
+      }
+
+      // Guarda la respuesta ANTES de enviar correo: si no se pudo guardar, no
+      // reportamos éxito (la garantía es "la respuesta nunca se pierde").
+      const { data: sub, error: subErr } = await admin.from('form_submissions')
         .insert({ link_id: link.id, token, data: d }).select('id').single();
+      if (subErr) throw subErr;
 
       // Envía el correo al remitente
       let emailed = false;
@@ -119,7 +146,7 @@ export default async function handler(req, res) {
       const token = randomBytes(9).toString('base64url');   // ~12 chars, URL-safe
       const { error } = await admin.from('form_links').insert({
         token, recipient_email: user.email, recipient_name: myName || null,
-        created_by: user.id, label: String(body.label || '').trim() || null,
+        created_by: user.id, label: String(body.label || '').trim().slice(0, 120) || null,
       });
       if (error) throw error;
       return res.status(200).json({ ok: true, token });
