@@ -3711,13 +3711,22 @@ function buildInvestorExport(posId) {
 
   const pos = positions.map(p => {
     const dists = p.investment_distributions || [];
-    let inkind = 0, cash = 0;
-    dists.forEach(x => { inkind += +x.value_in_kind || 0; cash += +x.cash_proceeds || 0; });
+    let inkind = 0, cash = 0, distShares = 0;
+    dists.forEach(x => { inkind += +x.value_in_kind || 0; cash += +x.cash_proceeds || 0; distShares += +x.shares_distributed || 0; });
+    // "De qué fue" la distribución: empresas subyacentes repartidas (únicas)
+    const unders = [...new Set(dists.map(x => x.underlying_company).filter(Boolean))];
+    // Naturaleza de lo distribuido: efectivo, especie, ambos o nada
+    const distTipo = (cash > 0 && inkind > 0) ? 'Efectivo + especie' : cash > 0 ? 'Efectivo' : inkind > 0 ? 'Especie' : '—';
     const num = (v) => (v != null && v !== '') ? +v : null;
     const shares = num(p.shares);
     const base = (+p.commitment_actual || +p.commitment || 0);
     return {
       cuenta: p._acct || null,
+      dist_cash: cash || null,
+      dist_inkind: inkind || null,
+      dist_shares: distShares || null,
+      dist_en: unders.join(', '),
+      dist_tipo: distTipo,
       company: p.companies?.name || '—',
       series: p.series?.name || '—',
       estado: p.distributed_at ? 'Terminada' : 'Activa',
@@ -4140,14 +4149,14 @@ async function exportInvestorXlsx(posId) {
       return { headerRow, start, end };
     };
     const carta = (p) => p.carta_ca ? { text: 'Ver carta', hyperlink: p.carta_ca } : '—';
-    const actCols = (acct ? ['Cuenta'] : []).concat(['Empresa', 'Serie', 'Compromiso', 'Account Balance', 'Distribuido', 'MOIC', 'Carry', 'Acciones', 'EV Entrada', 'PPS Entrada', 'EV Actual', 'PPS Actual', 'Valor estimado', 'Inicio', 'Fin', 'Duración', 'Última carta']);
-    const actFmt = (acct ? [null] : []).concat([null, null, Z.money, Z.money, Z.money, Z.moic, Z.pct, Z.sh, Z.evb, Z.money2, Z.evb, Z.money2, Z.money, null, null, Z.yrs, null]);
-    const actRows = active.map(p => (acct ? [p.cuenta || '—'] : []).concat([p.company, cleanSer(p.series), +p.commitment || 0, +p.commitment_actual || 0, +p.distribuido || 0, p.moic, p.carry, p.shares, p.entry_ev_b, p.entry_pps, p.current_ev_b, p.current_pps, p.valor_estimado, p.inicio || '', p.fin || '', p.duracion, carta(p)]));
+    const actCols = (acct ? ['Cuenta'] : []).concat(['Empresa', 'Serie', 'Compromiso', 'Account Balance', 'Distribuido', 'Dist. efectivo', 'Dist. especie', 'Acciones dist.', 'Distribuido en', 'MOIC', 'Carry', 'Acciones', 'EV Entrada', 'PPS Entrada', 'EV Actual', 'PPS Actual', 'Valor estimado', 'Inicio', 'Fin', 'Duración', 'Última carta']);
+    const actFmt = (acct ? [null] : []).concat([null, null, Z.money, Z.money, Z.money, Z.money, Z.money, Z.sh, null, Z.moic, Z.pct, Z.sh, Z.evb, Z.money2, Z.evb, Z.money2, Z.money, null, null, Z.yrs, null]);
+    const actRows = active.map(p => (acct ? [p.cuenta || '—'] : []).concat([p.company, cleanSer(p.series), +p.commitment || 0, +p.commitment_actual || 0, +p.distribuido || 0, p.dist_cash, p.dist_inkind, p.dist_shares, p.dist_en, p.moic, p.carry, p.shares, p.entry_ev_b, p.entry_pps, p.current_ev_b, p.current_pps, p.valor_estimado, p.inicio || '', p.fin || '', p.duracion, carta(p)]));
     const SA = drawSection('POSICIONES ACTIVAS', actRows, actCols, actFmt);
     const term = data.pos.filter(p => p.estado !== 'Activa');
-    const termCols = (acct ? ['Cuenta'] : []).concat(['Empresa', 'Serie', 'Compromiso', 'Distribuido', 'MOIC', 'Carry', 'Acciones', 'Inicio', 'Fin', 'Duración', 'Última carta']);
-    const termFmt = (acct ? [null] : []).concat([null, null, Z.money, Z.money, Z.moic, Z.pct, Z.sh, null, null, Z.yrs, null]);
-    const termRows = term.map(p => (acct ? [p.cuenta || '—'] : []).concat([p.company, cleanSer(p.series), +p.commitment || 0, +p.distribuido || 0, p.moic, p.carry, p.shares, p.inicio || '', p.fin || '', p.duracion, carta(p)]));
+    const termCols = (acct ? ['Cuenta'] : []).concat(['Empresa', 'Serie', 'Compromiso', 'Distribuido', 'Dist. efectivo', 'Dist. especie', 'Acciones dist.', 'Distribuido en', 'MOIC', 'Carry', 'Acciones', 'Inicio', 'Fin', 'Duración', 'Última carta']);
+    const termFmt = (acct ? [null] : []).concat([null, null, Z.money, Z.money, Z.money, Z.money, Z.sh, null, Z.moic, Z.pct, Z.sh, null, null, Z.yrs, null]);
+    const termRows = term.map(p => (acct ? [p.cuenta || '—'] : []).concat([p.company, cleanSer(p.series), +p.commitment || 0, +p.distribuido || 0, p.dist_cash, p.dist_inkind, p.dist_shares, p.dist_en, p.moic, p.carry, p.shares, p.inicio || '', p.fin || '', p.duracion, carta(p)]));
     const ST = term.length ? drawSection('POSICIONES TERMINADAS', termRows, termCols, termFmt) : null;
     // Formato condicional: índices calculados por nombre de columna (robusto ante cambios de columnas).
     const csRule = { type: 'colorScale', cfvo: [{ type: 'num', value: 0 }, { type: 'num', value: 1 }, { type: 'max' }], color: [{ argb: 'FFF8696B' }, { argb: 'FFFFEB84' }, { argb: 'FF63BE7B' }] };
@@ -4163,7 +4172,7 @@ async function exportInvestorXlsx(posId) {
       if (dI) { const dC = colL(dI); PS.addConditionalFormatting({ ref: `${dC}${ST.start}:${dC}${ST.end}`, rules: [barRule(GREEN)] }); }
     }
     PS.views = [{ state: 'frozen', ySplit: SA.headerRow, showGridLines: false }];
-    ((acct ? [20] : []).concat([24, 18, 15, 16, 14, 9, 8, 11, 11, 12, 11, 12, 15, 12, 12, 10, 12])).forEach((w, i) => PS.getColumn(i + 1).width = w);
+    ((acct ? [20] : []).concat([24, 18, 15, 16, 14, 13, 13, 13, 22, 9, 8, 11, 11, 12, 11, 12, 15, 12, 12, 10, 12])).forEach((w, i) => PS.getColumn(i + 1).width = w);
 
     // ===== RECOMPRAS =====
     const reps = [];
