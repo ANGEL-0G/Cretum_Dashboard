@@ -4074,7 +4074,7 @@ async function exportInvestorXlsx(posId) {
     wb.creator = 'MVP Manager';
 
     const NAVY = 'FF17436B', ORANGE = 'FFE8650D', GREEN = 'FF0F9B5A', GRAY = 'FF8A93A6', INK = 'FF1A1F2E', SLATE = 'FF8A93A6', ZEBRA = 'FFF4F7FC', CARD = 'FFF7F9FC', BORDER = 'FFDDE3EC', WHITE = 'FFFFFFFF';
-    const Z = { money: '"$"#,##0', money2: '"$"#,##0.00', pct: '0.0%', moic: '0.00"x"', sh: '#,##0' };
+    const Z = { money: '"$"#,##0', money2: '"$"#,##0.00', pct: '0.0%', moic: '0.00"x"', sh: '#,##0', evb: '"$"#,##0.00"B"', yrs: '0.00" yrs"' };
     const t = data.totals;
     const combined = !!data.combined;
     const thin = { style: 'thin', color: { argb: BORDER } };
@@ -4125,33 +4125,45 @@ async function exportInvestorXlsx(posId) {
       { type: 'doughnut', title: 'Exposición por tema', anchor: { col: 8, row: 21, w: 410, h: 250 }, cat: `'Datos'!$F$2:$F$${thN}`, nPoints: thArr.length, pctLabels: true, series: [{ val: `'Datos'!$G$2:$G$${thN}` }] },
     ];
 
-    // ===== POSICIONES (activas / terminadas, como el 360) =====
+    // ===== POSICIONES (activas / terminadas — TODAS las columnas del detalle) =====
     const PS = wb.addWorksheet('Posiciones', { views: [{ showGridLines: false }] });
     const acct = combined; let pr = 1;
+    // Alineación por tipo: columnas con formato numérico → derecha; texto/fecha/enlace → izquierda.
     const drawSection = (title, rows, cols, fmts) => {
       const hc = PS.getCell(pr, 1); hc.value = `${title} (${rows.length})`; hc.font = { size: 12, bold: true, color: { argb: NAVY } }; pr++;
       const headerRow = pr;
-      cols.forEach((h, i) => { const c = PS.getCell(pr, i + 1); c.value = h; c.font = { bold: true, color: { argb: WHITE }, size: 9.5 }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } }; c.alignment = { horizontal: i < (acct ? 3 : 2) ? 'left' : 'right', vertical: 'middle' }; c.border = border; });
+      cols.forEach((h, i) => { const c = PS.getCell(pr, i + 1); c.value = h; c.font = { bold: true, color: { argb: WHITE }, size: 9.5 }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } }; c.alignment = { horizontal: fmts[i] ? 'right' : 'left', vertical: 'middle' }; c.border = border; });
       PS.getRow(pr).height = 17; pr++;
       const start = pr;
-      rows.forEach((vals, ri) => { vals.forEach((v, i) => { const c = PS.getCell(pr, i + 1); c.value = (v == null ? null : v); c.font = { size: 9.5, color: { argb: INK } }; c.alignment = { horizontal: i < (acct ? 3 : 2) ? 'left' : 'right' }; c.border = border; if (ri % 2 === 1) c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ZEBRA } }; if (fmts[i]) c.numFmt = fmts[i]; }); pr++; });
+      rows.forEach((vals, ri) => { vals.forEach((v, i) => { const c = PS.getCell(pr, i + 1); c.value = (v == null ? null : v); c.font = { size: 9.5, color: { argb: INK } }; c.alignment = { horizontal: fmts[i] ? 'right' : 'left' }; c.border = border; if (ri % 2 === 1) c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ZEBRA } }; if (fmts[i]) c.numFmt = fmts[i]; }); pr++; });
       const end = pr - 1; pr += 1;
       return { headerRow, start, end };
     };
-    const actCols = (acct ? ['Cuenta'] : []).concat(['Empresa', 'Serie', 'Compromiso', 'Account Balance', 'Distribuido', 'MOIC', 'Acciones', 'PPS Entrada', 'PPS Actual']);
-    const actFmt = (acct ? [null] : []).concat([null, null, Z.money, Z.money, Z.money, Z.moic, Z.sh, Z.money2, Z.money2]);
-    const actRows = active.map(p => (acct ? [p.cuenta || '—'] : []).concat([p.company, cleanSer(p.series), +p.commitment || 0, +p.commitment_actual || 0, +p.distribuido || 0, p.moic, p.shares, p.entry_pps, p.current_pps]));
+    const carta = (p) => p.carta_ca ? { text: 'Ver carta', hyperlink: p.carta_ca } : '—';
+    const actCols = (acct ? ['Cuenta'] : []).concat(['Empresa', 'Serie', 'Compromiso', 'Account Balance', 'Distribuido', 'MOIC', 'Carry', 'Acciones', 'EV Entrada', 'PPS Entrada', 'EV Actual', 'PPS Actual', 'Valor estimado', 'Inicio', 'Fin', 'Duración', 'Última carta']);
+    const actFmt = (acct ? [null] : []).concat([null, null, Z.money, Z.money, Z.money, Z.moic, Z.pct, Z.sh, Z.evb, Z.money2, Z.evb, Z.money2, Z.money, null, null, Z.yrs, null]);
+    const actRows = active.map(p => (acct ? [p.cuenta || '—'] : []).concat([p.company, cleanSer(p.series), +p.commitment || 0, +p.commitment_actual || 0, +p.distribuido || 0, p.moic, p.carry, p.shares, p.entry_ev_b, p.entry_pps, p.current_ev_b, p.current_pps, p.valor_estimado, p.inicio || '', p.fin || '', p.duracion, carta(p)]));
     const SA = drawSection('POSICIONES ACTIVAS', actRows, actCols, actFmt);
     const term = data.pos.filter(p => p.estado !== 'Activa');
-    const termCols = (acct ? ['Cuenta'] : []).concat(['Empresa', 'Serie', 'Compromiso', 'Distribuido', 'MOIC', 'Cerrada']);
-    const termFmt = (acct ? [null] : []).concat([null, null, Z.money, Z.money, Z.moic, null]);
-    const termRows = term.map(p => (acct ? [p.cuenta || '—'] : []).concat([p.company, cleanSer(p.series), +p.commitment || 0, +p.distribuido || 0, p.moic, p.fin || '—']));
+    const termCols = (acct ? ['Cuenta'] : []).concat(['Empresa', 'Serie', 'Compromiso', 'Distribuido', 'MOIC', 'Carry', 'Acciones', 'Inicio', 'Fin', 'Duración', 'Última carta']);
+    const termFmt = (acct ? [null] : []).concat([null, null, Z.money, Z.money, Z.moic, Z.pct, Z.sh, null, null, Z.yrs, null]);
+    const termRows = term.map(p => (acct ? [p.cuenta || '—'] : []).concat([p.company, cleanSer(p.series), +p.commitment || 0, +p.distribuido || 0, p.moic, p.carry, p.shares, p.inicio || '', p.fin || '', p.duracion, carta(p)]));
     const ST = term.length ? drawSection('POSICIONES TERMINADAS', termRows, termCols, termFmt) : null;
-    const bA = acct ? 1 : 0;
-    if (actRows.length) { const mC = colL(bA + 7), aC = colL(bA + 5); PS.addConditionalFormatting({ ref: `${mC}${SA.start}:${mC}${SA.end}`, rules: [{ type: 'colorScale', cfvo: [{ type: 'num', value: 0 }, { type: 'num', value: 1 }, { type: 'max' }], color: [{ argb: 'FFF8696B' }, { argb: 'FFFFEB84' }, { argb: 'FF63BE7B' }] }] }); PS.addConditionalFormatting({ ref: `${aC}${SA.start}:${aC}${SA.end}`, rules: [{ type: 'dataBar', cfvo: [{ type: 'min' }, { type: 'max' }], color: { argb: ORANGE }, gradient: false }] }); }
-    if (ST) { const mC = colL(bA + 5), dC = colL(bA + 4); PS.addConditionalFormatting({ ref: `${mC}${ST.start}:${mC}${ST.end}`, rules: [{ type: 'colorScale', cfvo: [{ type: 'num', value: 0 }, { type: 'num', value: 1 }, { type: 'max' }], color: [{ argb: 'FFF8696B' }, { argb: 'FFFFEB84' }, { argb: 'FF63BE7B' }] }] }); PS.addConditionalFormatting({ ref: `${dC}${ST.start}:${dC}${ST.end}`, rules: [{ type: 'dataBar', cfvo: [{ type: 'min' }, { type: 'max' }], color: { argb: GREEN }, gradient: false }] }); }
+    // Formato condicional: índices calculados por nombre de columna (robusto ante cambios de columnas).
+    const csRule = { type: 'colorScale', cfvo: [{ type: 'num', value: 0 }, { type: 'num', value: 1 }, { type: 'max' }], color: [{ argb: 'FFF8696B' }, { argb: 'FFFFEB84' }, { argb: 'FF63BE7B' }] };
+    const barRule = (argb) => ({ type: 'dataBar', cfvo: [{ type: 'min' }, { type: 'max' }], color: { argb }, gradient: false });
+    if (actRows.length) {
+      const mI = actCols.indexOf('MOIC') + 1, aI = actCols.indexOf('Account Balance') + 1;
+      if (mI) { const mC = colL(mI); PS.addConditionalFormatting({ ref: `${mC}${SA.start}:${mC}${SA.end}`, rules: [csRule] }); }
+      if (aI) { const aC = colL(aI); PS.addConditionalFormatting({ ref: `${aC}${SA.start}:${aC}${SA.end}`, rules: [barRule(ORANGE)] }); }
+    }
+    if (ST) {
+      const mI = termCols.indexOf('MOIC') + 1, dI = termCols.indexOf('Distribuido') + 1;
+      if (mI) { const mC = colL(mI); PS.addConditionalFormatting({ ref: `${mC}${ST.start}:${mC}${ST.end}`, rules: [csRule] }); }
+      if (dI) { const dC = colL(dI); PS.addConditionalFormatting({ ref: `${dC}${ST.start}:${dC}${ST.end}`, rules: [barRule(GREEN)] }); }
+    }
     PS.views = [{ state: 'frozen', ySplit: SA.headerRow, showGridLines: false }];
-    ((acct ? [20] : []).concat([24, 20, 15, 16, 14, 9, 12, 12, 12])).forEach((w, i) => PS.getColumn(i + 1).width = w);
+    ((acct ? [20] : []).concat([24, 18, 15, 16, 14, 9, 8, 11, 11, 12, 11, 12, 15, 12, 12, 10, 12])).forEach((w, i) => PS.getColumn(i + 1).width = w);
 
     // ===== RECOMPRAS =====
     const reps = [];
@@ -4168,12 +4180,22 @@ async function exportInvestorXlsx(posId) {
       [22, 22, 28, 12, 15, 15, 15].forEach((w, i) => RP.getColumn(i + 1).width = w); RP.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 7 } };
     }
 
-    // ===== DISTRIBUCIONES =====
+    // ===== DISTRIBUCIONES (todas, con subyacente, especie, carta y notas) =====
     if (data.letters && data.letters.length) {
       const DD = wb.addWorksheet('Distribuciones', { views: [{ state: 'frozen', ySplit: 1, showGridLines: false }] });
-      ['Empresa', 'Serie', 'Fecha', 'Tipo', 'Acciones', 'PPS', 'Efectivo', 'Total'].forEach((h, i) => { const c = DD.getCell(1, i + 1); c.value = h; c.font = { bold: true, color: { argb: WHITE }, size: 10 }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } }; c.alignment = { horizontal: i < 4 ? 'left' : 'right' }; });
-      data.letters.forEach((x, i) => { const row = DD.getRow(2 + i); [x.company, cleanSer(x.series), x.fecha, x.tipo, x.shares, x.pps, x.cash, x.total].forEach((v, j) => { const c = row.getCell(j + 1); c.value = v; c.font = { size: 9.5, color: { argb: INK } }; c.alignment = { horizontal: j < 4 ? 'left' : 'right' }; if (j === 4) c.numFmt = Z.sh; if (j === 5) c.numFmt = Z.money2; if (j >= 6) c.numFmt = Z.money; }); });
-      [22, 18, 12, 11, 12, 11, 14, 14].forEach((w, i) => DD.getColumn(i + 1).width = w); DD.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 8 } };
+      const dCols = ['Empresa', 'Serie', 'Subyacente', 'Fecha', 'Tipo', 'Acciones', 'PPS', 'Efectivo', 'En especie', 'Total', 'Carta', 'Notas'];
+      const dNum = new Set([5, 6, 7, 8, 9]);   // índices (0-based) de columnas numéricas → derecha
+      dCols.forEach((h, i) => { const c = DD.getCell(1, i + 1); c.value = h; c.font = { bold: true, color: { argb: WHITE }, size: 10 }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } }; c.alignment = { horizontal: dNum.has(i) ? 'right' : 'left' }; });
+      data.letters.forEach((x, i) => { const row = DD.getRow(2 + i); [x.company, cleanSer(x.series), x.subyacente || '', x.fecha, x.tipo, x.shares, x.pps, x.cash, x.especie, x.total, (x.carta ? { text: 'Ver carta', hyperlink: x.carta } : '—'), x.notas || ''].forEach((v, j) => { const c = row.getCell(j + 1); c.value = v; c.font = { size: 9.5, color: { argb: INK } }; c.alignment = { horizontal: dNum.has(j) ? 'right' : 'left' }; if (j === 5) c.numFmt = Z.sh; if (j === 6) c.numFmt = Z.money2; if (j >= 7 && j <= 9) c.numFmt = Z.money; }); });
+      [22, 16, 18, 12, 12, 11, 11, 14, 14, 14, 10, 30].forEach((w, i) => DD.getColumn(i + 1).width = w); DD.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: dCols.length } };
+    }
+
+    // ===== CONTACTOS =====
+    if (data.contacts && data.contacts.length) {
+      const CT = wb.addWorksheet('Contactos', { views: [{ state: 'frozen', ySplit: 1, showGridLines: false }] });
+      ['Nombre', 'Email'].forEach((h, i) => { const c = CT.getCell(1, i + 1); c.value = h; c.font = { bold: true, color: { argb: WHITE }, size: 10 }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } }; c.alignment = { horizontal: 'left' }; });
+      data.contacts.forEach((ct, i) => { const row = CT.getRow(2 + i); [ct.name || '—', ct.email || '—'].forEach((v, j) => { const c = row.getCell(j + 1); c.value = v; c.font = { size: 10, color: { argb: INK } }; if (i % 2 === 1) c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ZEBRA } }; }); });
+      [32, 36].forEach((w, i) => CT.getColumn(i + 1).width = w);
     }
 
     const buf = await wb.xlsx.writeBuffer();
