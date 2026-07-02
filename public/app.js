@@ -4561,6 +4561,88 @@ function exportInvestorHtml() {
       cv.replaceWith(wrap);
     }
 
+    // 3.5) VALOR AGREGADO — hero ejecutivo, cards de empresas y liquidez con montos.
+    //      Todo condicional al perfil (aplica a CUALQUIER inversionista, sin secciones vacías).
+    try {
+      const positions = lastInvestorDetail.positions || [];
+      const _xids = inv._combined ? (inv._accounts || []).map(a => a.id) : (inv.id != null ? [inv.id] : []);
+      const lp = buildLp360(positions, _xids);
+      const activeP = positions.filter(p => !p.distributed_at);
+
+      // — Hero ejecutivo (reemplaza el encabezado simple: el nombre vive aquí, sin duplicarse) —
+      const heroLine = lp.committedNet > 0
+        ? `Su portafolio de <b>${fmtUsdShort(lp.committedNet)}</b> comprometidos vale hoy <b>${fmtUsdShort(lp.navActive)}</b>${lp.distrib > 500 ? ` y ha recibido <b>${fmtUsdShort(lp.distrib)}</b> en distribuciones` : ''} — un múltiplo de <b>${lp.moic.toFixed(2)}x</b> sobre su capital.`
+        : '';
+      const hero = document.createElement('div');
+      hero.className = 'xp-hero';
+      hero.innerHTML = `
+        <div class="xp-hero-eyebrow">Preparado exclusivamente para</div>
+        <div class="xp-hero-name">${escapeHtml(inv.name)}</div>
+        ${heroLine ? `<div class="xp-hero-line">${heroLine}</div>` : ''}
+        <div class="xp-hero-meta">Cifras al ${escapeHtml(new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }))} · Valuaciones a precios de mercado más recientes · ${lp.nActive} ${lp.nActive === 1 ? 'posición activa' : 'posiciones activas'}</div>`;
+      clone.querySelector('.db-detail-name')?.remove();
+      clone.querySelector('.db-detail-sub')?.remove();
+      clone.prepend(hero);
+
+      // — Cards "Sus empresas" (ficha curada de los trackers; solo empresas con info) —
+      const infoDicts = Object.values(FUND_TRACKERS || {}).map(t => t && t.companyInfo).filter(Boolean);
+      const normCo = s => String(s || '').toLowerCase().replace(/\b(inc|corp|corporation|llc|pbc|ltd|technologies|company|sab de cv|sapi de cv)\b/g, '').replace(/[^a-z0-9]/g, '');
+      const ALIAS = { 'spacex': 'spaceexploration' };
+      const findInfo = (name) => {
+        let n = normCo(name); n = ALIAS[n] || n;
+        if (!n) return null;
+        for (const d of infoDicts) for (const k of Object.keys(d)) {
+          const kn = normCo(k);
+          if (kn.includes(n) || n.includes(kn)) return { key: k, ...d[k] };
+        }
+        return null;
+      };
+      const seenCo = new Set(); const cards = [];
+      activeP.forEach(p => {
+        const nm = p.companies?.name;
+        if (!nm || p.companies?.id === 10 || seenCo.has(nm)) return;
+        seenCo.add(nm);
+        const info = findInfo(nm);
+        if (!info) return;
+        cards.push(`<div class="xp-co"><div class="xp-co-head"><span class="xp-co-name">${escapeHtml(nm)}</span><span class="xp-co-chip">${escapeHtml(info.category || '')}${info.stage ? ' · ' + escapeHtml(info.stage) : ''}</span></div><div class="xp-co-tag">${escapeHtml(info.tagline || '')}</div>${info.thesis ? `<div class="xp-co-thesis">${escapeHtml(info.thesis)}</div>` : ''}</div>`);
+      });
+      if (cards.length) {
+        const sec = document.createElement('div');
+        sec.className = 'db-section';
+        sec.innerHTML = `<div class="db-section-h">Sus empresas</div><div class="xp-cos">${cards.slice(0, 8).join('')}</div>`;
+        const anchor = [...clone.querySelectorAll('.db-section')].find(s => (s.querySelector('.db-section-h')?.textContent || '').startsWith('Exposición'));
+        if (anchor) anchor.insertAdjacentElement('afterend', sec);
+        else clone.appendChild(sec);
+      }
+
+      // — Liquidez estimada con MONTOS (solo si tiene SpaceX directo con acciones) —
+      const co27 = activeP.filter(p => p.companies?.id === 27 && +p.shares > 0);
+      if (co27.length) {
+        const price = Math.max(...co27.map(p => +p.current_ev_pps || 0));
+        let sA = 0, sB = 0;
+        co27.forEach(p => spxTranches(p.series?.name || '').forEach(t => { if (t.structure === 'A') sA += (+p.shares) * t.portion; else sB += (+p.shares) * t.portion; }));
+        const today = new Date().toISOString().slice(0, 10);
+        const pctNum = s => s === 'Remanente' ? 17 : (parseFloat(s) || 0);
+        const ev = [];
+        SPX_LOCKUP_B.forEach(e => { if (e.date >= today) ev.push({ ...e, sh: (pctNum(e.pct) / 100) * (sB + sA / 2) }); });
+        SPX_LOCKUP_A_EXT.forEach(e => { if (e.date >= today) ev.push({ ...e, sh: (pctNum(e.pct) / 100) * (sA / 2) }); });
+        ev.sort((a, b) => a.date.localeCompare(b.date));
+        if (ev.length && price > 0) {
+          const F = d => new Date(d + 'T12:00:00').toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' });
+          const rows = ev.map(e => `<tr><td>${F(e.date)}</td><td>${escapeHtml(e.label)}</td><td class="num">${Math.round(e.sh).toLocaleString('en-US')}</td><td class="num"><b>${fmtUsdShort(e.sh * price)}</b></td></tr>`).join('');
+          const tot = ev.reduce((s, e) => s + e.sh, 0);
+          const tbl = document.createElement('div');
+          tbl.className = 'xp-liq';
+          tbl.innerHTML = `<div class="xp-liq-h">Próximas liberaciones — valor estimado al precio actual de SPCX ($${price.toFixed(2)})</div>
+            <table class="db-table"><thead><tr><th>Fecha est.</th><th>Evento</th><th class="num">Acciones</th><th class="num">Valor estimado</th></tr></thead>
+            <tbody>${rows}<tr class="xp-liq-tot"><td colspan="2">Total por liberar</td><td class="num">${Math.round(tot).toLocaleString('en-US')}</td><td class="num"><b>${fmtUsdShort(tot * price)}</b></td></tr></tbody></table>
+            <div class="xp-liq-note">Estimaciones con el calendario del S-1 de SpaceX y el precio de mercado de hoy; los montos finales dependen del precio en cada fecha y del prospecto definitivo. No incluye el bono condicional de +10%.</div>`;
+          const lock = [...clone.querySelectorAll('.db-section')].find(s => (s.querySelector('.db-section-h')?.textContent || '').startsWith('Lock-up'));
+          if (lock) lock.appendChild(tbl);
+        }
+      }
+    } catch (e) { console.warn('[export html] valor agregado', e); }
+
     // 4) Sin handlers inline del portal (el archivo trae su propio script)
     clone.querySelectorAll('*').forEach(el => {
       [...el.attributes].forEach(a => { if (a.name.startsWith('on')) el.removeAttribute(a.name); });
@@ -4593,7 +4675,25 @@ body.xport #dbDetail,body.xport #dbDetailContent{display:block!important;positio
 body.xport .db-table thead th{cursor:pointer;user-select:none}
 body.xport .db-table thead th:hover{color:var(--orange,#e8650d)}
 body.xport .db-table thead th .xp-arrow{font-size:9px;margin-left:4px;opacity:.7}
-.xp-foot{max-width:1180px;margin:6px auto 34px;padding:0 26px;font-size:10.5px;letter-spacing:1.2px;color:#9aa1ad;text-transform:uppercase}
+.xp-foot{max-width:1180px;margin:6px auto 34px;padding:0 26px;font-size:10.5px;letter-spacing:.4px;color:#9aa1ad;line-height:1.7}
+.xp-foot .xp-foot-tag{text-transform:uppercase;letter-spacing:1.2px;display:block;margin-bottom:4px}
+.xp-hero{background:#fff;border:1px solid var(--gray-200,#e3e7ee);border-left:4px solid var(--navy,#ED7824);border-radius:14px;padding:22px 26px;margin-bottom:18px;box-shadow:0 1px 4px rgba(20,25,40,.05)}
+.xp-hero-eyebrow{font-size:10.5px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#9aa1ad;margin-bottom:6px}
+.xp-hero-name{font-size:26px;font-weight:600;color:var(--navy,#ED7824);line-height:1.15;margin-bottom:8px}
+.xp-hero-line{font-size:14.5px;color:#3a4152;line-height:1.55;max-width:760px}
+.xp-hero-line b{color:#171c28}
+.xp-hero-meta{margin-top:10px;font-size:11px;color:#9aa1ad;letter-spacing:.3px}
+.xp-cos{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px}
+.xp-co{background:#fff;border:1px solid var(--gray-200,#e3e7ee);border-radius:12px;padding:14px 16px}
+.xp-co-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:6px;flex-wrap:wrap}
+.xp-co-name{font-weight:600;font-size:14px;color:#171c28}
+.xp-co-chip{font-size:10px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:var(--navy,#ED7824);background:var(--navy-pale,rgba(237,120,36,.12));border-radius:20px;padding:3px 9px;white-space:nowrap}
+.xp-co-tag{font-size:12.5px;color:#3a4152;line-height:1.5;margin-bottom:5px}
+.xp-co-thesis{font-size:11.5px;color:#6b7280;line-height:1.5}
+.xp-liq{margin-top:14px}
+.xp-liq-h{font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:#3a4152;margin-bottom:8px}
+.xp-liq tr.xp-liq-tot td{background:var(--gray-50,#f7f8fb);font-weight:700;border-top:1.5px solid var(--gray-200,#e3e7ee)}
+.xp-liq-note{margin-top:7px;font-size:10.5px;color:#9aa1ad;line-height:1.5;max-width:820px}
 @media print{body.xport>.xp-top{position:static}.xp-top .xp-print{display:none}}
 `;
     const script = `
@@ -4640,7 +4740,7 @@ ${extLinks}
 </head><body class="xport">
 <div class="xp-top"><span class="xp-brand"><i class="fa-solid fa-chart-pie"></i> MVP · Perfil del inversionista</span><span class="xp-date">Generado ${escapeHtml(dateStr)}</span><button class="xp-print" onclick="window.print()"><i class="fa-solid fa-print"></i> Imprimir / PDF</button></div>
 <div class="xp-wrap"><div class="db-detail" id="dbDetail"><div class="db-detail-content" id="dbDetailContent">${clone.innerHTML}</div></div></div>
-<div class="xp-foot">MVP Manager · Confidencial · Preparado para el inversionista · ${escapeHtml(dateStr)}</div>
+<div class="xp-foot"><span class="xp-foot-tag">MVP Manager · Documento confidencial · ${escapeHtml(dateStr)}</span>Preparado exclusivamente para ${escapeHtml(inv.name)}. Cifras basadas en los registros oficiales de los fondos y precios de mercado al cierre más reciente. Las valuaciones de posiciones no realizadas son estimadas y pueden variar. Este documento es informativo y no constituye una oferta ni asesoría de inversión.</div>
 <script>${script}<\/script>
 </body></html>`;
 
