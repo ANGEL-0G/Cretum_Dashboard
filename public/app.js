@@ -2021,9 +2021,9 @@ function fmtUsdShort(v) {
   const s = v < 0 ? '-' : '';
   v = Math.abs(v);
   if (v >= 1e9) return s + '$' + (v / 1e9).toFixed(2) + 'B';
-  if (v >= 1e6) return s + '$' + (v / 1e6).toFixed(1) + 'M';
-  if (v >= 1e3) return s + '$' + Math.round(v / 1e3) + 'K';
-  return s + '$' + Math.round(v).toLocaleString('en-US');
+  if (v >= 1e6) return s + '$' + (v / 1e6).toFixed(2) + 'M';
+  if (v >= 1e3) return s + '$' + (v / 1e3).toFixed(2) + 'K';
+  return s + '$' + v.toFixed(2);
 }
 
 let _mvpKpisLoaded = false;
@@ -2392,8 +2392,8 @@ const fmtMoney = (n) => {
   const v = Math.abs(n);
   if (v >= 1e9) return '$' + (n / 1e9).toFixed(2) + 'B';
   if (v >= 1e6) return '$' + (n / 1e6).toFixed(2) + 'M';
-  if (v >= 1e3) return '$' + (n / 1e3).toFixed(1) + 'K';
-  return '$' + n.toFixed(0);
+  if (v >= 1e3) return '$' + (n / 1e3).toFixed(2) + 'K';
+  return '$' + n.toFixed(2);
 };
 
 // Supabase/PostgREST corta en 1000 filas por request. Paginamos con .range()
