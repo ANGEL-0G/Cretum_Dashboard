@@ -4544,7 +4544,7 @@ const XP_CO_FICHAS = {
   'Aumni':            { domain: 'aumni.fund',           category: 'Fintech · Datos VC', stage: 'Adquirida (J.P. Morgan)', tagline: 'Analítica de datos legales de inversiones de venture capital; adquirida por J.P. Morgan.' },
 };
 
-function exportInvestorHtml() {
+async function exportInvestorHtml() {
   if (!lastInvestorDetail) { toast('Abre un inversionista primero'); return; }
   const { inv } = lastInvestorDetail;
   const clone = document.getElementById('dbDetailContent').cloneNode(true);
@@ -4634,15 +4634,28 @@ function exportInvestorHtml() {
         const fk = matchKey(XP_CO_FICHAS, n);
         return fk ? XP_CO_FICHAS[fk].domain : null;
       };
-      const seenCo = new Set(); const cards = [];
+      const seenCo = new Set(); const cardData = [];
       activeP.forEach(p => {
         const nm = p.companies?.name;
         if (!nm || p.companies?.id === 10 || seenCo.has(nm)) return;
         seenCo.add(nm);
-        const info = findInfo(nm) || { category: companyTheme(nm), tagline: '' };
-        const dom = findDomain(nm);
-        const logo = dom ? `<img class="xp-co-logo" src="https://www.google.com/s2/favicons?sz=128&domain=${escapeHtml(dom)}" alt="">` : '';
-        cards.push(`<div class="xp-co"><div class="xp-co-head"><span class="xp-co-id">${logo}<span class="xp-co-name">${escapeHtml(nm)}</span></span><span class="xp-co-chip">${escapeHtml(info.category || '')}${info.stage ? ' · ' + escapeHtml(info.stage) : ''}</span></div>${info.tagline ? `<div class="xp-co-tag">${escapeHtml(info.tagline)}</div>` : ''}${info.thesis ? `<div class="xp-co-thesis">${escapeHtml(info.thesis)}</div>` : ''}</div>`);
+        cardData.push({ nm, info: findInfo(nm) || { category: companyTheme(nm), tagline: '' }, dom: findDomain(nm) });
+      });
+      // logos INCRUSTADOS como data URI (el HTML debe verse sin red ni JS, ej. visor del teléfono)
+      const logoUri = {};
+      await Promise.all([...new Set(cardData.map(c => c.dom).filter(Boolean))].map(async dom => {
+        try {
+          const g = 'https://www.google.com/s2/favicons?sz=128&domain=' + dom;
+          const r = await fetch('/api/logo?u=' + encodeURIComponent(g));
+          if (!r.ok) return;
+          const b = await r.blob();
+          if (b.size < 120) return;   // favicon vacío/placeholder
+          logoUri[dom] = await new Promise(res => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = () => res(null); fr.readAsDataURL(b); });
+        } catch (e) {}
+      }));
+      const cards = cardData.map(({ nm, info, dom }) => {
+        const logo = (dom && logoUri[dom]) ? `<img class="xp-co-logo" src="${logoUri[dom]}" alt="">` : '';
+        return `<div class="xp-co"><div class="xp-co-head"><span class="xp-co-id">${logo}<span class="xp-co-name">${escapeHtml(nm)}</span></span><span class="xp-co-chip">${escapeHtml(info.category || '')}${info.stage ? ' · ' + escapeHtml(info.stage) : ''}</span></div>${info.tagline ? `<div class="xp-co-tag">${escapeHtml(info.tagline)}</div>` : ''}${info.thesis ? `<div class="xp-co-thesis">${escapeHtml(info.thesis)}</div>` : ''}</div>`;
       });
       if (cards.length) {
         const sec = document.createElement('div');
