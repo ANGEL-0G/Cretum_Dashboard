@@ -3918,7 +3918,7 @@ async function investorChartImages(data) {
   const short = (s) => { s = String(s || ''); return s.length > 16 ? s.slice(0, 15) + '…' : s; };
   // Paleta MVP: naranja líder + neutros discretos; verde/rojo solo para ganancia/pérdida
   const MVP = '#E8650D', SLATE = '#9aa3b5', POS = '#2E9E5B', NEG = '#C0392B';
-  const PAL = ['#E8650D', '#1F3A5F', '#E0A458', '#5B8C7B', '#9B6A8F', '#7A93B0', '#C9572E', '#3F6B5E', '#B8923E', '#6B7689'];
+  const PAL = ['#E8650D', '#8A93A6', '#F4A259', '#4F5866', '#B04F0A', '#C4CBD6', '#FBCE9E', '#2E3440', '#D97E3F', '#6E7787'];
   try {
     // 1) Comprometido vs. valor actual — AGREGADO POR EMPRESA y solo posiciones ACTIVAS
     //    (las terminadas ya se realizaron; evita mostrar la mitad vendida del 22F duplicada con su recompra 26A QP)
@@ -4025,7 +4025,7 @@ async function investorChartImages(data) {
 }
 
 // ════════ Gráficas NATIVAS de Excel (inyección OOXML sobre el .xlsx de ExcelJS) ════════
-const CHART_PALETTE = ['E8650D', '17436B', '0F9B5A', '9B59B6', 'E1B12C', '3B65B0', 'C0392B', '16A085', 'b08968', '8A93A6'];
+const CHART_PALETTE = ['E8650D', '8A93A6', 'F4A259', '4F5866', 'B04F0A', 'C4CBD6', 'FBCE9E', '2E3440', 'D97E3F', '6E7787'];
 const C_NS = 'http://schemas.openxmlformats.org/drawingml/2006/chart';
 const A_NS = 'http://schemas.openxmlformats.org/drawingml/2006/main';
 const RL_NS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
@@ -4268,7 +4268,7 @@ const REPORT_FONT_FACES = [
 
 function buildReportHtmlClient(payload) {
   const { meta, totals, pos, dists = [] } = payload;
-  const PAL = ['#E8650D', '#3F3A36', '#E8A05A', '#8A8079', '#C25A2A', '#B89160', '#A9A29A', '#6E665F', '#D98F4E', '#cabfb4'];
+  const PAL = ['#E8650D', '#8A93A6', '#F4A259', '#4F5866', '#B04F0A', '#C4CBD6', '#FBCE9E', '#2E3440', '#D97E3F', '#6E7787'];
   const E = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const N = (v) => { const x = Number(v); return Number.isFinite(x) ? x : null; };
   const M = (v) => { if (v == null || !Number.isFinite(+v)) return '—'; v = +v; const a = Math.abs(v); return a >= 1e6 ? '$' + (v / 1e6).toFixed(2) + 'M' : a >= 1e3 ? '$' + (v / 1e3).toFixed(1) + 'K' : '$' + v.toFixed(0); };
@@ -5567,7 +5567,7 @@ function buildLp360(positions, investorIds) {
 // Paleta de gráficas del 360/export: en MVP sin azules (identidad naranja); Cretum conserva navy.
 function lpChartPalette() {
   return currentOrg === 'mvp'
-    ? ['#e8650d', '#f4a259', '#0f9b5a', '#e1b12c', '#a8632e', '#9b59b6', '#c0392b', '#16a085']
+    ? ['#E8650D', '#8A93A6', '#F4A259', '#4F5866', '#B04F0A', '#C4CBD6', '#FBCE9E', '#2E3440', '#D97E3F', '#6E7787']
     : ['#e8650d', '#1a3a6b', '#0f9b5a', '#9b59b6', '#e1b12c', '#3b65b0', '#c0392b', '#16a085'];
 }
 async function draw360Theme() {
