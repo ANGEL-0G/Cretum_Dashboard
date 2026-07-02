@@ -4514,6 +4514,31 @@ async function exportInvestorPdf(posId) {
 // Clona el DOM ya renderizado (mismo estilo y contenido, siempre en sync con el portal),
 // quita los controles de edición y embebe el CSS del portal + un script propio.
 // Las columnas de posiciones respetan el picker "Columnas": lo que ocultes ahí no sale en el archivo.
+// Catálogo propio de fichas por empresa (fallback del companyInfo de los trackers) — garantiza
+// que TODA posición en directo lleve card con logo en el export. domain = logo (Google favicons).
+const XP_CO_FICHAS = {
+  'Space X':          { domain: 'spacex.com',           category: 'Espacio · Satélites', stage: 'Pública (SPCX)', tagline: 'Líder mundial en lanzamientos reutilizables e internet satelital Starlink.' },
+  'Anthropic':        { domain: 'anthropic.com',        category: 'Inteligencia Artificial', stage: 'Etapa tardía', tagline: 'Laboratorio de IA creador de Claude, enfocado en modelos seguros para empresas.' },
+  'Base Power':       { domain: 'basepowercompany.com', category: 'Energía residencial', stage: 'Crecimiento', tagline: 'Baterías de respaldo en hogares operadas como una "central eléctrica virtual".' },
+  'Diamond Foundry':  { domain: 'diamondfoundry.com',   category: 'Materiales avanzados', stage: 'Crecimiento', tagline: 'Diamantes cultivados de grado gema y obleas de diamante para semiconductores de potencia.' },
+  'Agility Robotics': { domain: 'agilityrobotics.com',  category: 'Robótica humanoide', stage: 'Crecimiento', tagline: 'Fabrica Digit, robot humanoide para logística y almacenes.' },
+  'Groq':             { domain: 'groq.com',             category: 'Semiconductores · IA', stage: 'Crecimiento', tagline: 'Chips de inferencia de IA (LPU) ultrarrápidos para servir modelos a gran escala.' },
+  'Epic Games':       { domain: 'epicgames.com',        category: 'Gaming · 3D', stage: 'Etapa tardía', tagline: 'Creadora de Fortnite y de Unreal Engine, el motor 3D que impulsa juegos, cine y simulación.' },
+  'Rappi':            { domain: 'rappi.com',            category: 'Súper-app · LatAm', stage: 'Etapa tardía', tagline: 'La súper-app líder de delivery y servicios financieros en América Latina.' },
+  'Lime':             { domain: 'li.me',                category: 'Micromovilidad', stage: 'Etapa tardía', tagline: 'Red de scooters y bicicletas eléctricas compartidas en cientos de ciudades.' },
+  'Cohere':           { domain: 'cohere.com',           category: 'IA empresarial', stage: 'Crecimiento', tagline: 'Modelos de lenguaje para empresas, fundada por coautores del paper del Transformer.' },
+  'Revolut':          { domain: 'revolut.com',          category: 'Fintech · Neobanco', stage: 'Etapa tardía', tagline: 'Neobanco global con decenas de millones de clientes y licencia bancaria en Europa.' },
+  'Kraken':           { domain: 'kraken.com',           category: 'Cripto · Exchange', stage: 'Etapa tardía', tagline: 'Uno de los exchanges de criptomonedas más grandes y antiguos del mundo.' },
+  'Bolt':             { domain: 'bolt.com',             category: 'Fintech · E-commerce', stage: 'Crecimiento', tagline: 'Checkout de un clic y red de identidad para comercio electrónico.' },
+  'Patreon':          { domain: 'patreon.com',          category: 'Economía de creadores', stage: 'Crecimiento', tagline: 'La plataforma de membresías que conecta a creadores con sus fans.' },
+  'Automattic Inc.':  { domain: 'automattic.com',       category: 'Software · Web', stage: 'Etapa tardía', tagline: 'La empresa detrás de WordPress.com, WooCommerce y Tumblr.' },
+  'Cohesity':         { domain: 'cohesity.com',         category: 'Datos · Ciberseguridad', stage: 'Etapa tardía', tagline: 'Gestión y seguridad de datos empresariales; fusionada con Veritas.' },
+  'Trusted':          { domain: 'trustedhealth.com',    category: 'Salud · Talento', stage: 'Crecimiento', tagline: 'Plataforma de staffing clínico que conecta personal de enfermería con hospitales.' },
+  'Mach Industries':  { domain: 'machindustries.com',   category: 'Defensa', stage: 'Etapa temprana', tagline: 'Sistemas de defensa de nueva generación con manufactura descentralizada.' },
+  'Figure AI':        { domain: 'figure.ai',            category: 'Robótica humanoide', stage: 'Crecimiento', tagline: 'Robots humanoides de propósito general impulsados por IA.' },
+  'Aumni':            { domain: 'aumni.fund',           category: 'Fintech · Datos VC', stage: 'Adquirida (J.P. Morgan)', tagline: 'Analítica de datos legales de inversiones de venture capital; adquirida por J.P. Morgan.' },
+};
+
 function exportInvestorHtml() {
   if (!lastInvestorDetail) { toast('Abre un inversionista primero'); return; }
   const { inv } = lastInvestorDetail;
@@ -4583,32 +4608,41 @@ function exportInvestorHtml() {
       clone.querySelector('.db-detail-sub')?.remove();
       clone.prepend(hero);
 
-      // — Cards "Sus empresas" (ficha curada de los trackers; solo empresas con info) —
+      // — Cards "Sus empresas": TODA posición en directo lleva ficha + logo.
+      //   Fuente: companyInfo/logos de los trackers; fallback XP_CO_FICHAS (catálogo propio).
       const infoDicts = Object.values(FUND_TRACKERS || {}).map(t => t && t.companyInfo).filter(Boolean);
+      const logoDicts = Object.values(FUND_TRACKERS || {}).map(t => t && t.logos).filter(Boolean);
       const normCo = s => String(s || '').toLowerCase().replace(/\b(inc|corp|corporation|llc|pbc|ltd|technologies|company|sab de cv|sapi de cv)\b/g, '').replace(/[^a-z0-9]/g, '');
       const ALIAS = { 'spacex': 'spaceexploration' };
+      const matchKey = (dict, n) => Object.keys(dict).find(k => { const kn = normCo(k); return kn.includes(n) || n.includes(kn); });
       const findInfo = (name) => {
         let n = normCo(name); n = ALIAS[n] || n;
         if (!n) return null;
-        for (const d of infoDicts) for (const k of Object.keys(d)) {
-          const kn = normCo(k);
-          if (kn.includes(n) || n.includes(kn)) return { key: k, ...d[k] };
-        }
-        return null;
+        for (const d of infoDicts) { const k = matchKey(d, n); if (k) return { ...d[k] }; }
+        const fk = matchKey(XP_CO_FICHAS, n);
+        return fk ? { ...XP_CO_FICHAS[fk] } : null;
+      };
+      const findDomain = (name) => {
+        let n = normCo(name); n = ALIAS[n] || n;
+        if (!n) return null;
+        for (const d of logoDicts) { const k = matchKey(d, n); if (k) return d[k]; }
+        const fk = matchKey(XP_CO_FICHAS, n);
+        return fk ? XP_CO_FICHAS[fk].domain : null;
       };
       const seenCo = new Set(); const cards = [];
       activeP.forEach(p => {
         const nm = p.companies?.name;
         if (!nm || p.companies?.id === 10 || seenCo.has(nm)) return;
         seenCo.add(nm);
-        const info = findInfo(nm);
-        if (!info) return;
-        cards.push(`<div class="xp-co"><div class="xp-co-head"><span class="xp-co-name">${escapeHtml(nm)}</span><span class="xp-co-chip">${escapeHtml(info.category || '')}${info.stage ? ' · ' + escapeHtml(info.stage) : ''}</span></div><div class="xp-co-tag">${escapeHtml(info.tagline || '')}</div>${info.thesis ? `<div class="xp-co-thesis">${escapeHtml(info.thesis)}</div>` : ''}</div>`);
+        const info = findInfo(nm) || { category: companyTheme(nm), tagline: '' };
+        const dom = findDomain(nm);
+        const logo = dom ? `<img class="xp-co-logo" src="https://www.google.com/s2/favicons?sz=128&domain=${escapeHtml(dom)}" alt="">` : '';
+        cards.push(`<div class="xp-co"><div class="xp-co-head"><span class="xp-co-id">${logo}<span class="xp-co-name">${escapeHtml(nm)}</span></span><span class="xp-co-chip">${escapeHtml(info.category || '')}${info.stage ? ' · ' + escapeHtml(info.stage) : ''}</span></div>${info.tagline ? `<div class="xp-co-tag">${escapeHtml(info.tagline)}</div>` : ''}${info.thesis ? `<div class="xp-co-thesis">${escapeHtml(info.thesis)}</div>` : ''}</div>`);
       });
       if (cards.length) {
         const sec = document.createElement('div');
         sec.className = 'db-section';
-        sec.innerHTML = `<div class="db-section-h">Sus empresas</div><div class="xp-cos">${cards.slice(0, 8).join('')}</div>`;
+        sec.innerHTML = `<div class="db-section-h">Sus empresas</div><div class="xp-cos">${cards.join('')}</div>`;
         const anchor = [...clone.querySelectorAll('.db-section')].find(s => (s.querySelector('.db-section-h')?.textContent || '').startsWith('Exposición'));
         if (anchor) anchor.insertAdjacentElement('afterend', sec);
         else clone.appendChild(sec);
@@ -4701,7 +4735,9 @@ body.xport .lp-bar-fill,body.xport .home-top-fill{transition:width 1.1s cubic-be
 @media print{.xp-hero-eyebrow,.xp-hero-name,.xp-hero-line,.xp-hero-meta{animation:none!important;opacity:1!important;clip-path:none!important}.xr{opacity:1!important;transform:none!important}#xpProg,.xp-grain{display:none}}
 .xp-cos{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px}
 .xp-co{background:#fff;border:1px solid var(--gray-200,#e3e7ee);border-radius:12px;padding:14px 16px}
-.xp-co-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:6px;flex-wrap:wrap}
+.xp-co-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;flex-wrap:wrap}
+.xp-co-id{display:flex;align-items:center;gap:9px;min-width:0}
+.xp-co-logo{width:26px;height:26px;border-radius:7px;object-fit:contain;background:#fff;border:1px solid var(--gray-200,#e3e7ee);padding:2px;flex:none}
 .xp-co-name{font-weight:600;font-size:14px;color:#171c28}
 .xp-co-chip{font-size:10px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:var(--navy,#ED7824);background:var(--navy-pale,rgba(237,120,36,.12));border-radius:20px;padding:3px 9px;white-space:nowrap}
 .xp-co-tag{font-size:12.5px;color:#3a4152;line-height:1.5;margin-bottom:5px}
@@ -4728,6 +4764,11 @@ function xpVal(td){
   if (!isNaN(d) && /\\d{4}/.test(t)) return d;
   return t.toLowerCase();
 }
+// logos: ocultar los que no carguen (el favicon service no tiene todas)
+document.querySelectorAll('.xp-co-logo').forEach(function(img){
+  img.addEventListener('error', function(){ img.style.display = 'none'; });
+  if (img.complete && img.naturalWidth < 2) img.style.display = 'none';
+});
 // ── Coreografía premium (sobria): progress, reveals, count-up, barras y dona ──
 (function(){
   if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
