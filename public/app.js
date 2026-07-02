@@ -4542,7 +4542,7 @@ function exportInvestorHtml() {
       let svg = '';
       if (_lp360 && _lp360.themeExp && _lp360.themeExp.length) {
         const items = _lp360.themeExp;
-        const colors = ['#e8650d', '#1a3a6b', '#0f9b5a', '#9b59b6', '#e1b12c', '#3b65b0', '#c0392b', '#16a085'];
+        const colors = lpChartPalette();
         const tot = items.reduce((s, [, v]) => s + v, 0) || 1;
         const size = 220, stroke = 42, r = (size - stroke) / 2, c = size / 2, C = 2 * Math.PI * r;
         let off = 0, segs = '';
@@ -4630,7 +4630,8 @@ document.querySelectorAll('table.db-table').forEach(function(tb){
   });
 });
 `;
-    const html = `<!doctype html><html lang="es"><head><meta charset="utf-8">
+    const orgAttr = document.documentElement.getAttribute('data-org');   // hereda el tema (MVP = naranja) en el export; sin data-theme (siempre claro)
+    const html = `<!doctype html><html lang="es"${orgAttr ? ` data-org="${escapeHtml(orgAttr)}"` : ''}><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${escapeHtml(title)}</title>
 ${extLinks}
@@ -5362,13 +5363,19 @@ function buildLp360(positions, investorIds) {
   _lp360 = { companyExp, themeExp };
   return { moic, distrib, dpi, nActive: active.length, committedNet, navActive, companyExp, themeExp, expoBasis, lockup, hasSpx: spxPos.length > 0 };
 }
+// Paleta de gráficas del 360/export: en MVP sin azules (identidad naranja); Cretum conserva navy.
+function lpChartPalette() {
+  return currentOrg === 'mvp'
+    ? ['#e8650d', '#f4a259', '#0f9b5a', '#e1b12c', '#a8632e', '#9b59b6', '#c0392b', '#16a085']
+    : ['#e8650d', '#1a3a6b', '#0f9b5a', '#9b59b6', '#e1b12c', '#3b65b0', '#c0392b', '#16a085'];
+}
 async function draw360Theme() {
   const cv = document.getElementById('lpThemeChart');
   if (!cv || !_lp360 || !_lp360.themeExp.length) return;
   try { await loadScript('https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js'); } catch (e) { return; }
   const labels = _lp360.themeExp.map(t => t[0]);
   const data = _lp360.themeExp.map(t => t[1]);
-  const colors = ['#e8650d', '#1a3a6b', '#0f9b5a', '#9b59b6', '#e1b12c', '#3b65b0', '#c0392b', '#16a085'];
+  const colors = lpChartPalette();
   if (cv._chart) cv._chart.destroy();
   cv._chart = new Chart(cv.getContext('2d'), {
     type: 'doughnut',
