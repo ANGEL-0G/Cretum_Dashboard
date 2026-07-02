@@ -4679,6 +4679,10 @@ function exportInvestorHtml() {
           if (lock) lock.appendChild(tbl);
         }
       }
+
+      // — El bloque de lock-up SpaceX va HASTA ABAJO (después de Distribuciones) —
+      const lockSec = [...clone.querySelectorAll('.db-section')].find(s => (s.querySelector('.db-section-h')?.textContent || '').startsWith('Lock-up'));
+      if (lockSec) clone.appendChild(lockSec);
     } catch (e) { console.warn('[export html] valor agregado', e); }
 
     // 4) Sin handlers inline del portal (el archivo trae su propio script)
