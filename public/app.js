@@ -2062,7 +2062,7 @@ function _mvpSnapshotInnerHtml(d, topN) {
       kpi('Capital comprometido', fmtUsdShort(d.committed), '', 'Suma del compromiso de las posiciones activas de todos los LP, neto de reinversiones SpaceX (la 22F vendida y reinvertida en la 26A QP se cuenta una sola vez).') +
       kpi('Valor actual (NAV)', fmtUsdShort(d.nav), 'accent', 'Valor de mercado actual de todas las posiciones activas (mark-to-market, sincronizado con el último precio).', true) +
       kpi('MOIC', d.moic.toFixed(2) + 'x', moicClass(d.moic), 'Múltiplo total (TVPI): (NAV + distribuido real) ÷ capital pagado real (incluye terminadas). Neto de reinversiones.') +
-      kpi('Distribuido a la fecha', fmtUsdShort(d.distrib), '', 'Efectivo y acciones realmente devueltos a los LP. Excluye recompras/reinversiones SpaceX.', true) +
+      kpi('Distribuido a la fecha', fmtUsdShort(d.distrib), '', 'Efectivo y acciones devueltos a los LP, incluyendo distribuciones aplicadas a llamadas de capital. Excluye recompras/reinversiones SpaceX.', true) +
       kpi('Inversionistas', d.nInv.toLocaleString('en-US'), '', 'Número de inversionistas (LP) distintos en la base.') +
       kpi('Posiciones activas', d.nPos.toLocaleString('en-US'), '', 'Posiciones aún sin distribuir ni liquidar.', true) +
     `</div>` +
@@ -5608,7 +5608,7 @@ const LP_KPI_INFO = {
   commitTotal: 'Capital comprometido real (paid-in): suma del compromiso de todas las posiciones, neto de reinversiones SpaceX. La mitad de la Serie 22F que se vendió y se reinvirtió en la 26A QP se cuenta una sola vez (no se dobla el capital reciclado).',
   commitActual: 'Valor actual estimado (NAV) de las posiciones activas, a precio de mercado (mark-to-market, sincronizado con el último precio). No incluye posiciones ya distribuidas.',
   moic: 'Múltiplo total sobre el capital (TVPI): (valor actual de las posiciones activas + distribuido real) ÷ comprometido real. Sí incluye lo ya distribuido. Neto de reinversiones SpaceX.',
-  distribuido: 'Efectivo y acciones realmente devueltos al inversionista a la fecha. Excluye recompras/reinversiones y distribuciones aplicadas a llamadas de capital.',
+  distribuido: 'Efectivo y acciones devueltos al inversionista a la fecha, incluyendo distribuciones de fondos aplicadas a llamadas de capital. Excluye recompras/reinversiones.',
   dpi: 'Distribuciones sobre capital (DPI): distribuido real ÷ comprometido real. Cuánto se ha devuelto en efectivo/acciones por cada dólar comprometido.',
   posActivas: 'Posiciones que siguen vivas (aún sin distribuir ni liquidar).',
 };
