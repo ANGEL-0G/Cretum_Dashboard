@@ -4826,7 +4826,7 @@ async function openInvestor(id) {
       sb.from('contacts').select('id, name, email').eq('investor_id', id).order('id'),
       sb.from('investments')
         .select(`id, entry_ev_b, entry_pps, current_ev_b, current_ev_pps, shares,
-                 commitment, commitment_actual, dpi_moic, carry_pct,
+                 commitment, capital_sent, commitment_actual, dpi_moic, carry_pct,
                  start_date, end_date, duration_years, distributed_at, last_ca_letter, welcome_letter,
                  series(name), companies(id, name, is_public),
                  investment_distributions(distribution_date, letter_type, underlying_company,
@@ -4852,7 +4852,7 @@ async function openInvestorGroup(ids) {
       sb.from('contacts').select('id, name, email, investor_id').in('investor_id', ids).order('id'),
       sb.from('investments')
         .select(`id, investor_id, entry_ev_b, entry_pps, current_ev_b, current_ev_pps, shares,
-                 commitment, commitment_actual, dpi_moic, carry_pct,
+                 commitment, capital_sent, commitment_actual, dpi_moic, carry_pct,
                  start_date, end_date, duration_years, distributed_at, last_ca_letter, welcome_letter,
                  series(name), companies(id, name, is_public),
                  investment_distributions(distribution_date, letter_type, underlying_company,
@@ -4957,6 +4957,7 @@ const POSITION_COLUMNS = [
   { key: 'company',           label: 'Empresa',     locked: true,  default: true  },
   { key: 'series',            label: 'Series',                      default: true  },
   { key: 'commitment',        label: 'Commitment',                  default: true  },
+  { key: 'capital_sent',      label: 'Capital Enviado',             default: true  },
   { key: 'commitment_actual', label: 'Comp. ejec.',                 default: true  },
   { key: 'dpi_moic',          label: 'DPI / MOIC',                  default: true  },
   { key: 'carry_pct',         label: 'Carry',                       default: false },
@@ -4990,6 +4991,11 @@ function loadPosVisibleCols() {
       set.add('welcome_letter');
       localStorage.setItem('dbPosVisibleCols', JSON.stringify([...set]));
       localStorage.setItem('dbPosCols_welcome_v1', '1');
+    }
+    if (!localStorage.getItem('dbPosCols_capsent_v1')) {
+      set.add('capital_sent');
+      localStorage.setItem('dbPosVisibleCols', JSON.stringify([...set]));
+      localStorage.setItem('dbPosCols_capsent_v1', '1');
     }
   } catch {}
   return set;
@@ -5041,13 +5047,14 @@ function renderPositionsBlock(title, rows, showAcct) {
     date:  (v) => v ? new Date(v + 'T12:00:00').toLocaleDateString('es-MX', { day:'numeric', month:'short', year:'numeric' }) : dash,
     money: (v) => fmtMoney(+v),
   };
-  const numericKeys = new Set(['commitment','commitment_actual','dpi_moic','carry_pct','shares','entry_ev_b','entry_pps','current_ev_b','current_ev_pps','duration_years']);
+  const numericKeys = new Set(['commitment','capital_sent','commitment_actual','dpi_moic','carry_pct','shares','entry_ev_b','entry_pps','current_ev_b','current_ev_pps','duration_years']);
 
   const cellFor = (p, key) => {
     switch (key) {
       case 'company':           return `<td class="col-name">${escapeHtml(p.companies?.name || '—')}</td>`;
       case 'series':            return `<td>${escapeHtml(p.series?.name || '—')}</td>`;
       case 'commitment':        return `<td class="num">${fmt.money(p.commitment)}</td>`;
+      case 'capital_sent':      return `<td class="num">${p.capital_sent != null ? fmt.money(p.capital_sent) : '<span style="color:var(--gray-400)" title="Pendiente de verificación manual">—</span>'}</td>`;
       case 'commitment_actual': return `<td class="num muted">${fmt.money(p.commitment_actual)}</td>`;
       case 'dpi_moic':          return `<td class="num">${fmt.moic(p.dpi_moic)}</td>`;
       case 'carry_pct':         return `<td class="num muted">${fmt.carry(p.carry_pct)}</td>`;
