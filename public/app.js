@@ -4987,7 +4987,7 @@ async function openInvestor(id) {
       sb.from('contacts').select('id, name, email').eq('investor_id', id).order('id'),
       sb.from('investments')
         .select(`id, entry_ev_b, entry_pps, current_ev_b, current_ev_pps, shares,
-                 commitment, capital_sent, commitment_actual, dpi_moic, carry_pct,
+                 commitment, capital_sent, capital_sent_flag, commitment_actual, dpi_moic, carry_pct,
                  start_date, end_date, duration_years, distributed_at, last_ca_letter, welcome_letter,
                  series(name), companies(id, name, is_public),
                  investment_distributions(distribution_date, letter_type, underlying_company,
@@ -5013,7 +5013,7 @@ async function openInvestorGroup(ids) {
       sb.from('contacts').select('id, name, email, investor_id').in('investor_id', ids).order('id'),
       sb.from('investments')
         .select(`id, investor_id, entry_ev_b, entry_pps, current_ev_b, current_ev_pps, shares,
-                 commitment, capital_sent, commitment_actual, dpi_moic, carry_pct,
+                 commitment, capital_sent, capital_sent_flag, commitment_actual, dpi_moic, carry_pct,
                  start_date, end_date, duration_years, distributed_at, last_ca_letter, welcome_letter,
                  series(name), companies(id, name, is_public),
                  investment_distributions(distribution_date, letter_type, underlying_company,
@@ -5215,7 +5215,7 @@ function renderPositionsBlock(title, rows, showAcct) {
       case 'company':           return `<td class="col-name">${escapeHtml(p.companies?.name || '—')}</td>`;
       case 'series':            return `<td>${escapeHtml(p.series?.name || '—')}</td>`;
       case 'commitment':        return `<td class="num">${fmt.money(p.commitment)}</td>`;
-      case 'capital_sent':      return `<td class="num">${p.capital_sent != null ? fmt.money(p.capital_sent) : '<span style="color:var(--gray-400)" title="Pendiente de verificación manual">—</span>'}</td>`;
+      case 'capital_sent':      return `<td class="num">${p.capital_sent_flag ? `<span style="color:#c62828;font-weight:600" title="${escapeHtml(p.capital_sent_flag)}"><i class="fa-solid fa-triangle-exclamation"></i> ${escapeHtml(p.capital_sent_flag)}</span>` : (p.capital_sent != null ? fmt.money(p.capital_sent) : '<span style="color:var(--gray-400)" title="Pendiente de verificación manual">—</span>')}</td>`;
       case 'commitment_actual': return `<td class="num muted">${fmt.money(p.commitment_actual)}</td>`;
       case 'dpi_moic':          return `<td class="num">${fmt.moic(p.dpi_moic)}</td>`;
       case 'carry_pct':         return `<td class="num muted">${fmt.carry(p.carry_pct)}</td>`;
