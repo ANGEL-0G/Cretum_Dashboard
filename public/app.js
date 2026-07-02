@@ -5562,7 +5562,7 @@ const LP_KPI_INFO = {
   commitTotal: 'Capital comprometido real (paid-in): suma del compromiso de todas las posiciones, neto de reinversiones SpaceX. La mitad de la Serie 22F que se vendió y se reinvirtió en la 26A QP se cuenta una sola vez (no se dobla el capital reciclado).',
   commitActual: 'Valor actual estimado (NAV) de las posiciones activas, a precio de mercado (mark-to-market, sincronizado con el último precio). No incluye posiciones ya distribuidas.',
   moic: 'Múltiplo total sobre el capital (TVPI): (valor actual de las posiciones activas + distribuido real) ÷ comprometido real. Sí incluye lo ya distribuido. Neto de reinversiones SpaceX.',
-  distribuido: 'Efectivo y acciones realmente devueltos al inversionista a la fecha. Excluye recompras/reinversiones: la 22F vendida y reinvertida en la 26A QP no cuenta como distribución (la parte tomada en efectivo sí).',
+  distribuido: 'Efectivo y acciones realmente devueltos al inversionista a la fecha. Excluye recompras/reinversiones y distribuciones aplicadas a llamadas de capital.',
   dpi: 'Distribuciones sobre capital (DPI): distribuido real ÷ comprometido real. Cuánto se ha devuelto en efectivo/acciones por cada dólar comprometido.',
   posActivas: 'Posiciones que siguen vivas (aún sin distribuir ni liquidar).',
 };
