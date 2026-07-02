@@ -4117,6 +4117,11 @@ async function injectNativeCharts(arrayBuffer, sheetName, specs) {
 }
 
 async function exportInvestorXlsx(posId) {
+  const lang = await pickExportLang(); if (!lang) return;
+  const EN = lang === 'en';
+  const T = (es, en) => (EN ? en : es);
+  const XLS_EN = { 'Cuenta':'Account','Empresa':'Company','Serie':'Series','Subyacente':'Underlying','Compromiso':'Commitment','Distribuido':'Distributed','Dist. efectivo':'Cash Dist.','Dist. especie':'In-Kind Dist.','Acciones dist.':'Shares Dist.','Distribuido en':'Distributed On','Carry':'Carry','Acciones':'Shares','EV Entrada':'Entry EV','PPS Entrada':'Entry PPS','EV Actual':'Current EV','PPS Actual':'Current PPS','Valor estimado':'Estimated Value','Inicio':'Start','Fin':'End','Duración':'Duration','Última carta':'Latest Letter','Cerrada':'Closed','Fecha':'Date','Tipo':'Type','Efectivo':'Cash','En especie':'In-Kind','Carta':'Letter','Notas':'Notes','Serie vendida':'Series Sold','Vendido':'Sold','Reinvertido':'Reinvested','Efectivo neto':'Net Cash' };
+  const TC = (h) => (EN ? (XLS_EN[h] || h) : h);
   const data = buildInvestorExport(posId);
   if (!data) { toast('Abre un inversionista primero'); return; }
   if (posId != null && !data.pos.length) { toast('No encontré esa posición'); return; }
@@ -4138,17 +4143,17 @@ async function exportInvestorXlsx(posId) {
     const colL = n => { let s = ''; while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = (n - m - 1) / 26; } return s; };
 
     // ===== RESUMEN (limpio: KPIs + gráficas, como el header del 360) =====
-    const R = wb.addWorksheet('Resumen', { views: [{ showGridLines: false }] });
+    const R = wb.addWorksheet(T('Resumen', 'Summary'), { views: [{ showGridLines: false }] });
     R.mergeCells('A1:H1'); R.getCell('A1').value = data.inv.name; R.getCell('A1').font = { size: 22, bold: true, color: { argb: ORANGE } }; R.getRow(1).height = 30;
     R.mergeCells('A2:H2');
     const sub = [];
     if (data.inv._accounts) sub.push(data.inv._accounts.map(a => a.name).join(' + '));
-    else if (data.inv.titular) sub.push('Titular: ' + data.inv.titular);
+    else if (data.inv.titular) sub.push(T('Titular: ', 'Holder: ') + data.inv.titular);
     if (single && data.pos[0]) sub.push(data.pos[0].company + ' · ' + data.pos[0].series);
-    else sub.push(data.pos.length + ' posiciones');
-    sub.push('Generado ' + new Date().toLocaleDateString('es-MX'));
+    else sub.push(data.pos.length + T(' posiciones', ' positions'));
+    sub.push(T('Generado ', 'Generated ') + new Date().toLocaleDateString(EN ? 'en-US' : 'es-MX'));
     R.getCell('A2').value = sub.join('   ·   '); R.getCell('A2').font = { size: 10, color: { argb: GRAY } };
-    const kbar = [['COMPROMISO TOTAL', t.totCommit, Z.money, ORANGE], ['ACCOUNT BALANCE', t.totActual, Z.money, INK], ['ACCOUNT BALANCE + DIST.', (+t.totActual || 0) + (+t.totDist || 0), Z.money, GREEN], ['DISTRIBUIDO', t.totDist, Z.money, INK], ['MOIC', t.portMoic, Z.moic, INK], ['DPI', t.dpi, Z.moic, INK]];
+    const kbar = [[T('COMPROMISO TOTAL','TOTAL COMMITMENT'), t.totCommit, Z.money, ORANGE], ['ACCOUNT BALANCE', t.totActual, Z.money, INK], ['ACCOUNT BALANCE + DIST.', (+t.totActual || 0) + (+t.totDist || 0), Z.money, GREEN], [T('DISTRIBUIDO','DISTRIBUTED'), t.totDist, Z.money, INK], ['MOIC', t.portMoic, Z.moic, INK], ['DPI', t.dpi, Z.moic, INK]];
     kbar.forEach((k, i) => { const col = i + 1; const lc = R.getCell(4, col); lc.value = k[0]; lc.font = { size: 7.5, bold: true, color: { argb: GRAY } }; lc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: CARD } }; lc.border = { top: border.top, left: border.left, right: border.right };
       const vc = R.getCell(5, col); vc.value = k[1]; if (typeof k[1] === 'number') vc.numFmt = k[2]; vc.font = { size: 13, bold: true, color: { argb: k[3] } }; vc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: CARD } }; vc.border = { bottom: border.bottom, left: border.left, right: border.right }; R.getColumn(col).width = 17; });
     R.getRow(5).height = 22;
@@ -4160,28 +4165,28 @@ async function exportInvestorXlsx(posId) {
     active.forEach(p => { const k = p.company; (byCo[k] || (byCo[k] = { c: 0, a: 0, d: 0 })); byCo[k].c += +p.commitment || 0; byCo[k].a += +p.commitment_actual || 0; });
     data.pos.forEach(p => { const k = p.company; (byCo[k] || (byCo[k] = { c: 0, a: 0, d: 0 })); byCo[k].d += +p.distribuido || 0; });
     const coArr = Object.entries(byCo).sort((a, b) => b[1].a - a[1].a);
-    const byTh = {}; active.forEach(p => { const k = p.theme || companyTheme(p.company); byTh[k] = (byTh[k] || 0) + (+p.commitment_actual || 0); });
+    const byTh = {}; active.forEach(p => { let k = p.theme || companyTheme(p.company); if (EN) k = xlateText(k) || k; byTh[k] = (byTh[k] || 0) + (+p.commitment_actual || 0); });
     const thArr = Object.entries(byTh).sort((a, b) => b[1] - a[1]);
     const moicArr = active.filter(p => p.moic != null).sort((a, b) => b.moic - a.moic).slice(0, 8);
-    DT.getCell('A1').value = 'Empresa'; DT.getCell('B1').value = 'Comprometido'; DT.getCell('C1').value = 'Account Balance';
+    DT.getCell('A1').value = T('Empresa','Company'); DT.getCell('B1').value = T('Comprometido','Committed'); DT.getCell('C1').value = 'Account Balance';
     coArr.forEach(([nm, d], i) => { DT.getCell(2 + i, 1).value = nm; DT.getCell(2 + i, 2).value = d.c; DT.getCell(2 + i, 3).value = d.a; });
     const empN = coArr.length + 1;
-    DT.getCell('F1').value = 'Tema'; DT.getCell('G1').value = 'Account Balance';
+    DT.getCell('F1').value = T('Tema','Theme'); DT.getCell('G1').value = 'Account Balance';
     thArr.forEach(([nm, v], i) => { DT.getCell(2 + i, 6).value = nm; DT.getCell(2 + i, 7).value = v; });
     const thN = thArr.length + 1;
-    DT.getCell('I1').value = 'Posición'; DT.getCell('J1').value = 'MOIC';
+    DT.getCell('I1').value = T('Posición','Position'); DT.getCell('J1').value = 'MOIC';
     moicArr.forEach((p, i) => { DT.getCell(2 + i, 9).value = p.company + (p.series ? ' · ' + cleanSer(p.series) : ''); DT.getCell(2 + i, 10).value = p.moic; });
     const moN = moicArr.length + 1;
 
     const specs = [
-      { type: 'col', title: 'Comprometido vs. Account Balance · por empresa', anchor: { col: 0, row: 6, w: 480, h: 255 }, cat: `'Datos'!$A$2:$A$${empN}`, series: [{ name: `'Datos'!$B$1`, val: `'Datos'!$B$2:$B$${empN}`, color: '8A93A6' }, { name: `'Datos'!$C$1`, val: `'Datos'!$C$2:$C$${empN}`, color: 'E8650D' }] },
-      { type: 'doughnut', title: 'Composición por empresa', anchor: { col: 8, row: 6, w: 410, h: 255 }, cat: `'Datos'!$A$2:$A$${empN}`, nPoints: coArr.length, pctLabels: true, series: [{ val: `'Datos'!$C$2:$C$${empN}` }] },
-      { type: 'bar', title: 'MOIC por posición', anchor: { col: 0, row: 21, w: 480, h: 250 }, cat: `'Datos'!$I$2:$I$${moN}`, numFmt: '0.0"x"', series: [{ val: `'Datos'!$J$2:$J$${moN}`, color: '0F9B5A' }] },
-      { type: 'doughnut', title: 'Exposición por tema', anchor: { col: 8, row: 21, w: 410, h: 250 }, cat: `'Datos'!$F$2:$F$${thN}`, nPoints: thArr.length, pctLabels: true, series: [{ val: `'Datos'!$G$2:$G$${thN}` }] },
+      { type: 'col', title: T('Comprometido vs. Account Balance · por empresa','Committed vs. Account Balance · by Company'), anchor: { col: 0, row: 6, w: 480, h: 255 }, cat: `'Datos'!$A$2:$A$${empN}`, series: [{ name: `'Datos'!$B$1`, val: `'Datos'!$B$2:$B$${empN}`, color: '8A93A6' }, { name: `'Datos'!$C$1`, val: `'Datos'!$C$2:$C$${empN}`, color: 'E8650D' }] },
+      { type: 'doughnut', title: T('Composición por empresa','Composition by Company'), anchor: { col: 8, row: 6, w: 410, h: 255 }, cat: `'Datos'!$A$2:$A$${empN}`, nPoints: coArr.length, pctLabels: true, series: [{ val: `'Datos'!$C$2:$C$${empN}` }] },
+      { type: 'bar', title: T('MOIC por posición','MOIC by Position'), anchor: { col: 0, row: 21, w: 480, h: 250 }, cat: `'Datos'!$I$2:$I$${moN}`, numFmt: '0.0"x"', series: [{ val: `'Datos'!$J$2:$J$${moN}`, color: '0F9B5A' }] },
+      { type: 'doughnut', title: T('Exposición por tema','Exposure by Theme'), anchor: { col: 8, row: 21, w: 410, h: 250 }, cat: `'Datos'!$F$2:$F$${thN}`, nPoints: thArr.length, pctLabels: true, series: [{ val: `'Datos'!$G$2:$G$${thN}` }] },
     ];
 
     // ===== POSICIONES (activas / terminadas — TODAS las columnas del detalle) =====
-    const PS = wb.addWorksheet('Posiciones', { views: [{ showGridLines: false }] });
+    const PS = wb.addWorksheet(T('Posiciones','Positions'), { views: [{ showGridLines: false }] });
     const acct = combined; let pr = 1;
     // Alineación por tipo: columnas con formato numérico → derecha; texto/fecha/enlace → izquierda.
     const drawSection = (title, rows, cols, fmts) => {
@@ -4198,12 +4203,12 @@ async function exportInvestorXlsx(posId) {
     const actCols = (acct ? ['Cuenta'] : []).concat(['Empresa', 'Serie', 'Compromiso', 'Account Balance', 'Distribuido', 'Dist. efectivo', 'Dist. especie', 'Acciones dist.', 'Distribuido en', 'MOIC', 'Carry', 'Acciones', 'EV Entrada', 'PPS Entrada', 'EV Actual', 'PPS Actual', 'Valor estimado', 'Inicio', 'Fin', 'Duración', 'Última carta']);
     const actFmt = (acct ? [null] : []).concat([null, null, Z.money, Z.money, Z.money, Z.money, Z.money, Z.sh, null, Z.moic, Z.pct, Z.sh, Z.evb, Z.money2, Z.evb, Z.money2, Z.money, null, null, Z.yrs, null]);
     const actRows = active.map(p => (acct ? [p.cuenta || '—'] : []).concat([p.company, cleanSer(p.series), +p.commitment || 0, +p.commitment_actual || 0, +p.distribuido || 0, p.dist_cash, p.dist_inkind, p.dist_shares, p.dist_en, p.moic, p.carry, p.shares, p.entry_ev_b, p.entry_pps, p.current_ev_b, p.current_pps, p.valor_estimado, p.inicio || '', p.fin || '', p.duracion, carta(p)]));
-    const SA = drawSection('POSICIONES ACTIVAS', actRows, actCols, actFmt);
+    const SA = drawSection(T('POSICIONES ACTIVAS','ACTIVE POSITIONS'), actRows, actCols.map(TC), actFmt);
     const term = data.pos.filter(p => p.estado !== 'Activa');
     const termCols = (acct ? ['Cuenta'] : []).concat(['Empresa', 'Serie', 'Compromiso', 'Distribuido', 'Dist. efectivo', 'Dist. especie', 'Acciones dist.', 'Distribuido en', 'MOIC', 'Carry', 'Acciones', 'Inicio', 'Fin', 'Duración', 'Última carta']);
     const termFmt = (acct ? [null] : []).concat([null, null, Z.money, Z.money, Z.money, Z.money, Z.sh, null, Z.moic, Z.pct, Z.sh, null, null, Z.yrs, null]);
     const termRows = term.map(p => (acct ? [p.cuenta || '—'] : []).concat([p.company, cleanSer(p.series), +p.commitment || 0, +p.distribuido || 0, p.dist_cash, p.dist_inkind, p.dist_shares, p.dist_en, p.moic, p.carry, p.shares, p.inicio || '', p.fin || '', p.duracion, carta(p)]));
-    const ST = term.length ? drawSection('POSICIONES TERMINADAS', termRows, termCols, termFmt) : null;
+    const ST = term.length ? drawSection(T('POSICIONES TERMINADAS','CLOSED POSITIONS'), termRows, termCols.map(TC), termFmt) : null;
     // Formato condicional: índices calculados por nombre de columna (robusto ante cambios de columnas).
     const csRule = { type: 'colorScale', cfvo: [{ type: 'num', value: 0 }, { type: 'num', value: 1 }, { type: 'max' }], color: [{ argb: 'FFF8696B' }, { argb: 'FFFFEB84' }, { argb: 'FF63BE7B' }] };
     const barRule = (argb) => ({ type: 'dataBar', cfvo: [{ type: 'min' }, { type: 'max' }], color: { argb }, gradient: false });
@@ -4229,16 +4234,16 @@ async function exportInvestorXlsx(posId) {
       let remR = rnet.reinvestedDist;
       reps.sort((a, b) => (b.distribution_date || '').localeCompare(a.distribution_date || ''));
       reps.forEach(d => { const g = (+d.cash_proceeds || 0) + (+d.value_in_kind || 0); const rv = Math.min(remR, g); remR -= rv; d._g = g; d._r = rv; d._c = g - rv; });
-      const RP = wb.addWorksheet('Recompras', { views: [{ state: 'frozen', ySplit: 1, showGridLines: false }] });
-      ['Fecha', 'Empresa', 'Serie vendida', 'Acciones', 'Vendido', 'Reinvertido', 'Efectivo neto'].forEach((h, i) => { const c = RP.getCell(1, i + 1); c.value = h; c.font = { bold: true, color: { argb: WHITE }, size: 10 }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } }; c.alignment = { horizontal: i < 3 ? 'left' : 'right' }; });
+      const RP = wb.addWorksheet(T('Recompras','Repurchases'), { views: [{ state: 'frozen', ySplit: 1, showGridLines: false }] });
+      ['Fecha', 'Empresa', 'Serie vendida', 'Acciones', 'Vendido', 'Reinvertido', 'Efectivo neto'].map(TC).forEach((h, i) => { const c = RP.getCell(1, i + 1); c.value = h; c.font = { bold: true, color: { argb: WHITE }, size: 10 }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } }; c.alignment = { horizontal: i < 3 ? 'left' : 'right' }; });
       reps.forEach((d, i) => { const row = RP.getRow(2 + i); [d.distribution_date, d._company, cleanSer(d._series), d.shares_distributed, d._g, d._r, d._c].forEach((v, j) => { const c = row.getCell(j + 1); c.value = v; c.font = { size: 9.5, color: { argb: INK } }; c.alignment = { horizontal: j < 3 ? 'left' : 'right' }; if (j === 3) c.numFmt = Z.sh; if (j >= 4) c.numFmt = Z.money; }); });
       [22, 22, 28, 12, 15, 15, 15].forEach((w, i) => RP.getColumn(i + 1).width = w); RP.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 7 } };
     }
 
     // ===== DISTRIBUCIONES (todas, con subyacente, especie, carta y notas) =====
     if (data.letters && data.letters.length) {
-      const DD = wb.addWorksheet('Distribuciones', { views: [{ state: 'frozen', ySplit: 1, showGridLines: false }] });
-      const dCols = ['Empresa', 'Serie', 'Subyacente', 'Fecha', 'Tipo', 'Acciones', 'PPS', 'Efectivo', 'En especie', 'Total', 'Carta', 'Notas'];
+      const DD = wb.addWorksheet(T('Distribuciones','Distributions'), { views: [{ state: 'frozen', ySplit: 1, showGridLines: false }] });
+      const dCols = ['Empresa', 'Serie', 'Subyacente', 'Fecha', 'Tipo', 'Acciones', 'PPS', 'Efectivo', 'En especie', 'Total', 'Carta', 'Notas'].map(TC);
       const dNum = new Set([5, 6, 7, 8, 9]);   // índices (0-based) de columnas numéricas → derecha
       dCols.forEach((h, i) => { const c = DD.getCell(1, i + 1); c.value = h; c.font = { bold: true, color: { argb: WHITE }, size: 10 }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } }; c.alignment = { horizontal: dNum.has(i) ? 'right' : 'left' }; });
       data.letters.forEach((x, i) => { const row = DD.getRow(2 + i); [x.company, cleanSer(x.series), x.subyacente || '', x.fecha, x.tipo, x.shares, x.pps, x.cash, x.especie, x.total, (x.carta ? { text: 'Ver carta', hyperlink: x.carta } : '—'), x.notas || ''].forEach((v, j) => { const c = row.getCell(j + 1); c.value = v; c.font = { size: 9.5, color: { argb: INK } }; c.alignment = { horizontal: dNum.has(j) ? 'right' : 'left' }; if (j === 5) c.numFmt = Z.sh; if (j === 6) c.numFmt = Z.money2; if (j >= 7 && j <= 9) c.numFmt = Z.money; }); });
@@ -4271,7 +4276,10 @@ const REPORT_FONT_FACES = [
   ['Geist', 400, 'GeistMono-Regular.ttf'],
 ].map(([f, w, file]) => `@font-face{font-family:'${f}';font-weight:${w};src:url('/fonts/${file}') format('truetype');}`).join('\n');
 
-function buildReportHtmlClient(payload) {
+function buildReportHtmlClient(payload, lang) {
+  const EN = lang === 'en';
+  const T = (es, en) => (EN ? en : es);
+  const TH = (t) => (EN ? (xlateText(t) || t) : t);
   const { meta, totals, pos, dists = [] } = payload;
   const PAL = ['#E8650D', '#8A93A6', '#F4A259', '#4F5866', '#B04F0A', '#C4CBD6', '#FBCE9E', '#2E3440', '#D97E3F', '#6E7787'];
   const E = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -4288,8 +4296,8 @@ function buildReportHtmlClient(payload) {
   };
   const active = pos.filter(p => p.estado === 'Activa');
   const aggBy = (k) => { const d = {}; active.forEach(p => { const v = +p.commitment_actual || 0; if (v > 0) d[p[k]] = (d[p[k]] || 0) + v; }); return Object.entries(d).sort((a, b) => b[1] - a[1]); };
-  let byco = aggBy('company'); if (byco.length > 7) byco = byco.slice(0, 6).concat([['Otros', byco.slice(6).reduce((s, [, v]) => s + v, 0)]]);
-  const bytheme = aggBy('theme');
+  let byco = aggBy('company'); if (byco.length > 7) byco = byco.slice(0, 6).concat([[T('Otros', 'Other'), byco.slice(6).reduce((s, [, v]) => s + v, 0)]]);
+  const bytheme = aggBy('theme').map(([l, v]) => [TH(l), v]);
   const moicp = active.filter(p => N(p.moic) != null).sort((a, b) => b.moic - a.moic).slice(0, 8);
   const mxM = Math.max(1, ...moicp.map(p => +p.moic));
   const moicbars = moicp.map(p => { const m = +p.moic, col = m >= 1 ? '#E8650D' : '#b08968'; return `<div class="barrow"><span class="bn">${E(p.company)}</span><span class="bt"><span class="bf" style="width:${(m / mxM * 100).toFixed(0)}%;background:${col}"></span></span><span class="bv">${m.toFixed(2)}x</span></div>`; }).join('');
@@ -4297,11 +4305,11 @@ function buildReportHtmlClient(payload) {
   const cvl = Object.entries(cv).sort((a, b) => b[1].v - a[1].v).slice(0, 7);
   const mxCv = Math.max(1, ...cvl.map(([, d]) => Math.max(d.c, d.v)));
   const cvbars = cvl.map(([co, d]) => `<div class="cvrow"><span class="bn">${E(co)}</span><span class="cvbars"><span class="cvb"><span class="cvf gray" style="width:${(d.c / mxCv * 100).toFixed(0)}%"></span></span><span class="cvb"><span class="cvf orange" style="width:${(d.v / mxCv * 100).toFixed(0)}%"></span></span></span><span class="bv">${M(d.v)}</span></div>`).join('');
-  const kpis = [['Compromiso total', M(totals.compromiso), 'accent'], ['Account Balance', M(totals.nav), ''], ['Account Balance + Dist.', M((+totals.nav || 0) + (+totals.distribuido || 0)), 'pos'], ['Distribuido', M(totals.distribuido), ''], ['MOIC', (+totals.moic).toFixed(2) + 'x', ''], ['DPI', (+totals.dpi).toFixed(2) + 'x', '']];
+  const kpis = [[T('Compromiso total','Total Commitment'), M(totals.compromiso), 'accent'], ['Account Balance', M(totals.nav), ''], ['Account Balance + Dist.', M((+totals.nav || 0) + (+totals.distribuido || 0)), 'pos'], [T('Distribuido','Distributed'), M(totals.distribuido), ''], ['MOIC', (+totals.moic).toFixed(2) + 'x', ''], ['DPI', (+totals.dpi).toFixed(2) + 'x', '']];
   const kpihtml = kpis.map(([l, v, c]) => `<div class="kpi ${c}"><div class="kl">${E(l)}</div><div class="kv">${E(v)}</div></div>`).join('');
   const showAcct = !!meta.combined;
   const rows = pos.filter(p => !p.reinvSource).slice().sort((a, b) => (+b.commitment || 0) - (+a.commitment || 0));
-  const posrows = rows.map(p => { const on = p.estado === 'Activa'; return `<tr>${showAcct ? `<td class="acct" title="${E(p.acct)}">${E(p.acct)}</td>` : ''}<td class="co">${E(p.company)}</td><td class="ser">${E(SS(p.series))}</td><td><span class="badge ${on ? 'on' : 'off'}">${E(p.estado)}</span></td><td class="n">${p.shares != null ? Number(p.shares).toLocaleString('en-US') : '—'}</td><td class="n">${PP(p.entry_pps)}</td><td class="n">${PP(p.current_pps)}</td><td class="n">${M(p.commitment)}</td><td class="n">${M(p.commitment_actual)}</td><td class="n">${p.distribuido ? M(p.distribuido) : '—'}</td><td class="n">${N(p.moic) != null ? (+p.moic).toFixed(2) + 'x' : '—'}</td></tr>`; }).join('');
+  const posrows = rows.map(p => { const on = p.estado === 'Activa'; return `<tr>${showAcct ? `<td class="acct" title="${E(p.acct)}">${E(p.acct)}</td>` : ''}<td class="co">${E(p.company)}</td><td class="ser">${E(SS(p.series))}</td><td><span class="badge ${on ? 'on' : 'off'}">${E(EN ? (on ? 'Active' : 'Closed') : p.estado)}</span></td><td class="n">${p.shares != null ? Number(p.shares).toLocaleString('en-US') : '—'}</td><td class="n">${PP(p.entry_pps)}</td><td class="n">${PP(p.current_pps)}</td><td class="n">${M(p.commitment)}</td><td class="n">${M(p.commitment_actual)}</td><td class="n">${p.distribuido ? M(p.distribuido) : '—'}</td><td class="n">${N(p.moic) != null ? (+p.moic).toFixed(2) + 'x' : '—'}</td></tr>`; }).join('');
   const acctHead = showAcct ? '<th>Cuenta</th>' : '';
   // Sección de distribuciones (todas): fecha, subyacente, tipo (efectivo/especie), montos
   const distSection = dists.length ? `<div class="sec">Distribuciones</div>
@@ -4360,25 +4368,25 @@ td.co{font-weight:700;color:#241f1b}td.acct{color:#9a8f84;font-size:8.5px;max-wi
 .foot{margin:12px 40px 0;padding-top:9px;border-top:1px solid #efeae4;font-family:'Geist',monospace;font-size:8px;color:#a89e93;letter-spacing:.4px}
 </style></head><body><div class="page">
 <div class="topbar"></div>
-<div class="hero"><div class="eyebrow">MVP · ${meta.single ? 'Reporte de oportunidad' : 'Reporte de portafolio'}</div>
-<div class="htitle">${E(meta.title)}</div>
-<div class="hsub">${meta.accountsLine ? E(meta.accountsLine) + ' · ' : ''}${meta.count} posiciones · Generado ${E(meta.dateStr)}</div>
+<div class="hero"><div class="eyebrow">MVP · ${meta.single ? T('Reporte de oportunidad','Opportunity Report') : T('Reporte de portafolio','Portfolio Report')}</div>
+<div class="htitle">${E(TH(meta.title))}</div>
+<div class="hsub">${meta.accountsLine ? E(meta.accountsLine) + ' · ' : ''}${meta.count} ${T('posiciones','positions')} · ${T('Generado','Generated')} ${E(meta.dateStr)}</div>
 <div class="accentbar"></div></div>
 <div class="body">
 <div class="kpis">${kpihtml}</div>
 <div class="grid2">
-<div class="card"><div class="ctitle">Composición por empresa</div>${donut(byco)}</div>
-<div class="card"><div class="ctitle">Exposición por tema</div>${donut(bytheme)}</div>
+<div class="card"><div class="ctitle">${T('Composición por empresa','Composition by Company')}</div>${donut(byco)}</div>
+<div class="card"><div class="ctitle">${T('Exposición por tema','Exposure by Theme')}</div>${donut(bytheme)}</div>
 </div>
 <div class="grid2">
-<div class="card"><div class="ctitle">MOIC por posición</div>${moicbars}</div>
-<div class="card"><div class="ctitle">Comprometido vs. Account Balance · por empresa</div><div class="leg2">▮ gris = comprometido · ▮ naranja = Account Balance</div>${cvbars}</div>
+<div class="card"><div class="ctitle">${T('MOIC por posición','MOIC by Position')}</div>${moicbars}</div>
+<div class="card"><div class="ctitle">${T('Comprometido vs. Account Balance · por empresa','Committed vs. Account Balance · by Company')}</div><div class="leg2">${T('▮ gris = comprometido · ▮ naranja = Account Balance','▮ gray = committed · ▮ orange = Account Balance')}</div>${cvbars}</div>
 </div>
-<div class="sec">Posiciones</div>
-<table><thead><tr>${acctHead}<th>Empresa</th><th>Serie</th><th>Estado</th><th class="n">Acciones</th><th class="n">PPS Entrada</th><th class="n">PPS Actual</th><th class="n">Compromiso</th><th class="n">Account Balance</th><th class="n">Distribuido</th><th class="n">MOIC</th></tr></thead><tbody>${posrows}</tbody></table>
+<div class="sec">${T('Posiciones','Positions')}</div>
+<table><thead><tr>${acctHead}<th>${T('Empresa','Company')}</th><th>${T('Serie','Series')}</th><th>${T('Estado','Status')}</th><th class="n">${T('Acciones','Shares')}</th><th class="n">${T('PPS Entrada','Entry PPS')}</th><th class="n">${T('PPS Actual','Current PPS')}</th><th class="n">${T('Compromiso','Commitment')}</th><th class="n">Account Balance</th><th class="n">${T('Distribuido','Distributed')}</th><th class="n">MOIC</th></tr></thead><tbody>${posrows}</tbody></table>
 ${distSection}
 </div>
-<div class="foot">MVP MANAGER · DOCUMENTO INTERNO · ${E(meta.dateStr)}</div>
+<div class="foot">MVP MANAGER · ${T('DOCUMENTO INTERNO','INTERNAL DOCUMENT')} · ${E(meta.dateStr)}</div>
 </div></body></html>`;
 }
 
@@ -4500,11 +4508,12 @@ function buildInvestorReportPayload(posId) {
 
 // Botón PDF: genera el reporte premium con el Chrome del navegador (Guardar como PDF). Fallback jsPDF.
 async function exportInvestorPdf(posId) {
+  const lang = await pickExportLang(); if (!lang) return;
   const built = buildInvestorReportPayload(posId);
   if (!built) return;
   try {
-    toast('Generando PDF…');
-    const html = buildReportHtmlClient(built.payload);
+    toast(lang === 'en' ? 'Generating PDF…' : 'Generando PDF…');
+    const html = buildReportHtmlClient(built.payload, lang);
     await renderReportPdf(html, built.fileName);
     toast('PDF descargado');
     return;
@@ -4519,33 +4528,175 @@ async function exportInvestorPdf(posId) {
 // Clona el DOM ya renderizado (mismo estilo y contenido, siempre en sync con el portal),
 // quita los controles de edición y embebe el CSS del portal + un script propio.
 // Las columnas de posiciones respetan el picker "Columnas": lo que ocultes ahí no sale en el archivo.
+// ════════ IDIOMA DE DESCARGABLES (ES/EN) ════════
+// Selector compartido: cualquier botón de export pregunta el idioma (recuerda el último).
+function pickExportLang() {
+  return new Promise((resolve) => {
+    const last = localStorage.getItem('exportLang') || 'es';
+    const ov = document.createElement('div');
+    ov.className = 'xlang-ov';
+    ov.innerHTML = `
+      <div class="xlang-card">
+        <div class="xlang-h">Idioma del documento · Document language</div>
+        <div class="xlang-opts">
+          <button class="xlang-opt${last === 'es' ? ' sel' : ''}" data-l="es"><span class="xlang-big">Español</span><span class="xlang-sub">Documento en español</span></button>
+          <button class="xlang-opt${last === 'en' ? ' sel' : ''}" data-l="en"><span class="xlang-big">English</span><span class="xlang-sub">Document in English</span></button>
+        </div>
+      </div>`;
+    const done = (l) => { ov.remove(); if (l) localStorage.setItem('exportLang', l); resolve(l); };
+    ov.addEventListener('click', (e) => {
+      const b = e.target.closest('.xlang-opt');
+      if (b) return done(b.dataset.l);
+      if (e.target === ov) done(null);
+    });
+    document.addEventListener('keydown', function esc(e) { if (e.key === 'Escape') { document.removeEventListener('keydown', esc); done(null); } });
+    document.body.appendChild(ov);
+  });
+}
+
+// Diccionario ES -> EN de los descargables (exactos + patrones). Lo no mapeado queda igual.
+const XLATE_EXACT = {
+  'Exposición del portafolio': 'Portfolio Exposure', 'Exposición del portafolio · histórico': 'Portfolio Exposure · historical',
+  'Sus empresas': 'Your Companies', 'Lock-up SpaceX · liquidez estimada': 'SpaceX Lock-up · Estimated Liquidity',
+  'Por empresa / fondo · NAV activo': 'By company / fund · active NAV', 'Por tema': 'By theme',
+  'MOIC': 'MOIC', 'Distribuido a la fecha': 'Distributed to Date', 'DPI': 'DPI',
+  'Posiciones activas': 'Active Positions', 'Posiciones': 'Positions', 'Posiciones terminadas': 'Closed Positions',
+  'Commitment total': 'Total Commitment', 'Commitment actual': 'Current Commitment',
+  'INVERSIONISTA': 'INVESTOR', 'Inversionista': 'Investor', 'TITULAR': 'HOLDER', 'Titular': 'Holder',
+  'Empresa': 'Company', 'Series': 'Series', 'Serie': 'Series', 'Estado': 'Status', 'Compromiso': 'Commitment',
+  'Account Balance': 'Account Balance', 'Distribuido': 'Distributed', 'Acciones': 'Shares',
+  'PPS Entrada': 'Entry PPS', 'PPS Actual': 'Current PPS', 'Carry': 'Carry', 'Inicio': 'Start', 'Fin': 'End',
+  'Duración': 'Duration', 'Última carta (CA)': 'Latest Statement (CAS)', 'Welcome Letter': 'Welcome Letter',
+  'Fecha': 'Date', 'Tipo': 'Type', 'Cash': 'Cash', 'In-Kind': 'In-Kind', 'PPS': 'PPS', 'Carta': 'Letter',
+  'Serie vendida': 'Series Sold', 'Vendido': 'Sold', 'Reinvertido': 'Reinvested', 'Efectivo neto': 'Net Cash',
+  'DPI / MOIC': 'DPI / MOIC', '# Cartas': '# Letters', 'Cerrada': 'Closed', 'Cuenta': 'Account',
+  'Fecha est.': 'Est. Date', 'Evento': 'Event', 'Valor estimado': 'Estimated Value', 'Total por liberar': 'Total to be released',
+  'No disponible': 'Not available', 'TOTAL': 'TOTAL', 'Activa': 'Active', 'Terminada': 'Closed',
+  'Información detallada de distribución': 'Detailed distribution information',
+  'Recompras y reinversiones': 'Repurchases & Reinvestments',
+  'Espacio & Satélites': 'Space & Satellites', 'Fondos All-Star': 'All-Star Funds', 'IA & Robótica': 'AI & Robotics',
+  'Energía': 'Energy', 'Defensa': 'Defense', 'Fintech & Cripto': 'Fintech & Crypto',
+  'Movilidad & Logística': 'Mobility & Logistics', 'Software & Consumo': 'Software & Consumer', 'Otros': 'Other',
+  '1er cliff (tras Q2 2026)': '1st cliff (after Q2 2026)', '2º cliff (tras Q3 2026)': '2nd cliff (after Q3 2026)',
+  'Día 70': 'Day 70', 'Día 90': 'Day 90', 'Día 105': 'Day 105', 'Día 120': 'Day 120', 'Día 135': 'Day 135',
+  'Día 180 — expiración total': 'Day 180 — full expiration', 'Lock-up extendido (tras Q4 2026)': 'Extended lock-up (after Q4 2026)',
+  'Día 280': 'Day 280', 'Tras Q1 2027': 'After Q1 2027', 'Día 340': 'Day 340', 'Día 366': 'Day 366',
+  'Tras Q2 2027 — liberación final': 'After Q2 2027 — final release', 'Remanente': 'Remainder',
+  'Lock-up escalonado de 180 días': '180-day staggered lock-up', 'Liberación en dos mitades (hasta ~13 meses)': 'Release in two halves (up to ~13 months)',
+  'Primera mitad (~50%) — lock-up de 180 días': 'First half (~50%) — 180-day lock-up',
+  'Segunda mitad (~50%) — lock-up extendido (patrón 20/10/20/10/20/20)': 'Second half (~50%) — extended lock-up (20/10/20/10/20/20 pattern)',
+  'Bono por desempeño': 'Performance bonus', 'Cada 15-20 días': 'Every 15-20 days', 'Tras resultados Q3': 'After Q3 results',
+  'Hito': 'Milestone', 'Detalle': 'Detail', '% liberado': '% released',
+  'Fund V': 'Fund V', 'Fund IV': 'Fund IV', 'Portafolio combinado': 'Combined Portfolio',
+};
+const XLATE_PATTERNS = [
+  [/^Posiciones activas \((\d+)\)$/, 'Active Positions ($1)'],
+  [/^Posiciones terminadas \((\d+)\)$/, 'Closed Positions ($1)'],
+  [/^Recompras y reinversiones \((\d+)\)$/, 'Repurchases & Reinvestments ($1)'],
+  [/^Distribuciones · Oportunidades en directo \(SPVs\) \((\d+)\)$/, 'Distributions · Direct Opportunities (SPVs) ($1)'],
+  [/^Distribuciones · Fondos MVP \((\d+)\)$/, 'Distributions · MVP Funds ($1)'],
+  [/^Próximas liberaciones — valor estimado al precio actual de SPCX \((.+)\)$/i, 'Upcoming releases — estimated value at current SPCX price ($1)'],
+  [/^Próxima liberación estimada:$/, 'Next estimated release:'],
+  [/^(\d+%) de la posición$/, '$1 of the position'],
+  [/^Serie ([\w-]+)$/, 'Series $1'],
+  [/^(\d+) cuentas combinadas$/, '$1 combined accounts'],
+  [/^Acumulado: (.+)$/, 'Cumulative: $1'],
+  [/^Día (\d+) \((.+)\)$/, 'Day $1 ($2)'],
+  [/^1er cliff — tras Q2 2026.*$/, '1st cliff — after Q2 2026 (Jul–Sep 2026)'],
+  [/^2 días tras (Q\d) (\d{4})(.*)$/, '2 days after $1 $2$3'],
+  [/^Su portafolio de (.+) comprometidos vale hoy (.+)$/, 'Your portfolio of $1 committed is worth $2 today'],
+
+];
+const XLATE_HTML = [
+  ['Liberación escalonada y ligada a desempeño dentro de la ventana estándar de <b>180 días</b>. Expira por completo ~9 de diciembre de 2026.',
+   'Staggered, performance-linked release within the standard <b>180-day</b> window. Fully expires ~December 9, 2026.'],
+  ['La posición se libera en <b>dos mitades</b>. La primera (~50%) durante los primeros ~6 meses (lock-up de 180 días); la segunda (~50%) en un <b>lock-up extendido</b> que se estira hasta ~13-14 meses post-IPO (liberación final ~ agosto 2027).',
+   'The position is released in <b>two halves</b>. The first (~50%) over the first ~6 months (180-day lock-up); the second (~50%) under an <b>extended lock-up</b> stretching to ~13-14 months post-IPO (final release ~August 2027).'],
+];
+const XLATE_LONG = [
+  ['Número total de posiciones del inversionista: activas (sin distribuir) + terminadas (ya distribuidas o liquidadas).',
+   "Total number of the investor's positions: active (not yet distributed) + closed (already distributed or liquidated)."],
+  ['Capital comprometido real (paid-in): suma del compromiso de todas las posiciones, neto de reinversiones SpaceX. La mitad de la Serie 22F que se vendió y se reinvirtió en la 26A QP se cuenta una sola vez (no se dobla el capital reciclado).',
+   'Actual committed capital (paid-in): sum of all position commitments, net of SpaceX reinvestments. The half of Series 22F that was sold and reinvested into 26A QP is counted once (recycled capital is not doubled).'],
+  ['Valor actual estimado (NAV) de las posiciones activas, a precio de mercado (mark-to-market, sincronizado con el último precio). No incluye posiciones ya distribuidas.',
+   'Estimated current value (NAV) of active positions, marked to market (synced to the latest price). Excludes positions already distributed.'],
+  ['Múltiplo total sobre el capital (TVPI): (valor actual de las posiciones activas + distribuido real) ÷ comprometido real. Sí incluye lo ya distribuido. Neto de reinversiones SpaceX.',
+   'Total multiple on capital (TVPI): (current value of active positions + actual distributions) ÷ actual committed. Includes amounts already distributed. Net of SpaceX reinvestments.'],
+  ['Efectivo y acciones devueltos al inversionista a la fecha, incluyendo distribuciones de fondos aplicadas a llamadas de capital. Excluye recompras/reinversiones.',
+   'Cash and shares returned to the investor to date, including fund distributions applied to capital calls. Excludes repurchases/reinvestments.'],
+  ['Distribuciones sobre capital (DPI): distribuido real ÷ comprometido real. Cuánto se ha devuelto en efectivo/acciones por cada dólar comprometido.',
+   'Distributions to paid-in (DPI): actual distributions ÷ actual committed. How much has been returned in cash/shares per dollar committed.'],
+  ['Posiciones que siguen vivas (aún sin distribuir ni liquidar).',
+   'Positions still live (not yet distributed or liquidated).'],
+  ['Liberación escalonada y ligada a desempeño dentro de la ventana de 180 días. Expira por completo ~9 dic 2026.',
+   'Staggered, performance-linked release within the 180-day window. Fully expires ~Dec 9, 2026.'],
+  ['Una porción sigue un lock-up extendido (en parcialidades) hasta ~13-14 meses post-IPO; liberación final ~ago 2027.',
+   'A portion follows an extended lock-up (in installments) up to ~13-14 months post-IPO; final release ~Aug 2027.'],
+  ['Estimado con base en el S-1 de SpaceX (IPO 12-jun-2026); el prospecto final es la autoridad.',
+   'Estimated based on the SpaceX S-1 (IPO Jun 12, 2026); the final prospectus governs.'],
+  ['Estimaciones con el calendario del S-1 de SpaceX y el precio de mercado de hoy; los montos finales dependen del precio en cada fecha y del prospecto definitivo. No incluye el bono condicional de +10%.',
+   "Estimates based on the SpaceX S-1 schedule and today's market price; final amounts depend on the price at each date and the definitive prospectus. Excludes the conditional +10% bonus."],
+  ['Posiciones que el fondo subyacente liquidó y cuyo importe se reinvirtió en un vehículo directo de SpaceX (Serie 26A QP). La parte reinvertida no es efectivo devuelto al inversionista; el resto (si lo hay) sí se entregó en efectivo.',
+   'Positions liquidated by the underlying fund whose proceeds were reinvested into a direct SpaceX vehicle (Series 26A QP). The reinvested portion is not cash returned to the investor; the remainder (if any) was paid in cash.'],
+];
+function xlateText(t) {
+  const raw = (t || '').trim();
+  if (!raw) return null;
+  if (XLATE_EXACT[raw] !== undefined) return XLATE_EXACT[raw];
+  for (const [re, rep] of XLATE_PATTERNS) { if (re.test(raw)) return raw.replace(re, rep); }
+  for (const [es, en] of XLATE_LONG) { if (raw === es) return en; }
+  return null;
+}
+// Traduce nodos de texto del DOM exportado (exactos/patrones; lo demás no se toca).
+function translateExportDom(root) {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const nodes = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode);
+  nodes.forEach(n => { const r = xlateText(n.nodeValue); if (r !== null) n.nodeValue = n.nodeValue.replace(n.nodeValue.trim(), r); });
+  // pase por elementos con markup interno (summaries con <b>)
+  root.querySelectorAll('*').forEach(el => {
+    if (el.children.length > 1) return;
+    const h = (el.innerHTML || '').trim();
+    for (const [es, en] of XLATE_HTML) { if (h === es) { el.innerHTML = en; break; } }
+  });
+  // fechas es-MX "15 nov 2026" -> "Nov 15, 2026" en celdas de tablas
+  const M = { ene: 'Jan', feb: 'Feb', mar: 'Mar', abr: 'Apr', may: 'May', jun: 'Jun', jul: 'Jul', ago: 'Aug', sep: 'Sep', oct: 'Oct', nov: 'Nov', dic: 'Dec' };
+  nodes.forEach(n => {
+    const m = (n.nodeValue || '').trim().match(/^(~?\s*)(\d{1,2}) (ene|feb|mar|abr|may|jun|jul|ago|sep|oct|nov|dic) (\d{4})$/);
+    if (m) n.nodeValue = n.nodeValue.replace(/(\d{1,2}) (\w{3}) (\d{4})/, (s0, d, mo, y) => `${M[mo] || mo} ${d}, ${y}`);
+  });
+}
+
 // Catálogo propio de fichas por empresa (fallback del companyInfo de los trackers) — garantiza
 // que TODA posición en directo lleve card con logo en el export. domain = logo (Google favicons).
 const XP_CO_FICHAS = {
-  'Space X':          { domain: 'spacex.com',           category: 'Espacio · Satélites', stage: 'Pública (SPCX)', tagline: 'Líder mundial en lanzamientos reutilizables e internet satelital Starlink.' },
-  'Anthropic':        { domain: 'anthropic.com',        category: 'Inteligencia Artificial', stage: 'Etapa tardía', tagline: 'Laboratorio de IA creador de Claude, enfocado en modelos seguros para empresas.' },
-  'Base Power':       { domain: 'basepowercompany.com', category: 'Energía residencial', stage: 'Crecimiento', tagline: 'Baterías de respaldo en hogares operadas como una "central eléctrica virtual".' },
-  'Diamond Foundry':  { domain: 'diamondfoundry.com',   category: 'Materiales avanzados', stage: 'Crecimiento', tagline: 'Diamantes cultivados de grado gema y obleas de diamante para semiconductores de potencia.' },
-  'Agility Robotics': { domain: 'agilityrobotics.com',  category: 'Robótica humanoide', stage: 'Crecimiento', tagline: 'Fabrica Digit, robot humanoide para logística y almacenes.' },
-  'Groq':             { domain: 'groq.com',             category: 'Semiconductores · IA', stage: 'Crecimiento', tagline: 'Chips de inferencia de IA (LPU) ultrarrápidos para servir modelos a gran escala.' },
-  'Epic Games':       { domain: 'epicgames.com',        category: 'Gaming · 3D', stage: 'Etapa tardía', tagline: 'Creadora de Fortnite y de Unreal Engine, el motor 3D que impulsa juegos, cine y simulación.' },
-  'Rappi':            { domain: 'rappi.com',            category: 'Súper-app · LatAm', stage: 'Etapa tardía', tagline: 'La súper-app líder de delivery y servicios financieros en América Latina.' },
-  'Lime':             { domain: 'li.me',                category: 'Micromovilidad', stage: 'Etapa tardía', tagline: 'Red de scooters y bicicletas eléctricas compartidas en cientos de ciudades.' },
-  'Cohere':           { domain: 'cohere.com',           category: 'IA empresarial', stage: 'Crecimiento', tagline: 'Modelos de lenguaje para empresas, fundada por coautores del paper del Transformer.' },
-  'Revolut':          { domain: 'revolut.com',          category: 'Fintech · Neobanco', stage: 'Etapa tardía', tagline: 'Neobanco global con decenas de millones de clientes y licencia bancaria en Europa.' },
-  'Kraken':           { domain: 'kraken.com',           category: 'Cripto · Exchange', stage: 'Etapa tardía', tagline: 'Uno de los exchanges de criptomonedas más grandes y antiguos del mundo.' },
-  'Bolt':             { domain: 'bolt.com',             category: 'Fintech · E-commerce', stage: 'Crecimiento', tagline: 'Checkout de un clic y red de identidad para comercio electrónico.' },
-  'Patreon':          { domain: 'patreon.com',          category: 'Economía de creadores', stage: 'Crecimiento', tagline: 'La plataforma de membresías que conecta a creadores con sus fans.' },
-  'Automattic Inc.':  { domain: 'automattic.com',       category: 'Software · Web', stage: 'Etapa tardía', tagline: 'La empresa detrás de WordPress.com, WooCommerce y Tumblr.' },
-  'Cohesity':         { domain: 'cohesity.com',         category: 'Datos · Ciberseguridad', stage: 'Etapa tardía', tagline: 'Gestión y seguridad de datos empresariales; fusionada con Veritas.' },
-  'Trusted':          { domain: 'trustedhealth.com',    category: 'Salud · Talento', stage: 'Crecimiento', tagline: 'Plataforma de staffing clínico que conecta personal de enfermería con hospitales.' },
-  'Mach Industries':  { domain: 'machindustries.com',   category: 'Defensa', stage: 'Etapa temprana', tagline: 'Sistemas de defensa de nueva generación con manufactura descentralizada.' },
-  'Figure AI':        { domain: 'figure.ai',            category: 'Robótica humanoide', stage: 'Crecimiento', tagline: 'Robots humanoides de propósito general impulsados por IA.' },
-  'Aumni':            { domain: 'aumni.fund',           category: 'Fintech · Datos VC', stage: 'Adquirida (J.P. Morgan)', tagline: 'Analítica de datos legales de inversiones de venture capital; adquirida por J.P. Morgan.' },
+  'Space X':          { domain: 'spacex.com',           category: 'Espacio · Satélites', stage: 'Pública (SPCX)', tagline: 'Líder mundial en lanzamientos reutilizables e internet satelital Starlink.' , en: { category: 'Space · Satellites', stage: 'Public (SPCX)', tagline: 'Global leader in reusable launch vehicles and the Starlink satellite internet constellation.' } },
+  'Anthropic':        { domain: 'anthropic.com',        category: 'Inteligencia Artificial', stage: 'Etapa tardía', tagline: 'Laboratorio de IA creador de Claude, enfocado en modelos seguros para empresas.' , en: { category: 'Artificial Intelligence', stage: 'Late stage', tagline: 'AI lab behind Claude, focused on safe, enterprise-grade models.' } },
+  'Base Power':       { domain: 'basepowercompany.com', category: 'Energía residencial', stage: 'Crecimiento', tagline: 'Baterías de respaldo en hogares operadas como una "central eléctrica virtual".' , en: { category: 'Residential energy', stage: 'Growth', tagline: 'Home backup batteries operated together as a \'virtual power plant\'.' } },
+  'Diamond Foundry':  { domain: 'diamondfoundry.com',   category: 'Materiales avanzados', stage: 'Crecimiento', tagline: 'Diamantes cultivados de grado gema y obleas de diamante para semiconductores de potencia.' , en: { category: 'Advanced materials', stage: 'Growth', tagline: 'Lab-grown gem-grade diamonds and diamond wafers for power semiconductors.' } },
+  'Agility Robotics': { domain: 'agilityrobotics.com',  category: 'Robótica humanoide', stage: 'Crecimiento', tagline: 'Fabrica Digit, robot humanoide para logística y almacenes.' , en: { category: 'Humanoid robotics', stage: 'Growth', tagline: 'Maker of Digit, a humanoid robot for logistics and warehouses.' } },
+  'Groq':             { domain: 'groq.com',             category: 'Semiconductores · IA', stage: 'Crecimiento', tagline: 'Chips de inferencia de IA (LPU) ultrarrápidos para servir modelos a gran escala.' , en: { category: 'Semiconductors · AI', stage: 'Growth', tagline: 'Ultra-fast AI inference chips (LPU) for serving models at scale.' } },
+  'Epic Games':       { domain: 'epicgames.com',        category: 'Gaming · 3D', stage: 'Etapa tardía', tagline: 'Creadora de Fortnite y de Unreal Engine, el motor 3D que impulsa juegos, cine y simulación.' , en: { category: 'Gaming · 3D', stage: 'Late stage', tagline: 'Creator of Fortnite and Unreal Engine, the 3D engine powering games, film and simulation.' } },
+  'Rappi':            { domain: 'rappi.com',            category: 'Súper-app · LatAm', stage: 'Etapa tardía', tagline: 'La súper-app líder de delivery y servicios financieros en América Latina.' , en: { category: 'Super-app · LatAm', stage: 'Late stage', tagline: 'Latin America\'s leading delivery and financial services super-app.' } },
+  'Lime':             { domain: 'li.me',                category: 'Micromovilidad', stage: 'Etapa tardía', tagline: 'Red de scooters y bicicletas eléctricas compartidas en cientos de ciudades.' , en: { category: 'Micromobility', stage: 'Late stage', tagline: 'Shared electric scooters and bikes across hundreds of cities.' } },
+  'Cohere':           { domain: 'cohere.com',           category: 'IA empresarial', stage: 'Crecimiento', tagline: 'Modelos de lenguaje para empresas, fundada por coautores del paper del Transformer.' , en: { category: 'Enterprise AI', stage: 'Growth', tagline: 'Enterprise language models, founded by co-authors of the Transformer paper.' } },
+  'Revolut':          { domain: 'revolut.com',          category: 'Fintech · Neobanco', stage: 'Etapa tardía', tagline: 'Neobanco global con decenas de millones de clientes y licencia bancaria en Europa.' , en: { category: 'Fintech · Neobank', stage: 'Late stage', tagline: 'Global neobank with tens of millions of customers and a European banking license.' } },
+  'Kraken':           { domain: 'kraken.com',           category: 'Cripto · Exchange', stage: 'Etapa tardía', tagline: 'Uno de los exchanges de criptomonedas más grandes y antiguos del mundo.' , en: { category: 'Crypto · Exchange', stage: 'Late stage', tagline: 'One of the world\'s largest and longest-running cryptocurrency exchanges.' } },
+  'Bolt':             { domain: 'bolt.com',             category: 'Fintech · E-commerce', stage: 'Crecimiento', tagline: 'Checkout de un clic y red de identidad para comercio electrónico.' , en: { category: 'Fintech · E-commerce', stage: 'Growth', tagline: 'One-click checkout and identity network for e-commerce.' } },
+  'Patreon':          { domain: 'patreon.com',          category: 'Economía de creadores', stage: 'Crecimiento', tagline: 'La plataforma de membresías que conecta a creadores con sus fans.' , en: { category: 'Creator economy', stage: 'Growth', tagline: 'The membership platform connecting creators with their fans.' } },
+  'Automattic Inc.':  { domain: 'automattic.com',       category: 'Software · Web', stage: 'Etapa tardía', tagline: 'La empresa detrás de WordPress.com, WooCommerce y Tumblr.' , en: { category: 'Software · Web', stage: 'Late stage', tagline: 'The company behind WordPress.com, WooCommerce and Tumblr.' } },
+  'Cohesity':         { domain: 'cohesity.com',         category: 'Datos · Ciberseguridad', stage: 'Etapa tardía', tagline: 'Gestión y seguridad de datos empresariales; fusionada con Veritas.' , en: { category: 'Data · Cybersecurity', stage: 'Late stage', tagline: 'Enterprise data management and security; merged with Veritas.' } },
+  'Trusted':          { domain: 'trustedhealth.com',    category: 'Salud · Talento', stage: 'Crecimiento', tagline: 'Plataforma de staffing clínico que conecta personal de enfermería con hospitales.' , en: { category: 'Healthcare · Talent', stage: 'Growth', tagline: 'Clinical staffing platform connecting nurses with hospitals.' } },
+  'Mach Industries':  { domain: 'machindustries.com',   category: 'Defensa', stage: 'Etapa temprana', tagline: 'Sistemas de defensa de nueva generación con manufactura descentralizada.' , en: { category: 'Defense', stage: 'Early stage', tagline: 'Next-generation defense systems with decentralized manufacturing.' } },
+  'Figure AI':        { domain: 'figure.ai',            category: 'Robótica humanoide', stage: 'Crecimiento', tagline: 'Robots humanoides de propósito general impulsados por IA.' , en: { category: 'Humanoid robotics', stage: 'Growth', tagline: 'General-purpose humanoid robots powered by AI.' } },
+  'Aumni':            { domain: 'aumni.fund',           category: 'Fintech · Datos VC', stage: 'Adquirida (J.P. Morgan)', tagline: 'Analítica de datos legales de inversiones de venture capital; adquirida por J.P. Morgan.' , en: { category: 'Fintech · VC data', stage: 'Acquired (J.P. Morgan)', tagline: 'Legal data analytics for venture investments; acquired by J.P. Morgan.' } },
 };
 
 async function exportInvestorHtml() {
   if (!lastInvestorDetail) { toast('Abre un inversionista primero'); return; }
+  const lang = await pickExportLang(); if (!lang) return;
+  const EN = lang === 'en';
+  const LOC = EN ? 'en-US' : 'es-MX';
   const { inv } = lastInvestorDetail;
   const clone = document.getElementById('dbDetailContent').cloneNode(true);
   try {
@@ -4601,14 +4752,16 @@ async function exportInvestorHtml() {
 
       // — Hero ejecutivo (reemplaza el encabezado simple: el nombre vive aquí, sin duplicarse) —
       const heroLine = lp.committedNet > 0
-        ? `Su portafolio de <b>${fmtUsdShort(lp.committedNet)}</b> comprometidos vale hoy <b>${fmtUsdShort(lp.navActive)}</b>${lp.distrib > 500 ? ` y ha recibido <b>${fmtUsdShort(lp.distrib)}</b> en distribuciones` : ''} — un múltiplo de <b>${lp.moic.toFixed(2)}x</b> sobre su capital.`
+        ? (EN
+          ? `Your portfolio of <b>${fmtUsdShort(lp.committedNet)}</b> committed is worth <b>${fmtUsdShort(lp.navActive)}</b> today${lp.distrib > 500 ? ` and has received <b>${fmtUsdShort(lp.distrib)}</b> in distributions` : ''} — a <b>${lp.moic.toFixed(2)}x</b> multiple on your capital.`
+          : `Su portafolio de <b>${fmtUsdShort(lp.committedNet)}</b> comprometidos vale hoy <b>${fmtUsdShort(lp.navActive)}</b>${lp.distrib > 500 ? ` y ha recibido <b>${fmtUsdShort(lp.distrib)}</b> en distribuciones` : ''} — un múltiplo de <b>${lp.moic.toFixed(2)}x</b> sobre su capital.`)
         : '';
       const hero = document.createElement('div');
       hero.className = 'xp-hero';
       hero.innerHTML = `
         <div class="xp-hero-name">${escapeHtml(inv.name)}</div>
         ${heroLine ? `<div class="xp-hero-line">${heroLine}</div>` : ''}
-        <div class="xp-hero-meta">Cifras al ${escapeHtml(new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }))} · Valuaciones a precios de mercado más recientes · ${lp.nActive} ${lp.nActive === 1 ? 'posición activa' : 'posiciones activas'}</div>`;
+        <div class="xp-hero-meta">${EN ? 'Figures as of' : 'Cifras al'} ${escapeHtml(new Date().toLocaleDateString(LOC, { day: 'numeric', month: 'long', year: 'numeric' }))} · ${EN ? 'Valuations at latest market prices' : 'Valuaciones a precios de mercado más recientes'} · ${lp.nActive} ${EN ? (lp.nActive === 1 ? 'active position' : 'active positions') : (lp.nActive === 1 ? 'posición activa' : 'posiciones activas')}</div>`;
       clone.querySelector('.db-detail-name')?.remove();
       clone.querySelector('.db-detail-sub')?.remove();
       clone.prepend(hero);
@@ -4639,7 +4792,12 @@ async function exportInvestorHtml() {
         const nm = p.companies?.name;
         if (!nm || p.companies?.id === 10 || seenCo.has(nm)) return;
         seenCo.add(nm);
-        cardData.push({ nm, info: findInfo(nm) || { category: companyTheme(nm), tagline: '' }, dom: findDomain(nm) });
+        let cinfo = findInfo(nm) || { category: companyTheme(nm), tagline: '' };
+        if (EN) {
+          const fk = Object.keys(XP_CO_FICHAS).find(k => { const kn = normCo(k), n2 = normCo(nm); return kn.includes(n2) || n2.includes(kn); });
+          if (fk && XP_CO_FICHAS[fk].en) cinfo = { ...XP_CO_FICHAS[fk].en };
+        }
+        cardData.push({ nm, info: cinfo, dom: findDomain(nm) });
       });
       // logos INCRUSTADOS como data URI (el HTML debe verse sin red ni JS, ej. visor del teléfono)
       const logoUri = {};
@@ -4679,7 +4837,7 @@ async function exportInvestorHtml() {
         SPX_LOCKUP_A_EXT.forEach(e => { if (e.date >= today) ev.push({ ...e, sh: (pctNum(e.pct) / 100) * (sA / 2) }); });
         ev.sort((a, b) => a.date.localeCompare(b.date));
         if (ev.length && price > 0) {
-          const F = d => new Date(d + 'T12:00:00').toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' });
+          const F = d => new Date(d + 'T12:00:00').toLocaleDateString(LOC, { day: 'numeric', month: 'short', year: 'numeric' });
           const rows = ev.map(e => `<tr><td>${F(e.date)}</td><td>${escapeHtml(e.label)}</td><td class="num">${Math.round(e.sh).toLocaleString('en-US')}</td><td class="num"><b>${fmtUsdShort(e.sh * price)}</b></td></tr>`).join('');
           const tot = ev.reduce((s, e) => s + e.sh, 0);
           const tbl = document.createElement('div');
@@ -4696,6 +4854,8 @@ async function exportInvestorHtml() {
       // — El bloque de lock-up SpaceX va HASTA ABAJO (después de Distribuciones) —
       const lockSec = [...clone.querySelectorAll('.db-section')].find(s => (s.querySelector('.db-section-h')?.textContent || '').startsWith('Lock-up'));
       if (lockSec) clone.appendChild(lockSec);
+
+      if (EN) translateExportDom(clone);
     } catch (e) { console.warn('[export html] valor agregado', e); }
 
     // 4) Sin handlers inline del portal (el archivo trae su propio script)
@@ -4713,8 +4873,8 @@ async function exportInvestorHtml() {
       .map(l => l.href).filter(h => /^https?:\/\//.test(h))
       .map(h => `<link rel="stylesheet" href="${h}">`).join('\n');
 
-    const dateStr = new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' });
-    const title = `${inv.name} — Perfil del inversionista`;
+    const dateStr = new Date().toLocaleDateString(LOC, { day: 'numeric', month: 'long', year: 'numeric' });
+    const title = `${inv.name} — ${EN ? 'Investor Profile' : 'Perfil del inversionista'}`;
     const exportCss = `
 body.xport{overflow:auto!important;display:block!important;margin:0!important;padding:0!important;background:var(--gray-50,#f7f8fb)!important}
 body.xport>.xp-top{position:sticky;top:0;z-index:60;display:flex;align-items:center;gap:14px;background:linear-gradient(90deg,#e8650d,#ef8a3c);color:#fff;padding:12px 24px;font-family:inherit}
@@ -4866,13 +5026,15 @@ ${extLinks}
 <style>${exportCss}</style>
 </head><body class="xport">
 <div id="xpProg"></div><div class="xp-grain"></div>
-<div class="xp-top"><span class="xp-brand"><i class="fa-solid fa-chart-pie"></i> MVP · Perfil del inversionista</span><span class="xp-date">Generado ${escapeHtml(dateStr)}</span><button class="xp-print" onclick="window.print()"><i class="fa-solid fa-print"></i> Imprimir / PDF</button></div>
+<div class="xp-top"><span class="xp-brand"><i class="fa-solid fa-chart-pie"></i> MVP · ${EN ? 'Investor Profile' : 'Perfil del inversionista'}</span><span class="xp-date">${EN ? 'Generated' : 'Generado'} ${escapeHtml(dateStr)}</span><button class="xp-print" onclick="window.print()"><i class="fa-solid fa-print"></i> ${EN ? 'Print / PDF' : 'Imprimir / PDF'}</button></div>
 <div class="xp-wrap"><div class="db-detail" id="dbDetail"><div class="db-detail-content" id="dbDetailContent">${clone.innerHTML}</div></div></div>
-<div class="xp-foot"><span class="xp-foot-tag">MVP Manager · Documento confidencial · ${escapeHtml(dateStr)}</span>Preparado exclusivamente para ${escapeHtml(inv.name)}. Cifras basadas en los registros oficiales de los fondos y precios de mercado al cierre más reciente. Las valuaciones de posiciones no realizadas son estimadas y pueden variar. Este documento es informativo y no constituye una oferta ni asesoría de inversión.</div>
+<div class="xp-foot"><span class="xp-foot-tag">MVP Manager · ${EN ? 'Confidential document' : 'Documento confidencial'} · ${escapeHtml(dateStr)}</span>${EN
+  ? `Prepared exclusively for ${escapeHtml(inv.name)}. Figures based on the funds' official records and market prices at the most recent close. Valuations of unrealized positions are estimates and may change. This document is for information purposes only and does not constitute an offer or investment advice.`
+  : `Preparado exclusivamente para ${escapeHtml(inv.name)}. Cifras basadas en los registros oficiales de los fondos y precios de mercado al cierre más reciente. Las valuaciones de posiciones no realizadas son estimadas y pueden variar. Este documento es informativo y no constituye una oferta ni asesoría de inversión.`}</div>
 <script>${script}<\/script>
 </body></html>`;
 
-    const fileName = ((inv.name + ' Perfil Inversionista').replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, ' ').trim()) + ' · ' + dlStamp();
+    const fileName = ((inv.name + (EN ? ' Investor Profile' : ' Perfil Inversionista')).replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, ' ').trim()) + ' · ' + dlStamp();
     downloadBlob(new Blob([html], { type: 'text/html;charset=utf-8' }), fileName + '.html');
     toast('HTML descargado');
   } catch (e) {
@@ -4915,8 +5077,8 @@ async function exportInvestorPdfJsPDF(posId) {
     if (data.inv._accounts) sub.push(data.inv._accounts.map(a => a.name).join(' + '));
     else if (data.inv.titular) sub.push('Titular: ' + data.inv.titular);
     if (single && data.pos[0]) sub.push('Oportunidad: ' + data.pos[0].company + ' · ' + data.pos[0].series);
-    else sub.push(data.pos.length + ' posiciones');
-    sub.push('Generado ' + new Date().toLocaleDateString('es-MX'));
+    else sub.push(data.pos.length + T(' posiciones', ' positions'));
+    sub.push(T('Generado ', 'Generated ') + new Date().toLocaleDateString(EN ? 'en-US' : 'es-MX'));
     doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(orange[0], orange[1], orange[2]);
     doc.text(single ? 'MVP · REPORTE DE OPORTUNIDAD' : 'MVP · REPORTE DE PORTAFOLIO', M, 32);
     doc.setFillColor(orange[0], orange[1], orange[2]); doc.rect(M, 41, 3.5, 24, 'F');
@@ -6851,6 +7013,40 @@ function renderFundTrackerDetail(fundId) {
 }
 
 // Construye las tarjetas de empresas (reutilizado por la pestaña y por export HTML/PDF)
+// Fichas de empresas en INGLÉS (para exports de Empresas en EN). Mismo key que companyInfo.
+const FT_CO_EN = {
+  'RapidSOS, Inc.': { category:'Emergency data', tagline:'Emergency data platform connecting devices, apps and sensors to 911 centers.', pname:'RapidSOS', pdesc:'Routes location and critical data to emergency services in real time.', thesis:'Network-effect infrastructure across carriers, device makers and first responders.' },
+  'BlueVoyant, Inc.': { category:'Cybersecurity', tagline:'Managed cybersecurity: detection and response (MDR) plus supply-chain defense.', pname:'MDR + Supply Chain Defense', pdesc:'24/7 monitoring and third-party risk management for enterprises and government.', thesis:'Structural demand for managed cyber defense amid growing threats.' },
+  'Job and Talent Holding, Ltd': { category:'Staffing · marketplace', tagline:'On-demand jobs marketplace connecting temporary workers with companies.', pname:'Jobandtalent', pdesc:'Hiring and management of temporary staff at scale.', thesis:'Digitizes a huge, fragmented temporary labor market.' },
+  'Epic Games, Inc.': { category:'Gaming · software', tagline:'Creator of Fortnite and Unreal Engine, the industry-standard 3D engine.', pname:'Fortnite · Unreal Engine', pdesc:'Gaming ecosystem, 3D engine, store and metaverse vision.', thesis:'Iconic brand with massive revenue; its antitrust litigation could open up app store markets.' },
+  'Space Exploration Technologies Corp. (X)': { category:'Space · satellites', tagline:'SpaceX: world leader in reusable launch and Starlink satellite internet.', pname:'Falcon/Starship · Starlink', pdesc:'Reusable rockets and the largest satellite internet constellation.', thesis:'Trading since Jun-2026 (SPCX); valuation marked to market. High-conviction position.' },
+  'Platform Science, Inc.': { category:'Telematics · trucking', tagline:'Telematics and connected-vehicle software platform for freight fleets.', pname:'Connected Vehicle Platform', pdesc:'On-board apps and data to optimize fleets and compliance.', thesis:'Digitizes fleet operations; partnerships with major truck manufacturers.' },
+  'Patreon, Inc.': { category:'Creator economy', tagline:'Membership platform for creators to earn recurring subscriptions from fans.', pname:'Patreon', pdesc:'Subscriptions, exclusive content and community for creators.', thesis:'Recurring revenue for creators; entered at a high valuation, since marked down.' },
+  'Wefox Holding AG': { category:'Insurtech', tagline:'European insurtech: digital insurance distribution through agents and platform.', pname:'Insurance platform', pdesc:'Connects insurers, agents and customers in a digital model.', thesis:'Digitizes insurance distribution; execution and profitability under scrutiny.' },
+  'Cohere': { category:'Enterprise AI', tagline:'Language models (Command) and search (Rerank) focused 100% on enterprises.', pname:'Command / Rerank', pdesc:'LLMs and search with privacy and on-premise deployment.', thesis:'Neutral alternative for corporations that do not want to depend on OpenAI or Anthropic.' },
+  'Hawkeye 360, Inc.': { category:'Geospatial · RF', tagline:'Radio-frequency geospatial analytics: detects and geolocates signals from satellites.', pname:'RF Analytics', pdesc:'Signals intelligence for defense, maritime security and monitoring.', thesis:'Unique RF data from space, with growing defense and security demand.' },
+  'Cohesity Global, Inc.': { category:'Data management', tagline:'Enterprise data management, backup and recovery; merged with Veritas.', pname:'Data Cloud', pdesc:'Backup, recovery and data security against ransomware.', thesis:'Consolidated leader in data protection after the Veritas merger; heading to IPO.' },
+  'Trusted, Inc.': { category:'Healthtech · staffing', tagline:'Healthcare staffing marketplace connecting nurses with hospitals.', pname:'Trusted Health', pdesc:'Digital hiring and management of (travel) nursing staff.', thesis:'Digitizes healthcare staffing amid a chronic personnel shortage.' },
+  'Forto Logistics GmbH & Co': { category:'Digital logistics', tagline:'Digital freight forwarding: manages international cargo shipments end to end.', pname:'Freight platform', pdesc:'Quoting, booking and shipment visibility in a single platform.', thesis:'Digitizes traditional forwarding; sensitive to the global trade cycle.' },
+  'Revolut Ltd': { category:'Fintech · neobank', tagline:'Financial super-app: accounts, cards, FX, crypto and investments for tens of millions.', pname:'Revolut', pdesc:'Banking, payments, FX, crypto and trading in one app.', thesis:'Global decacorn (~$75B); one of the largest fintechs in the world, heading to IPO.' },
+  'Quantstamp, Inc.': { category:'Crypto · security', tagline:'Blockchain security: smart-contract and Web3 protocol audits.', pname:'Web3 audits', pdesc:'Review and assurance of smart contracts.', thesis:'Trust layer for Web3; demand tied to crypto activity.' },
+  'Groq, Inc.': { category:'Semiconductors · AI', tagline:'Designs the LPU, an AI inference chip with ultra-low latency and leading speed.', pname:'LPU / GroqCloud', pdesc:'Ultra-fast AI inference; large-scale agreements (incl. Nvidia).', thesis:'Attacks the inference bottleneck — the dominant cost of AI in production.' },
+  'Transfix, Inc.': { category:'Logistics · freight', tagline:'Digital freight marketplace connecting shippers with carriers.', pname:'Transfix', pdesc:'Truckload matching and freight management platform.', thesis:'Efficiency in a fragmented freight market; sensitive to the freight cycle.' },
+  'Loft Holdings, Ltd': { category:'Proptech', tagline:'Brazilian proptech: marketplace to buy, sell and rent homes online.', pname:'Loft', pdesc:'Residential real-estate transaction platform in Brazil.', thesis:'Digitizes LatAm real estate; hit by rates and down-rounds.' },
+  'Automattic, Inc.': { category:'Software · web', tagline:'The company behind WordPress.com, WooCommerce, Tumblr and Jetpack.', pname:'WordPress.com · WooCommerce', pdesc:'Web publishing and e-commerce for a huge share of the web.', thesis:'Powers an enormous fraction of the world\\u2019s websites; dominant brand and distribution.' },
+  'Figure AI Inc.': { category:'Humanoid robotics', tagline:'General-purpose humanoid robots (Figure 02/03) with a proprietary AI stack.', pname:'Figure 02 / 03', pdesc:'Humanoids with in-house AI; integrate language models for tasks.', thesis:'The fund\\u2019s highest-multiple position; industrial pilots (e.g. with BMW).' },
+  'Neutron Holdings, Inc., DBA Lime': { category:'Micromobility', tagline:'Lime: shared electric scooters and bikes across hundreds of cities.', pname:'Lime', pdesc:'Shared fleet of e-scooters and e-bikes via app.', thesis:'Micromobility leader, profitable and heading to IPO.' },
+  'Payward Inc., DBA Kraken': { category:'Crypto · exchange', tagline:'Operates Kraken, one of the oldest and most regulated crypto exchanges in the world.', pname:'Kraken', pdesc:'Crypto trading, staking, custody and institutional services.', thesis:'Beneficiary of the crypto cycle and clearer regulation; IPO candidate.' },
+  'Turo, Inc.': { category:'Marketplace · mobility', tagline:'Peer-to-peer car rental marketplace ("the Airbnb of cars").', pname:'Turo', pdesc:'P2P platform to rent out and book cars.', thesis:'P2P car-sharing leader in a large market; IPO candidate.' },
+  'Klarna Holding AB': { category:'Fintech · payments', tagline:'Swedish "buy now, pay later" (BNPL) fintech with tens of millions of users.', pname:'Klarna', pdesc:'Deferred payments, banking, card and AI-assisted shopping.', thesis:'Global BNPL leader; already publicly traded.' },
+  'Bolt Financial, Inc.': { category:'Fintech · payments', tagline:'One-click checkout enabling fast, frictionless payments in e-commerce.', pname:'Bolt Checkout', pdesc:'Identity network and one-click payment for online merchants.', thesis:'Bet on frictionless checkout; entered high and was marked down sharply.' },
+  'Instacart': { category:'E-commerce · delivery', tagline:'On-demand grocery delivery platform in North America (public: CART).', pname:'Instacart', pdesc:'Grocery delivery and advertising for retailers.', thesis:'Grocery delivery leader with a profitable advertising business; trades as CART.' },
+  'Udemy': { category:'Edtech', tagline:'Global online course marketplace for consumers and enterprises (public: UDMY).', pname:'Udemy / Udemy Business', pdesc:'On-demand courses and corporate training.', thesis:'Learning marketplace with a growing enterprise arm (Udemy Business).' },
+  'Anthropic PBC': { category:'Artificial Intelligence', tagline:'AI lab behind Claude, focused on safe, enterprise-grade models.', pname:'Claude', pdesc:'Frontier language models for enterprises and developers.', thesis:'One of the leading frontier AI labs; enterprise adoption accelerating.' },
+};
+const FT_STAGE_EN = { 'Crecimiento':'Growth','Tardía':'Late stage','Etapa tardía':'Late stage','Temprana':'Early stage','Etapa temprana':'Early stage','Pública':'Public','Pública (SPCX)':'Public (SPCX)','Adquirida':'Acquired','Pública (CART)':'Public (CART)','Pública (UDMY)':'Public (UDMY)','Pública (KLAR)':'Public (KLAR)' };
+const FT_MKT_EN = { 'Lanzamientos':'Launch','Internet satelital':'Satellite internet','Defensa':'Defense','Gobierno':'Government','Energía':'Energy','Residencial':'Residential','Red eléctrica':'Power grid','Seguridad':'Security','Salud':'Healthcare','Hospitales':'Hospitals','Educación':'Education','Empresas':'Enterprise','Consumo':'Consumer','Comercio':'Commerce','Pagos':'Payments','Banca':'Banking','Movilidad':'Mobility','Ciudades':'Cities','Logística':'Logistics','Carga':'Freight','Bienes raíces':'Real estate','Seguros':'Insurance','Juegos':'Gaming','Creadores':'Creators','Música':'Music','Video':'Video','Emergencias':'Emergency' };
+
 function ftCompanyCards(f, opts) {
   opts = opts || {};
   const _seenCo = new Set();
@@ -6866,11 +7062,22 @@ function ftCompanyCards(f, opts) {
     const cur = r.corpVal;
     const moic = (r.moic && r.moic > 0) ? r.moic : 1;
     const entry = cur / moic;
-    const info = (f.companyInfo || {})[r.company] || {};
+    const EN = opts.lang === 'en';
+    let info = (f.companyInfo || {})[r.company] || {};
+    if (EN) {
+      const en = FT_CO_EN[r.company];
+      info = { ...info,
+        category: (en && en.category) || info.category,
+        stage: FT_STAGE_EN[info.stage] || info.stage,
+        tagline: (en && en.tagline) || info.tagline,
+        product: info.product ? { name: (en && en.pname) || info.product.name, desc: (en && en.pdesc) || info.product.desc } : info.product,
+        markets: info.markets ? info.markets.map(m => FT_MKT_EN[m] || m) : info.markets,
+        thesis: (en && en.thesis) || info.thesis };
+    }
     let valNote;
-    if (Math.abs(moic - 1) < 0.02) valNote = 'Sin cambio: entrada en la ronda más reciente — marca fresca, no estancamiento.';
-    else if (moic > 1) valNote = `Apreciación de ${moic.toFixed(2)}x desde la entrada.`;
-    else valNote = `Marca a la baja respecto a la entrada (down-round · ${moic.toFixed(2)}x).`;
+    if (Math.abs(moic - 1) < 0.02) valNote = EN ? 'No change: entered at the most recent round — a fresh mark, not stagnation.' : 'Sin cambio: entrada en la ronda más reciente — marca fresca, no estancamiento.';
+    else if (moic > 1) valNote = EN ? `${moic.toFixed(2)}x appreciation since entry.` : `Apreciación de ${moic.toFixed(2)}x desde la entrada.`;
+    else valNote = EN ? `Marked down vs. entry (down-round · ${moic.toFixed(2)}x).` : `Marca a la baja respecto a la entrada (down-round · ${moic.toFixed(2)}x).`;
     const ov0 = (f.logoOverrides || {})[r.company];
     const override = ov0 ? (/^https?:/i.test(ov0) ? ov0 : (location.origin + ov0)) : null;
     const domain = (f.logos || {})[r.company];
@@ -6911,20 +7118,21 @@ function ftCompanyCards(f, opts) {
         </div>
         ${info.tagline ? `<p class="ft-co-tagline">${escapeHtml(info.tagline)}</p>` : ''}
         <div class="ft-co-vals">
-          <div class="ft-co-valbox"><span class="ft-co-vl">Entrada</span><span class="ft-co-vv">${fmtBil(entry)}</span></div>
-          <div class="ft-co-valbox"><span class="ft-co-vl">Valuación actual</span><span class="ft-co-vv ft-co-vv-now">${fmtBil(cur)}</span></div>
+          <div class="ft-co-valbox"><span class="ft-co-vl">${EN ? 'Entry' : 'Entrada'}</span><span class="ft-co-vv">${fmtBil(entry)}</span></div>
+          <div class="ft-co-valbox"><span class="ft-co-vl">${EN ? 'Current valuation' : 'Valuación actual'}</span><span class="ft-co-vv ft-co-vv-now">${fmtBil(cur)}</span></div>
         </div>
         <div class="ft-co-vnote"><i class="fa-solid fa-circle-info"></i> ${escapeHtml(valNote)}</div>
         ${hasDetail ? `<hr class="ft-co-div">` : ''}
-        ${info.product ? sec('fa-cube', 'Producto · ' + info.product.name, `<div class="ft-co-sec-t">${escapeHtml(info.product.desc)}</div>`) : ''}
-        ${info.markets ? sec('fa-globe', 'Mercado objetivo', `<div class="ft-co-chips">${info.markets.map(m => `<span class="ft-co-chip">${escapeHtml(m)}</span>`).join('')}</div>`) : ''}
-        ${info.thesis ? sec('fa-arrow-trend-up', 'Tesis de inversión', `<div class="ft-co-sec-t">${escapeHtml(info.thesis)}</div>`) : ''}
+        ${info.product ? sec('fa-cube', (EN ? 'Product · ' : 'Producto · ') + info.product.name, `<div class="ft-co-sec-t">${escapeHtml(info.product.desc)}</div>`) : ''}
+        ${info.markets ? sec('fa-globe', EN ? 'Target market' : 'Mercado objetivo', `<div class="ft-co-chips">${info.markets.map(m => `<span class="ft-co-chip">${escapeHtml(m)}</span>`).join('')}</div>`) : ''}
+        ${info.thesis ? sec('fa-arrow-trend-up', EN ? 'Investment thesis' : 'Tesis de inversión', `<div class="ft-co-sec-t">${escapeHtml(info.thesis)}</div>`) : ''}
       </div>`;
   }).join('');
 }
 
 // Documento HTML standalone (para descargar como HTML o imprimir a PDF)
-function ftCompaniesDocHtml(f) {
+function ftCompaniesDocHtml(f, lang) {
+  const EN = lang === 'en';
   const cutoffPretty = new Date(f.cutoff + 'T00:00:00').toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
   const css = `
 *{box-sizing:border-box}
@@ -6963,18 +7171,19 @@ body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;backgro
 .ft-co-chip{font-size:12px;font-weight:500;color:#3d4559;background:#eef0f5;padding:4px 11px;border-radius:999px}
 @media print{.doc{padding:0;max-width:none}.ft-co-grid{gap:12px}}
 @page{margin:13mm}`;
-  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(f.name)} — Empresas</title>` +
+  return `<!doctype html><html lang="${EN ? 'en' : 'es'}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(f.name)} — ${EN ? 'Companies' : 'Empresas'}</title>` +
     `<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"><style>${css}</style></head>` +
-    `<body><div class="doc"><div class="doc-head"><div class="doc-title">${escapeHtml(f.name)} — Empresas</div>` +
+    `<body><div class="doc"><div class="doc-head"><div class="doc-title">${escapeHtml(f.name)} — ${EN ? 'Companies' : 'Empresas'}</div>` +
     `<div class="doc-sub">${escapeHtml(f.status)} · ${escapeHtml(f.confidentiality)} · Cutoff ${escapeHtml(cutoffPretty)}</div>` +
-    `<div class="doc-note">Valuación corporativa. La de entrada se deriva de la apreciación del PPS (valuación actual ÷ MOIC).</div></div>` +
-    `<div class="ft-co-grid">${ftCompanyCards(f)}</div></div></body></html>`;
+    `<div class="doc-note">${EN ? 'Corporate valuation. Entry is derived from PPS appreciation (current valuation ÷ MOIC).' : 'Valuación corporativa. La de entrada se deriva de la apreciación del PPS (valuación actual ÷ MOIC).'}</div></div>` +
+    `<div class="ft-co-grid">${ftCompanyCards(f, { lang })}</div></div></body></html>`;
 }
 
 // ── Export HTML del tracker (Valuation Overview) — auto-contenido, logos embebidos ──
 async function exportFundTrackerHtml(fundId, btn) {
   const f = FUND_TRACKERS[fundId];
   if (!f || f.placeholder) { toast('Tracker no disponible'); return; }
+  const lang = await pickExportLang(); if (!lang) return;
   const orig = btn ? btn.innerHTML : '';
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generando…'; }
   try {
@@ -6989,7 +7198,7 @@ async function exportFundTrackerHtml(fundId, btn) {
         logos[name] = await new Promise(res => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = () => res(null); fr.readAsDataURL(b); });
       } catch (e) {}
     }));
-    const blob = new Blob([ftTrackerDocHtml(f, logos)], { type: 'text/html;charset=utf-8' });
+    const blob = new Blob([ftTrackerDocHtml(f, logos, lang)], { type: 'text/html;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = `${f.name.replace(/[^a-z0-9]+/gi, '_')}_Tracker · ${dlStamp()}.html`;
@@ -7000,10 +7209,15 @@ async function exportFundTrackerHtml(fundId, btn) {
   finally { if (btn) { btn.disabled = false; btn.innerHTML = orig; } }
 }
 
-function ftTrackerDocHtml(f, logos) {
+function ftTrackerDocHtml(f, logos, lang) {
+  const EN = lang === 'en';
+  const T = (es, en) => (EN ? en : es);
+  const COL_ES = { 'Company':'Empresa','Investment Amount':'Monto invertido','% of Invested Capital':'% del capital invertido','Mark-to-Market Valuation':'Valuación mark-to-market','MTM MOIC (x)':'MOIC MTM (x)','Corp. Valuation ($B)':'Valuación corp. ($B)','Current Mark (PPS)':'Mark actual (PPS)','Entry Price (PPS)':'Precio de entrada (PPS)','Shares':'Acciones','FDSO (M)':'FDSO (M)' };
+  const CL = (l) => (EN ? l : (COL_ES[l] || l));
+  const LOC = EN ? 'en-US' : 'es-MX';
   const E = escapeHtml;
-  const cutoffPretty = new Date(f.cutoff + 'T00:00:00').toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
-  const genPretty = new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' });
+  const cutoffPretty = new Date(f.cutoff + 'T00:00:00').toLocaleDateString(LOC, { year: 'numeric', month: 'long', day: 'numeric' });
+  const genPretty = new Date().toLocaleDateString(LOC, { day: 'numeric', month: 'long', year: 'numeric' });
   const ov = f.overallTotal2 || f.overallTotal || f.activeTotal;
   const cell = (row, c) => {
     const v = row[c.key];
@@ -7021,15 +7235,15 @@ function ftTrackerDocHtml(f, logos) {
     if (c.key === 'moic')     return `<td class="num ${moicClass(t.moic)}">${fmtTrackerCell(t.moic, 'moic')}</td>`;
     return '<td></td>';
   }).join('') + `</tr>`;
-  const head = `<tr>` + f.columns.map(c => `<th class="${c.key === 'company' ? '' : 'num'}">${E(c.label)}</th>`).join('') + `</tr>`;
+  const head = `<tr>` + f.columns.map(c => `<th class="${c.key === 'company' ? '' : 'num'}">${E(CL(c.label))}</th>`).join('') + `</tr>`;
   const table = (title, rows, tots) => `
     <div class="sec xr"><div class="sec-h">${E(title)}</div><div class="twrap"><table><thead>${head}</thead><tbody>
       ${rows.map(r => `<tr>${f.columns.map(c => cell(r, c)).join('')}</tr>`).join('')}${tots}
     </tbody></table></div></div>`;
   const secs =
-    table('Active Positions', f.active, totRow('Total — Active', f.activeTotal)) +
-    ((f.pending && f.pending.length) ? table(f.pendingTitle || 'Pending Positions', f.pending, totRow('Total — Pending', f.pendingTotal)) : '') +
-    table('Distributed Positions', f.distributed, totRow(f.overallLabel || 'Total — Overall', f.overallTotal) + (f.overallTotal2 ? totRow(f.overallTotal2.label, f.overallTotal2) : ''));
+    table(T('Posiciones activas', 'Active Positions'), f.active, totRow(T('Total — Activas', 'Total — Active'), f.activeTotal)) +
+    ((f.pending && f.pending.length) ? table(EN ? (f.pendingTitle || 'Pending Positions') : 'Posiciones pendientes', f.pending, totRow(T('Total — Pendientes', 'Total — Pending'), f.pendingTotal)) : '') +
+    table(T('Posiciones distribuidas', 'Distributed Positions'), f.distributed, totRow(f.overallLabel || 'Total — Overall', f.overallTotal) + (f.overallTotal2 ? totRow(f.overallTotal2.label, f.overallTotal2) : ''));
   return `<!doctype html><html lang="es" data-org="mvp"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>${E(f.name)} — Tracker</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;700&family=DM+Mono:wght@400;500&family=Fraunces:opsz,wght@9..144,480;9..144,560;9..144,640&display=swap">
@@ -7078,22 +7292,22 @@ body.anim .xr.xin{opacity:1;transform:none}
 @media print{.hero .nm,.hero .sb,.hero .mt{animation:none!important;opacity:1!important;clip-path:none!important}.xr{opacity:1!important;transform:none!important}#prog,.grain{display:none}.top button{display:none}}
 </style></head><body>
 <div id="prog"></div><div class="grain"></div>
-<div class="top"><span class="b">MVP · Fund Tracker</span><span class="d">Generado ${E(genPretty)}</span><button onclick="window.print()">Imprimir / PDF</button></div>
+<div class="top"><span class="b">MVP · Fund Tracker</span><span class="d">${T('Generado','Generated')} ${E(genPretty)}</span><button onclick="window.print()">${T('Imprimir / PDF','Print / PDF')}</button></div>
 <div class="wrap">
   <div class="hero">
     <div class="nm">${E(f.name)}</div>
     <div class="sb">${E(f.subtitle || 'Valuation Overview')} · ${E(f.status || '')}</div>
-    <div class="mt">Corte: ${E(cutoffPretty)} · ${E(f.confidentiality || 'CONFIDENTIAL')} · SpaceX marcado al precio vivo de SPCX</div>
+    <div class="mt">${T('Corte','As of')}: ${E(cutoffPretty)} · ${E(f.confidentiality || 'CONFIDENTIAL')} · ${T('SpaceX marcado al precio vivo de SPCX','SpaceX marked at live SPCX price')}</div>
   </div>
   <div class="kpis xr">
-    <div class="kpi"><div class="l">Capital invertido</div><div class="v or">${fmtTrackerCell(ov.invested, 'money')}</div></div>
-    <div class="kpi"><div class="l">Valor (MtM)</div><div class="v">${fmtTrackerCell(ov.mtm, 'money')}</div></div>
+    <div class="kpi"><div class="l">${T('Capital invertido','Invested Capital')}</div><div class="v or">${fmtTrackerCell(ov.invested, 'money')}</div></div>
+    <div class="kpi"><div class="l">${T('Valor (MtM)','Value (MtM)')}</div><div class="v">${fmtTrackerCell(ov.mtm, 'money')}</div></div>
     <div class="kpi"><div class="l">MOIC</div><div class="v gr">${fmtTrackerCell(ov.moic, 'moic')}</div></div>
-    <div class="kpi"><div class="l">Posiciones activas</div><div class="v">${f.active.length}</div></div>
+    <div class="kpi"><div class="l">${T('Posiciones activas','Active Positions')}</div><div class="v">${f.active.length}</div></div>
   </div>
   ${secs}
 </div>
-<div class="foot"><span class="t">MVP Manager · Documento confidencial · ${E(genPretty)}</span>${E(f.name)} — ${E(f.subtitle || 'Valuation Overview')}. Cifras al corte indicado; SpaceX a precio de mercado vivo. Valuaciones preliminares y no auditadas. Este documento es informativo y no constituye una oferta ni asesoría de inversión.</div>
+<div class="foot"><span class="t">MVP Manager · ${T('Documento confidencial','Confidential document')} · ${E(genPretty)}</span>${E(f.name)} — ${E(f.subtitle || 'Valuation Overview')}. ${T('Cifras al corte indicado; SpaceX a precio de mercado vivo. Valuaciones preliminares y no auditadas. Este documento es informativo y no constituye una oferta ni asesoría de inversión.','Figures as of the stated cutoff; SpaceX at live market price. Valuations are preliminary and unaudited. This document is for information purposes only and does not constitute an offer or investment advice.')}</div>
 <script>
 (function(){
   if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -7119,12 +7333,13 @@ body.anim .xr.xin{opacity:1;transform:none}
 </body></html>`;
 }
 
-function exportCompaniesHTML(fundId, btn) {
+async function exportCompaniesHTML(fundId, btn) {
   const f = FUND_TRACKERS[fundId]; if (!f || !f.companyInfo) return;
-  const blob = new Blob([ftCompaniesDocHtml(f)], { type: 'text/html;charset=utf-8' });
+  const lang = await pickExportLang(); if (!lang) return;
+  const blob = new Blob([ftCompaniesDocHtml(f, lang)], { type: 'text/html;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = `${f.name.replace(/[^a-z0-9]+/gi, '_')}_Empresas.html`;
+  a.href = url; a.download = `${f.name.replace(/[^a-z0-9]+/gi, '_')}_${lang === 'en' ? 'Companies' : 'Empresas'} · ${dlStamp()}.html`;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 3000);
 }
@@ -7168,7 +7383,20 @@ function _san(t) {
 }
 
 async function exportCompaniesPDF(fundId, btn) {
-  const f = FUND_TRACKERS[fundId]; if (!f || !f.companyInfo) return;
+  const f0 = FUND_TRACKERS[fundId]; if (!f0 || !f0.companyInfo) return;
+  const lang = await pickExportLang(); if (!lang) return;
+  const EN = lang === 'en';
+  // vista EN del tracker: fichas traducidas (FT_CO_EN) sin mutar el original
+  const f = !EN ? f0 : { ...f0, companyInfo: Object.fromEntries(Object.entries(f0.companyInfo).map(([k, v]) => {
+    const en = FT_CO_EN[k] || {};
+    return [k, { ...v,
+      category: en.category || v.category,
+      stage: FT_STAGE_EN[v.stage] || v.stage,
+      tagline: en.tagline || v.tagline,
+      product: v.product ? { name: en.pname || v.product.name, desc: en.pdesc || v.product.desc } : v.product,
+      markets: v.markets ? v.markets.map(m => FT_MKT_EN[m] || m) : v.markets,
+      thesis: en.thesis || v.thesis }];
+  })) };
   if (btn) { btn.disabled = true; }
   try {
     await loadJsPDF();
@@ -7202,9 +7430,9 @@ async function exportCompaniesPDF(fundId, btn) {
       const dn = info.displayName || r.company;
       const cur = r.corpVal, moic = (r.moic && r.moic > 0) ? r.moic : 1, entry = cur / moic;
       let note;
-      if (Math.abs(moic - 1) < 0.02) note = 'Sin cambio: entrada en la ronda mas reciente, marca fresca.';
-      else if (moic > 1) note = 'Apreciacion de ' + moic.toFixed(2) + 'x desde la entrada.';
-      else note = 'Marca a la baja respecto a la entrada (down-round, ' + moic.toFixed(2) + 'x).';
+      if (Math.abs(moic - 1) < 0.02) note = EN ? 'No change: entered at the most recent round, a fresh mark.' : 'Sin cambio: entrada en la ronda mas reciente, marca fresca.';
+      else if (moic > 1) note = EN ? (moic.toFixed(2) + 'x appreciation since entry.') : ('Apreciacion de ' + moic.toFixed(2) + 'x desde la entrada.');
+      else note = EN ? ('Marked down vs. entry (down-round, ' + moic.toFixed(2) + 'x).') : ('Marca a la baja respecto a la entrada (down-round, ' + moic.toFixed(2) + 'x).');
       const pad = 6, ix = M + pad, iw = CW - 2 * pad;
       let cy = yTop + pad;
 
@@ -7253,7 +7481,7 @@ async function exportCompaniesPDF(fundId, btn) {
 
       const boxH = 14, gap = 4, bw = (iw - gap) / 2;
       if (draw) {
-        [['Entrada', fmtBil(entry), NAVY, ix], ['Valuacion actual', fmtBil(cur), ORANGE, ix + bw + gap]].forEach(b => {
+        [[EN ? 'Entry' : 'Entrada', fmtBil(entry), NAVY, ix], [EN ? 'Current valuation' : 'Valuacion actual', fmtBil(cur), ORANGE, ix + bw + gap]].forEach(b => {
           doc.setFillColor.apply(doc, BOX); doc.roundedRect(b[3], cy, bw, boxH, 2.5, 2.5, 'F');
           doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor.apply(doc, GRAY);
           T(b[0].toUpperCase(), b[3] + 4, cy + 5);
@@ -7297,9 +7525,9 @@ async function exportCompaniesPDF(fundId, btn) {
           cy += bl.length * lh(9) + 3;
         }
       };
-      if (info.product) drawSec('Producto - ' + info.product.name, false, info.product.desc);
-      if (info.markets) drawSec('Mercado objetivo', true, info.markets);
-      if (info.thesis)  drawSec('Tesis de inversion', false, info.thesis);
+      if (info.product) drawSec((EN ? 'Product - ' : 'Producto - ') + info.product.name, false, info.product.desc);
+      if (info.markets) drawSec(EN ? 'Target market' : 'Mercado objetivo', true, info.markets);
+      if (info.thesis)  drawSec(EN ? 'Investment thesis' : 'Tesis de inversion', false, info.thesis);
 
       cy += pad - 2;
       return cy - yTop;
@@ -7307,7 +7535,7 @@ async function exportCompaniesPDF(fundId, btn) {
 
     let y = M;
     doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.setTextColor.apply(doc, ORANGE);
-    T(f.name + ' - Empresas', M, y + 3); y += 8;
+    T(f.name + (EN ? ' - Companies' : ' - Empresas'), M, y + 3); y += 8;
     doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor.apply(doc, GRAY);
     T(f.status + ' - ' + f.confidentiality + ' - Cutoff ' + cutoffPretty, M, y); y += 7;
 
@@ -7319,7 +7547,7 @@ async function exportCompaniesPDF(fundId, btn) {
       card(r, y, true);
       y += h + 6;
     }
-    doc.save(f.name.replace(/[^a-z0-9]+/gi, '_') + '_Empresas.pdf');
+    doc.save(f.name.replace(/[^a-z0-9]+/gi, '_') + (EN ? '_Companies' : '_Empresas') + ' · ' + dlStamp() + '.pdf');
   } catch (e) {
     alert('No se pudo generar el PDF: ' + e.message);
   } finally {
@@ -7374,6 +7602,11 @@ function loadExcelJS() {
 }
 
 async function exportFundTrackerExcel(fundId, btn) {
+  const lang = await pickExportLang(); if (!lang) return;
+  const EN = lang === 'en';
+  const COL_ES = { 'Company':'Empresa','Investment Amount':'Monto invertido','% of Invested Capital':'% del capital invertido','Mark-to-Market Valuation':'Valuación mark-to-market','MTM MOIC (x)':'MOIC MTM (x)','Corp. Valuation ($B)':'Valuación corp. ($B)','Current Mark (PPS)':'Mark actual (PPS)','Entry Price (PPS)':'Precio de entrada (PPS)','Shares':'Acciones','FDSO (M)':'FDSO (M)' };
+  const CL = (l) => (EN ? l : (COL_ES[l] || l));
+  const TSEC = (en, es) => (EN ? en : es);
   const f = FUND_TRACKERS[fundId];
   if (!f || f.placeholder) return;
   computeFundTotals(f);
@@ -7411,14 +7644,14 @@ async function exportFundTrackerExcel(fundId, btn) {
     titleRow(`${f.name} Tracker`, { bold: true, size: 16 });
     titleRow(f.status, { size: 10 });
     titleRow(f.subtitle, { size: 10 });
-    titleRow(`Cutoff: ${f.cutoff}`, { size: 10 });
+    titleRow(`${EN ? 'Cutoff' : 'Corte'}: ${f.cutoff}`, { size: 10 });
     titleRow(f.confidentiality, { bold: true, size: 10, color: 'FFC0392B' });
     r++;
 
     const headerRow = () => {
       f.columns.forEach((c, i) => {
         const cell = ws.getCell(r, i + 1);
-        cell.value = c.label;
+        cell.value = CL(c.label);
         cell.font = { bold: true, size: 10, color: { argb: 'FFFFFFFF' } };
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ORANGE } };
         cell.alignment = { horizontal: i === 0 ? 'left' : 'right', vertical: 'middle', wrapText: true };
@@ -7464,11 +7697,11 @@ async function exportFundTrackerExcel(fundId, btn) {
       r++;
     };
 
-    section('Active Positions', f.active, 'Total - Active', f.activeTotal);
+    section(TSEC('Active Positions','Posiciones activas'), f.active, TSEC('Total - Active','Total - Activas'), f.activeTotal);
     if (f.pending && f.pending.length) {
-      section(f.pendingTitle || 'Pending Positions', f.pending, 'Total - Pending', f.pendingTotal);
+      section(EN ? (f.pendingTitle || 'Pending Positions') : 'Posiciones pendientes', f.pending, TSEC('Total - Pending','Total - Pendientes'), f.pendingTotal);
     }
-    section('Distributed Positions', f.distributed, null, null);
+    section(TSEC('Distributed Positions','Posiciones distribuidas'), f.distributed, null, null);
     r--;
     totalRow((f.overallLabel || 'Total - Overall').replace(/—/g, '-'), f.overallTotal);
     if (f.overallTotal2) totalRow(f.overallTotal2.label.replace(/—/g, '-'), f.overallTotal2);
