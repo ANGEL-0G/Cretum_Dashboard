@@ -4576,7 +4576,6 @@ function exportInvestorHtml() {
       const hero = document.createElement('div');
       hero.className = 'xp-hero';
       hero.innerHTML = `
-        <div class="xp-hero-eyebrow">Preparado exclusivamente para</div>
         <div class="xp-hero-name">${escapeHtml(inv.name)}</div>
         ${heroLine ? `<div class="xp-hero-line">${heroLine}</div>` : ''}
         <div class="xp-hero-meta">Cifras al ${escapeHtml(new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }))} · Valuaciones a precios de mercado más recientes · ${lp.nActive} ${lp.nActive === 1 ? 'posición activa' : 'posiciones activas'}</div>`;
