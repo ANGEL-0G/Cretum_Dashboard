@@ -4730,7 +4730,9 @@ body.xport::-webkit-scrollbar-track{background:transparent}
 .xr{opacity:0;transform:translateY(22px);transition:opacity .85s cubic-bezier(.16,1,.3,1),transform .85s cubic-bezier(.16,1,.3,1);transition-delay:var(--d,0s)}
 .xr.xin{opacity:1;transform:none}
 body.xport .lp-bar-fill,body.xport .home-top-fill{transition:width 1.1s cubic-bezier(.16,1,.3,1)}
-.xp-donut-svg circle{transition:stroke-dasharray 1.25s cubic-bezier(.33,1,.68,1)}
+.xp-donut-svg.xpre{opacity:0;transform:rotate(-16deg) scale(.94);transition:opacity .9s cubic-bezier(.16,1,.3,1),transform 1.1s cubic-bezier(.16,1,.3,1)}
+.xp-donut-svg.xpre.xdon{opacity:1;transform:none}
+@media print{.xp-donut-svg{opacity:1!important;transform:none!important}}
 @media (prefers-reduced-motion:reduce){.xp-hero-eyebrow,.xp-hero-name,.xp-hero-line,.xp-hero-meta{animation:none;opacity:1;clip-path:none}.xr{opacity:1;transform:none;transition:none}}
 @media print{.xp-hero-eyebrow,.xp-hero-name,.xp-hero-line,.xp-hero-meta{animation:none!important;opacity:1!important;clip-path:none!important}.xr{opacity:1!important;transform:none!important}#xpProg,.xp-grain{display:none}}
 .xp-cos{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px}
@@ -4803,12 +4805,10 @@ document.querySelectorAll('.xp-co-logo').forEach(function(img){
     var w = b.style.width; b.style.width = '0%';
     setTimeout(function(){ b.style.width = w; }, 380);
   });
-  document.querySelectorAll('.xp-donut-svg circle').forEach(function(c, i){
-    var d = c.getAttribute('stroke-dasharray'); if (!d) return;
-    var parts = d.split(' ');
-    var total = parseFloat(parts[0]) + parseFloat(parts[1] || 0);
-    c.setAttribute('stroke-dasharray', '0 ' + total);
-    setTimeout(function(){ c.setAttribute('stroke-dasharray', d); }, 450 + i * 150);
+  document.querySelectorAll('.xp-donut-svg').forEach(function(sv){
+    sv.classList.add('xpre');
+    void sv.getBoundingClientRect();
+    setTimeout(function(){ sv.classList.add('xdon'); }, 400);
   });
 })();
 document.querySelectorAll('table.db-table').forEach(function(tb){
