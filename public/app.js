@@ -3848,11 +3848,16 @@ function buildInvestorExport(posId) {
 }
 
 // Nombre de archivo seguro a partir del nombre del inversionista (+ etiqueta opcional)
+// Sello fecha+hora para nombres de descarga ÚNICOS (evita el "(N)" que agrega el navegador al repetir nombre).
+function dlStamp() {
+  const d = new Date(), p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}.${p(d.getMinutes())}`;
+}
 function invExportFilename(inv, extra) {
   const clean = (s) => String(s || '').replace(/[^\w\sáéíóúñÁÉÍÓÚÑ-]/gi, '').trim().replace(/\s+/g, '_').slice(0, 40);
   const parts = ['cretum', clean(inv.name) || 'inversionista'];
   if (extra) { const e = clean(extra); if (e) parts.push(e); }
-  return parts.join('_') + '_' + new Date().toISOString().slice(0, 10);
+  return parts.join('_') + '_' + dlStamp().replace(' ', '_');
 }
 
 // Quita las columnas que están vacías en TODAS las filas (evita huecos feos).
@@ -4489,7 +4494,7 @@ function buildInvestorReportPayload(posId) {
   const nameBase = (data.combined && data.inv._accounts)
     ? data.inv._accounts.map(a => a.name).join(' + ')
     : data.inv.name;
-  const fileName = (nameBase + ' Portfolio Snapshot').replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, ' ').trim();
+  const fileName = ((nameBase + ' Portfolio Snapshot').replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, ' ').trim()) + ' · ' + dlStamp();
   return { payload, fileName };
 }
 
@@ -4845,7 +4850,7 @@ ${extLinks}
 <script>${script}<\/script>
 </body></html>`;
 
-    const fileName = (inv.name + ' Perfil Inversionista').replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, ' ').trim();
+    const fileName = ((inv.name + ' Perfil Inversionista').replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, ' ').trim()) + ' · ' + dlStamp();
     downloadBlob(new Blob([html], { type: 'text/html;charset=utf-8' }), fileName + '.html');
     toast('HTML descargado');
   } catch (e) {
