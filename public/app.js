@@ -4553,7 +4553,7 @@ function exportInvestorHtml() {
         });
         const leg = items.map(([l, v], i) =>
           `<span class="xp-leg"><span class="xp-dot" style="background:${colors[i % colors.length]}"></span>${escapeHtml(l)} <b>${(v / tot * 100).toFixed(0)}%</b></span>`).join('');
-        svg = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${segs}</svg><div class="xp-legend">${leg}</div>`;
+        svg = `<svg class="xp-donut-svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${segs}</svg><div class="xp-legend">${leg}</div>`;
       }
       const wrap = document.createElement('div');
       wrap.className = 'xp-donut';
@@ -4677,12 +4677,29 @@ body.xport .db-table thead th:hover{color:var(--orange,#e8650d)}
 body.xport .db-table thead th .xp-arrow{font-size:9px;margin-left:4px;opacity:.7}
 .xp-foot{max-width:1180px;margin:6px auto 34px;padding:0 26px;font-size:10.5px;letter-spacing:.4px;color:#9aa1ad;line-height:1.7}
 .xp-foot .xp-foot-tag{text-transform:uppercase;letter-spacing:1.2px;display:block;margin-bottom:4px}
-.xp-hero{background:#fff;border:1px solid var(--gray-200,#e3e7ee);border-left:4px solid var(--navy,#ED7824);border-radius:14px;padding:22px 26px;margin-bottom:18px;box-shadow:0 1px 4px rgba(20,25,40,.05)}
-.xp-hero-eyebrow{font-size:10.5px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#9aa1ad;margin-bottom:6px}
-.xp-hero-name{font-size:26px;font-weight:600;color:var(--navy,#ED7824);line-height:1.15;margin-bottom:8px}
-.xp-hero-line{font-size:14.5px;color:#3a4152;line-height:1.55;max-width:760px}
-.xp-hero-line b{color:#171c28}
-.xp-hero-meta{margin-top:10px;font-size:11px;color:#9aa1ad;letter-spacing:.3px}
+::selection{background:rgba(237,120,36,.22);color:#171c28}
+body.xport{scroll-behavior:smooth}
+body.xport::-webkit-scrollbar{width:10px}
+body.xport::-webkit-scrollbar-thumb{background:#d8dde6;border-radius:6px;border:2px solid #f7f8fb}
+body.xport::-webkit-scrollbar-track{background:transparent}
+#xpProg{position:fixed;top:0;left:0;height:2.5px;width:0;background:linear-gradient(90deg,var(--navy,#ED7824),#f6a55c);z-index:99;transition:width .15s linear}
+.xp-grain{position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.028;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
+.xp-hero{position:relative;overflow:hidden;background:linear-gradient(135deg,#fff 62%,#fdf6ef 100%);border:1px solid var(--gray-200,#e3e7ee);border-radius:16px;padding:34px 38px 30px;margin-bottom:20px;box-shadow:0 2px 14px rgba(20,25,40,.06)}
+.xp-hero::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,var(--navy,#ED7824),#f6a55c)}
+.xp-hero::after{content:"";position:absolute;right:-70px;top:-70px;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,rgba(237,120,36,.09),transparent 65%)}
+.xp-hero-eyebrow{font-family:var(--mono,'DM Mono',monospace);font-size:10.5px;font-weight:500;letter-spacing:2.2px;text-transform:uppercase;color:#a3742f;margin-bottom:10px;opacity:0;animation:xpUp .7s cubic-bezier(.16,1,.3,1) .1s forwards}
+.xp-hero-name{font-family:'Fraunces',Georgia,serif;font-size:clamp(28px,4.2vw,42px);font-weight:560;letter-spacing:-.018em;color:#171c28;line-height:1.08;margin-bottom:12px;opacity:0;clip-path:inset(0 0 100% 0);animation:xpName .9s cubic-bezier(.16,1,.3,1) .25s forwards}
+.xp-hero-line{font-size:15.5px;color:#3a4152;line-height:1.6;max-width:780px;opacity:0;animation:xpUp .8s cubic-bezier(.16,1,.3,1) .55s forwards}
+.xp-hero-line b{color:var(--navy,#ED7824);font-weight:700}
+.xp-hero-meta{margin-top:14px;font-family:var(--mono,'DM Mono',monospace);font-size:10.5px;color:#9aa1ad;letter-spacing:.6px;opacity:0;animation:xpUp .8s cubic-bezier(.16,1,.3,1) .8s forwards}
+@keyframes xpUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes xpName{from{opacity:0;clip-path:inset(0 0 100% 0);transform:translateY(10px)}to{opacity:1;clip-path:inset(0 0 -8% 0);transform:none}}
+.xr{opacity:0;transform:translateY(22px);transition:opacity .85s cubic-bezier(.16,1,.3,1),transform .85s cubic-bezier(.16,1,.3,1);transition-delay:var(--d,0s)}
+.xr.xin{opacity:1;transform:none}
+body.xport .lp-bar-fill,body.xport .home-top-fill{transition:width 1.1s cubic-bezier(.16,1,.3,1)}
+.xp-donut-svg circle{transition:stroke-dasharray 1.25s cubic-bezier(.33,1,.68,1)}
+@media (prefers-reduced-motion:reduce){.xp-hero-eyebrow,.xp-hero-name,.xp-hero-line,.xp-hero-meta{animation:none;opacity:1;clip-path:none}.xr{opacity:1;transform:none;transition:none}}
+@media print{.xp-hero-eyebrow,.xp-hero-name,.xp-hero-line,.xp-hero-meta{animation:none!important;opacity:1!important;clip-path:none!important}.xr{opacity:1!important;transform:none!important}#xpProg,.xp-grain{display:none}}
 .xp-cos{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px}
 .xp-co{background:#fff;border:1px solid var(--gray-200,#e3e7ee);border-radius:12px;padding:14px 16px}
 .xp-co-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:6px;flex-wrap:wrap}
@@ -4712,6 +4729,48 @@ function xpVal(td){
   if (!isNaN(d) && /\\d{4}/.test(t)) return d;
   return t.toLowerCase();
 }
+// ── Coreografía premium (sobria): progress, reveals, count-up, barras y dona ──
+(function(){
+  if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var pr = document.getElementById('xpProg');
+  addEventListener('scroll', function(){
+    var h = document.documentElement;
+    var p = h.scrollTop / ((h.scrollHeight - h.clientHeight) || 1);
+    if (pr) pr.style.width = (p * 100) + '%';
+  }, { passive: true });
+  var els = [].slice.call(document.querySelectorAll('.db-section, .xp-co, .lp-kpi, .db-stat'));
+  els.forEach(function(el, i){ el.classList.add('xr'); el.style.setProperty('--d', ((i % 6) * 0.07) + 's'); });
+  var io = new IntersectionObserver(function(es){
+    es.forEach(function(e){ if (e.isIntersecting) { e.target.classList.add('xin'); io.unobserve(e.target); } });
+  }, { threshold: 0.1 });
+  els.forEach(function(el){ io.observe(el); });
+  function cnt(el){
+    var t = (el.textContent || '').trim();
+    var m = t.match(/^([$]?)([\\d,]+\\.?\\d*)([KMBx%]?)$/); if (!m) return;
+    var target = parseFloat(m[2].replace(/,/g, '')); if (!isFinite(target) || target === 0) return;
+    var dec = (m[2].split('.')[1] || '').length, t0 = null;
+    function step(ts){
+      if (!t0) t0 = ts;
+      var k = Math.min(1, (ts - t0) / 950); k = 1 - Math.pow(1 - k, 3);
+      var v = dec ? (target * k).toFixed(dec) : Math.round(target * k).toLocaleString('en-US');
+      el.textContent = m[1] + v + m[3];
+      if (k < 1) requestAnimationFrame(step); else el.textContent = t;
+    }
+    requestAnimationFrame(step);
+  }
+  document.querySelectorAll('.xp-hero-line b, .db-stat-v, .lp-kpi-v').forEach(cnt);
+  document.querySelectorAll('.lp-bar-fill').forEach(function(b){
+    var w = b.style.width; b.style.width = '0%';
+    setTimeout(function(){ b.style.width = w; }, 380);
+  });
+  document.querySelectorAll('.xp-donut-svg circle').forEach(function(c, i){
+    var d = c.getAttribute('stroke-dasharray'); if (!d) return;
+    var parts = d.split(' ');
+    var total = parseFloat(parts[0]) + parseFloat(parts[1] || 0);
+    c.setAttribute('stroke-dasharray', '0 ' + total);
+    setTimeout(function(){ c.setAttribute('stroke-dasharray', d); }, 450 + i * 150);
+  });
+})();
 document.querySelectorAll('table.db-table').forEach(function(tb){
   tb.querySelectorAll('thead th').forEach(function(th, i){
     th.title = 'Ordenar por esta columna';
@@ -4735,9 +4794,11 @@ document.querySelectorAll('table.db-table').forEach(function(tb){
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${escapeHtml(title)}</title>
 ${extLinks}
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,480;9..144,560;9..144,640&display=swap">
 <style>${css}</style>
 <style>${exportCss}</style>
 </head><body class="xport">
+<div id="xpProg"></div><div class="xp-grain"></div>
 <div class="xp-top"><span class="xp-brand"><i class="fa-solid fa-chart-pie"></i> MVP · Perfil del inversionista</span><span class="xp-date">Generado ${escapeHtml(dateStr)}</span><button class="xp-print" onclick="window.print()"><i class="fa-solid fa-print"></i> Imprimir / PDF</button></div>
 <div class="xp-wrap"><div class="db-detail" id="dbDetail"><div class="db-detail-content" id="dbDetailContent">${clone.innerHTML}</div></div></div>
 <div class="xp-foot"><span class="xp-foot-tag">MVP Manager · Documento confidencial · ${escapeHtml(dateStr)}</span>Preparado exclusivamente para ${escapeHtml(inv.name)}. Cifras basadas en los registros oficiales de los fondos y precios de mercado al cierre más reciente. Las valuaciones de posiciones no realizadas son estimadas y pueden variar. Este documento es informativo y no constituye una oferta ni asesoría de inversión.</div>
