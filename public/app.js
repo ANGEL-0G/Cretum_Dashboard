@@ -6820,6 +6820,7 @@ function renderFundTrackerDetail(fundId) {
         </div>
         <div class="ft-export-grp">
           <button class="ft-export-btn" data-ftexp="overview" onclick="exportFundTrackerExcel('${f.id}', this)"><i class="fa-solid fa-file-excel"></i> Descargar Excel</button>
+          <button class="ft-export-btn ft-export-btn-alt" data-ftexp="overview" onclick="exportFundTrackerHtml('${f.id}', this)"><i class="fa-solid fa-file-code"></i> Descargar HTML</button>
           ${f.companyInfo ? `<button class="ft-export-btn ft-export-btn-pdf" data-ftexp="companies" style="display:none" onclick="exportCompaniesPDF('${f.id}', this)"><i class="fa-solid fa-file-pdf"></i> Descargar PDF</button>
           <button class="ft-export-btn ft-export-btn-alt" data-ftexp="companies" style="display:none" onclick="exportCompaniesHTML('${f.id}', this)"><i class="fa-solid fa-file-code"></i> Descargar HTML</button>` : ''}
         </div>
@@ -6963,6 +6964,150 @@ body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;backgro
     `<div class="doc-sub">${escapeHtml(f.status)} · ${escapeHtml(f.confidentiality)} · Cutoff ${escapeHtml(cutoffPretty)}</div>` +
     `<div class="doc-note">Valuación corporativa. La de entrada se deriva de la apreciación del PPS (valuación actual ÷ MOIC).</div></div>` +
     `<div class="ft-co-grid">${ftCompanyCards(f)}</div></div></body></html>`;
+}
+
+// ── Export HTML del tracker (Valuation Overview) — auto-contenido, logos embebidos ──
+async function exportFundTrackerHtml(fundId, btn) {
+  const f = FUND_TRACKERS[fundId];
+  if (!f || f.placeholder) { toast('Tracker no disponible'); return; }
+  const orig = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generando…'; }
+  try {
+    computeFundTotals(f);
+    const logos = {};
+    await Promise.all(Object.entries(f.logos || {}).map(async ([name, dom]) => {
+      try {
+        const g = 'https://www.google.com/s2/favicons?sz=128&domain=' + dom;
+        const r = await fetch('/api/logo?u=' + encodeURIComponent(g));
+        if (!r.ok) return;
+        const b = await r.blob(); if (b.size < 120) return;
+        logos[name] = await new Promise(res => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = () => res(null); fr.readAsDataURL(b); });
+      } catch (e) {}
+    }));
+    const blob = new Blob([ftTrackerDocHtml(f, logos)], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `${f.name.replace(/[^a-z0-9]+/gi, '_')}_Tracker · ${dlStamp()}.html`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
+    toast('HTML del tracker descargado');
+  } catch (e) { console.error('[ft html]', e); toast('Error: ' + e.message); }
+  finally { if (btn) { btn.disabled = false; btn.innerHTML = orig; } }
+}
+
+function ftTrackerDocHtml(f, logos) {
+  const E = escapeHtml;
+  const cutoffPretty = new Date(f.cutoff + 'T00:00:00').toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
+  const genPretty = new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' });
+  const ov = f.overallTotal2 || f.overallTotal || f.activeTotal;
+  const cell = (row, c) => {
+    const v = row[c.key];
+    if (c.key === 'company') {
+      const lg = logos[row.company] ? `<img class="tlogo" src="${logos[row.company]}" alt="">` : '';
+      return `<td class="co">${lg}<span>${E(row.company)}</span></td>`;
+    }
+    const cls = c.key === 'moic' ? (' ' + moicClass(v)) : '';
+    return `<td class="num${cls}">${E(fmtTrackerCell(v, c.type))}</td>`;
+  };
+  const totRow = (label, t) => `<tr class="tot">` + f.columns.map(c => {
+    if (c.key === 'company')  return `<td class="co"><span>${E(label)}</span></td>`;
+    if (c.key === 'invested') return `<td class="num">${fmtTrackerCell(t.invested, 'money')}</td>`;
+    if (c.key === 'mtm')      return `<td class="num">${fmtTrackerCell(t.mtm, 'money')}</td>`;
+    if (c.key === 'moic')     return `<td class="num ${moicClass(t.moic)}">${fmtTrackerCell(t.moic, 'moic')}</td>`;
+    return '<td></td>';
+  }).join('') + `</tr>`;
+  const head = `<tr>` + f.columns.map(c => `<th class="${c.key === 'company' ? '' : 'num'}">${E(c.label)}</th>`).join('') + `</tr>`;
+  const table = (title, rows, tots) => `
+    <div class="sec xr"><div class="sec-h">${E(title)}</div><div class="twrap"><table><thead>${head}</thead><tbody>
+      ${rows.map(r => `<tr>${f.columns.map(c => cell(r, c)).join('')}</tr>`).join('')}${tots}
+    </tbody></table></div></div>`;
+  const secs =
+    table('Active Positions', f.active, totRow('Total — Active', f.activeTotal)) +
+    ((f.pending && f.pending.length) ? table(f.pendingTitle || 'Pending Positions', f.pending, totRow('Total — Pending', f.pendingTotal)) : '') +
+    table('Distributed Positions', f.distributed, totRow(f.overallLabel || 'Total — Overall', f.overallTotal) + (f.overallTotal2 ? totRow(f.overallTotal2.label, f.overallTotal2) : ''));
+  return `<!doctype html><html lang="es" data-org="mvp"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>${E(f.name)} — Tracker</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;700&family=DM+Mono:wght@400;500&family=Fraunces:opsz,wght@9..144,480;9..144,560;9..144,640&display=swap">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:#f7f8fb;color:#1a1f2e;font-size:14px}
+::selection{background:rgba(237,120,36,.22)}
+#prog{position:fixed;top:0;left:0;height:2.5px;width:0;background:linear-gradient(90deg,#e8650d,#f6a55c);z-index:99;transition:width .15s linear}
+.grain{position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.028;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
+.top{position:sticky;top:0;z-index:60;display:flex;align-items:center;gap:14px;background:linear-gradient(90deg,#e8650d,#ef8a3c);color:#fff;padding:12px 24px}
+.top .b{font-weight:700;font-size:15px}.top .d{font-size:12px;opacity:.9}
+.top button{margin-left:auto;border:1.5px solid rgba(255,255,255,.55);background:rgba(255,255,255,.14);color:#fff;border-radius:9px;padding:7px 15px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit}
+.wrap{max-width:1180px;margin:0 auto;padding:24px 26px 10px}
+.hero{position:relative;overflow:hidden;background:linear-gradient(135deg,#fff 62%,#fdf6ef 100%);border:1px solid #e3e7ee;border-left:4px solid #ED7824;border-radius:16px;padding:34px 38px 30px;margin-bottom:20px;box-shadow:0 2px 14px rgba(20,25,40,.06)}
+.hero::after{content:"";position:absolute;right:-70px;top:-70px;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,rgba(237,120,36,.09),transparent 65%)}
+.hero .nm{font-family:'Fraunces',Georgia,serif;font-size:clamp(26px,4vw,40px);font-weight:560;letter-spacing:-.018em;line-height:1.08;margin-bottom:8px;opacity:0;clip-path:inset(0 0 100% 0);animation:nm .9s cubic-bezier(.16,1,.3,1) .15s forwards}
+.hero .sb{font-size:14px;color:#3a4152;opacity:0;animation:up .8s cubic-bezier(.16,1,.3,1) .45s forwards}
+.hero .mt{margin-top:10px;font-family:'DM Mono',monospace;font-size:10.5px;color:#9aa1ad;letter-spacing:.6px;opacity:0;animation:up .8s cubic-bezier(.16,1,.3,1) .65s forwards}
+@keyframes up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes nm{from{opacity:0;clip-path:inset(0 0 100% 0);transform:translateY(10px)}to{opacity:1;clip-path:inset(0 0 -8% 0);transform:none}}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:20px}
+.kpi{background:#fff;border:1px solid #e3e7ee;border-radius:14px;padding:16px 18px}
+.kpi .l{font-size:10.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:#8a93a6;margin-bottom:6px}
+.kpi .v{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+.kpi .v.or{color:#E8650D}.kpi .v.gr{color:#0f9b5a}
+.sec{margin-bottom:22px}
+.sec-h{font-size:11px;font-weight:700;color:#8a93a6;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px}
+.twrap{overflow-x:auto;background:#fff;border:1px solid #e3e7ee;border-radius:12px}
+table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:760px}
+th{background:#f4f6f9;font-weight:600;color:#5b6472;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;padding:10px 12px;text-align:left;border-bottom:1px solid #e3e7ee}
+th.num{text-align:right}
+td{padding:9px 12px;border-bottom:1px solid #f0f2f6}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+td.co{display:flex;align-items:center;gap:8px;font-weight:500}
+.tlogo{width:20px;height:20px;border-radius:5px;object-fit:contain;background:#fff;border:1px solid #e3e7ee;padding:1px;flex:none}
+tr.tot td{background:#f9fafc;font-weight:700;border-top:1.5px solid #e3e7ee}
+.moic-pos,.pos{color:#0f9b5a}.moic-neg,.neg{color:#c0392b}
+.xr{opacity:0;transform:translateY(22px);transition:opacity .85s cubic-bezier(.16,1,.3,1),transform .85s cubic-bezier(.16,1,.3,1)}
+.xr.xin{opacity:1;transform:none}
+.foot{max-width:1180px;margin:6px auto 34px;padding:0 26px;font-size:10.5px;letter-spacing:.4px;color:#9aa1ad;line-height:1.7}
+.foot .t{text-transform:uppercase;letter-spacing:1.2px;display:block;margin-bottom:4px}
+@media (prefers-reduced-motion:reduce){.hero .nm,.hero .sb,.hero .mt{animation:none;opacity:1;clip-path:none}.xr{opacity:1;transform:none}}
+@media print{.hero .nm,.hero .sb,.hero .mt{animation:none!important;opacity:1!important;clip-path:none!important}.xr{opacity:1!important;transform:none!important}#prog,.grain{display:none}.top button{display:none}}
+</style></head><body>
+<div id="prog"></div><div class="grain"></div>
+<div class="top"><span class="b">MVP · Fund Tracker</span><span class="d">Generado ${E(genPretty)}</span><button onclick="window.print()">Imprimir / PDF</button></div>
+<div class="wrap">
+  <div class="hero">
+    <div class="nm">${E(f.name)}</div>
+    <div class="sb">${E(f.subtitle || 'Valuation Overview')} · ${E(f.status || '')}</div>
+    <div class="mt">Corte: ${E(cutoffPretty)} · ${E(f.confidentiality || 'CONFIDENTIAL')} · SpaceX marcado al precio vivo de SPCX</div>
+  </div>
+  <div class="kpis xr">
+    <div class="kpi"><div class="l">Capital invertido</div><div class="v or">${fmtTrackerCell(ov.invested, 'money')}</div></div>
+    <div class="kpi"><div class="l">Valor (MtM)</div><div class="v">${fmtTrackerCell(ov.mtm, 'money')}</div></div>
+    <div class="kpi"><div class="l">MOIC</div><div class="v gr">${fmtTrackerCell(ov.moic, 'moic')}</div></div>
+    <div class="kpi"><div class="l">Posiciones activas</div><div class="v">${f.active.length}</div></div>
+  </div>
+  ${secs}
+</div>
+<div class="foot"><span class="t">MVP Manager · Documento confidencial · ${E(genPretty)}</span>${E(f.name)} — ${E(f.subtitle || 'Valuation Overview')}. Cifras al corte indicado; SpaceX a precio de mercado vivo. Valuaciones preliminares y no auditadas. Este documento es informativo y no constituye una oferta ni asesoría de inversión.</div>
+<script>
+(function(){
+  if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var pr=document.getElementById('prog');
+  addEventListener('scroll',function(){var h=document.documentElement;var p=h.scrollTop/((h.scrollHeight-h.clientHeight)||1);if(pr)pr.style.width=(p*100)+'%';},{passive:true});
+  var els=[].slice.call(document.querySelectorAll('.xr'));
+  var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('xin');io.unobserve(e.target);}});},{threshold:.08});
+  els.forEach(function(el){io.observe(el);});
+  function cnt(el){
+    var t=(el.textContent||'').trim();
+    var m=t.match(/^([$]?)([\\d,]+\\.?\\d*)(x?)$/); if(!m) return;
+    var target=parseFloat(m[2].replace(/,/g,'')); if(!isFinite(target)||!target) return;
+    var dec=(m[2].split('.')[1]||'').length,t0=null;
+    function st(ts){if(!t0)t0=ts;var k=Math.min(1,(ts-t0)/950);k=1-Math.pow(1-k,3);
+      var v=dec?(target*k).toFixed(dec):Math.round(target*k).toLocaleString('en-US');
+      el.textContent=m[1]+v+m[3]; if(k<1)requestAnimationFrame(st); else el.textContent=t;}
+    requestAnimationFrame(st);
+  }
+  document.querySelectorAll('.kpi .v').forEach(cnt);
+})();
+</script>
+</body></html>`;
 }
 
 function exportCompaniesHTML(fundId, btn) {
