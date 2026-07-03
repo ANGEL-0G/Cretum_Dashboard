@@ -2206,9 +2206,9 @@ function switchView(view, isBack = false) {
   const backBtn = document.getElementById('backBtn');
   if (backBtn) backBtn.style.display = viewHistory.length > 0 ? '' : 'none';
 
-  // Botón "Regresar a Menú" en header: visible en cualquier vista que no sea el selector
-  const headerBackBtn = document.getElementById('headerBackMenuBtn');
-  if (headerBackBtn) headerBackBtn.style.display = (view === 'selector') ? 'none' : '';
+  // El logo/marca es el botón "Ir al menú": inactivo cuando ya estás en el selector.
+  const brandBtn = document.getElementById('headerBrandBtn');
+  if (brandBtn) brandBtn.disabled = (view === 'selector');
 
   closeNav();
 

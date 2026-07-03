@@ -112,9 +112,16 @@ button,input,select{font-family:var(--font)}
 }
 .header-brand{
   display:flex;align-items:center;gap:9px;
-  background:white;border-radius:var(--r-md);
+  background:white;border:none;border-radius:var(--r-md);
   padding:4px 14px 4px 4px;flex-shrink:0;
+  font-family:var(--font);cursor:pointer;
+  transition:box-shadow .15s,transform .12s;
 }
+.header-brand:hover{box-shadow:0 0 0 2px rgba(255,255,255,.5)}
+.header-brand:active{transform:scale(.98)}
+.header-brand:disabled{cursor:default}
+.header-brand:disabled:hover{box-shadow:none}
+.header-brand:disabled:active{transform:none}
 .header-mark{
   width:34px;height:34px;border-radius:var(--r-sm);
   display:flex;align-items:center;justify-content:center;
@@ -139,7 +146,7 @@ button,input,select{font-family:var(--font)}
   display:flex;align-items:center;gap:9px;font-size:13px;color:white;
   background:rgba(255,255,255,.08);border:none;cursor:pointer;
   padding:5px 12px 5px 5px;border-radius:24px;
-  margin-left:auto;font-family:var(--font);
+  font-family:var(--font);
   transition:background .15s,transform .15s;
 }
 .header-user:hover{background:rgba(255,255,255,.16)}
@@ -154,21 +161,10 @@ button,input,select{font-family:var(--font)}
   display:flex;align-items:center;gap:6px;font-size:11px;
   background:rgba(255,255,255,.12);padding:5px 12px;border-radius:20px;
   cursor:pointer;transition:background .15s;
+  margin-left:auto;   /* inicia el grupo derecho: estado + cuenta */
 }
 .header-sync:hover{background:rgba(255,255,255,.22)}
 .header-sync[title]{position:relative}
-.header-back-menu{
-  display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:500;color:#fff;
-  background:rgba(255,255,255,.12);border:none;padding:5px 12px;border-radius:20px;
-  cursor:pointer;transition:background .15s;animation:fadeIn .2s ease;
-}
-.header-back-menu:hover{background:rgba(255,255,255,.22)}
-.header-back-menu i{font-size:12px}
-@media (max-width:720px){
-  /* En móvil se oculta el texto: queda solo la CASA (distinta de la flecha Atrás) */
-  .header-back-menu{padding:6px 9px;font-size:10px;gap:4px}
-  .header-back-menu span{display:none}
-}
 .sync-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 .sync-dot.saving{background:var(--amber);animation:none}
@@ -2539,19 +2535,15 @@ button,input,select{font-family:var(--font)}
     <button class="header-back" id="backBtn" onclick="goBack()" aria-label="Atrás" title="Atrás (pantalla anterior)" style="display:none">
       <i class="fa-solid fa-arrow-left"></i>
     </button>
-    <div class="header-brand">
+    <button class="header-brand" id="headerBrandBtn" onclick="headerBackToMenu()" title="Ir al menú de empresas" aria-label="Ir al menú de empresas">
       <div class="header-mark"><img src="/logo-icon.png" alt="" class="header-logo"></div>
       <div class="header-title" id="headerBrandText">Cretum · To Do</div>
-    </div>
+    </button>
     <div class="header-sync" id="syncStatus" title="Click para sincronizar ahora">
       <div class="sync-dot" id="syncDot"></div>
       <span id="syncLabel">Sincronizado</span>
     </div>
-    <button class="header-back-menu" id="headerBackMenuBtn" onclick="headerBackToMenu()" title="Ir al menú de empresas" aria-label="Menú de empresas" style="display:none">
-      <i class="fa-solid fa-house"></i>
-      <span>Menú</span>
-    </button>
-    <button class="header-user" id="headerUserBtn" onclick="toggleSettings(event)" title="Menú">
+    <button class="header-user" id="headerUserBtn" onclick="toggleSettings(event)" title="Tu cuenta">
       <div class="header-av" id="headerAv">—</div>
       <span id="headerUser">—</span>
       <i class="fa-solid fa-chevron-down chev" style="font-size:10px;opacity:.7"></i>
