@@ -6757,7 +6757,15 @@ const FUND_TRACKERS = {
    pps y corpVal vivos, mtm = shares × pps, moic = mtm / invested, totales por delta.
    Al terminar el lock-up las investments quedarán distribuidas (distributed_at)
    → la query no regresa filas y el tracker vuelve a los valores del Excel oficial. */
-let _spcxLive = null;
+// Empresas públicas cuyo mark vive en la DB (cron Finnhub) y se aplica LIVE a los fund trackers.
+// displayMult: la fila del tracker está en base pre-split → precio real de mercado = pps × mult.
+// (Lime hizo reverse split 672-a-1 para su IPO; su DB y su fila del tracker siguen en base pre-split,
+// el cron ya escribe current_ev_pps = LIME/672, así que aquí se aplica directo sin convertir.)
+const LIVE_TRACKER_COMPANIES = [
+  { dbId: 27, rowRe: /space exploration|spacex/i, name: 'SpaceX', label: 'SPCX', displayMult: 1 },
+  { dbId: 18, rowRe: /neutron|lime/i,             name: 'Lime',   label: 'LIME', displayMult: 672 },
+];
+const _liveMarks = {};        // dbId -> { pps, evB } (en la base de la DB/tracker)
 let _spcxFetchStarted = false;
 let _spcxCurrentFund = null;
 const SPCX_ROW_RE = /space exploration|spacex/i;
@@ -6765,20 +6773,22 @@ const SPCX_ROW_RE = /space exploration|spacex/i;
 function fetchSpacexLiveMark() {
   if (_spcxFetchStarted || !sb) return;
   _spcxFetchStarted = true;
-  sb.from('investments')
-    .select('current_ev_pps,current_ev_b')
-    .eq('company_id', 27)
-    .is('distributed_at', null)
-    .limit(1)
-    .then(({ data, error }) => {
-      if (error || !data || !data.length || !data[0].current_ev_pps) return;
-      _spcxLive = { pps: data[0].current_ev_pps, evB: data[0].current_ev_b };
-      applySpacexLiveToTrackers();
-      const det = document.getElementById('ftDetail');
-      if (det && det.classList.contains('show') && _spcxCurrentFund) {
-        renderFundTrackerDetail(_spcxCurrentFund);
-      }
-    });
+  LIVE_TRACKER_COMPANIES.forEach(cfg => {
+    sb.from('investments')
+      .select('current_ev_pps,current_ev_b')
+      .eq('company_id', cfg.dbId)
+      .is('distributed_at', null)
+      .limit(1)
+      .then(({ data, error }) => {
+        if (error || !data || !data.length || !data[0].current_ev_pps) return;
+        _liveMarks[cfg.dbId] = { pps: data[0].current_ev_pps, evB: data[0].current_ev_b };
+        applySpacexLiveToTrackers();
+        const det = document.getElementById('ftDetail');
+        if (det && det.classList.contains('show') && _spcxCurrentFund) {
+          renderFundTrackerDetail(_spcxCurrentFund);
+        }
+      });
+  });
 }
 
 // Recalcula los totales de un fondo SIEMPRE desde las filas (nunca hardcodeados),
@@ -6804,22 +6814,28 @@ function computeFundTotals(f) {
 }
 
 function applySpacexLiveToTrackers() {
-  if (!_spcxLive) return;
+  if (!Object.keys(_liveMarks).length) return;
   for (const f of [FUND_TRACKERS.fundIV, FUND_TRACKERS.fundV]) {
     if (!f || f.placeholder || !f.active) continue;
-    let hit = false;
-    for (const row of f.active) {
-      if (!SPCX_ROW_RE.test(row.company) || !row.shares) continue;
-      row.pps = _spcxLive.pps;
-      if (_spcxLive.evB) row.corpVal = _spcxLive.evB;
-      row.mtm = Math.round(row.shares * _spcxLive.pps);
-      if (row.invested) row.moic = row.mtm / row.invested;
-      hit = true;
+    const notes = [];
+    for (const cfg of LIVE_TRACKER_COMPANIES) {
+      const mk = _liveMarks[cfg.dbId];
+      if (!mk) continue;
+      let hit = false;
+      for (const row of f.active) {
+        if (!cfg.rowRe.test(row.company) || !row.shares) continue;
+        row.pps = mk.pps;
+        if (mk.evB) row.corpVal = mk.evB;
+        row.mtm = Math.round(row.shares * mk.pps);
+        if (row.invested) row.moic = row.mtm / row.invested;
+        hit = true;
+      }
+      if (hit) notes.push(cfg.name + ' @ mercado (' + cfg.label + ' $' +
+        (mk.pps * cfg.displayMult).toLocaleString('en-US', { maximumFractionDigits: 2 }) + ')');
     }
-    if (!hit) continue;
-    computeFundTotals(f); // los totales se recalculan desde las filas (incluye SpaceX live)
-    f._spcxLiveNote = 'SpaceX @ mercado (SPCX $' +
-      _spcxLive.pps.toLocaleString('en-US', { maximumFractionDigits: 2 }) + ')';
+    if (!notes.length) continue;
+    computeFundTotals(f); // los totales se recalculan desde las filas (incluye marks live)
+    f._spcxLiveNote = notes.join(' · ');
   }
 }
 
