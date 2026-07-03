@@ -1263,7 +1263,7 @@ function showUndo(msg, onUndo) {
 (function initTaskSwipe() {
   let el = null, wrap = null, id = null, kind = null;
   let x0 = 0, y0 = 0, t0 = 0, dx = 0, dragging = false, decided = false;
-  const THRESH = 96;
+  const THRESH = 60;   // distancia para confirmar (más corto = más suave)
   // Táctil (no por ancho): funciona en cualquier teléfono/tablet aunque su
   // ancho CSS sea mayor a 480px.
   const isTouchUI = () => window.matchMedia('(pointer:coarse)').matches;
@@ -1285,7 +1285,7 @@ function showUndo(msg, onUndo) {
     if (!el) return;
     const ddx = e.clientX - x0, ddy = e.clientY - y0;
     if (!decided) {
-      if (Math.abs(ddx) < 8 && Math.abs(ddy) < 8) return;
+      if (Math.abs(ddx) < 5 && Math.abs(ddy) < 5) return;
       decided = true;
       if (Math.abs(ddx) <= Math.abs(ddy)) { el = null; return; }   // scroll vertical → soltar
       dragging = true; el.style.transition = 'none';
@@ -1293,9 +1293,9 @@ function showUndo(msg, onUndo) {
     if (!dragging) return;
     e.preventDefault();
     dx = ddx;
-    // Amortigua después del umbral para dar sensación física
-    const a = Math.abs(dx);
-    const show = Math.sign(dx) * (a > THRESH ? THRESH + (a - THRESH) * 0.35 : a);
+    // Sigue el dedo 1:1 hasta bien pasado el umbral; amortigua solo al final
+    const a = Math.abs(dx), soft = THRESH * 2;
+    const show = Math.sign(dx) * (a > soft ? soft + (a - soft) * 0.4 : a);
     el.style.transform = `translateX(${show}px)`;
     wrap.classList.toggle('sw-right', dx > 8);
     wrap.classList.toggle('sw-left', dx < -8);
@@ -1303,7 +1303,7 @@ function showUndo(msg, onUndo) {
   document.addEventListener('pointerup', () => {
     if (!el || !dragging) { el = null; return; }
     const vel = Math.abs(dx) / Math.max(1, performance.now() - t0);
-    const commit = Math.abs(dx) >= THRESH || vel > 0.5;
+    const commit = Math.abs(dx) >= THRESH || vel > 0.3;
     const dir = dx > 0 ? 1 : -1, _id = id, _kind = kind, _el = el;
     if (commit) {
       _el.style.transition = 'transform .2s cubic-bezier(.4,0,1,1),opacity .2s ease';
