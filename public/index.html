@@ -885,6 +885,10 @@ button,input,select{font-family:var(--font)}
              0 18px 44px -12px rgba(15,23,42,.32),
              0 6px 14px -8px rgba(15,23,42,.18);
   padding:6px;width:280px;z-index:50;
+  /* Nunca se sale de la pantalla: altura acotada + scroll interno */
+  max-height:calc(100vh - 76px);
+  max-height:calc(100dvh - 76px);
+  overflow-y:auto;overscroll-behavior:contain;
   transform-origin:top right;
   opacity:0;visibility:hidden;
   transform:scale(.96) translateY(-6px);
@@ -2435,8 +2439,16 @@ button,input,select{font-family:var(--font)}
   .modal-btn{padding:10px 18px;flex:1}
   .modal-actions{flex-direction:row;gap:8px}
 
-  /* Settings popup full-width */
-  .settings-pop{right:12px;left:12px;width:auto;top:56px}
+  /* Menú de cuenta en móvil: tarjeta cómoda bajo el header, ancho completo con
+     márgenes; entra bajando desde arriba (no desde la esquina) y scrollea
+     internamente sin arrastrar la página detrás. No invasivo. */
+  .settings-pop{
+    left:10px;right:10px;width:auto;top:56px;
+    max-height:calc(100dvh - 66px);
+    transform-origin:top center;transform:translateY(-8px) scale(.995);
+    -webkit-overflow-scrolling:touch;
+  }
+  .settings-pop.show{transform:translateY(0) scale(1)}
 
   /* Drawers (forms) — apilar date + prioridad */
   .drawer-btn,.assign-btn{padding:11px 14px;font-size:12px}
