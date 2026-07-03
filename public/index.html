@@ -71,7 +71,7 @@ html,body{overflow-x:clip;max-width:100%}
 [data-theme="dark"] .modal-cancel:hover{background:#3a3a3a}
 [data-theme="dark"] .tl-items{border-left-color:#262626}
 [data-theme="dark"] .tl-item::before{border-color:#151515}
-[data-theme="dark"] .settings-pop{background:#1a1a1a;border-color:#262626}
+[data-theme="dark"] .settings-pop{background:rgba(24,24,27,.78);border-color:rgba(255,255,255,.09);box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 18px 44px -12px rgba(0,0,0,.6),0 6px 14px -8px rgba(0,0,0,.4)}
 [data-theme="dark"] .settings-row:hover{background:rgba(255,255,255,.05)}
 [data-theme="dark"] .settings-logout:hover{background:rgba(232,123,106,.18)}
 [data-theme="dark"] .settings-userhead-av{background:rgba(93,143,245,.18);color:var(--navy-light)}
@@ -873,23 +873,50 @@ button,input,select{font-family:var(--font)}
 
 /* ── DROPDOWN MENU ── */
 .settings-pop{
-  position:absolute;top:62px;right:14px;background:white;
-  border-radius:var(--r-lg);box-shadow:0 10px 32px rgba(0,0,0,.18);
+  position:absolute;top:62px;right:14px;
+  /* Fondo glass: translúcido + blur del contenido detrás */
+  background:rgba(255,255,255,.80);
+  -webkit-backdrop-filter:blur(22px) saturate(180%);
+  backdrop-filter:blur(22px) saturate(180%);
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.6);
+  /* Sombra en capas: contacto + elevación (sin la sombra plana anterior) */
+  box-shadow:0 1px 0 rgba(255,255,255,.7) inset,
+             0 18px 44px -12px rgba(15,23,42,.32),
+             0 6px 14px -8px rgba(15,23,42,.18);
   padding:6px;width:280px;z-index:50;
-  border:1px solid var(--gray-100);
   transform-origin:top right;
   opacity:0;visibility:hidden;
-  transform:scale(.92) translateY(-8px);
-  transition:opacity .22s ease,
-             transform .32s cubic-bezier(.34,1.45,.64,1),
-             visibility 0s linear .32s;
+  transform:scale(.96) translateY(-6px);
+  /* ease-out fuerte, sin rebote; salida un poco más rápida que entrada */
+  transition:opacity .16s cubic-bezier(.23,1,.32,1),
+             transform .18s cubic-bezier(.23,1,.32,1),
+             visibility 0s linear .18s;
 }
 .settings-pop.show{
   opacity:1;visibility:visible;
   transform:scale(1) translateY(0);
-  transition:opacity .22s ease,
-             transform .32s cubic-bezier(.34,1.45,.64,1),
+  transition:opacity .2s cubic-bezier(.23,1,.32,1),
+             transform .26s cubic-bezier(.23,1,.32,1),
              visibility 0s linear 0s;
+}
+/* Navegadores sin backdrop-filter: fondo sólido para conservar contraste */
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .settings-pop{background:#fff;border-color:var(--gray-100)}
+}
+/* Stagger sutil de los ítems al abrir (cascada breve, premium) */
+.settings-pop.show > *{animation:settingsItemIn .26s cubic-bezier(.23,1,.32,1) backwards}
+.settings-pop.show > *:nth-child(1){animation-delay:.02s}
+.settings-pop.show > *:nth-child(2){animation-delay:.05s}
+.settings-pop.show > *:nth-child(3){animation-delay:.08s}
+.settings-pop.show > *:nth-child(4){animation-delay:.11s}
+.settings-pop.show > *:nth-child(5){animation-delay:.13s}
+.settings-pop.show > *:nth-child(n+6){animation-delay:.15s}
+@keyframes settingsItemIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@media (prefers-reduced-motion:reduce){
+  .settings-pop{transition:opacity .12s ease,visibility 0s linear .12s;transform:none}
+  .settings-pop.show{transform:none;transition:opacity .12s ease,visibility 0s linear 0s}
+  .settings-pop.show > *{animation:none}
 }
 
 .settings-userhead{
