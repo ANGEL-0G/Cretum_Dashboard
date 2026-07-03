@@ -2398,6 +2398,7 @@ button,input,select{font-family:var(--font)}
     flex-wrap:wrap;align-items:flex-start;
     gap:0 12px;padding:14px 42px 14px 14px;position:relative;
     background:var(--white);z-index:1;           /* opaco: tapa el fondo de acción del swipe */
+    touch-action:pan-y;   /* CLAVE: deja el scroll vertical al navegador y el gesto horizontal a la app (si no, el navegador cancela el arrastre) */
   }
   [data-theme="dark"] .list-item{background:#1a1a1a}
   .li-chk{width:24px;height:24px;border-radius:7px;font-size:12px;margin-top:1px}
@@ -4044,6 +4045,6 @@ button,input,select{font-family:var(--font)}
   </div>
 </div>
 
-<script src="/app.js?v=20260629-swipe3"></script>
+<script src="/app.js?v=20260629-swipe4"></script>
 </body>
 </html>
