@@ -163,9 +163,10 @@ button,input,select{font-family:var(--font)}
   cursor:pointer;transition:background .15s;animation:fadeIn .2s ease;
 }
 .header-back-menu:hover{background:rgba(255,255,255,.22)}
-.header-back-menu i{font-size:10px}
+.header-back-menu i{font-size:12px}
 @media (max-width:720px){
-  .header-back-menu{padding:4px 9px;font-size:10px;gap:4px}
+  /* En móvil se oculta el texto: queda solo la CASA (distinta de la flecha Atrás) */
+  .header-back-menu{padding:6px 9px;font-size:10px;gap:4px}
   .header-back-menu span{display:none}
 }
 .sync-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;animation:pulse 2s infinite}
@@ -2535,7 +2536,7 @@ button,input,select{font-family:var(--font)}
     <button class="hamburger" id="hamburgerBtn" onclick="openNav()" aria-label="Menú">
       <i class="fa-solid fa-bars"></i>
     </button>
-    <button class="header-back" id="backBtn" onclick="goBack()" aria-label="Volver" style="display:none">
+    <button class="header-back" id="backBtn" onclick="goBack()" aria-label="Atrás" title="Atrás (pantalla anterior)" style="display:none">
       <i class="fa-solid fa-arrow-left"></i>
     </button>
     <div class="header-brand">
@@ -2546,9 +2547,9 @@ button,input,select{font-family:var(--font)}
       <div class="sync-dot" id="syncDot"></div>
       <span id="syncLabel">Sincronizado</span>
     </div>
-    <button class="header-back-menu" id="headerBackMenuBtn" onclick="headerBackToMenu()" title="Regresar a Menú" style="display:none">
-      <i class="fa-solid fa-arrow-left"></i>
-      <span>Regresar a Menú</span>
+    <button class="header-back-menu" id="headerBackMenuBtn" onclick="headerBackToMenu()" title="Ir al menú de empresas" aria-label="Menú de empresas" style="display:none">
+      <i class="fa-solid fa-house"></i>
+      <span>Menú</span>
     </button>
     <button class="header-user" id="headerUserBtn" onclick="toggleSettings(event)" title="Menú">
       <div class="header-av" id="headerAv">—</div>
