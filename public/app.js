@@ -611,7 +611,8 @@ function tkRow(t, i) {
   const delay = `style="animation-delay:${Math.min(i, 12) * 30}ms"`;
   const enter = (tkToggleAnim && tkToggleAnim.id === t.id) ? ' tk-entering' : '';
   if (t.kind === 'simple') return `
-    <div class="list-item ${done ? 'done-item' : ''}${enter}" data-tid="${t.id}" ${delay}>
+    <div class="li-wrap">
+    <div class="list-item ${done ? 'done-item' : ''}${enter}" data-tid="${t.id}" data-kind="simple" ${delay}>
       <div class="li-chk ${done ? 'on' : ''}" onclick="toggle('${t.id}','simple')">✓</div>
       <div class="li-name">${escapeHtml(t.name)}</div>
       <div class="li-meta">
@@ -622,10 +623,11 @@ function tkRow(t, i) {
         ${done ? `<button class="sm-btn sm-red" onclick="toggle('${t.id}','simple')">Reabrir</button>` : ''}
       </div>
       <button class="li-del" onclick="del('${t.id}','simple')"><i class="fa-solid fa-xmark"></i></button>
-    </div>`;
+    </div></div>`;
   const p = pct(t);
   return `
-    <div class="list-item ${done ? 'done-item' : ''}${enter}" data-tid="${t.id}" ${delay}>
+    <div class="li-wrap">
+    <div class="list-item ${done ? 'done-item' : ''}${enter}" data-tid="${t.id}" data-kind="progress" ${delay}>
       <div class="li-chk ${done ? 'on' : ''}">✓</div>
       <div class="li-body" style="flex:1;min-width:0">
         <div class="li-name ${done ? 'struck' : ''}">${escapeHtml(t.name)}</div>
@@ -650,7 +652,7 @@ function tkRow(t, i) {
             </span>`}
       </div>
       <button class="li-del" onclick="del('${t.id}','progress')"><i class="fa-solid fa-xmark"></i></button>
-    </div>`;
+    </div></div>`;
 }
 
 /* ── Sección colapsable de "Completadas" (compartida por Lista y Proyectos) ── */
@@ -1216,6 +1218,104 @@ async function del(id, kind) {
   else                      state.progress = state.progress.filter(x => x.id !== id);
   scheduleSave(); render(); toast('Tarea eliminada');
 }
+
+/* ── Borrado por deslizamiento (móvil): quita sin confirmar, con "Deshacer" ── */
+function swipeDelete(id, kind) {
+  const list = kind === 'simple' ? state.simple : state.progress;
+  const idx = list.findIndex(x => x.id === id);
+  if (idx === -1) return;
+  const [removed] = list.splice(idx, 1);   // muta el arreglo real de state
+  scheduleSave(); render();
+  showUndo('Tarea eliminada', () => {
+    const l2 = kind === 'simple' ? state.simple : state.progress;
+    l2.splice(Math.min(idx, l2.length), 0, removed);   // reinserta donde estaba
+    scheduleSave(); render();
+    toast('Tarea restaurada');
+  });
+}
+
+/* Snackbar "Deshacer" (se auto-oculta a los 5s). Reutiliza un único nodo. */
+let _undoFn = null, _undoTimer = null;
+function showUndo(msg, onUndo) {
+  let bar = document.getElementById('undoBar');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'undoBar';
+    bar.innerHTML = '<span id="undoBarMsg"></span><button id="undoBarBtn" type="button">Deshacer</button>';
+    document.body.appendChild(bar);
+    bar.querySelector('#undoBarBtn').addEventListener('click', () => {
+      clearTimeout(_undoTimer); bar.classList.remove('show');
+      const fn = _undoFn; _undoFn = null;
+      if (fn) fn();
+    });
+  }
+  bar.querySelector('#undoBarMsg').textContent = msg;
+  _undoFn = onUndo;
+  bar.classList.add('show');
+  clearTimeout(_undoTimer);
+  _undoTimer = setTimeout(() => { bar.classList.remove('show'); _undoFn = null; }, 5000);
+}
+
+/* ── Gesto de deslizar en tareas (solo teléfono/touch) ──
+   Derecha = completar (verde) · Izquierda = borrar con deshacer (rojo).
+   Distingue swipe horizontal de scroll vertical; resorte de regreso si no
+   alcanza el umbral; dismissal por distancia o velocidad. */
+(function initTaskSwipe() {
+  let el = null, wrap = null, id = null, kind = null;
+  let x0 = 0, y0 = 0, t0 = 0, dx = 0, dragging = false, decided = false;
+  const THRESH = 96;
+  const onlyPhone = () => window.matchMedia('(max-width:480px)').matches;
+
+  function reset(animate) {
+    if (el) { el.style.transition = animate ? 'transform .22s cubic-bezier(.23,1,.32,1)' : ''; el.style.transform = 'translateX(0)'; }
+    if (wrap) wrap.classList.remove('sw-right', 'sw-left');
+    el = wrap = id = kind = null; dragging = decided = false;
+  }
+  document.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'touch' || !onlyPhone()) return;
+    const li = e.target.closest('.list-item');
+    if (!li || e.target.closest('input,button,select,a,.li-chk,.li-del,.li-inc')) return;
+    el = li; wrap = li.closest('.li-wrap'); if (!wrap) { el = null; return; }
+    id = li.dataset.tid; kind = li.dataset.kind;
+    x0 = e.clientX; y0 = e.clientY; t0 = performance.now(); dx = 0; dragging = decided = false;
+  }, { passive: true });
+  document.addEventListener('pointermove', (e) => {
+    if (!el) return;
+    const ddx = e.clientX - x0, ddy = e.clientY - y0;
+    if (!decided) {
+      if (Math.abs(ddx) < 8 && Math.abs(ddy) < 8) return;
+      decided = true;
+      if (Math.abs(ddx) <= Math.abs(ddy)) { el = null; return; }   // scroll vertical → soltar
+      dragging = true; el.style.transition = 'none';
+    }
+    if (!dragging) return;
+    e.preventDefault();
+    dx = ddx;
+    // Amortigua después del umbral para dar sensación física
+    const a = Math.abs(dx);
+    const show = Math.sign(dx) * (a > THRESH ? THRESH + (a - THRESH) * 0.35 : a);
+    el.style.transform = `translateX(${show}px)`;
+    wrap.classList.toggle('sw-right', dx > 8);
+    wrap.classList.toggle('sw-left', dx < -8);
+  }, { passive: false });
+  document.addEventListener('pointerup', () => {
+    if (!el || !dragging) { el = null; return; }
+    const vel = Math.abs(dx) / Math.max(1, performance.now() - t0);
+    const commit = Math.abs(dx) >= THRESH || vel > 0.5;
+    const dir = dx > 0 ? 1 : -1, _id = id, _kind = kind, _el = el;
+    if (commit) {
+      _el.style.transition = 'transform .2s cubic-bezier(.4,0,1,1),opacity .2s ease';
+      _el.style.transform = `translateX(${dir * window.innerWidth}px)`;
+      _el.style.opacity = '0';
+      if (wrap) wrap.classList.remove('sw-right', 'sw-left');
+      el = wrap = null; dragging = decided = false;
+      setTimeout(() => { dir > 0 ? toggle(_id, _kind) : swipeDelete(_id, _kind); }, 150);
+    } else {
+      reset(true);
+    }
+  }, { passive: true });
+  document.addEventListener('pointercancel', () => reset(true), { passive: true });
+})();
 
 /* Modal de confirmación interno */
 let _confirmResolve = null;

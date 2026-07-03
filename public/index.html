@@ -433,11 +433,12 @@ button,input,select{font-family:var(--font)}
 .tk-group-n{font-family:var(--mono);font-size:11px;font-weight:500;color:var(--gray-400);background:var(--gray-100);border-radius:10px;padding:0 7px;line-height:18px}
 .tk-group-label.od .tk-group-n{color:var(--red);background:var(--red-bg)}
 .tk-rows{background:var(--white);border:1px solid var(--gray-100);border-radius:var(--r-lg);overflow:hidden}
+.li-wrap{position:relative}   /* contenedor para el fondo de acción del swipe (móvil) */
 .list-item{
   display:flex;align-items:center;gap:11px;padding:11px 14px;
   border-bottom:1px solid var(--gray-100);transition:background .15s;
 }
-.tk-rows .list-item:last-child{border-bottom:none}
+.tk-rows .li-wrap:last-child .list-item{border-bottom:none}
 .list-item:hover{background:var(--gray-50)}
 .list-item.done-item{opacity:.55}
 .list-item.done-item .li-name{text-decoration:line-through;color:var(--gray-400)}
@@ -773,6 +774,25 @@ button,input,select{font-family:var(--font)}
   display:flex;align-items:center;gap:8px;box-shadow:var(--shadow-md);
 }
 .toast.show{transform:translateY(0);opacity:1}
+
+/* Snackbar "Deshacer" (borrado por swipe) */
+#undoBar{
+  position:fixed;left:50%;bottom:20px;transform:translateX(-50%) translateY(14px);
+  z-index:200;display:flex;align-items:center;gap:14px;
+  background:#1a1f2e;color:#fff;padding:11px 12px 11px 18px;border-radius:12px;
+  font-size:13px;box-shadow:0 12px 34px rgba(0,0,0,.3);
+  opacity:0;visibility:hidden;pointer-events:none;max-width:calc(100vw - 28px);
+  transition:opacity .2s ease,transform .3s cubic-bezier(.23,1,.32,1),visibility 0s linear .3s;
+}
+#undoBar.show{opacity:1;visibility:visible;pointer-events:auto;transform:translateX(-50%) translateY(0);
+  transition:opacity .2s ease,transform .3s cubic-bezier(.23,1,.32,1),visibility 0s}
+#undoBarBtn{background:none;border:none;color:#7ba7ff;font-weight:600;font-size:13px;
+  cursor:pointer;font-family:var(--font);padding:5px 8px;border-radius:7px;flex-shrink:0}
+#undoBarBtn:hover{background:rgba(255,255,255,.12)}
+@media (prefers-reduced-motion:reduce){
+  #undoBar{transition:opacity .15s ease,visibility 0s linear .15s;transform:translateX(-50%)}
+  #undoBar.show{transform:translateX(-50%)}
+}
 
 /* ── TRIGGER "NUEVA TAREA" + MODAL ── */
 .new-task-btn{
@@ -2442,6 +2462,21 @@ button,input,select{font-family:var(--font)}
   /* Botón borrar: esquina superior derecha, discreto (no compite con el contenido) */
   .li-del{position:absolute;top:11px;right:10px;font-size:16px;padding:4px;color:var(--gray-300)}
 
+  /* ── Deslizar para completar (→ verde) / borrar (← rojo) ── */
+  .li-wrap{overflow:hidden}
+  .list-item{background:var(--white);position:relative;z-index:1}   /* opaco: tapa el fondo de acción */
+  .li-wrap.sw-right{background:var(--green)}
+  .li-wrap.sw-left{background:var(--red)}
+  .li-wrap.sw-right::before{
+    content:"✓  Completar";position:absolute;inset:0;display:flex;align-items:center;
+    padding-left:22px;color:#fff;font-weight:600;font-size:13px;letter-spacing:.2px;
+  }
+  .li-wrap.sw-left::after{
+    content:"Borrar  🗑";position:absolute;inset:0;display:flex;align-items:center;justify-content:flex-end;
+    padding-right:22px;color:#fff;font-weight:600;font-size:13px;letter-spacing:.2px;
+  }
+  [data-theme="dark"] .list-item{background:#1a1a1a}
+
   /* Timeline */
   .tl-items{padding-left:14px}
   .tl-item{padding:9px 11px;flex-wrap:wrap}
@@ -4006,6 +4041,6 @@ button,input,select{font-family:var(--font)}
   </div>
 </div>
 
-<script src="/app.js?v=20260629-tasksmobile"></script>
+<script src="/app.js?v=20260629-swipe"></script>
 </body>
 </html>
