@@ -968,7 +968,7 @@ function renderEquipo() {
         <div class="team-av">${USERS[a.to]?.initials || a.to.slice(0,2).toUpperCase()}</div>
         <div style="flex:1;min-width:0">
           <div class="team-name">${escapeHtml(a.name)}</div>
-          <div class="team-sub">→ ${USERS[a.to]?.name || a.to} · ${a.due ? fmtD(a.due) : 'Sin fecha'} · ${a.prio}</div>
+          <div class="team-sub">→ ${USERS[a.to]?.name || a.to} · ${a.due ? fmtD(a.due) : 'Sin fecha'} · ${a.prio}${a.createdAt ? ` · <span class="li-created" title="${createdTitle(a.createdAt)}"><i class="fa-regular fa-clock"></i> creada ${fmtCreated(a.createdAt)}</span>` : ''}</div>
           ${progressBar}
         </div>
         ${badge}
@@ -1052,6 +1052,7 @@ function renderOtros() {
             <div class="om-task">
               <div class="om-task-name">${escapeHtml(t.name)}${progLbl}</div>
               <div class="om-task-meta">
+                ${t.createdAt ? `<span class="li-created" title="${createdTitle(t.createdAt)}"><i class="fa-regular fa-clock"></i> ${fmtCreated(t.createdAt)}</span>` : ''}
                 ${dueHtml}
                 <span class="om-prio ${prioCls}">${t.prio}</span>
                 ${assignerHtml}
