@@ -1264,7 +1264,9 @@ function showUndo(msg, onUndo) {
   let el = null, wrap = null, id = null, kind = null;
   let x0 = 0, y0 = 0, t0 = 0, dx = 0, dragging = false, decided = false;
   const THRESH = 96;
-  const onlyPhone = () => window.matchMedia('(max-width:480px)').matches;
+  // Táctil (no por ancho): funciona en cualquier teléfono/tablet aunque su
+  // ancho CSS sea mayor a 480px.
+  const isTouchUI = () => window.matchMedia('(pointer:coarse)').matches;
 
   function reset(animate) {
     if (el) { el.style.transition = animate ? 'transform .22s cubic-bezier(.23,1,.32,1)' : ''; el.style.transform = 'translateX(0)'; }
@@ -1272,7 +1274,7 @@ function showUndo(msg, onUndo) {
     el = wrap = id = kind = null; dragging = decided = false;
   }
   document.addEventListener('pointerdown', (e) => {
-    if (e.pointerType !== 'touch' || !onlyPhone()) return;
+    if (e.pointerType !== 'touch' || !isTouchUI()) return;
     const li = e.target.closest('.list-item');
     if (!li || e.target.closest('input,button,select,a,.li-chk,.li-del,.li-inc')) return;
     el = li; wrap = li.closest('.li-wrap'); if (!wrap) { el = null; return; }

@@ -2391,6 +2391,52 @@ button,input,select{font-family:var(--font)}
   .settings-pop{right:16px;width:260px}
 }
 
+/* ── Tareas en dispositivos táctiles (teléfono/tablet), sin depender del ancho ──
+   Fila aireada estilo Todoist/Things + deslizar para completar/borrar. */
+@media (pointer:coarse){
+  .list-item{
+    flex-wrap:wrap;align-items:flex-start;
+    gap:0 12px;padding:14px 42px 14px 14px;position:relative;
+    background:var(--white);z-index:1;           /* opaco: tapa el fondo de acción del swipe */
+  }
+  [data-theme="dark"] .list-item{background:#1a1a1a}
+  .li-chk{width:24px;height:24px;border-radius:7px;font-size:12px;margin-top:1px}
+  .list-item > .li-name,          /* simples */
+  .list-item > .li-body{          /* progreso */
+    flex:1 1 auto;min-width:0;
+  }
+  .li-name{font-size:14.5px;line-height:1.35;color:var(--gray-900);white-space:normal;overflow-wrap:anywhere}
+  .li-meta{                       /* meta en su propia línea, bajo el título (36px = chk 24 + gap 12) */
+    flex-basis:100%;justify-content:flex-start;
+    margin-top:9px;padding-left:36px;gap:6px 10px;
+  }
+  .li-created,.li-due,.li-prio,.li-tag{font-size:11px}
+  .li-prio{padding:2px 9px}
+  .li-prog{margin-top:7px;font-size:12px}
+  .li-prog-bar{flex:1;width:auto;max-width:200px;height:6px}
+  .li-inc{flex-basis:100%;justify-content:flex-start;margin-top:2px}
+  .li-inc input{width:84px!important;padding:7px 10px!important;font-size:14px!important}
+  .li-inc .sm-btn{padding:7px 12px;font-size:13px}
+  .li-del{position:absolute;top:11px;right:10px;font-size:16px;padding:4px;color:var(--gray-300)}
+
+  /* Deslizar: derecha = completar (verde) · izquierda = borrar (rojo) */
+  .li-wrap{overflow:hidden}
+  .li-wrap.sw-right{background:var(--green)}
+  .li-wrap.sw-left{background:var(--red)}
+  .li-wrap.sw-right::before{
+    content:"✓  Completar";position:absolute;inset:0;display:flex;align-items:center;
+    padding-left:22px;color:#fff;font-weight:600;font-size:13px;letter-spacing:.2px;
+  }
+  .li-wrap.sw-left::after{
+    content:"Borrar  🗑";position:absolute;inset:0;display:flex;align-items:center;justify-content:flex-end;
+    padding-right:22px;color:#fff;font-weight:600;font-size:13px;letter-spacing:.2px;
+  }
+  /* La fila se desliza sobre el fondo de acción */
+  .li-wrap .list-item{will-change:transform}
+  /* En táctil no hay hover-nudge que estorbe el gesto */
+  .list-item:hover{transform:none}
+}
+
 /* Celulares */
 @media (max-width:480px){
   body{font-size:13px}
@@ -2431,51 +2477,8 @@ button,input,select{font-family:var(--font)}
   .kb-card-name{font-size:13px}
   .kb-action{padding:8px}
 
-  /* ── Tareas en móvil: fila aireada (referencia Todoist / Things) ──
-     checkbox grande arriba-izquierda · título prominente · meta discreta
-     debajo alineada a la izquierda · controles de progreso en su propia
-     línea · ✕ discreta en la esquina. */
-  .list-item{
-    flex-wrap:wrap;align-items:flex-start;
-    gap:0 12px;padding:14px 42px 14px 14px;position:relative;
-  }
-  .li-chk{width:24px;height:24px;border-radius:7px;font-size:12px;margin-top:1px}
-  .list-item > .li-name,          /* simples */
-  .list-item > .li-body{          /* progreso */
-    flex:1 1 auto;min-width:0;
-  }
-  .li-name{font-size:14.5px;line-height:1.35;color:var(--gray-900);white-space:normal;overflow-wrap:anywhere}
-  /* Meta: su propia línea, alineada a la izquierda bajo el título (36px = chk 24 + gap 12) */
-  .li-meta{
-    flex-basis:100%;justify-content:flex-start;
-    margin-top:9px;padding-left:36px;gap:6px 10px;
-  }
-  .li-created,.li-due,.li-prio,.li-tag{font-size:11px}
-  .li-prio{padding:2px 9px}
-  /* Barra de progreso más ancha y aireada */
-  .li-prog{margin-top:7px;font-size:12px}
-  .li-prog-bar{flex:1;width:auto;max-width:200px;height:6px}
-  /* Controles de incremento: línea propia, no revueltos con fecha/prioridad */
-  .li-inc{flex-basis:100%;justify-content:flex-start;margin-top:2px}
-  .li-inc input{width:84px!important;padding:7px 10px!important;font-size:14px!important}
-  .li-inc .sm-btn{padding:7px 12px;font-size:13px}
-  /* Botón borrar: esquina superior derecha, discreto (no compite con el contenido) */
-  .li-del{position:absolute;top:11px;right:10px;font-size:16px;padding:4px;color:var(--gray-300)}
-
-  /* ── Deslizar para completar (→ verde) / borrar (← rojo) ── */
-  .li-wrap{overflow:hidden}
-  .list-item{background:var(--white);position:relative;z-index:1}   /* opaco: tapa el fondo de acción */
-  .li-wrap.sw-right{background:var(--green)}
-  .li-wrap.sw-left{background:var(--red)}
-  .li-wrap.sw-right::before{
-    content:"✓  Completar";position:absolute;inset:0;display:flex;align-items:center;
-    padding-left:22px;color:#fff;font-weight:600;font-size:13px;letter-spacing:.2px;
-  }
-  .li-wrap.sw-left::after{
-    content:"Borrar  🗑";position:absolute;inset:0;display:flex;align-items:center;justify-content:flex-end;
-    padding-right:22px;color:#fff;font-weight:600;font-size:13px;letter-spacing:.2px;
-  }
-  [data-theme="dark"] .list-item{background:#1a1a1a}
+  /* (El rediseño de la fila de tareas y el swipe viven en @media (pointer:coarse)
+     para que apliquen en cualquier teléfono/tablet táctil, sin depender del ancho.) */
 
   /* Timeline */
   .tl-items{padding-left:14px}
@@ -4041,6 +4044,6 @@ button,input,select{font-family:var(--font)}
   </div>
 </div>
 
-<script src="/app.js?v=20260629-swipe"></script>
+<script src="/app.js?v=20260629-swipe2"></script>
 </body>
 </html>
