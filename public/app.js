@@ -497,6 +497,22 @@ function fmtD(d) {
   if (diff === -1) return 'Ayer';
   return dt.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
 }
+
+// Fecha de creación (relativa y corta) para la mini label de las tareas.
+// Solo informativa; las tareas viejas sin createdAt no muestran nada.
+function fmtCreated(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  const startOf = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const days = Math.round((startOf(new Date()) - startOf(d)) / 86400000);
+  if (days <= 0) return 'hoy';
+  if (days === 1) return 'ayer';
+  if (days < 7) return `hace ${days} d`;
+  return d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
+}
+// Tooltip con la fecha/hora exacta de creación
+const createdTitle = (iso) => iso ? `Creada el ${new Date(iso).toLocaleString('es-MX')}` : '';
 function isOD(d) { return d && new Date(d + 'T12:00:00') < new Date(); }
 function prioC(p) { return p === 'Alta' ? 'lp-a' : p === 'Media' ? 'lp-m' : 'lp-b'; }
 function pct(t) { return Math.min(100, Math.round((t.done / t.total) * 100)); }
@@ -599,6 +615,7 @@ function tkRow(t, i) {
       <div class="li-chk ${done ? 'on' : ''}" onclick="toggle('${t.id}','simple')">✓</div>
       <div class="li-name">${escapeHtml(t.name)}</div>
       <div class="li-meta">
+        ${t.createdAt ? `<span class="li-created" title="${createdTitle(t.createdAt)}"><i class="fa-regular fa-clock"></i> ${fmtCreated(t.createdAt)}</span>` : ''}
         ${t.due ? `<span class="li-due ${od ? 'od' : ''}">${fmtD(t.due)}</span>` : ''}
         <span class="li-prio ${prioC(t.prio)}">${t.prio}</span>
         ${t.collab ? '<span class="li-tag">Colaborativa</span>' : ''}
@@ -618,6 +635,7 @@ function tkRow(t, i) {
         </div>
       </div>
       <div class="li-meta">
+        ${t.createdAt ? `<span class="li-created" title="${createdTitle(t.createdAt)}"><i class="fa-regular fa-clock"></i> ${fmtCreated(t.createdAt)}</span>` : ''}
         ${t.due ? `<span class="li-due ${od ? 'od' : ''}">${fmtD(t.due)}</span>` : ''}
         <span class="li-prio ${prioC(t.prio)}">${t.prio}</span>
         ${done
@@ -807,6 +825,7 @@ function buildKanban() {
               <div class="kb-prog"><div class="kb-prog-fill ${done ? 'complete' : ''}" style="width:${p}%"></div></div>` : ''}
             <div class="kb-card-name ${done ? 'struck' : ''}">${escapeHtml(t.name)}</div>
             <div class="kb-card-foot">
+              ${t.createdAt ? `<span class="li-created" title="${createdTitle(t.createdAt)}"><i class="fa-regular fa-clock"></i> ${fmtCreated(t.createdAt)}</span>` : ''}
               ${t.due ? `<span class="kb-due ${od ? 'od' : ''}"><i class="fa-regular fa-calendar" style="font-size:10px"></i> ${fmtD(t.due)}</span>` : ''}
               <span class="kb-prio ${prioC(t.prio)}">${t.prio}</span>
               ${t.kind === 'simple' && !done
