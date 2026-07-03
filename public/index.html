@@ -2411,11 +2411,36 @@ button,input,select{font-family:var(--font)}
   .kb-card-name{font-size:13px}
   .kb-action{padding:8px}
 
-  /* Lista: meta debajo del nombre */
-  .list-item{flex-wrap:wrap;padding:10px 12px}
-  .li-name{flex:1 1 100%;font-size:13px}
-  .li-meta{flex-basis:100%;justify-content:flex-end;margin-top:6px;gap:5px}
-  .li-del{align-self:flex-start;margin-left:6px}
+  /* ── Tareas en móvil: fila aireada (referencia Todoist / Things) ──
+     checkbox grande arriba-izquierda · título prominente · meta discreta
+     debajo alineada a la izquierda · controles de progreso en su propia
+     línea · ✕ discreta en la esquina. */
+  .list-item{
+    flex-wrap:wrap;align-items:flex-start;
+    gap:0 12px;padding:14px 42px 14px 14px;position:relative;
+  }
+  .li-chk{width:24px;height:24px;border-radius:7px;font-size:12px;margin-top:1px}
+  .list-item > .li-name,          /* simples */
+  .list-item > .li-body{          /* progreso */
+    flex:1 1 auto;min-width:0;
+  }
+  .li-name{font-size:14.5px;line-height:1.35;color:var(--gray-900);white-space:normal;overflow-wrap:anywhere}
+  /* Meta: su propia línea, alineada a la izquierda bajo el título (36px = chk 24 + gap 12) */
+  .li-meta{
+    flex-basis:100%;justify-content:flex-start;
+    margin-top:9px;padding-left:36px;gap:6px 10px;
+  }
+  .li-created,.li-due,.li-prio,.li-tag{font-size:11px}
+  .li-prio{padding:2px 9px}
+  /* Barra de progreso más ancha y aireada */
+  .li-prog{margin-top:7px;font-size:12px}
+  .li-prog-bar{flex:1;width:auto;max-width:200px;height:6px}
+  /* Controles de incremento: línea propia, no revueltos con fecha/prioridad */
+  .li-inc{flex-basis:100%;justify-content:flex-start;margin-top:2px}
+  .li-inc input{width:84px!important;padding:7px 10px!important;font-size:14px!important}
+  .li-inc .sm-btn{padding:7px 12px;font-size:13px}
+  /* Botón borrar: esquina superior derecha, discreto (no compite con el contenido) */
+  .li-del{position:absolute;top:11px;right:10px;font-size:16px;padding:4px;color:var(--gray-300)}
 
   /* Timeline */
   .tl-items{padding-left:14px}
@@ -3981,6 +4006,6 @@ button,input,select{font-family:var(--font)}
   </div>
 </div>
 
-<script src="/app.js?v=20260629-header"></script>
+<script src="/app.js?v=20260629-tasksmobile"></script>
 </body>
 </html>

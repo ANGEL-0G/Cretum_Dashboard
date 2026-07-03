@@ -627,7 +627,7 @@ function tkRow(t, i) {
   return `
     <div class="list-item ${done ? 'done-item' : ''}${enter}" data-tid="${t.id}" ${delay}>
       <div class="li-chk ${done ? 'on' : ''}">✓</div>
-      <div style="flex:1;min-width:0">
+      <div class="li-body" style="flex:1;min-width:0">
         <div class="li-name ${done ? 'struck' : ''}">${escapeHtml(t.name)}</div>
         <div class="li-prog">
           <div class="li-prog-bar"><div class="li-prog-fill" style="width:${p}%"></div></div>
@@ -640,7 +640,7 @@ function tkRow(t, i) {
         <span class="li-prio ${prioC(t.prio)}">${t.prio}</span>
         ${done
           ? `<button class="sm-btn sm-red" onclick="toggle('${t.id}','progress')">Reabrir</button>`
-          : `<span style="display:flex;align-items:center;gap:4px">
+          : `<span class="li-inc" style="display:flex;align-items:center;gap:4px">
               <input type="number" placeholder="" id="l-${t.id}"
                 title="Positivo para sumar, negativo para corregir"
                 style="width:74px;padding:5px 9px;border:1px solid var(--gray-200);border-radius:var(--r-sm);font-size:13px;text-align:center;outline:none"
