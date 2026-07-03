@@ -4622,7 +4622,7 @@ const XLATE_PATTERNS = [
   [/^(\d+) cuentas combinadas$/, '$1 combined accounts'],
   [/^Acumulado: (.+)$/, 'Cumulative: $1'],
   [/^Día (\d+) \((.+)\)$/, 'Day $1 ($2)'],
-  [/^1er cliff — tras Q2 2026.*$/, '1st cliff — after Q2 2026 (Jul–Sep 2026)'],
+  [/^1er cliff.*earnings Q2.*$/, '1st cliff — 2 days after Q2 earnings (Sep 2, 2026, official)'],
   [/^2 días tras (Q\d) (\d{4})(.*)$/, '2 days after $1 $2$3'],
   [/^Su portafolio de (.+) comprometidos vale hoy (.+)$/, 'Your portfolio of $1 committed is worth $2 today'],
 
@@ -4630,8 +4630,8 @@ const XLATE_PATTERNS = [
 const XLATE_HTML = [
   ['Liberación escalonada y ligada a desempeño dentro de la ventana estándar de <b>180 días</b>. Expira por completo ~9 de diciembre de 2026.',
    'Staggered, performance-linked release within the standard <b>180-day</b> window. Fully expires ~December 9, 2026.'],
-  ['La posición se libera en <b>dos mitades</b>. La primera (~50%) durante los primeros ~6 meses (lock-up de 180 días); la segunda (~50%) en un <b>lock-up extendido</b> que se estira hasta ~13-14 meses post-IPO (liberación final ~ agosto 2027).',
-   'The position is released in <b>two halves</b>. The first (~50%) over the first ~6 months (180-day lock-up); the second (~50%) under an <b>extended lock-up</b> stretching to ~13-14 months post-IPO (final release ~August 2027).'],
+  ['La posición se libera en <b>dos mitades</b>. La primera (~50%) durante los primeros ~6 meses (lock-up de 180 días); la segunda (~50%) en un <b>lock-up extendido</b> que se estira hasta ~15 meses post-IPO (liberación final ~ septiembre 2027).',
+   'The position is released in <b>two halves</b>. The first (~50%) over the first ~6 months (180-day lock-up); the second (~50%) under an <b>extended lock-up</b> stretching to ~15 months post-IPO (final release ~September 2027).'],
 ];
 const XLATE_LONG = [
   ['Número total de posiciones del inversionista: activas (sin distribuir) + terminadas (ya distribuidas o liquidadas).',
@@ -4650,10 +4650,10 @@ const XLATE_LONG = [
    'Positions still live (not yet distributed or liquidated).'],
   ['Liberación escalonada y ligada a desempeño dentro de la ventana de 180 días. Expira por completo ~9 dic 2026.',
    'Staggered, performance-linked release within the 180-day window. Fully expires ~Dec 9, 2026.'],
-  ['Una porción sigue un lock-up extendido (en parcialidades) hasta ~13-14 meses post-IPO; liberación final ~ago 2027.',
-   'A portion follows an extended lock-up (in installments) up to ~13-14 months post-IPO; final release ~Aug 2027.'],
-  ['Estimado con base en el S-1 de SpaceX (IPO 12-jun-2026); el prospecto final es la autoridad.',
-   'Estimated based on the SpaceX S-1 (IPO Jun 12, 2026); the final prospectus governs.'],
+  ['Una porción sigue un lock-up extendido (en parcialidades) hasta ~15 meses post-IPO; liberación final ~sep 2027.',
+   'A portion follows an extended lock-up (in installments) up to ~15 months post-IPO; final release ~Sep 2027.'],
+  ['Estructura del S-1 de SpaceX (IPO 12-jun-2026); primer earnings oficial: 2 sep 2026. El prospecto final es la autoridad.',
+   'Structure from the SpaceX S-1 (IPO Jun 12, 2026); first earnings official: Sep 2, 2026. The final prospectus governs.'],
   ['Estimaciones con el calendario del S-1 de SpaceX y el precio de mercado de hoy; los montos finales dependen del precio en cada fecha y del prospecto definitivo. No incluye el bono condicional de +10%.',
    "Estimates based on the SpaceX S-1 schedule and today's market price; final amounts depend on the price at each date and the definitive prospectus. Excludes the conditional +10% bonus."],
   ['Posiciones que el fondo subyacente liquidó y cuyo importe se reinvirtió en un vehículo directo de SpaceX (Serie 26A QP). La parte reinvertida no es efectivo devuelto al inversionista; el resto (si lo hay) sí se entregó en efectivo.',
@@ -5595,23 +5595,27 @@ function companyTheme(name) {
   if (/epic|automattic|asana|patreon|udemy|rapidsos|bluevoyant|cohesity|trusted|wefox|job and talent|jobandtalent|loft|pinterest|spotify|airbnb|draftkings/.test(n)) return 'Software & Consumo';
   return 'Otros';
 }
+// Calendario re-anclado al PRIMER EARNINGS OFICIAL de SpaceX: 2 sep 2026 (IR SpaceX, confirmado).
+// El 1er cliff es 2 días hábiles tras earnings; los bloques 7% van cada ~15 días tras el cliff.
+// El día 180 (9 dic 2026) es fijo desde el IPO (12 jun 2026). Earnings Q3/Q4/2027: estimados
+// con la misma cadencia (~63 días tras el cierre del trimestre, como el Q2 oficial).
 const SPX_LOCKUP_B = [
-  { date: '2026-07-31', pct: '20%', label: '1er cliff (tras Q2 2026)' },
-  { date: '2026-08-21', pct: '7%',  label: 'Día 70' },
-  { date: '2026-09-10', pct: '7%',  label: 'Día 90' },
-  { date: '2026-09-25', pct: '7%',  label: 'Día 105' },
-  { date: '2026-10-10', pct: '7%',  label: 'Día 120' },
-  { date: '2026-10-25', pct: '7%',  label: 'Día 135' },
-  { date: '2026-11-15', pct: '28%', label: '2º cliff (tras Q3 2026)' },
+  { date: '2026-09-04', pct: '20%', label: '1er cliff (2 días tras earnings Q2 · 2 sep 2026, oficial)' },
+  { date: '2026-09-21', pct: '7%',  label: 'Bloque 1 (~15 días tras el cliff)' },
+  { date: '2026-10-06', pct: '7%',  label: 'Bloque 2' },
+  { date: '2026-10-21', pct: '7%',  label: 'Bloque 3' },
+  { date: '2026-11-05', pct: '7%',  label: 'Bloque 4' },
+  { date: '2026-11-20', pct: '7%',  label: 'Bloque 5' },
+  { date: '2026-12-04', pct: '28%', label: '2º cliff (tras earnings Q3 2026, est.)' },
   { date: '2026-12-09', pct: 'Remanente', label: 'Día 180 — expiración total' },
 ];
 const SPX_LOCKUP_A_EXT = [
-  { date: '2027-02-15', pct: '20%', label: 'Lock-up extendido (tras Q4 2026)' },
+  { date: '2027-03-05', pct: '20%', label: 'Lock-up extendido (tras earnings Q4 2026, est.)' },
   { date: '2027-03-19', pct: '10%', label: 'Día 280' },
-  { date: '2027-05-15', pct: '20%', label: 'Tras Q1 2027' },
   { date: '2027-05-18', pct: '10%', label: 'Día 340' },
+  { date: '2027-06-04', pct: '20%', label: 'Tras earnings Q1 2027 (est.)' },
   { date: '2027-06-13', pct: '20%', label: 'Día 366' },
-  { date: '2027-08-15', pct: '20%', label: 'Tras Q2 2027 — liberación final' },
+  { date: '2027-09-03', pct: '20%', label: 'Tras earnings Q2 2027 (est.) — liberación final' },
 ];
 function spxStructures(seriesName) {
   const s = seriesName || '';
@@ -5626,39 +5630,39 @@ const SPX_STRUCTURES = {
     label: 'Lock-up escalonado de 180 días',
     summary: 'Liberación escalonada y ligada a desempeño dentro de la ventana estándar de <b>180 días</b>. Expira por completo ~9 de diciembre de 2026.',
     phases: [
-      { hito: '1er cliff — tras Q2 2026 (jul–sep 2026)', pct: '20%', detalle: 'Acumulado: 20%.' },
-      { hito: 'Bono por desempeño', pct: '+10%', detalle: 'Si la acción cotiza ≥30% arriba del IPO en 5 de 10 días consecutivos (pre-Q2). Acumulado: 30%.' },
-      { hito: 'Día 70 (~21 ago 2026)', pct: '7%', detalle: 'Acumulado: 37%.' },
-      { hito: 'Día 90 (~10 sep 2026)', pct: '7%', detalle: 'Acumulado: 44%.' },
-      { hito: 'Día 105 (~25 sep 2026)', pct: '7%', detalle: 'Acumulado: 51%.' },
-      { hito: 'Día 120 (~10 oct 2026)', pct: '7%', detalle: 'Acumulado: 58%.' },
-      { hito: 'Día 135 (~25 oct 2026)', pct: '7%', detalle: 'Acumulado: 65%.' },
-      { hito: '2º cliff — tras Q3 2026 (oct–dic 2026)', pct: '28%', detalle: 'Acumulado: 93%.' },
-      { hito: 'Día 180 (~9 dic 2026)', pct: 'Remanente', detalle: 'Expiración total. Acumulado: 100%.' },
+      { hito: '1er cliff — 2 días tras earnings Q2 (~4 sep 2026)', pct: '20%', detalle: 'Earnings Q2 confirmado: 2 sep 2026 (oficial, IR SpaceX). Acumulado: 20%.' },
+      { hito: 'Bono por desempeño', pct: '+10%', detalle: 'Si la acción cotiza ≥30% arriba del IPO en 5 de 10 días consecutivos (pre-earnings Q2). Acumulado: 30%.' },
+      { hito: 'Bloque 1 (~21 sep 2026)', pct: '7%', detalle: 'Acumulado: 37%.' },
+      { hito: 'Bloque 2 (~6 oct 2026)', pct: '7%', detalle: 'Acumulado: 44%.' },
+      { hito: 'Bloque 3 (~21 oct 2026)', pct: '7%', detalle: 'Acumulado: 51%.' },
+      { hito: 'Bloque 4 (~5 nov 2026)', pct: '7%', detalle: 'Acumulado: 58%.' },
+      { hito: 'Bloque 5 (~20 nov 2026)', pct: '7%', detalle: 'Acumulado: 65%.' },
+      { hito: '2º cliff — tras earnings Q3 2026 (~4 dic 2026, est.)', pct: '28%', detalle: 'Acumulado: 93%.' },
+      { hito: 'Día 180 (9 dic 2026)', pct: 'Remanente', detalle: 'Expiración total. Acumulado: 100%.' },
     ],
-    nota: 'Fechas y porcentajes estimados con base en el S-1 de SpaceX (mayo 2026); el prospecto final es la autoridad.',
+    nota: 'Estructura y porcentajes del S-1 de SpaceX (mayo 2026). Primer earnings OFICIAL: 2 sep 2026 (IR SpaceX); earnings posteriores estimados con la misma cadencia. El prospecto final es la autoridad.',
   },
   A: {
-    label: 'Liberación en dos mitades (hasta ~13 meses)',
-    summary: 'La posición se libera en <b>dos mitades</b>. La primera (~50%) durante los primeros ~6 meses (lock-up de 180 días); la segunda (~50%) en un <b>lock-up extendido</b> que se estira hasta ~13-14 meses post-IPO (liberación final ~ agosto 2027).',
+    label: 'Liberación en dos mitades (hasta ~15 meses)',
+    summary: 'La posición se libera en <b>dos mitades</b>. La primera (~50%) durante los primeros ~6 meses (lock-up de 180 días); la segunda (~50%) en un <b>lock-up extendido</b> que se estira hasta ~15 meses post-IPO (liberación final ~ septiembre 2027).',
     groups: [
       { label: 'Primera mitad (~50%) — lock-up de 180 días', phases: [
-        { hito: '2 días tras Q2 2026', pct: '20%', detalle: 'Primer cliff de esta mitad.' },
-        { hito: '~mismo período', pct: '+10% bonus', detalle: 'Solo si el precio cierra ≥30% arriba del precio de oferta en 5 de los 10 días siguientes a Q2 2026.' },
-        { hito: 'Cada 15-20 días', pct: '7% por bloque', detalle: 'Bloques sucesivos (~ago–oct 2026).' },
-        { hito: 'Tras resultados Q3', pct: '28%', detalle: '~noviembre 2026.' },
-        { hito: 'Día 180 (~9 dic 2026)', pct: 'Remanente', detalle: 'Cierre de la primera mitad.' },
+        { hito: '2 días tras earnings Q2 (~4 sep 2026)', pct: '20%', detalle: 'Primer cliff de esta mitad. Earnings Q2 confirmado: 2 sep 2026 (oficial).' },
+        { hito: '~mismo período', pct: '+10% bonus', detalle: 'Solo si el precio cierra ≥30% arriba del precio de oferta en 5 de los 10 días siguientes al earnings Q2.' },
+        { hito: 'Cada ~15 días', pct: '7% por bloque', detalle: 'Bloques sucesivos (~sep–nov 2026).' },
+        { hito: 'Tras earnings Q3', pct: '28%', detalle: '~diciembre 2026 (est.).' },
+        { hito: 'Día 180 (9 dic 2026)', pct: 'Remanente', detalle: 'Cierre de la primera mitad.' },
       ] },
       { label: 'Segunda mitad (~50%) — lock-up extendido (patrón 20/10/20/10/20/20)', phases: [
-        { hito: '2 días tras Q4 2026 (~feb 2027)', pct: '20%', detalle: 'Inicio del lock-up extendido.' },
+        { hito: '2 días tras earnings Q4 2026 (~mar 2027, est.)', pct: '20%', detalle: 'Inicio del lock-up extendido.' },
         { hito: 'Día 280 (~19 mar 2027)', pct: '10%', detalle: '' },
-        { hito: '2 días tras Q1 2027 (~may 2027)', pct: '20%', detalle: '' },
         { hito: 'Día 340 (~18 may 2027)', pct: '10%', detalle: '' },
+        { hito: '2 días tras earnings Q1 2027 (~jun 2027, est.)', pct: '20%', detalle: '' },
         { hito: 'Día 366 (~13 jun 2027)', pct: '20%', detalle: '' },
-        { hito: '2 días tras Q2 2027 (~ago 2027)', pct: '20%', detalle: 'Remanente — liberación final.' },
+        { hito: '2 días tras earnings Q2 2027 (~sep 2027, est.)', pct: '20%', detalle: 'Remanente — liberación final.' },
       ] },
     ],
-    nota: 'Fechas y porcentajes estimados con base en el S-1 de SpaceX (mayo 2026); el prospecto final es la autoridad. Liquidez total ~ agosto 2027 (~13-14 meses post-IPO).',
+    nota: 'Estructura y porcentajes del S-1 de SpaceX (mayo 2026). Primer earnings OFICIAL: 2 sep 2026 (IR SpaceX); earnings posteriores estimados con la misma cadencia. El prospecto final es la autoridad. Liquidez total ~ septiembre 2027 (~15 meses post-IPO).',
   },
 };
 function spxShort(sname) {
@@ -5767,7 +5771,7 @@ function buildLp360(positions, investorIds) {
     const nextB = SPX_LOCKUP_B.find(e => e.date >= today);
     const blocks = [];
     if (by.B.length) blocks.push({ scope: by.B.join(' · '), summary: 'Liberación escalonada y ligada a desempeño dentro de la ventana de 180 días. Expira por completo ~9 dic 2026.' });
-    if (by.A.length) blocks.push({ scope: by.A.join(' · '), summary: 'Una porción sigue un lock-up extendido (en parcialidades) hasta ~13-14 meses post-IPO; liberación final ~ago 2027.' });
+    if (by.A.length) blocks.push({ scope: by.A.join(' · '), summary: 'Una porción sigue un lock-up extendido (en parcialidades) hasta ~15 meses post-IPO; liberación final ~sep 2027.' });
     lockup = { blocks, next: nextB || null, detail: spxLockupDetail(spxPos) };
   }
   _lp360 = { companyExp, themeExp };
@@ -5883,7 +5887,7 @@ function renderInvestorDetail(inv, contacts, positions) {
     <div class="db-section-h">Lock-up SpaceX · liquidez estimada</div>
     ${_lp.lockup.next ? `<div class="lp-lock-next"><i class="fa-solid fa-unlock"></i> Próxima liberación estimada: <b>${fmtEventDate(_lp.lockup.next.date)}</b> &middot; ${escapeHtml(_lp.lockup.next.pct)} de la posición</div>` : ''}
     ${_lp.lockup.blocks.map(b => `<div class="lp-lock-block"><div class="lp-lock-scope">${escapeHtml(b.scope)}</div><div class="lp-lock-sum">${escapeHtml(b.summary)}</div></div>`).join('')}
-    <div class="lp-events-note">Estimado con base en el S-1 de SpaceX (IPO 12-jun-2026); el prospecto final es la autoridad.</div>
+    <div class="lp-events-note">Estructura del S-1 de SpaceX (IPO 12-jun-2026); primer earnings oficial: 2 sep 2026. El prospecto final es la autoridad.</div>
     ${_lp.lockup.detail ? `<details class="lp-distdetail"><summary><i class="fa-solid fa-circle-info"></i> Información detallada de distribución</summary><div class="lp-dd-body">${_lp.lockup.detail}</div></details>` : ''}
   </div>` : '';
   const html = `
