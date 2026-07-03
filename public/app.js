@@ -1234,6 +1234,23 @@ function swipeDelete(id, kind) {
   });
 }
 
+/* ── Completar por deslizamiento (→): pide confirmación para no completar por
+   accidente. Si la tarea ya estaba completada, el gesto la reabre (sin pedir). ── */
+async function swipeComplete(id, kind) {
+  const list = kind === 'simple' ? state.simple : state.progress;
+  const t = list.find(x => x.id === id);
+  if (!t) return;
+  const wasDone = kind === 'simple' ? !!t.done : t.done >= t.total;
+  if (wasDone) { toggle(id, kind); return; }   // reabrir: no requiere confirmación
+  const ok = await showConfirm('¿Completar tarea?', `"${t.name}" se marcará como completada.`);
+  if (!ok) return;                              // la fila ya volvió a su lugar
+  const t2 = list.find(x => x.id === id);
+  if (!t2) return;
+  t2.done = kind === 'simple' ? true : t2.total;
+  tkToggleAnim = { id, becameDone: true };
+  scheduleSave(); render(); toast('Tarea completada ✓');
+}
+
 /* Snackbar "Deshacer" (se auto-oculta a los 5s). Reutiliza un único nodo. */
 let _undoFn = null, _undoTimer = null;
 function showUndo(msg, onUndo) {
@@ -1263,7 +1280,7 @@ function showUndo(msg, onUndo) {
 (function initTaskSwipe() {
   let el = null, wrap = null, id = null, kind = null;
   let x0 = 0, y0 = 0, t0 = 0, dx = 0, dragging = false, decided = false;
-  const THRESH = 60;   // distancia para confirmar (más corto = más suave)
+  const THRESH = 92;   // distancia para disparar la acción (más alto = menos sensible)
   // Táctil (no por ancho): funciona en cualquier teléfono/tablet aunque su
   // ancho CSS sea mayor a 480px.
   const isTouchUI = () => window.matchMedia('(pointer:coarse)').matches;
@@ -1285,9 +1302,9 @@ function showUndo(msg, onUndo) {
     if (!el) return;
     const ddx = e.clientX - x0, ddy = e.clientY - y0;
     if (!decided) {
-      if (Math.abs(ddx) < 5 && Math.abs(ddy) < 5) return;
+      if (Math.abs(ddx) < 8 && Math.abs(ddy) < 8) return;
       decided = true;
-      if (Math.abs(ddx) <= Math.abs(ddy)) { el = null; return; }   // scroll vertical → soltar
+      if (Math.abs(ddx) < Math.abs(ddy) * 1.2) { el = null; return; }   // más vertical → es scroll
       dragging = true; el.style.transition = 'none';
     }
     if (!dragging) return;
@@ -1302,18 +1319,24 @@ function showUndo(msg, onUndo) {
   }, { passive: false });
   document.addEventListener('pointerup', () => {
     if (!el || !dragging) { el = null; return; }
+    // Menos sensible: exige distancia clara O un flick decidido (no un roce)
     const vel = Math.abs(dx) / Math.max(1, performance.now() - t0);
-    const commit = Math.abs(dx) >= THRESH || vel > 0.3;
-    const dir = dx > 0 ? 1 : -1, _id = id, _kind = kind, _el = el;
-    if (commit) {
-      _el.style.transition = 'transform .2s cubic-bezier(.4,0,1,1),opacity .2s ease';
-      _el.style.transform = `translateX(${dir * window.innerWidth}px)`;
-      _el.style.opacity = '0';
-      if (wrap) wrap.classList.remove('sw-right', 'sw-left');
-      el = wrap = null; dragging = decided = false;
-      setTimeout(() => { dir > 0 ? toggle(_id, _kind) : swipeDelete(_id, _kind); }, 150);
-    } else {
+    const commit = Math.abs(dx) >= THRESH || (vel > 0.55 && Math.abs(dx) > 40);
+    const dir = dx > 0 ? 1 : -1, _id = id, _kind = kind, _el = el, _wrap = wrap;
+    if (!commit) { reset(true); return; }
+    if (dir > 0) {
+      // Completar: la fila REGRESA a su lugar y se pide confirmación (evita
+      // completar por accidente). Si se confirma, render la mueve a completadas.
       reset(true);
+      swipeComplete(_id, _kind);
+    } else {
+      // Borrar: la fila sale de pantalla y se borra con opción de "Deshacer".
+      _el.style.transition = 'transform .2s cubic-bezier(.4,0,1,1),opacity .2s ease';
+      _el.style.transform = `translateX(${-window.innerWidth}px)`;
+      _el.style.opacity = '0';
+      if (_wrap) _wrap.classList.remove('sw-right', 'sw-left');
+      el = wrap = null; dragging = decided = false;
+      setTimeout(() => swipeDelete(_id, _kind), 150);
     }
   }, { passive: true });
   document.addEventListener('pointercancel', () => reset(true), { passive: true });
