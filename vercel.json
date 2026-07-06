@@ -23,6 +23,13 @@
     { "src": "public/fonts/*.ttf",       "use": "@vercel/static" }
   ],
   "routes": [
+    { "src": "/(.*)", "continue": true, "headers": {
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "SAMEORIGIN",
+        "Referrer-Policy": "strict-origin-when-cross-origin",
+        "Permissions-Policy": "geolocation=(), microphone=(), camera=(), payment=()"
+    } },
     { "src": "/api/tasks",              "dest": "/api/tasks.js" },
     { "src": "/api/reminder",           "dest": "/api/reminder.js" },
     { "src": "/api/config",             "dest": "/api/config.js" },

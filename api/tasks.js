@@ -34,8 +34,24 @@ async function getStore() {
   };
 }
 
+// Orígenes permitidos para CORS. El frontend se sirve del MISMO deployment (same-origin,
+// no necesita CORS); esta lista solo habilita los dominios propios como cross-origin.
+// Los *.vercel.app (previews) se permiten por sufijo. Cualquier otro origen no recibe
+// cabecera CORS → el navegador bloquea la lectura de la respuesta.
+const ALLOWED_ORIGINS = [
+  'https://cretumdesk.com',
+  'https://www.cretumdesk.com',
+];
+function applyCors(req, res) {
+  const origin = req.headers.origin;
+  if (origin && (ALLOWED_ORIGINS.includes(origin) || /^https:\/\/[a-z0-9-]+\.vercel\.app$/.test(origin))) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+  }
+}
+
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  applyCors(req, res);
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
