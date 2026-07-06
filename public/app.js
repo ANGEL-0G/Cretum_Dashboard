@@ -535,7 +535,7 @@ function render() {
   const myInvites = state.invites.filter(iv => iv.to === currentUser);
   document.getElementById('invitesEl').innerHTML = myInvites.map(iv => {
     const isProg = typeof iv.total === 'number' && iv.total > 0;
-    const progLbl = isProg ? ` · ${iv.total} ${iv.unit || 'unidades'}` : '';
+    const progLbl = isProg ? ` · ${iv.total} ${escapeHtml(iv.unit || 'unidades')}` : '';
     return `
     <div class="tk-invite">
       <div class="tk-invite-info">
@@ -633,7 +633,7 @@ function tkRow(t, i) {
         <div class="li-name ${done ? 'struck' : ''}">${escapeHtml(t.name)}</div>
         <div class="li-prog">
           <div class="li-prog-bar"><div class="li-prog-fill" style="width:${p}%"></div></div>
-          <span>${t.done}/${t.total} ${t.unit} · ${p}%</span>
+          <span>${t.done}/${t.total} ${escapeHtml(t.unit)} · ${p}%</span>
         </div>
       </div>
       <div class="li-meta">
@@ -823,7 +823,7 @@ function buildKanban() {
           return `<div class="kb-card ${done ? 'done-card' : ''}" ${delay}>
             <button class="kb-del" onclick="del('${t.id}','${t.kind}')" title="Eliminar"><i class="fa-solid fa-xmark"></i></button>
             ${p !== null ? `
-              <div class="kb-prog-label">${t.done}/${t.total} ${t.unit}</div>
+              <div class="kb-prog-label">${t.done}/${t.total} ${escapeHtml(t.unit)}</div>
               <div class="kb-prog"><div class="kb-prog-fill ${done ? 'complete' : ''}" style="width:${p}%"></div></div>` : ''}
             <div class="kb-card-name ${done ? 'struck' : ''}">${escapeHtml(t.name)}</div>
             <div class="kb-card-foot">
@@ -890,7 +890,7 @@ function buildTimeline() {
             ${p !== null ? `
               <div style="margin-top:5px">
                 <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--gray-400);margin-bottom:2px">
-                  <span>${t.done}/${t.total} ${t.unit}</span><span>${p}%</span>
+                  <span>${t.done}/${t.total} ${escapeHtml(t.unit)}</span><span>${p}%</span>
                 </div>
                 <div style="height:5px;background:var(--gray-100);border-radius:3px;overflow:hidden">
                   <div style="height:100%;background:${done ? 'var(--green)' : 'var(--navy)'};width:${p}%;border-radius:3px"></div>
@@ -959,7 +959,7 @@ function renderEquipo() {
       progressBar = `
         <div class="team-prog-wrap">
           <div class="team-prog-bar"><div class="team-prog-fill" style="width:${pct}%"></div></div>
-          <span class="team-prog-lbl">${task.done}/${task.total} ${task.unit || ''}</span>
+          <span class="team-prog-lbl">${task.done}/${task.total} ${escapeHtml(task.unit || '')}</span>
         </div>`;
     } else {
       badge = '<span class="team-status ts-ok"><i class="fa-solid fa-circle-play"></i> En progreso</span>';
@@ -1035,7 +1035,7 @@ function renderOtros() {
       } else {
         const taskRows = tasks.map(t => {
           const isProg = typeof t.done === 'number';
-          const progLbl = isProg ? ` · ${t.done}/${t.total} ${t.unit || 'unidades'}` : '';
+          const progLbl = isProg ? ` · ${t.done}/${t.total} ${escapeHtml(t.unit || 'unidades')}` : '';
           const assignerId = getAssignerId(t);
           let assignerHtml;
           if (!assignerId || assignerId === uid) {
