@@ -4737,7 +4737,7 @@ const XLATE_PATTERNS = [
   [/^Recompras y reinversiones \((\d+)\)$/, 'Repurchases & Reinvestments ($1)'],
   [/^Distribuciones · Oportunidades en directo \(SPVs\) \((\d+)\)$/, 'Distributions · Direct Opportunities (SPVs) ($1)'],
   [/^Distribuciones · Fondos MVP \((\d+)\)$/, 'Distributions · MVP Funds ($1)'],
-  [/^Próximas liberaciones — valor estimado al precio actual de SPCX \((.+)\)$/i, 'Upcoming releases — estimated value at current SPCX price ($1)'],
+  [/^Próximas liberaciones — calendario estimado$/, 'Upcoming releases — estimated schedule'],
   [/^Próxima liberación estimada:$/, 'Next estimated release:'],
   [/^(\d+%) de la posición$/, '$1 of the position'],
   [/^Serie ([\w-]+)$/, 'Series $1'],
@@ -4776,8 +4776,8 @@ const XLATE_LONG = [
    'A portion follows an extended lock-up (in installments) up to ~14 months post-IPO; final release ~Aug 2027.'],
   ['Estructura del S-1 de SpaceX (IPO 12-jun-2026); primer earnings aún no oficial — 1er cliff estimado: 17 ago 2026. El prospecto final es la autoridad.',
    'Structure from the SpaceX S-1 (IPO Jun 12, 2026); first earnings not yet official — 1st cliff estimated: Aug 17, 2026. The final prospectus governs.'],
-  ['Estimaciones con el calendario del S-1 de SpaceX y el precio de mercado de hoy; los montos finales dependen del precio en cada fecha y del prospecto definitivo. El bono por desempeño (+10%) es condicional y, de cumplirse, adelanta ese monto del remanente del día 180 — no son acciones adicionales, por eso no suma al total.',
-   "Estimates based on the SpaceX S-1 schedule and today's market price; final amounts depend on the price at each date and the definitive prospectus. The performance bonus (+10%) is conditional and, if met, brings that amount forward from the day-180 remainder — it is not additional shares, so it does not add to the total."],
+  ['Calendario del S-1 de SpaceX; las fechas ligadas a earnings son estimadas y el prospecto definitivo es la autoridad. El bono por desempeño (+10%) es condicional y, de cumplirse, adelanta esas acciones del remanente del día 180 — no son acciones adicionales, por eso no suma al total.',
+   'Schedule from the SpaceX S-1; earnings-linked dates are estimates and the definitive prospectus governs. The performance bonus (+10%) is conditional and, if met, brings those shares forward from the day-180 remainder — they are not additional shares, so they do not add to the total.'],
   ['Posiciones que el fondo subyacente liquidó y cuyo importe se reinvirtió en un vehículo directo de SpaceX (Serie 26A QP). La parte reinvertida no es efectivo devuelto al inversionista; el resto (si lo hay) sí se entregó en efectivo.',
    'Positions liquidated by the underlying fund whose proceeds were reinvested into a direct SpaceX vehicle (Series 26A QP). The reinvested portion is not cash returned to the investor; the remainder (if any) was paid in cash.'],
 ];
@@ -4987,14 +4987,14 @@ async function exportInvestorHtml() {
         ev.sort((a, b) => a.date.localeCompare(b.date));
         if (ev.length && price > 0) {
           const F = d => new Date(d + 'T12:00:00').toLocaleDateString(LOC, { day: 'numeric', month: 'short', year: 'numeric' });
-          const rows = ev.map(e => `<tr${e.bonus ? ' class="xp-liq-bono"' : ''}><td>${e.dlbl ? escapeHtml(e.dlbl) : F(e.date)}</td><td>${escapeHtml(e.label)}</td><td class="num">${e.bonus ? '+' : ''}${Math.round(e.sh).toLocaleString('en-US')}</td><td class="num"><b>${e.bonus ? '+' : ''}${fmtUsdShort(e.sh * price)}</b></td></tr>`).join('');
+          const rows = ev.map(e => `<tr${e.bonus ? ' class="xp-liq-bono"' : ''}><td>${e.dlbl ? escapeHtml(e.dlbl) : F(e.date)}</td><td>${escapeHtml(e.label)}</td><td class="num">${e.bonus ? '+' : ''}${Math.round(e.sh).toLocaleString('en-US')}</td></tr>`).join('');
           const tot = ev.reduce((s, e) => s + (e.bonus ? 0 : e.sh), 0);
           const tbl = document.createElement('div');
           tbl.className = 'xp-liq';
-          tbl.innerHTML = `<div class="xp-liq-h">Próximas liberaciones — valor estimado al precio actual de SPCX ($${price.toFixed(2)})</div>
-            <table class="db-table"><thead><tr><th>Fecha est.</th><th>Evento</th><th class="num">Acciones</th><th class="num">Valor estimado</th></tr></thead>
-            <tbody>${rows}<tr class="xp-liq-tot"><td colspan="2">Total por liberar</td><td class="num">${Math.round(tot).toLocaleString('en-US')}</td><td class="num"><b>${fmtUsdShort(tot * price)}</b></td></tr></tbody></table>
-            <div class="xp-liq-note">Estimaciones con el calendario del S-1 de SpaceX y el precio de mercado de hoy; los montos finales dependen del precio en cada fecha y del prospecto definitivo. El bono por desempeño (+10%) es condicional y, de cumplirse, adelanta ese monto del remanente del día 180 — no son acciones adicionales, por eso no suma al total.</div>`;
+          tbl.innerHTML = `<div class="xp-liq-h">Próximas liberaciones — calendario estimado</div>
+            <table class="db-table"><thead><tr><th>Fecha est.</th><th>Evento</th><th class="num">Acciones</th></tr></thead>
+            <tbody>${rows}<tr class="xp-liq-tot"><td colspan="2">Total por liberar</td><td class="num">${Math.round(tot).toLocaleString('en-US')}</td></tr></tbody></table>
+            <div class="xp-liq-note">Calendario del S-1 de SpaceX; las fechas ligadas a earnings son estimadas y el prospecto definitivo es la autoridad. El bono por desempeño (+10%) es condicional y, de cumplirse, adelanta esas acciones del remanente del día 180 — no son acciones adicionales, por eso no suma al total.</div>`;
           const lock = [...clone.querySelectorAll('.db-section')].find(s => (s.querySelector('.db-section-h')?.textContent || '').startsWith('Lock-up'));
           if (lock) lock.appendChild(tbl);
         }
