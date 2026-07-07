@@ -4977,6 +4977,9 @@ async function exportInvestorHtml() {
         const ev = [];
         SPX_LOCKUP_B.forEach(e => { if (e.date >= today) ev.push({ ...e, sh: (pctNum(e.pct) / 100) * (sB + sA / 2) }); });
         SPX_LOCKUP_A_EXT.forEach(e => { if (e.date >= today) ev.push({ ...e, sh: (pctNum(e.pct) / 100) * (sA / 2) }); });
+        // Solo hitos que le liberan acciones a ESTE inversionista (sin filas en $0 del calendario que no le aplica)
+        const evReal = ev.filter(e => e.sh >= 0.5);
+        ev.length = 0; ev.push(...evReal);
         ev.sort((a, b) => a.date.localeCompare(b.date));
         if (ev.length && price > 0) {
           const F = d => new Date(d + 'T12:00:00').toLocaleDateString(LOC, { day: 'numeric', month: 'short', year: 'numeric' });
