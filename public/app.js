@@ -4727,7 +4727,7 @@ const XLATE_EXACT = {
   'Lock-up escalonado de 180 días': '180-day staggered lock-up', 'Liberación en dos mitades (hasta ~14 meses)': 'Release in two halves (up to ~14 months)',
   'Primera mitad (~50%) — lock-up de 180 días': 'First half (~50%) — 180-day lock-up',
   'Segunda mitad (~50%) — lock-up extendido (patrón 20/10/20/10/20/20)': 'Second half (~50%) — extended lock-up (20/10/20/10/20/20 pattern)',
-  'Bono por desempeño': 'Performance bonus', 'Cada 15-20 días': 'Every 15-20 days', 'Tras resultados Q3': 'After Q3 results',
+  'Bono por desempeño': 'Performance bonus', 'Bono por desempeño — condicional (+10%)': 'Performance bonus — conditional (+10%)', '~ago 2026': '~Aug 2026', 'Cada 15-20 días': 'Every 15-20 days', 'Tras resultados Q3': 'After Q3 results',
   'Hito': 'Milestone', 'Detalle': 'Detail', '% liberado': '% released',
   'Fund V': 'Fund V', 'Fund IV': 'Fund IV', 'Portafolio combinado': 'Combined Portfolio',
 };
@@ -4776,8 +4776,8 @@ const XLATE_LONG = [
    'A portion follows an extended lock-up (in installments) up to ~14 months post-IPO; final release ~Aug 2027.'],
   ['Estructura del S-1 de SpaceX (IPO 12-jun-2026); primer earnings aún no oficial — 1er cliff estimado: 17 ago 2026. El prospecto final es la autoridad.',
    'Structure from the SpaceX S-1 (IPO Jun 12, 2026); first earnings not yet official — 1st cliff estimated: Aug 17, 2026. The final prospectus governs.'],
-  ['Estimaciones con el calendario del S-1 de SpaceX y el precio de mercado de hoy; los montos finales dependen del precio en cada fecha y del prospecto definitivo. No incluye el bono condicional de +10%.',
-   "Estimates based on the SpaceX S-1 schedule and today's market price; final amounts depend on the price at each date and the definitive prospectus. Excludes the conditional +10% bonus."],
+  ['Estimaciones con el calendario del S-1 de SpaceX y el precio de mercado de hoy; los montos finales dependen del precio en cada fecha y del prospecto definitivo. El bono por desempeño (+10%) es condicional y, de cumplirse, adelanta ese monto del remanente del día 180 — no son acciones adicionales, por eso no suma al total.',
+   "Estimates based on the SpaceX S-1 schedule and today's market price; final amounts depend on the price at each date and the definitive prospectus. The performance bonus (+10%) is conditional and, if met, brings that amount forward from the day-180 remainder — it is not additional shares, so it does not add to the total."],
   ['Posiciones que el fondo subyacente liquidó y cuyo importe se reinvirtió en un vehículo directo de SpaceX (Serie 26A QP). La parte reinvertida no es efectivo devuelto al inversionista; el resto (si lo hay) sí se entregó en efectivo.',
    'Positions liquidated by the underlying fund whose proceeds were reinvested into a direct SpaceX vehicle (Series 26A QP). The reinvested portion is not cash returned to the investor; the remainder (if any) was paid in cash.'],
 ];
@@ -4980,17 +4980,21 @@ async function exportInvestorHtml() {
         // Solo hitos que le liberan acciones a ESTE inversionista (sin filas en $0 del calendario que no le aplica)
         const evReal = ev.filter(e => e.sh >= 0.5);
         ev.length = 0; ev.push(...evReal);
+        // Bono por desempeño (+10%): condicional; de cumplirse ADELANTA parte del remanente del día 180
+        // (no son acciones adicionales) — por eso la fila no suma al total. Ventana: ~10 días tras earnings Q2.
+        const bonusSh = 0.10 * (sB + sA / 2);
+        if (bonusSh >= 0.5 && today <= '2026-08-31') ev.push({ date: '2026-08-18', dlbl: '~ago 2026', label: 'Bono por desempeño — condicional (+10%)', sh: bonusSh, bonus: true });
         ev.sort((a, b) => a.date.localeCompare(b.date));
         if (ev.length && price > 0) {
           const F = d => new Date(d + 'T12:00:00').toLocaleDateString(LOC, { day: 'numeric', month: 'short', year: 'numeric' });
-          const rows = ev.map(e => `<tr><td>${F(e.date)}</td><td>${escapeHtml(e.label)}</td><td class="num">${Math.round(e.sh).toLocaleString('en-US')}</td><td class="num"><b>${fmtUsdShort(e.sh * price)}</b></td></tr>`).join('');
-          const tot = ev.reduce((s, e) => s + e.sh, 0);
+          const rows = ev.map(e => `<tr${e.bonus ? ' class="xp-liq-bono"' : ''}><td>${e.dlbl ? escapeHtml(e.dlbl) : F(e.date)}</td><td>${escapeHtml(e.label)}</td><td class="num">${e.bonus ? '+' : ''}${Math.round(e.sh).toLocaleString('en-US')}</td><td class="num"><b>${e.bonus ? '+' : ''}${fmtUsdShort(e.sh * price)}</b></td></tr>`).join('');
+          const tot = ev.reduce((s, e) => s + (e.bonus ? 0 : e.sh), 0);
           const tbl = document.createElement('div');
           tbl.className = 'xp-liq';
           tbl.innerHTML = `<div class="xp-liq-h">Próximas liberaciones — valor estimado al precio actual de SPCX ($${price.toFixed(2)})</div>
             <table class="db-table"><thead><tr><th>Fecha est.</th><th>Evento</th><th class="num">Acciones</th><th class="num">Valor estimado</th></tr></thead>
             <tbody>${rows}<tr class="xp-liq-tot"><td colspan="2">Total por liberar</td><td class="num">${Math.round(tot).toLocaleString('en-US')}</td><td class="num"><b>${fmtUsdShort(tot * price)}</b></td></tr></tbody></table>
-            <div class="xp-liq-note">Estimaciones con el calendario del S-1 de SpaceX y el precio de mercado de hoy; los montos finales dependen del precio en cada fecha y del prospecto definitivo. No incluye el bono condicional de +10%.</div>`;
+            <div class="xp-liq-note">Estimaciones con el calendario del S-1 de SpaceX y el precio de mercado de hoy; los montos finales dependen del precio en cada fecha y del prospecto definitivo. El bono por desempeño (+10%) es condicional y, de cumplirse, adelanta ese monto del remanente del día 180 — no son acciones adicionales, por eso no suma al total.</div>`;
           const lock = [...clone.querySelectorAll('.db-section')].find(s => (s.querySelector('.db-section-h')?.textContent || '').startsWith('Lock-up'));
           if (lock) lock.appendChild(tbl);
         }
@@ -5078,6 +5082,7 @@ body.xport .lp-bar-fill,body.xport .home-top-fill{transition:width 1.1s cubic-be
 .xp-liq{margin-top:14px}
 .xp-liq-h{font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:#3a4152;margin-bottom:8px}
 .xp-liq tr.xp-liq-tot td{background:var(--gray-50,#f7f8fb);font-weight:700;border-top:1.5px solid var(--gray-200,#e3e7ee)}
+.xp-liq tr.xp-liq-bono td{color:#8a93a6;font-style:italic}
 .xp-liq-note{margin-top:7px;font-size:10.5px;color:#9aa1ad;line-height:1.5;max-width:820px}
 @media print{body.xport>.xp-top{position:static}.xp-top .xp-print{display:none}}
 `;
