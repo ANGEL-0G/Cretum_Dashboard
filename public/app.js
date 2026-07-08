@@ -39,7 +39,7 @@ async function loadProfile(userId) {
 async function loadAllProfiles() {
   const { data, error } = await sb
     .from('profiles')
-    .select('id, full_name, initials, role');
+    .select('id, full_name, initials, role, hidden');
   if (error) throw error;
   USERS = {};
   data.forEach(p => {
@@ -52,6 +52,10 @@ async function loadAllProfiles() {
       nameRaw: p.full_name || '',              // para textContent (toast/confirm), sin entidades
       initials: escapeHtml(p.initials || (p.full_name || '?').slice(0, 2).toUpperCase()),
       role: p.role,
+      // Cuentas de sistema/continuidad (p. ej. admin break-glass): se resuelve
+      // su nombre si algo la referencia, pero NO aparece en listas de personas
+      // (asignar tareas, vista de compañeros, pendientes).
+      hidden: !!p.hidden,
     };
   });
 }
@@ -71,7 +75,7 @@ async function enterApp(user) {
   // pills de multi-asignación — todos menos uno mismo
   const wrap = document.getElementById('aAssignees');
   wrap.innerHTML = Object.entries(USERS)
-    .filter(([k]) => k !== currentUser)
+    .filter(([k, v]) => k !== currentUser && !v.hidden)
     .map(([k,v]) => `
       <button type="button" class="multi-pill" data-uid="${k}" onclick="toggleAssignee(this)">
         <span class="multi-pill-av">${v.initials}</span>
@@ -548,6 +552,9 @@ function render() {
     </div>`;
   }).join('');
 
+  // Mantiene el pulso del módulo To Do (en el menú) en sync con las invitaciones.
+  refreshTodoBadge();
+
   // stats (mis tareas)
   const mt = myTasks();
   const pend = mt.filter(t => !isDone(t)).length;
@@ -1015,7 +1022,7 @@ function getAssignerId(task) {
 function renderOtros() {
   const container = document.getElementById('viewContainer');
   const others = Object.entries(USERS)
-    .filter(([uid]) => uid !== currentUser)
+    .filter(([uid, u]) => uid !== currentUser && !u.hidden)
     .sort((a, b) => (a[1].name || '').localeCompare(b[1].name || ''));
 
   if (!others.length) {
@@ -1455,7 +1462,7 @@ function openEditAssigned(id) {
     .map(x => x.to);
   const wrap = document.getElementById('eAssignees');
   wrap.innerHTML = Object.entries(USERS)
-    .filter(([k]) => k !== currentUser && !alreadyAssignees.includes(k))
+    .filter(([k, v]) => k !== currentUser && !v.hidden && !alreadyAssignees.includes(k))
     .map(([k,v]) => `
       <button type="button" class="multi-pill" data-uid="${k}" onclick="toggleAssignee(this)">
         <span class="multi-pill-av">${v.initials}</span>
@@ -2128,6 +2135,32 @@ function switchToOtherOrg() {
   setTimeout(() => { overlay.classList.remove('show'); }, 560);
 }
 
+// ── Indicador de notificación del módulo To Do ──
+// Cuenta las invitaciones de tarea pendientes por aceptar del usuario actual.
+function pendingInviteCount() {
+  if (!currentUser) return 0;
+  return (state.invites || []).filter(iv => iv.to === currentUser).length;
+}
+
+// Sincroniza el pulso del módulo To Do sin re-renderizar todo el menú.
+// Se llama desde render() para que aparezca/desaparezca al aceptar o declinar.
+function refreshTodoBadge() {
+  const grid = document.getElementById('homeModules');
+  if (!grid) return;
+  const btn = grid.querySelector('.home-module[data-mod="tasks"]');
+  if (!btn) return;
+  const has = pendingInviteCount() > 0;
+  const pulse = btn.querySelector('.home-module-pulse');
+  if (has && !pulse) {
+    const el = document.createElement('span');
+    el.className = 'home-module-pulse';
+    el.setAttribute('aria-label', 'Tienes tareas por aceptar');
+    btn.appendChild(el);
+  } else if (!has && pulse) {
+    pulse.remove();
+  }
+}
+
 function renderHomeModules() {
   const el = document.getElementById('homeModules');
   if (!el || !currentOrg) return;
@@ -2136,8 +2169,9 @@ function renderHomeModules() {
   const mods = (ORG_MODULES[currentOrg] || []).filter(m =>
     (!m.adminOnly || isAdmin) && (!m.editorOrAdmin || isEditorOrAdmin));
   el.innerHTML = mods.map(m => `
-    <button class="home-module${m.disabled ? ' disabled' : ''}"${m.disabled ? ' disabled aria-disabled="true"' : ` onclick="switchView('${m.view}')"`}>
+    <button class="home-module${m.disabled ? ' disabled' : ''}" data-mod="${m.view}"${m.disabled ? ' disabled aria-disabled="true"' : ` onclick="switchView('${m.view}')"`}>
       ${m.disabled ? '<span class="home-module-badge">Pronto</span>' : ''}
+      ${(!m.disabled && m.view === 'tasks' && pendingInviteCount() > 0) ? '<span class="home-module-pulse" aria-label="Tienes tareas por aceptar"></span>' : ''}
       <div class="home-module-ico ${m.iconClass}"><i class="${m.iconBrand ? 'fa-brands' : 'fa-solid'} ${m.icon}"></i></div>
       <div class="home-module-content">
         <div class="home-module-title">${m.title}</div>
