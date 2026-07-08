@@ -5368,7 +5368,7 @@ async function openInvestor(id) {
       sb.from('investments')
         .select(`id, entry_ev_b, entry_pps, current_ev_b, current_ev_pps, shares,
                  commitment, capital_sent, capital_sent_flag, commitment_actual, dpi_moic, carry_pct,
-                 start_date, end_date, duration_years, distributed_at, last_ca_letter, welcome_letter,
+                 start_date, end_date, duration_years, distributed_at, last_ca_letter, welcome_letter, spacex_indirect,
                  series(name), companies(id, name, is_public),
                  investment_distributions(distribution_date, letter_type, underlying_company,
                    price_per_share, shares_distributed, cash_proceeds, value_in_kind, letter_url, notes)`)
@@ -5394,7 +5394,7 @@ async function openInvestorGroup(ids) {
       sb.from('investments')
         .select(`id, investor_id, entry_ev_b, entry_pps, current_ev_b, current_ev_pps, shares,
                  commitment, capital_sent, capital_sent_flag, commitment_actual, dpi_moic, carry_pct,
-                 start_date, end_date, duration_years, distributed_at, last_ca_letter, welcome_letter,
+                 start_date, end_date, duration_years, distributed_at, last_ca_letter, welcome_letter, spacex_indirect,
                  series(name), companies(id, name, is_public),
                  investment_distributions(distribution_date, letter_type, underlying_company,
                    price_per_share, shares_distributed, cash_proceeds, value_in_kind, letter_url, notes)`)
@@ -6029,7 +6029,7 @@ function renderInvestorDetail(inv, contacts, positions) {
           <div class="db-detail-sub">${combined ? `${inv._accounts.length} cuentas combinadas` : 'Inversionista'}</div>
         </div>
         <div class="db-detail-export">
-          ${positions.some(p => (p.companies?.name) === 'Space X') ? `<button class="dbx-btn spx" onclick="exportSpacexReport()" title="Reporte SpaceX — posición, calendario de liberación y cartas del IPO"><i class="fa-solid fa-rocket"></i> Reporte SpaceX</button>` : ''}
+          ${positions.some(p => (p.companies?.name) === 'Space X' || (p.spacex_indirect && +p.spacex_indirect.shares > 0 && !p.distributed_at)) ? `<button class="dbx-btn spx" onclick="exportSpacexReport()" title="Reporte SpaceX — posición, calendario de liberación y cartas del IPO"><i class="fa-solid fa-rocket"></i> Reporte SpaceX</button>` : ''}
           <button class="dbx-btn" onclick="exportInvestorXlsx()" title="Exportar todo su detalle a Excel"><i class="fa-solid fa-file-excel"></i> Excel</button>
           <button class="dbx-btn pdf" onclick="exportInvestorPdf()" title="Exportar todo su detalle a PDF"><i class="fa-solid fa-file-pdf"></i> PDF</button>
           <button class="dbx-btn html" onclick="exportInvestorHtml()" title="Descargar el perfil como reporte HTML para compartir"><i class="fa-solid fa-file-code"></i> HTML</button>
@@ -9271,7 +9271,18 @@ function spxrBuildData(d, live) {
   const inv = d.inv;
   const combined = !!inv._accounts;
   const rows = (d.positions || []).filter(SPXR_IS_SPACEX);
-  if (!rows.length) return null;
+  // Exposición INDIRECTA vía fondos All-Star (acciones de la carta SpaceX IPO del fondo,
+  // guardadas en investments.spacex_indirect = {shares, pps, letter_url}).
+  const indFund = s => (/All-Star Fund IV/i.test(s || '') ? 'IV' : (/All-Star Fund V/i.test(s || '') ? 'V' : null));
+  const indirect = (d.positions || []).filter(p => !p.distributed_at && indFund(p.series?.name)
+    && p.spacex_indirect && +p.spacex_indirect.shares > 0).map(p => {
+      const si = p.spacex_indirect, f = indFund(p.series?.name);
+      const sh = +si.shares, pps = SPXR_N(si.pps);
+      return { acct: p._acct || null, serie: p.series?.name, short: `All-Star Fund ${f} (indirecta)`,
+               shares: sh, commitment: pps ? sh * pps : 0, sold: false, soldDate: null,
+               carta: si.letter_url || null, isReinvTarget: false, struct: null, indirect: true, fund: f, dists: [] };
+    });
+  if (!rows.length && !indirect.length) return null;
   const P = live.P;
 
   const mk = (p) => {
@@ -9287,7 +9298,7 @@ function spxrBuildData(d, live) {
       dists,
     };
   };
-  const act = rows.filter(p => !p.distributed_at).map(mk).sort((a, b) => b.commitment - a.commitment);
+  const act = rows.filter(p => !p.distributed_at).map(mk).concat(indirect).sort((a, b) => b.commitment - a.commitment);
   const sold = rows.filter(p => p.distributed_at).map(mk);
 
   // Venta/reinversión desde las cartas de distribución de las filas vendidas
@@ -9313,8 +9324,13 @@ function spxrBuildData(d, live) {
   const original = totCost - Math.min(reinvCost, reinvP) + soldCost;
   const totalGenerado = totVal + cashOut;
 
-  // Calendario combinado (solo acciones ACTIVAS): A = dos mitades, B = 180 días
-  const shA = act.filter(a => a.struct === 'A').reduce((s, a) => s + a.shares, 0);
+  // Calendario combinado (solo acciones ACTIVAS): A = dos mitades, B = 180 días.
+  // Directas: por serie. Indirectas: Fund IV = 20% A + 80% B; Fund V = 100% B.
+  let shA = 0;
+  act.forEach(a => {
+    if (a.indirect) { if (a.fund === 'IV') shA += 0.2 * a.shares; }
+    else if (a.struct === 'A') shA += a.shares;
+  });
   const shB = totSh - shA;
 
   return {
@@ -9374,9 +9390,18 @@ function spxrCalendar(shA, shB) {
 // ── Narrativa "¿Qué pasó con la posición?" por caso ──
 function spxrNarrative(D) {
   const ps = [];
-  const veh = D.act.filter(a => !a.isReinvTarget || !D.hasReinv).map(a => `<b>${a.short}</b> (${SPXR_MONEY(a.commitment)})`);
-  const vehTxt = veh.join(', ').replace(/, ([^,]*)$/, ' y $1');
-  ps.push(`<b>1. La posición.</b> El inversionista tiene exposición directa a SpaceX a través de ${D.act.length === 1 ? 'el vehículo' : 'los vehículos'} ${vehTxt}${D.hasSold ? ' (más las porciones ya liquidadas que se describen abajo)' : ''}. Capital original: <b>${SPXR_MONEY(D.original)}</b>. Reflejando el <b>split 5:1</b>, la tenencia activa es de <b>${SPXR_SH(D.totSh)} acciones post-split</b>.`);
+  const dirV = D.act.filter(a => !a.indirect && (!a.isReinvTarget || !D.hasReinv)).map(a => `<b>${a.short}</b> (${SPXR_MONEY(a.commitment)})`);
+  const indV = D.act.filter(a => a.indirect);
+  const join = arr => arr.join(', ').replace(/, ([^,]*)$/, ' y $1');
+  let p1;
+  if (dirV.length && indV.length) {
+    p1 = `<b>1. La posición.</b> El inversionista tiene exposición directa a SpaceX a través de ${join(dirV)}, y exposición <b>indirecta</b> como parte de ${join(indV.map(a => `<b>${a.short.replace(' (indirecta)', '')}</b> (${SPXR_SH(a.shares)} acc)`))}${D.hasSold ? ' (más las porciones ya liquidadas que se describen abajo)' : ''}. Capital original: <b>${SPXR_MONEY(D.original)}</b>. Reflejando el <b>split 5:1</b>, la tenencia activa total es de <b>${SPXR_SH(D.totSh)} acciones post-split</b>.`;
+  } else if (indV.length) {
+    p1 = `<b>1. Exposición a SpaceX.</b> El inversionista <b>no</b> tiene un vehículo directo (SPV) de SpaceX. Su exposición proviene de SpaceX como una de las empresas dentro de ${indV.length === 1 ? 'un fondo diversificado de MVP: el' : 'los fondos diversificados'} ${join(indV.map(a => `<b>${a.short.replace(' (indirecta)', '')}</b>`))}. Reflejando el <b>split 5:1</b>, la tenencia indirecta es de <b>${SPXR_SH(D.totSh)} acciones post-split</b>, a un costo promedio del fondo de ${join(indV.map(a => `<b>${SPXR_P2(a.commitment / a.shares)}</b>/acción`))}. Estas cifras no reflejan retenciones por gastos ni carried interest.`;
+  } else {
+    p1 = `<b>1. La posición.</b> El inversionista tiene exposición directa a SpaceX a través de ${D.act.length === 1 ? 'el vehículo' : 'los vehículos'} ${join(dirV)}${D.hasSold ? ' (más las porciones ya liquidadas que se describen abajo)' : ''}. Capital original: <b>${SPXR_MONEY(D.original)}</b>. Reflejando el <b>split 5:1</b>, la tenencia activa es de <b>${SPXR_SH(D.totSh)} acciones post-split</b>.`;
+  }
+  ps.push(p1);
   if (D.hasSold) {
     const pps = D.soldPps ? ` a un precio bruto de ${SPXR_P2(D.soldPps * 5)}/acción (${SPXR_P2(D.soldPps)} post-split)` : '';
     const fecha = D.soldDate ? new Date(D.soldDate.slice(0, 10) + 'T12:00:00').toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
@@ -9427,8 +9452,13 @@ function spxrHtml(D) {
   // Narrativa "cómo y cuándo"
   const como = [];
   como.push(`Las <b>${SPXR_SH(D.totSh)} acciones activas</b> se liberan según ${D.shA > 0 && D.shB > 0 ? '<b>dos calendarios</b>. La tabla de abajo los <b>combina</b>: cada fila es una fecha y la columna <b>Acciones</b> es el total que se distribuye ese día.' : 'el calendario de abajo.'}`);
-  if (D.shA > 0) como.push(`<b>Calendario 1 — Liberación en dos mitades (${SPXR_SH(D.shA)} acciones: ${D.act.filter(a => a.struct === 'A').map(a => a.short).join(', ')}).</b> La 1ª mitad (~${SPXR_INT(D.shA / 2)}) se libera en los primeros ~6 meses; la 2ª mitad en un lock-up extendido que corre hasta ~agosto 2027.`);
-  if (D.shB > 0) como.push(`<b>Calendario ${D.shA > 0 ? '2' : 'único'} — Escalonado de 180 días (${SPXR_SH(D.shB)} acciones: ${D.act.filter(a => a.struct === 'B').map(a => a.short).join(', ')}).</b> Se libera completo dentro de los primeros 180 días; expira el 9 de diciembre de 2026.`);
+  const aList = D.act.filter(a => !a.indirect && a.struct === 'A').map(a => a.short)
+    .concat(D.act.filter(a => a.indirect && a.fund === 'IV').map(() => '20% del Fund IV'));
+  const bList = D.act.filter(a => !a.indirect && a.struct === 'B').map(a => a.short)
+    .concat(D.act.filter(a => a.indirect && a.fund === 'IV').map(() => '80% del Fund IV'))
+    .concat(D.act.filter(a => a.indirect && a.fund === 'V').map(() => 'Fund V'));
+  if (D.shA > 0) como.push(`<b>Calendario 1 — Liberación en dos mitades (~${SPXR_INT(D.shA)} acciones: ${aList.join(', ')}).</b> La 1ª mitad (~${SPXR_INT(D.shA / 2)}) se libera en los primeros ~6 meses; la 2ª mitad en un lock-up extendido que corre hasta ~agosto 2027.`);
+  if (D.shB > 0) como.push(`<b>Calendario ${D.shA > 0 ? '2' : 'único'} — Escalonado de 180 días (~${SPXR_INT(D.shB)} acciones: ${bList.join(', ')}).</b> Se libera completo dentro de los primeros 180 días; expira el 9 de diciembre de 2026.`);
   como.push(`La fecha del primer earnings de SpaceX aún no es oficial; el primer tramo (20%) se libera ~2 días hábiles después del reporte — la mejor estimación disponible es el <b>~17 de agosto de 2026</b>.`);
 
   const calRows = D.calendar.rows.map(r => `<tr${r.bonus ? ' class="bono"' : ''}><td>${E(r.date)}</td><td>${E(r.label)}</td><td class="num b">${r.bonus ? '+' : ''}${SPXR_INT(r.sh)}</td><td class="num">${r.pct.toFixed(1)}%</td><td class="num">${r.acum == null ? '-' : r.acum.toFixed(1) + '%'}</td><td class="det">${E(r.scope)}</td></tr>`).join('');
