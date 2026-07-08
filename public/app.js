@@ -9443,17 +9443,9 @@ function spxrHtml(D) {
     const cta = (D.combined && a.acct) ? `${E(a.acct)} · ` : '';
     return `<tr><td>${cta}${E(a.short)}${tag}</td><td class="num">${SPXR_SH(a.shares)}</td><td class="num">${entry ? SPXR_P2(entry) : '—'}</td><td class="num">${SPXR_P2(P)}</td><td class="num">${SPXR_MONEY(a.commitment)}</td><td class="num b">${SPXR_MONEY(val)}</td><td class="num b">${entry ? SPXR_X(P / entry) : '—'}</td></tr>`;
   });
-  // Reinversión TOTAL (formato Avtem): la venta ya está representada en la fila 26A QP;
-  // NO va fila de vendidas ni se suman sus acciones al total (evita doble conteo).
-  const reinvOnly = D.hasReinv && D.cashOut <= 0.01;
-  if (D.hasSold && !reinvOnly) {
-    vrows.push(`<tr><td><b>Vendidas (efectivo)</b>${D.soldDate ? ' — ' + D.soldDate.slice(0, 10) : ''}</td><td class="num">${SPXR_SH(D.soldShares)}</td><td class="num">—</td><td class="num">${D.soldPps ? SPXR_P2(D.soldPps) : '—'}</td><td class="num">${SPXR_MONEY(D.soldCost)}</td><td class="num b">${SPXR_MONEY(D.cashOut)}</td><td class="num b">${D.soldCost ? SPXR_X((D.cashOut + D.reinvP) / D.soldCost) : '—'}</td></tr>`);
-  }
-  const star = (D.hasSold || D.hasReinv) ? '*' : '';
-  const totLbl = reinvOnly ? 'Total posición actual SpaceX' : (D.hasSold ? 'Total (activas + efectivo recibido)' : 'Total SpaceX');
-  const totSh2 = reinvOnly ? D.totSh : D.totSh + D.soldShares;
-  const totVal2 = reinvOnly ? D.totVal : D.totalGenerado;
-  const totRow = `<tr class="tot"><td>${totLbl}</td><td class="num">${SPXR_SH(totSh2)}</td><td></td><td></td><td class="num">${SPXR_MONEY(D.original)}${star}</td><td class="num">${SPXR_MONEY(totVal2)}</td><td class="num">${SPXR_X(totVal2 / D.original)}${star}</td></tr>`;
+  // ⛔ REGLA (template v2, Eugenio 2026-07-08): la posición VENDIDA va SOLO en la narrativa.
+  // NO aparece como fila en la tabla y NO cuenta en el MOIC. Tabla y total = SOLO activas.
+  const totRow = `<tr class="tot"><td>Total SpaceX</td><td class="num">${SPXR_SH(D.totSh)}</td><td></td><td class="num">${SPXR_P2(P)}</td><td class="num">${SPXR_MONEY(D.totCost)}</td><td class="num">${SPXR_MONEY(D.totVal)}</td><td class="num">${SPXR_X(D.totVal / D.totCost)}</td></tr>`;
 
   // Narrativa "cómo y cuándo"
   const como = [];
@@ -9532,7 +9524,7 @@ tr.bono td{color:#8a6d1f;background:#fdf9ef}
   ${sec('Detalle por vehículo')}
   <table><thead><tr><th>${D.combined ? 'Cuenta · Vehículo / Estatus' : 'Vehículo / Estatus'}</th><th class="num">Acciones</th><th class="num">PPS Entrada</th><th class="num">PPS Actual</th><th class="num">Inversión</th><th class="num">Valor actual</th><th class="num">MOIC</th></tr></thead>
   <tbody>${vrows.join('')}${totRow}</tbody></table>
-  <div class="fn">PPS Entrada = costo all-in por acción (inversión ÷ acciones de la carta), base post-split 5:1. Valor de las activas = acciones × ${SPXR_P2(P)} (precio de cierre de hoy).${reinvOnly ? ` * Múltiplo sobre el capital original de ${SPXR_MONEY(D.original)}. El capital de la Serie VI-26A QP proviene de la liquidación parcial de ${SPXR_MONEY(D.reinvP)} reinvertida en su totalidad — no es capital adicional aportado.` : (D.hasSold ? ' * El múltiplo del total se calcula sobre el capital original e incluye el efectivo ya recibido.' : '')}</div>
+  <div class="fn">Acciones y costo/acción: cartas del IPO de SpaceX de cada vehículo (Altareturn). Base post-split 5:1. Valor actual = acciones × ${SPXR_P2(P)} (precio de cierre de hoy). MOIC = valor actual / costo.${D.hasSold ? ' La liquidación parcial se describe en la sección anterior y no forma parte de esta tabla.' : ''}</div>
 
   ${sec('¿Cómo y cuándo se liberan las acciones?')}
   ${como.map(p => `<p class="body">${p}</p>`).join('')}
