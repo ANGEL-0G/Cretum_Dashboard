@@ -3589,6 +3589,10 @@ button,input,select{font-family:var(--font)}
   .fm-back:hover{color:var(--navy)}
   .fm-back:hover i{transform:translateX(-2px)}
   .fm-back i{transition:transform .15s}
+  /* Ventas: full-bleed cuando el dashboard GVV está abierto (sin max-width ni título, padding mínimo) */
+  #pageVentas.gvv-full{max-width:none;padding:8px 12px 12px}
+  #pageVentas.gvv-full .db-toolbar{display:none}
+  #pageVentas.gvv-full .fm-back{margin-bottom:6px}
   /* Transición galería ↔ detalle: se reproduce sola en cada display:none→block */
   @keyframes fmIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
   #formsDetail{animation:fmIn .24s cubic-bezier(.23,1,.32,1)}
@@ -3669,7 +3673,7 @@ button,input,select{font-family:var(--font)}
   <!-- Dashboard GVV embebido (archivo estático servido por cretumdesk, carga lazy) -->
   <div id="ventasDash" style="display:none">
     <button class="fm-back" type="button" onclick="ventasBackHome()"><i class="fa-solid fa-arrow-left"></i> Ventas</button>
-    <iframe id="ventasGvvFrame" title="GVV Dashboard" style="width:100%;height:calc(100vh - 210px);min-height:560px;border:1px solid var(--gray-200,#e0e3eb);border-radius:12px;background:#fff"></iframe>
+    <iframe id="ventasGvvFrame" title="GVV Dashboard" style="width:100%;height:calc(100vh - 112px);min-height:560px;border:1px solid var(--gray-200,#e0e3eb);border-radius:10px;background:#fff"></iframe>
   </div>
 </div>
 

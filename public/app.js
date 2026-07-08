@@ -2359,18 +2359,22 @@ function switchView(view, isBack = false) {
 function ventasBackHome() {
   const menu = document.getElementById('ventasMenu');
   const dash = document.getElementById('ventasDash');
+  const page = document.getElementById('pageVentas');
   if (menu) menu.style.display = '';
   if (dash) dash.style.display = 'none';
+  if (page) page.classList.remove('gvv-full');
 }
 // Embebe el GVV Dashboard (archivo estático servido por cretumdesk).
 // Carga lazy: el iframe (~1.3 MB) no se baja hasta que le piquen.
 function openGvvDashboard() {
   const menu = document.getElementById('ventasMenu');
   const dash = document.getElementById('ventasDash');
+  const page = document.getElementById('pageVentas');
   const frame = document.getElementById('ventasGvvFrame');
   if (frame && !frame.getAttribute('src')) frame.setAttribute('src', '/gvv-detalle.html');
   if (menu) menu.style.display = 'none';
   if (dash) dash.style.display = '';
+  if (page) page.classList.add('gvv-full');
 }
 
 /* ── Routing por hash (#org/vista) — persiste la vista al refrescar ── */
