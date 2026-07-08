@@ -212,7 +212,7 @@ export default async function handler(req, res) {
       const { data: { users }, error } = await sbAdmin.auth.admin.listUsers();
       if (error) throw error;
       const { data: profiles } = await sbAdmin.from('profiles')
-        .select('id, full_name, reminder_enabled, reminder_day, reminder_hour');
+        .select('id, full_name, reminder_enabled, reminder_day, reminder_hour, hidden');
       const profileById = {};
       (profiles || []).forEach(p => { profileById[p.id] = p; });
 
@@ -229,6 +229,12 @@ export default async function handler(req, res) {
       for (const u of users || []) {
         if (!u.email) continue;
         const profile = profileById[u.id];
+        // Cuentas de sistema/continuidad (profiles.hidden): nunca reciben el
+        // resumen automático — su buzón no lo lee nadie a diario.
+        if (profile?.hidden) {
+          results.push({ user: u.email, skipped: 'hidden' });
+          continue;
+        }
         if (!profile?.reminder_enabled) {
           results.push({ user: u.email, skipped: 'disabled' });
           continue;
