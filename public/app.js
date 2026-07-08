@@ -9421,7 +9421,8 @@ function spxrNarrative(D) {
 // ── HTML del reporte (identidad v2: navy + Playfair/Inter) ──
 function spxrHtml(D) {
   const E = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const name = D.inv.name;
+  const name = (D.combined && D.inv._accounts && D.inv._accounts.length <= 3)
+    ? D.inv._accounts.map(a => a.name).join(' + ') : D.inv.name;
   const P = D.live.P;
 
   const kpi = (label, value, note, green) => `
@@ -9442,12 +9443,17 @@ function spxrHtml(D) {
     const cta = (D.combined && a.acct) ? `${E(a.acct)} · ` : '';
     return `<tr><td>${cta}${E(a.short)}${tag}</td><td class="num">${SPXR_SH(a.shares)}</td><td class="num">${entry ? SPXR_P2(entry) : '—'}</td><td class="num">${SPXR_P2(P)}</td><td class="num">${SPXR_MONEY(a.commitment)}</td><td class="num b">${SPXR_MONEY(val)}</td><td class="num b">${entry ? SPXR_X(P / entry) : '—'}</td></tr>`;
   });
-  if (D.hasSold) {
-    const recibido = D.hasReinv && D.cashOut <= 0.01 ? D.reinvP : D.cashOut + D.reinvP;
-    const lbl = D.hasReinv && D.cashOut <= 0.01 ? 'vendidas (reinvertidas)' : 'vendidas' + (D.cashOut > 0 ? ' (efectivo)' : '');
-    vrows.push(`<tr><td><b>${lbl.charAt(0).toUpperCase() + lbl.slice(1)}</b>${D.soldDate ? ' — ' + D.soldDate.slice(0, 10) : ''}</td><td class="num">${SPXR_SH(D.soldShares)}</td><td class="num">—</td><td class="num">${D.soldPps ? SPXR_P2(D.soldPps) : '—'}</td><td class="num">${SPXR_MONEY(D.soldCost)}</td><td class="num b">${SPXR_MONEY(recibido)}</td><td class="num b">${D.soldCost ? SPXR_X(recibido / D.soldCost) : '—'}</td></tr>`);
+  // Reinversión TOTAL (formato Avtem): la venta ya está representada en la fila 26A QP;
+  // NO va fila de vendidas ni se suman sus acciones al total (evita doble conteo).
+  const reinvOnly = D.hasReinv && D.cashOut <= 0.01;
+  if (D.hasSold && !reinvOnly) {
+    vrows.push(`<tr><td><b>Vendidas (efectivo)</b>${D.soldDate ? ' — ' + D.soldDate.slice(0, 10) : ''}</td><td class="num">${SPXR_SH(D.soldShares)}</td><td class="num">—</td><td class="num">${D.soldPps ? SPXR_P2(D.soldPps) : '—'}</td><td class="num">${SPXR_MONEY(D.soldCost)}</td><td class="num b">${SPXR_MONEY(D.cashOut)}</td><td class="num b">${D.soldCost ? SPXR_X((D.cashOut + D.reinvP) / D.soldCost) : '—'}</td></tr>`);
   }
-  const totRow = `<tr class="tot"><td>Total${D.hasSold ? ' (activas + realizado)' : ' SpaceX'}</td><td class="num">${SPXR_SH(D.totSh + D.soldShares)}</td><td></td><td></td><td class="num">${SPXR_MONEY(D.original)}</td><td class="num">${SPXR_MONEY(D.totalGenerado + (D.hasReinv && D.cashOut <= 0.01 ? 0 : 0))}</td><td class="num">${SPXR_X(D.totalGenerado / D.original)}</td></tr>`;
+  const star = (D.hasSold || D.hasReinv) ? '*' : '';
+  const totLbl = reinvOnly ? 'Total posición actual SpaceX' : (D.hasSold ? 'Total (activas + efectivo recibido)' : 'Total SpaceX');
+  const totSh2 = reinvOnly ? D.totSh : D.totSh + D.soldShares;
+  const totVal2 = reinvOnly ? D.totVal : D.totalGenerado;
+  const totRow = `<tr class="tot"><td>${totLbl}</td><td class="num">${SPXR_SH(totSh2)}</td><td></td><td></td><td class="num">${SPXR_MONEY(D.original)}${star}</td><td class="num">${SPXR_MONEY(totVal2)}</td><td class="num">${SPXR_X(totVal2 / D.original)}${star}</td></tr>`;
 
   // Narrativa "cómo y cuándo"
   const como = [];
@@ -9524,9 +9530,9 @@ tr.bono td{color:#8a6d1f;background:#fdf9ef}
   ${paras}
 
   ${sec('Detalle por vehículo')}
-  <table><thead><tr><th>Vehículo / Estatus</th><th class="num">Acciones</th><th class="num">PPS Entrada</th><th class="num">PPS Actual</th><th class="num">Inversión</th><th class="num">Valor actual</th><th class="num">MOIC</th></tr></thead>
+  <table><thead><tr><th>${D.combined ? 'Cuenta · Vehículo / Estatus' : 'Vehículo / Estatus'}</th><th class="num">Acciones</th><th class="num">PPS Entrada</th><th class="num">PPS Actual</th><th class="num">Inversión</th><th class="num">Valor actual</th><th class="num">MOIC</th></tr></thead>
   <tbody>${vrows.join('')}${totRow}</tbody></table>
-  <div class="fn">PPS Entrada = costo all-in por acción (inversión ÷ acciones de la carta), base post-split 5:1. Valor de las activas = acciones × ${SPXR_P2(P)} (precio de cierre de hoy).${D.hasSold ? ' El múltiplo del total se calcula sobre el capital original e incluye lo ya realizado.' : ''}</div>
+  <div class="fn">PPS Entrada = costo all-in por acción (inversión ÷ acciones de la carta), base post-split 5:1. Valor de las activas = acciones × ${SPXR_P2(P)} (precio de cierre de hoy).${reinvOnly ? ` * Múltiplo sobre el capital original de ${SPXR_MONEY(D.original)}. El capital de la Serie VI-26A QP proviene de la liquidación parcial de ${SPXR_MONEY(D.reinvP)} reinvertida en su totalidad — no es capital adicional aportado.` : (D.hasSold ? ' * El múltiplo del total se calcula sobre el capital original e incluye el efectivo ya recibido.' : '')}</div>
 
   ${sec('¿Cómo y cuándo se liberan las acciones?')}
   ${como.map(p => `<p class="body">${p}</p>`).join('')}
@@ -9647,7 +9653,8 @@ async function exportSpacexReport() {
         url: a.carta || null,
       })),
     };
-    const slug = String(D.inv.name).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+    const slugBase = (D.combined && D.inv._accounts && D.inv._accounts.length <= 3) ? D.inv._accounts.map(a => a.name).join('_') : D.inv.name;
+    const slug = String(slugBase).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
     await spxrRenderPdf(html, `Reporte_SpaceX_${slug}.pdf`, anexo3);
     toast('Reporte SpaceX descargado');
   } catch (e) {
