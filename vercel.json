@@ -20,7 +20,11 @@
     { "src": "api/forms.js",             "use": "@vercel/node" },
     { "src": "api/notify-assignment.js", "use": "@vercel/node" },
     { "src": "api/logo.js",              "use": "@vercel/node" },
-    { "src": "public/fonts/*.ttf",       "use": "@vercel/static" }
+    { "src": "public/fonts/*.ttf",       "use": "@vercel/static" },
+    { "src": "public/gvv-detalle.html",  "use": "@vercel/static" },
+    { "src": "public/docs/*.pdf",        "use": "@vercel/static" },
+    { "src": "public/docs/gvv/*.pdf",    "use": "@vercel/static" },
+    { "src": "public/og/*.png",          "use": "@vercel/static" }
   ],
   "routes": [
     { "src": "/(.*)", "continue": true, "headers": {
@@ -49,6 +53,9 @@
     { "src": "/logo-icon.png", "dest": "/public/logo-icon.png" },
     { "src": "/logo-mvp.png",  "dest": "/public/logo-mvp.png" },
     { "src": "/chaos-industries.png", "dest": "/public/chaos-industries.png" },
+    { "src": "/gvv-detalle.html", "dest": "/public/gvv-detalle.html" },
+    { "src": "/docs/(.*)",     "dest": "/public/docs/$1" },
+    { "src": "/og/(.*)",       "dest": "/public/og/$1" },
     { "src": "/(.*)",          "dest": "/public/index.html" }
   ]
 }

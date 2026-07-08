@@ -2008,6 +2008,9 @@ const ORG_MODULES = {
     { view: 'portal', icon: 'fa-share-nodes', title: 'Portal de clientes',
       desc: 'Sube dashboards externos y da acceso a clientes con su propio usuario',
       iconClass: 'home-ico-portal' },
+    { view: 'ventas', icon: 'fa-chart-line', title: 'Ventas',
+      desc: 'Dashboards y análisis de ventas del fondo',
+      iconClass: 'home-ico-ventas' },
   ],
   mvp: [
     { view: 'db', icon: 'fa-database', title: 'Base de Datos',
@@ -2037,6 +2040,7 @@ const ORG_NAV = {
     { view: 'campaigns', icon: 'fa-bolt',      label: 'Campañas' },
     { view: 'forms',     icon: 'fa-clipboard-list', label: 'Formularios' },
     { view: 'portal',    icon: 'fa-share-nodes', label: 'Portal de clientes' },
+    { view: 'ventas',    icon: 'fa-chart-line', label: 'Ventas' },
   ],
   mvp: [
     { view: 'home',         icon: 'fa-house',         label: 'Inicio' },
@@ -2305,6 +2309,8 @@ function switchView(view, isBack = false) {
   if (pagePortal) pagePortal.classList.toggle('active', view === 'portal');
   const pageForms = document.getElementById('pageForms');
   if (pageForms) pageForms.classList.toggle('active', view === 'forms');
+  const pageVentas = document.getElementById('pageVentas');
+  if (pageVentas) pageVentas.classList.toggle('active', view === 'ventas');
 
   highlightActiveNav();
 
@@ -2320,6 +2326,7 @@ function switchView(view, isBack = false) {
     'reports':      'Reportes',
     'forms':        'Formularios',
     'portal':       'Portal de clientes',
+    'ventas':       'Ventas',
   }[view] || '';
   document.getElementById('headerBrandText').textContent =
     view === 'selector' ? 'Cretum · Selector' : (orgPrefix + viewLabel);
@@ -2341,9 +2348,29 @@ function switchView(view, isBack = false) {
   if (view === 'reports') loadReports();
   if (view === 'portal') { portalOrg = currentOrg || 'cretum'; loadPortalAdmin(); }
   if (view === 'forms') formsBackHome();
+  if (view === 'ventas') ventasBackHome();
   if (view === 'tasks') requestAnimationFrame(tkMoveSliders);   // coloca las pills una vez visible
 
   syncHash();
+}
+
+// ─── Ventas: menú + dashboards embebidos ───────────────────────────────────
+// Muestra el menú de Ventas (una card "GVV Dashboard") y esconde el dashboard.
+function ventasBackHome() {
+  const menu = document.getElementById('ventasMenu');
+  const dash = document.getElementById('ventasDash');
+  if (menu) menu.style.display = '';
+  if (dash) dash.style.display = 'none';
+}
+// Embebe el GVV Dashboard (archivo estático servido por cretumdesk).
+// Carga lazy: el iframe (~1.3 MB) no se baja hasta que le piquen.
+function openGvvDashboard() {
+  const menu = document.getElementById('ventasMenu');
+  const dash = document.getElementById('ventasDash');
+  const frame = document.getElementById('ventasGvvFrame');
+  if (frame && !frame.getAttribute('src')) frame.setAttribute('src', '/gvv-detalle.html');
+  if (menu) menu.style.display = 'none';
+  if (dash) dash.style.display = '';
 }
 
 /* ── Routing por hash (#org/vista) — persiste la vista al refrescar ── */
