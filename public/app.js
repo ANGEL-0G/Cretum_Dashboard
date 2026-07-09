@@ -4212,7 +4212,7 @@ async function renderChartPng(config, w, h) {
   config.options = config.options || {};
   config.options.animation = false;
   config.options.responsive = false;
-  config.options.devicePixelRatio = 2;
+  config.options.devicePixelRatio = 3;   // graficas nitidas en el PDF (antes 2)
   config.options.layout = { padding: 10 };
   const chart = new Chart(canvas.getContext('2d'), config);
   await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
@@ -4720,7 +4720,7 @@ async function renderReportPdf(html, fileName) {
     try { await document.fonts.ready; } catch (e) { /* noop */ }
     await loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js');
     await loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
-    const SCALE = 2.5;   // debe coincidir con canvas.width = 816 * SCALE
+    const SCALE = 4;   // ~400 DPI: texto nitido incluso con zoom (antes 2.5)
     const canvas = await window.html2canvas(el, { scale: SCALE, backgroundColor: '#ffffff', width: 816, height: h, windowWidth: 816, useCORS: true, logging: false });
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'letter' });
@@ -4757,7 +4757,7 @@ async function renderReportPdf(html, fileName) {
         ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, tmp.width, tmp.height);
         ctx.drawImage(canvas, 0, y0, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
         if (!first) pdf.addPage();
-        pdf.addImage(tmp.toDataURL('image/jpeg', 0.94), 'JPEG', 0, 0, pageW, sliceH * ptPerPx);
+        pdf.addImage(tmp.toDataURL('image/jpeg', 0.93), 'JPEG', 0, 0, pageW, sliceH * ptPerPx);
         first = false;
         y0 = y1;
       }
