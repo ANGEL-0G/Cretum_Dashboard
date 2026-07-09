@@ -9500,11 +9500,10 @@ function spxrHtml(D) {
   const sec = t => `<div class="sec"><span class="sec-rule"></span><span class="sec-t">${t}</span><span class="sec-hair"></span></div>`;
 
   // Tabla detalle por vehículo
-  const soldShorts = new Set(D.sold.map(s => s.short));
   const vrows = D.act.map(a => {
     const entry = a.shares ? a.commitment / a.shares : null;
     const val = a.shares * P;
-    const tag = a.isReinvTarget && D.hasReinv ? ' — <b>reinversión</b>' : (soldShorts.has(a.short) ? ' — <b>retenida</b> (activa)' : ' (activa)');
+    const tag = a.isReinvTarget && D.hasReinv ? ' — <b>reinversión</b>' : ' (activa)';
     const cta = (D.combined && a.acct) ? `${E(a.acct)} · ` : '';
     return `<tr><td>${cta}${E(a.short)}${tag}</td><td class="num">${SPXR_SH(a.shares)}</td><td class="num">${entry ? SPXR_P2(entry) : '—'}</td><td class="num">${SPXR_P2(P)}</td><td class="num">${SPXR_MONEY(a.commitment)}</td><td class="num b">${SPXR_MONEY(val)}</td><td class="num b">${entry ? SPXR_X(P / entry) : '—'}</td></tr>`;
   });
