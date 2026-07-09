@@ -9722,20 +9722,25 @@ tr.bono td{background:#fdf6ec;color:#9a6c1f}
 </div></body></html>`;
 }
 
-// ── Paginación inteligente: corta SOLO en fronteras de bloque (nunca a media línea o fila).
-// Reglas: un encabezado de sección (.sec) nunca queda huérfano al pie (se prohíbe cortar justo
-// después de él); un pie de tabla (.fn) nunca se separa de su tabla; entre thead y la 1ª fila
-// no se corta; dentro de una fila jamás. Si un bloque no cabe completo, se pasa entero a la
-// página siguiente (corte duro solo si un bloque solo es más alto que una página).
+// ── Paginación inteligente: empaquetado por SECCIONES con fallback a bloques/filas.
+// 1) El contenido se agrupa en unidades: [portada+KPIs] y luego cada sección (.sec hasta la
+//    siguiente .sec). Si una unidad completa cabe en una página, JAMÁS se parte: se empuja
+//    entera a la página siguiente (temas coherentes, sin tablas cortadas).
+// 2) Solo si una unidad sola es más alta que una página, se parte por dentro en fronteras
+//    seguras: inicio de párrafo o fila de tabla (nunca a media línea; nunca entre thead y la
+//    1ª fila; la última fila/total viaja pegada; un .sec nunca queda huérfano; un .fn nunca
+//    se separa de su tabla).
 function spxrPageCuts(pageEl, capacityCss) {
   const pageTop = pageEl.getBoundingClientRect().top;
   const relTop = el => Math.round(el.getBoundingClientRect().top - pageTop);
-  const cands = new Set(), banned = new Set();
-  let prevWasSec = false;
+  const relBot = el => Math.round(el.getBoundingClientRect().bottom - pageTop);
   const kids = [];
   Array.from(pageEl.children).forEach(ch => {
     if (ch.classList.contains('rbody')) kids.push(...ch.children); else kids.push(ch);
   });
+  // candidatos finos (para unidades más altas que una página)
+  const cands = new Set(), banned = new Set();
+  let prevWasSec = false;
   kids.forEach(el => {
     const y = relTop(el);
     if (prevWasSec || el.classList.contains('fn')) banned.add(y); else cands.add(y);
@@ -9744,21 +9749,37 @@ function spxrPageCuts(pageEl, capacityCss) {
       const trs = Array.from(el.querySelectorAll('tbody tr'));
       trs.forEach((tr, i) => {
         const yy = relTop(tr);
-        // no cortar entre thead y la 1ª fila, ni justo antes de la ÚLTIMA (el total viaja con su tabla)
         if (i === 0 || i === trs.length - 1) banned.add(yy); else cands.add(yy);
       });
     }
   });
   banned.forEach(y => cands.delete(y));
-  const sorted = [...cands].sort((a, b) => a - b);
+  const fine = [...cands].sort((a, b) => a - b);
+  // unidades: [inicio..antes de la 1ª .sec], luego una por sección
+  const units = [];
+  let cur = null;
+  kids.forEach(el => {
+    if (el.classList.contains('sec')) { if (cur) units.push(cur); cur = { top: relTop(el), bottom: relBot(el) }; }
+    else if (cur) cur.bottom = Math.max(cur.bottom, relBot(el));
+    else { if (!units.length) units.push({ top: 0, bottom: relBot(el) }); else units[0].bottom = Math.max(units[0].bottom, relBot(el)); }
+  });
+  if (cur) units.push(cur);
   const total = Math.ceil(pageEl.getBoundingClientRect().height);
+  // unidades CONTIGUAS: el margen entre secciones pertenece a la unidad anterior
+  for (let i = 0; i < units.length - 1; i++) units[i].bottom = units[i + 1].top;
+  if (units.length) units[units.length - 1].bottom = total;
   const cuts = [];
   let y = 0;
   while (total - y > capacityCss) {
     const limit = y + capacityCss;
+    const u = units.find(un => un.top < limit && un.bottom > limit);
     let c = null;
-    for (const v of sorted) { if (v > y + 120 && v <= limit) c = v; }
-    if (c == null) c = limit;
+    if (u && u.top > y + 80 && (u.bottom - u.top) <= capacityCss) {
+      c = u.top;                    // la sección cabe completa en una página → se empuja entera
+    } else {
+      for (const v of fine) { if (v > y + 120 && v <= limit) c = v; }   // partir por dentro
+    }
+    if (c == null || c <= y + 80) c = limit;   // bloque gigante sin frontera: corte duro
     cuts.push(c); y = c;
   }
   return { cuts, total };
