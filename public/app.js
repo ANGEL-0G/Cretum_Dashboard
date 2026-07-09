@@ -4729,7 +4729,7 @@ async function renderReportPdf(html, fileName) {
     const pageHpx = pageH / ptPerPx;               // altura de una página en px de canvas
     if (canvas.height <= pageHpx + 2) {
       // Cabe en una sola página
-      pdf.addImage(canvas.toDataURL('image/jpeg', 0.94), 'JPEG', 0, 0, pageW, canvas.height * ptPerPx);
+      pdf.addImage(canvas.toDataURL('image/jpeg', 0.93), 'JPEG', 0, 0, pageW, canvas.height * ptPerPx);
     } else {
       // Cortes "seguros": el fondo (bottom) de cada fila y bloque, para NO partir una fila a la mitad.
       // Solo tbody tr (no thead): cortar justo tras el encabezado dejaría un header huérfano al pie.
@@ -9808,7 +9808,7 @@ async function spxrRenderPdf(html, fileName, anexo3) {
     try { await document.fonts.ready; } catch (e) { /* noop */ }
     await loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js');
     await loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
-    const SCALE = 2.5;
+    const SCALE = 4;   // ~400 DPI: texto nitido incluso con zoom
     const canvas = await window.html2canvas(el, { scale: SCALE, backgroundColor: '#ffffff', width: 816, height: h, windowWidth: 816, useCORS: true, logging: false });
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'letter' });
@@ -9816,7 +9816,7 @@ async function spxrRenderPdf(html, fileName, anexo3) {
     const ptPerPx = pageW / canvas.width;
     const pageHpx = pageH / ptPerPx;
     if (canvas.height <= pageHpx + 2) {
-      pdf.addImage(canvas.toDataURL('image/jpeg', 0.94), 'JPEG', 0, 0, pageW, canvas.height * ptPerPx);
+      pdf.addImage(canvas.toDataURL('image/jpeg', 0.93), 'JPEG', 0, 0, pageW, canvas.height * ptPerPx);
     } else {
       // cortes seguros medidos en el DOM (px CSS): margen superior 26pt en páginas 2+,
       // capacidad = página menos márgenes, convertida de pt -> px CSS
@@ -9833,7 +9833,7 @@ async function spxrRenderPdf(html, fileName, anexo3) {
         c2.width = canvas.width; c2.height = sliceH;
         c2.getContext('2d').drawImage(canvas, 0, y0, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
         if (i) pdf.addPage();
-        pdf.addImage(c2.toDataURL('image/jpeg', 0.94), 'JPEG', 0, i === 0 ? 0 : topPadPt, pageW, sliceH * ptPerPx);
+        pdf.addImage(c2.toDataURL('image/jpeg', 0.93), 'JPEG', 0, i === 0 ? 0 : topPadPt, pageW, sliceH * ptPerPx);
       }
     }
     // ── Anexo 3 (vectorial): links reales, clicables ──
