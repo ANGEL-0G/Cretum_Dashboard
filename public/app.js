@@ -654,6 +654,7 @@ function tkRow(t, i) {
         ${t.createdAt ? `<span class="li-created" title="${createdTitle(t.createdAt)}"><i class="fa-regular fa-clock"></i> ${fmtCreated(t.createdAt)}</span>` : ''}
         ${t.due ? `<span class="li-due ${od ? 'od' : ''}">${fmtD(t.due)}</span>` : ''}
         <span class="li-prio ${prioC(t.prio)}">${t.prio}</span>
+        ${t.collab ? '<span class="li-tag">Colaborativa</span>' : ''}
         ${done
           ? `<button class="sm-btn sm-red" onclick="toggle('${t.id}','progress')">Reabrir</button>`
           : `<span class="li-inc" style="display:flex;align-items:center;gap:4px">
@@ -1438,6 +1439,7 @@ function openTaskModal() {
     const el = document.getElementById(id); if (el) el.value = '';
   });
   resetPrio('fPrio'); resetPrio('pPrio');
+  const fc = document.getElementById('fCollab'); if (fc) fc.checked = false;
   m.classList.add('show');
   setTimeout(() => document.getElementById('fName')?.focus(), 80);
 }
@@ -1466,6 +1468,7 @@ function openEditTask(id, kind) {
     document.getElementById('fDue').value = t.due || '';
     document.getElementById('fProject').value = t.project || '';
     setPrioActive('fPrio', t.prio || 'Media');
+    const fc = document.getElementById('fCollab'); if (fc) fc.checked = !!t.collab;
   } else {
     document.getElementById('pName').value = t.name || '';
     document.getElementById('pUnit').value = t.unit || '';
@@ -1619,6 +1622,7 @@ function addSimple() {
   const n = document.getElementById('fName').value.trim();
   if (!n) { toast('Escribe una descripción'); return; }
   // Modo edición: actualiza la tarea existente (conserva done/collab/owner/createdAt).
+  const collab = !!document.getElementById('fCollab')?.checked;
   if (editingTaskId && editingTaskKind === 'simple') {
     const t = state.simple.find(x => x.id === editingTaskId);
     if (t) {
@@ -1626,6 +1630,7 @@ function addSimple() {
       t.due = document.getElementById('fDue').value;
       t.prio = document.getElementById('fPrio').value;
       t.project = document.getElementById('fProject').value.trim() || null;
+      t.collab = collab;
     }
     scheduleSave(); render(); toast('Tarea actualizada');
     closeTaskModal();
@@ -1638,7 +1643,7 @@ function addSimple() {
     prio: document.getElementById('fPrio').value,
     project: document.getElementById('fProject').value.trim() || null,
     done: false,
-    collab: false,
+    collab: collab,
     owner: currentUser,
     createdAt: new Date().toISOString()
   });
@@ -1739,16 +1744,18 @@ function doAssign() {
 
   assignees.forEach(to => {
     // Auto-asignación: si me la asigno a mí mismo, va DIRECTO a mi lista (sin invitación ni correo).
+    // Es "colaborativa" si además se la asigné a alguien más (tarea compartida).
     if (to === currentUser) {
+      const shared = assignees.some(a => a !== currentUser);
       const tid = (isProgress ? 'P' : 'S') + (++tkId);
       if (isProgress) {
         state.progress.unshift({
           id: tid, name: n, unit, total, done: 0, log: [],
-          due, prio, owner: currentUser, createdAt: new Date().toISOString()
+          due, prio, owner: currentUser, collab: shared, createdAt: new Date().toISOString()
         });
       } else {
         state.simple.unshift({
-          id: tid, name: n, due, prio, done: false, collab: false,
+          id: tid, name: n, due, prio, done: false, collab: shared,
           owner: currentUser, createdAt: new Date().toISOString()
         });
       }

@@ -3856,6 +3856,10 @@ button,input,select{font-family:var(--font)}
           <label class="form-label">Proyecto <span class="form-label-opt">opcional</span></label>
           <input class="form-input" id="fProject" list="projectList" placeholder="Ej: Fondo VI, Marketing, Onboarding…" autocomplete="off">
         </div>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:14px">
+          <input type="checkbox" id="fCollab" style="width:auto;margin:0;cursor:pointer">
+          <span style="font-size:13px;color:var(--gray-700)">Colaborativa <span class="form-label-opt">(compartida con el equipo)</span></span>
+        </label>
         <button class="btn-primary" id="btnAddSimple" onclick="addSimple()">
           <i class="fa-solid fa-plus"></i> Agregar tarea
         </button>
