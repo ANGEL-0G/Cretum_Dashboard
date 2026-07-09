@@ -9738,6 +9738,44 @@ tr.bono td{color:#8a6d1f;background:#fdf9ef}
 </div></body></html>`;
 }
 
+// ── Paginación inteligente: corta SOLO en fronteras de bloque (nunca a media línea o fila).
+// Reglas: un encabezado de sección (.sec) nunca queda huérfano al pie (se prohíbe cortar justo
+// después de él); un pie de tabla (.fn) nunca se separa de su tabla; entre thead y la 1ª fila
+// no se corta; dentro de una fila jamás. Si un bloque no cabe completo, se pasa entero a la
+// página siguiente (corte duro solo si un bloque solo es más alto que una página).
+function spxrPageCuts(pageEl, capacityCss) {
+  const pageTop = pageEl.getBoundingClientRect().top;
+  const relTop = el => Math.round(el.getBoundingClientRect().top - pageTop);
+  const cands = new Set(), banned = new Set();
+  let prevWasSec = false;
+  Array.from(pageEl.children).forEach(el => {
+    const y = relTop(el);
+    if (prevWasSec || el.classList.contains('fn')) banned.add(y); else cands.add(y);
+    prevWasSec = el.classList.contains('sec');
+    if (el.tagName === 'TABLE') {
+      const trs = Array.from(el.querySelectorAll('tbody tr'));
+      trs.forEach((tr, i) => {
+        const yy = relTop(tr);
+        // no cortar entre thead y la 1ª fila, ni justo antes de la ÚLTIMA (el total viaja con su tabla)
+        if (i === 0 || i === trs.length - 1) banned.add(yy); else cands.add(yy);
+      });
+    }
+  });
+  banned.forEach(y => cands.delete(y));
+  const sorted = [...cands].sort((a, b) => a - b);
+  const total = Math.ceil(pageEl.getBoundingClientRect().height);
+  const cuts = [];
+  let y = 0;
+  while (total - y > capacityCss) {
+    const limit = y + capacityCss;
+    let c = null;
+    for (const v of sorted) { if (v > y + 120 && v <= limit) c = v; }
+    if (c == null) c = limit;
+    cuts.push(c); y = c;
+  }
+  return { cuts, total };
+}
+
 // ── PDF: páginas imagen (mecanismo estándar) + Anexo 3 VECTORIAL con links clicables ──
 async function spxrRenderPdf(html, fileName, anexo3) {
   const old = document.getElementById('reportPrintFrame');
@@ -9771,15 +9809,22 @@ async function spxrRenderPdf(html, fileName, anexo3) {
     if (canvas.height <= pageHpx + 2) {
       pdf.addImage(canvas.toDataURL('image/jpeg', 0.94), 'JPEG', 0, 0, pageW, canvas.height * ptPerPx);
     } else {
-      let y = 0, first = true;
-      while (y < canvas.height - 2) {
-        const sliceH = Math.min(pageHpx, canvas.height - y);
+      // cortes seguros medidos en el DOM (px CSS): margen superior 26pt en páginas 2+,
+      // capacidad = página menos márgenes, convertida de pt -> px CSS
+      const topPadPt = 26, botPadPt = 12;
+      const capacityCss = Math.floor(((pageH - topPadPt - botPadPt) / ptPerPx) / SCALE);
+      const { cuts, total } = spxrPageCuts(el, capacityCss);
+      const bounds = [0, ...cuts, total];
+      for (let i = 0; i < bounds.length - 1; i++) {
+        const y0 = Math.floor(bounds[i] * SCALE);
+        const y1 = Math.min(Math.ceil(bounds[i + 1] * SCALE), canvas.height);
+        const sliceH = y1 - y0;
+        if (sliceH <= 4) continue;
         const c2 = document.createElement('canvas');
         c2.width = canvas.width; c2.height = sliceH;
-        c2.getContext('2d').drawImage(canvas, 0, y, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
-        if (!first) pdf.addPage();
-        pdf.addImage(c2.toDataURL('image/jpeg', 0.94), 'JPEG', 0, 0, pageW, sliceH * ptPerPx);
-        first = false; y += sliceH;
+        c2.getContext('2d').drawImage(canvas, 0, y0, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+        if (i) pdf.addPage();
+        pdf.addImage(c2.toDataURL('image/jpeg', 0.94), 'JPEG', 0, i === 0 ? 0 : topPadPt, pageW, sliceH * ptPerPx);
       }
     }
     // ── Anexo 3 (vectorial): links reales, clicables ──
