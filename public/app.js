@@ -629,6 +629,7 @@ function tkRow(t, i) {
         ${t.collab ? '<span class="li-tag">Colaborativa</span>' : ''}
         ${done ? `<button class="sm-btn sm-red" onclick="toggle('${t.id}','simple')">Reabrir</button>` : ''}
       </div>
+      ${!done ? `<button class="li-edit" onclick="openEditTask('${t.id}','simple')" title="Editar tarea"><i class="fa-solid fa-pen"></i></button>` : ''}
       <button class="li-del" onclick="del('${t.id}','simple')"><i class="fa-solid fa-xmark"></i></button>
     </div></div>`;
   const p = pct(t);
@@ -658,6 +659,7 @@ function tkRow(t, i) {
               ${t.log.length ? `<button class="sm-btn sm-red" onclick="undoLog('${t.id}')" title="Deshacer última entrada">↩</button>` : ''}
             </span>`}
       </div>
+      ${!done ? `<button class="li-edit" onclick="openEditTask('${t.id}','progress')" title="Editar tarea"><i class="fa-solid fa-pen"></i></button>` : ''}
       <button class="li-del" onclick="del('${t.id}','progress')"><i class="fa-solid fa-xmark"></i></button>
     </div></div>`;
 }
@@ -1399,19 +1401,81 @@ function tkAllProjects() {
   return [...set].sort((a, b) => a.localeCompare(b, 'es'));
 }
 
+// Modo edición del taskModal: si hay id, addSimple/addProgress ACTUALIZAN esa tarea
+// en vez de crear una nueva. El mismo modal sirve para crear y editar (reutilizado).
+let editingTaskId = null;
+let editingTaskKind = null;
+
+// Devuelve el taskModal a modo "crear" (título, tabs visibles, labels de botón, sin edición).
+function taskModalResetCreate() {
+  editingTaskId = null;
+  editingTaskKind = null;
+  const title = document.getElementById('taskModalTitle');
+  if (title) title.textContent = 'Nueva tarea';
+  const tabs = document.querySelector('#taskModal .task-modal-tabs');
+  if (tabs) tabs.style.display = '';
+  const bS = document.getElementById('btnAddSimple');
+  if (bS) bS.innerHTML = '<i class="fa-solid fa-plus"></i> Agregar tarea';
+  const bP = document.getElementById('btnAddProgress');
+  if (bP) bP.innerHTML = '<i class="fa-solid fa-chart-line"></i> Crear tarea con progreso';
+}
+
 function openTaskModal() {
   const m = document.getElementById('taskModal');
   if (!m) return;
+  taskModalResetCreate();
   setType('simple');
   // Autocompletado de proyectos existentes + limpia los campos de proyecto
   const dl = document.getElementById('projectList');
   if (dl) dl.innerHTML = tkAllProjects().map(p => `<option value="${escapeHtml(p)}"></option>`).join('');
-  ['fProject', 'pProject'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  ['fName', 'fDue', 'fProject', 'pName', 'pUnit', 'pTotal', 'pDue', 'pProject'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  resetPrio('fPrio'); resetPrio('pPrio');
   m.classList.add('show');
   setTimeout(() => document.getElementById('fName')?.focus(), 80);
 }
+
+// Abre el taskModal PRECARGADO para editar una tarea activa propia (simple o progress).
+function openEditTask(id, kind) {
+  const t = (kind === 'progress' ? state.progress : state.simple).find(x => x.id === id);
+  if (!t) { toast('No encontré la tarea'); return; }
+  const m = document.getElementById('taskModal');
+  if (!m) return;
+  editingTaskId = id;
+  editingTaskKind = kind;
+  const dl = document.getElementById('projectList');
+  if (dl) dl.innerHTML = tkAllProjects().map(p => `<option value="${escapeHtml(p)}"></option>`).join('');
+  setType(kind);
+  // UI en modo edición: título, ocultar tabs (no se cambia el tipo), labels de guardar
+  const title = document.getElementById('taskModalTitle');
+  if (title) title.textContent = 'Editar tarea';
+  const tabs = document.querySelector('#taskModal .task-modal-tabs');
+  if (tabs) tabs.style.display = 'none';
+  const saveLabel = '<i class="fa-solid fa-check"></i> Guardar cambios';
+  const bS = document.getElementById('btnAddSimple'); if (bS) bS.innerHTML = saveLabel;
+  const bP = document.getElementById('btnAddProgress'); if (bP) bP.innerHTML = saveLabel;
+  if (kind === 'simple') {
+    document.getElementById('fName').value = t.name || '';
+    document.getElementById('fDue').value = t.due || '';
+    document.getElementById('fProject').value = t.project || '';
+    setPrioActive('fPrio', t.prio || 'Media');
+  } else {
+    document.getElementById('pName').value = t.name || '';
+    document.getElementById('pUnit').value = t.unit || '';
+    document.getElementById('pTotal').value = (t.total != null ? t.total : '');
+    document.getElementById('pDue').value = t.due || '';
+    document.getElementById('pProject').value = t.project || '';
+    setPrioActive('pPrio', t.prio || 'Media');
+  }
+  m.classList.add('show');
+  setTimeout(() => document.getElementById(kind === 'simple' ? 'fName' : 'pName')?.focus(), 80);
+}
+
 function closeTaskModal() {
   document.getElementById('taskModal')?.classList.remove('show');
+  editingTaskId = null;
+  editingTaskKind = null;
 }
 function openAssignModal() {
   const m = document.getElementById('assignModal');
@@ -1532,16 +1596,35 @@ function pickPrio(btn, hiddenId) {
 }
 
 function resetPrio(hiddenId) {
-  document.getElementById(hiddenId).value = 'Media';
-  const group = document.getElementById(hiddenId)?.parentElement?.querySelector('.prio-group');
+  setPrioActive(hiddenId, 'Media');
+}
+
+// Fija la prioridad (hidden + pill activa) a un valor arbitrario. Usado al precargar el editor.
+function setPrioActive(hiddenId, prio) {
+  const hidden = document.getElementById(hiddenId);
+  if (hidden) hidden.value = prio;
+  const group = hidden?.parentElement?.querySelector('.prio-group');
   group?.querySelectorAll('.prio-pill').forEach(p => {
-    p.classList.toggle('active', p.dataset.prio === 'Media');
+    p.classList.toggle('active', p.dataset.prio === prio);
   });
 }
 
 function addSimple() {
   const n = document.getElementById('fName').value.trim();
   if (!n) { toast('Escribe una descripción'); return; }
+  // Modo edición: actualiza la tarea existente (conserva done/collab/owner/createdAt).
+  if (editingTaskId && editingTaskKind === 'simple') {
+    const t = state.simple.find(x => x.id === editingTaskId);
+    if (t) {
+      t.name = n;
+      t.due = document.getElementById('fDue').value;
+      t.prio = document.getElementById('fPrio').value;
+      t.project = document.getElementById('fProject').value.trim() || null;
+    }
+    scheduleSave(); render(); toast('Tarea actualizada');
+    closeTaskModal();
+    return;
+  }
   state.simple.unshift({
     id: 'S' + (++tkId),
     name: n,
@@ -1566,6 +1649,21 @@ function addProgress() {
   const total = parseInt(document.getElementById('pTotal').value);
   const unit = document.getElementById('pUnit').value.trim() || 'unidades';
   if (!n || !total || total < 1) { toast('Completa nombre y total'); return; }
+  // Modo edición: actualiza la tarea existente (conserva done/log/owner/createdAt).
+  if (editingTaskId && editingTaskKind === 'progress') {
+    const t = state.progress.find(x => x.id === editingTaskId);
+    if (t) {
+      t.name = n;
+      t.unit = unit;
+      t.total = total;
+      t.due = document.getElementById('pDue').value;
+      t.prio = document.getElementById('pPrio').value;
+      t.project = document.getElementById('pProject').value.trim() || null;
+    }
+    scheduleSave(); render(); toast('Tarea actualizada');
+    closeTaskModal();
+    return;
+  }
   state.progress.unshift({
     id: 'P' + (++tkId),
     name: n, unit, total, done: 0, log: [],

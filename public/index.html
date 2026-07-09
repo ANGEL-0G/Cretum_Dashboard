@@ -465,6 +465,8 @@ button,input,select{font-family:var(--font)}
 .li-prog-fill{height:100%;background:var(--navy);border-radius:3px}
 .li-del{background:none;border:none;color:var(--gray-300);font-size:13px;cursor:pointer;transition:color .15s;flex-shrink:0}
 .li-del:hover{color:var(--red)}
+.li-edit{background:none;border:none;color:var(--gray-300);font-size:12px;cursor:pointer;transition:color .15s;flex-shrink:0;padding:0 2px}
+.li-edit:hover{color:var(--navy)}
 
 /* Completar / reabrir: la fila sale desvaneciéndose y entra en su nuevo lugar
    con un breve destello del acento. Solo transform/opacity (GPU). */
@@ -3810,7 +3812,7 @@ button,input,select{font-family:var(--font)}
 <div class="modal-backdrop task-modal-backdrop" id="taskModal" onclick="if(event.target===this)closeTaskModal()">
   <div class="task-modal-box">
     <div class="task-modal-head">
-      <div class="task-modal-title">Nueva tarea</div>
+      <div class="task-modal-title" id="taskModalTitle">Nueva tarea</div>
       <button class="task-modal-close" onclick="closeTaskModal()" aria-label="Cerrar">
         <i class="fa-solid fa-xmark"></i>
       </button>
@@ -3854,7 +3856,7 @@ button,input,select{font-family:var(--font)}
           <label class="form-label">Proyecto <span class="form-label-opt">opcional</span></label>
           <input class="form-input" id="fProject" list="projectList" placeholder="Ej: Fondo VI, Marketing, Onboarding…" autocomplete="off">
         </div>
-        <button class="btn-primary" onclick="addSimple()">
+        <button class="btn-primary" id="btnAddSimple" onclick="addSimple()">
           <i class="fa-solid fa-plus"></i> Agregar tarea
         </button>
       </div>
@@ -3898,7 +3900,7 @@ button,input,select{font-family:var(--font)}
           <label class="form-label">Proyecto <span class="form-label-opt">opcional</span></label>
           <input class="form-input" id="pProject" list="projectList" placeholder="Ej: Fondo VI, Marketing, Onboarding…" autocomplete="off">
         </div>
-        <button class="btn-primary" onclick="addProgress()">
+        <button class="btn-primary" id="btnAddProgress" onclick="addProgress()">
           <i class="fa-solid fa-chart-line"></i> Crear tarea con progreso
         </button>
       </div>
