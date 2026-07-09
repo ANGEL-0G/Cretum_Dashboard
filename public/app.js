@@ -72,9 +72,15 @@ async function enterApp(user) {
   document.getElementById('loginWrap').style.display = 'none';
   document.getElementById('app').style.display = 'block';
 
-  // pills de multi-asignación — todos menos uno mismo
+  // pills de multi-asignación — incluye a uno mismo (primero, "(yo)") para auto-asignarse
   const wrap = document.getElementById('aAssignees');
-  wrap.innerHTML = Object.entries(USERS)
+  const meU = USERS[currentUser];
+  const selfPill = meU ? `
+      <button type="button" class="multi-pill" data-uid="${currentUser}" onclick="toggleAssignee(this)">
+        <span class="multi-pill-av">${meU.initials}</span>
+        <span class="multi-pill-name">${meU.name} (yo)</span>
+      </button>` : '';
+  wrap.innerHTML = selfPill + Object.entries(USERS)
     .filter(([k, v]) => k !== currentUser && !v.hidden)
     .map(([k,v]) => `
       <button type="button" class="multi-pill" data-uid="${k}" onclick="toggleAssignee(this)">
@@ -1732,6 +1738,22 @@ function doAssign() {
   }
 
   assignees.forEach(to => {
+    // Auto-asignación: si me la asigno a mí mismo, va DIRECTO a mi lista (sin invitación ni correo).
+    if (to === currentUser) {
+      const tid = (isProgress ? 'P' : 'S') + (++tkId);
+      if (isProgress) {
+        state.progress.unshift({
+          id: tid, name: n, unit, total, done: 0, log: [],
+          due, prio, owner: currentUser, createdAt: new Date().toISOString()
+        });
+      } else {
+        state.simple.unshift({
+          id: tid, name: n, due, prio, done: false, collab: false,
+          owner: currentUser, createdAt: new Date().toISOString()
+        });
+      }
+      return;
+    }
     // Si ya hay invite pendiente del mismo asignador → mismo destinatario → misma tarea, no spam
     const alreadyPending = state.invites.some(iv =>
       iv.from === currentUser && iv.to === to && iv.name === n
@@ -1753,10 +1775,16 @@ function doAssign() {
     }
   });
 
-  const lbl = assignees.length === 1
-    ? (USERS[assignees[0]]?.name || assignees[0])
-    : `${assignees.length} personas`;
-  scheduleSave(); render(); toast(`Tarea enviada a ${lbl}`);
+  const others = assignees.filter(a => a !== currentUser);
+  const includesSelf = assignees.includes(currentUser);
+  let msg;
+  if (!others.length) {
+    msg = 'Tarea agregada a tu lista';
+  } else {
+    const lbl = others.length === 1 ? (USERS[others[0]]?.name || others[0]) : `${others.length} personas`;
+    msg = `Tarea enviada a ${lbl}${includesSelf ? ' y a ti' : ''}`;
+  }
+  scheduleSave(); render(); toast(msg);
   closeAssignModal();
 }
 
