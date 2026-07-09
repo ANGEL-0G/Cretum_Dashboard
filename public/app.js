@@ -9430,6 +9430,72 @@ async function spxrLivePrice() {
   return { P: +data[0].current_ev_pps, EVB: SPXR_N(data[0].current_ev_b) };
 }
 
+// ── ES→EN de etiquetas derivadas del catálogo (calendario, fases, fechas, scopes) ──
+const SPXR_MON_EN = { ene: 'Jan', feb: 'Feb', mar: 'Mar', abr: 'Apr', may: 'May', jun: 'Jun', jul: 'Jul', ago: 'Aug', sep: 'Sep', oct: 'Oct', nov: 'Nov', dic: 'Dec' };
+function spxrEn(s) {
+  if (s == null) return s;
+  let t = String(s);
+  const R = [
+    // ── frases completas del catálogo (ANTES que los patrones genéricos) ──
+    [/Estructura y porcentajes del S-1 de SpaceX \(mayo 2026\)\. La fecha del primer earnings aún no es oficial: el 1er cliff \(~17 ago 2026\) es la mejor estimación disponible; hitos posteriores estimados con la misma cadencia\. El prospecto final es la autoridad\.( Liquidez total ~ agosto 2027 \(~14 meses post-IPO\)\.)?/g,
+     (m, tail) => "Structure and percentages from SpaceX's S-1 (May 2026). The date of the first earnings report is not yet official: the 1st cliff (~Aug 17, 2026) is the best available estimate; later milestones estimated with the same cadence. The final prospectus is the controlling authority." + (tail ? ' Full liquidity ~ August 2027 (~14 months post-IPO).' : '')],
+    [/La posición se libera en <b>dos mitades<\/b>\. La primera \(~50%\) durante los primeros ~6 meses \(lock-up de 180 días\); la segunda \(~50%\) en un <b>lock-up extendido<\/b> que se estira hasta ~14 meses post-IPO \(liberación final ~ agosto 2027\)\./g,
+     'The position is released in <b>two halves</b>. The first (~50%) during the first ~6 months (180-day lock-up); the second (~50%) under an <b>extended lock-up</b> stretching to ~14 months post-IPO (final release ~ August 2027).'],
+    [/Liberación escalonada y ligada a desempeño dentro de la ventana estándar de <b>180 días<\/b>\. Expira por completo ~9 de diciembre de 2026\./g,
+     'Staggered, performance-linked release within the standard <b>180-day</b> window. Fully expires ~December 9, 2026.'],
+    [/Fecha del earnings Q2 aún no oficial; 17 ago 2026 es la mejor estimación\. Acumulado: 20%\./g,
+     'Q2 earnings date not yet official; Aug 17, 2026 is the best estimate. Cumulative: 20%.'],
+    [/Si la acción cotiza ≥30% arriba del IPO en 5 de 10 días consecutivos \(pre-earnings Q2\)\. Acumulado: 30%\./g,
+     'If the stock trades ≥30% above the IPO price on 5 of 10 consecutive days (pre-Q2 earnings). Cumulative: 30%.'],
+    [/Solo si el precio cierra ≥30% arriba del precio de oferta en 5 de los 10 días siguientes al earnings Q2\./g,
+     'Only if the price closes ≥30% above the offering price on 5 of the 10 days following Q2 earnings.'],
+    [/Solo si SpaceX cotiza >=30% sobre el IPO; adelanta parte del remanente/g,
+     'Only if SpaceX trades >=30% above the IPO price; brings forward part of the remainder'],
+    [/Bono condicional adelantaría parte del remanente/g, 'A conditional bonus would bring forward part of the remainder'],
+    [/Primer cliff de esta mitad\. Fecha del earnings Q2 aún no oficial; mejor estimación\./g,
+     'First cliff of this half. Q2 earnings date not yet official; best estimate.'],
+    [/Expiración total\. Acumulado: 100%\./g, 'Full expiration. Cumulative: 100%.'],
+    [/Inicio del lock-up extendido\./g, 'Start of the extended lock-up.'],
+    [/Remanente — liberación final\./g, 'Remainder — final release.'],
+    [/Liberación en dos mitades \(hasta ~14 meses\)/g, 'Release in two halves (up to ~14 months)'],
+    [/Lock-up escalonado de 180 días/g, 'Staggered 180-day lock-up'],
+    [/Primera mitad \(~50%\) — lock-up de 180 días/g, 'First half (~50%) — 180-day lock-up'],
+    [/Segunda mitad \(~50%\) — lock-up extendido \(patrón 20\/10\/20\/10\/20\/20\)/g, 'Second half (~50%) — extended lock-up (20/10/20/10/20/20 pattern)'],
+    // ── hitos / etiquetas ──
+    [/1er cliff — 2 días tras earnings Q2 \(~/g, '1st cliff — 2 days after Q2 earnings (~'],
+    [/2º cliff — tras earnings Q3 2026 \(~/g, '2nd cliff — after Q3 2026 earnings (~'],
+    [/2 días tras earnings (Q\d)( \d{4})? \(~/g, (m, q, y) => `2 days after ${q}${y || ''} earnings (~`],
+    [/Tras earnings (Q\d)( \d{4})? \(~/g, (m, q, y) => `After ${q}${y || ''} earnings (~`],
+    [/Tras earnings Q2 2027 \(est\.\) — liberación final/g, 'After Q2 2027 earnings (est.) — final release'],
+    [/Lock-up extendido \(tras earnings Q4 2026, est\.\)/g, 'Extended lock-up (after Q4 2026 earnings, est.)'],
+    [/Bloque (\d) \(~15 días tras el cliff\)/g, 'Block $1 (~15 days after the cliff)'],
+    [/Bloque (\d)/g, 'Block $1'],
+    [/Bono por desempeño — condicional/g, 'Performance bonus — conditional'],
+    [/Bono por desempeño/g, 'Performance bonus'],
+    [/Día 180 — expiración total/g, 'Day 180 — full lock-up expiration'],
+    [/Día (\d+)/g, 'Day $1'],
+    [/Cada ~15 días/g, 'Every ~15 days'],
+    [/~mismo período/g, '~same period'],
+    [/Cal\. 2 \+ 1ª mitad Cal\. 1/g, 'Cal. 2 + 1st half Cal. 1'],
+    [/1ª mitad Cal\. 1/g, '1st half Cal. 1'],
+    [/2ª mitad del Cal\. 1( \(completa\))?/g, (m, c) => '2nd half of Cal. 1' + (c ? ' (completes)' : '')],
+    [/Calendario de 180 días/g, '180-day schedule'],
+    [/Acumulado: (\d+(?:\.\d+)?)%\./g, 'Cumulative: $1%.'],
+    [/Remanente/g, 'Remainder'],
+    [/1er cliff/g, '1st cliff'], [/2º cliff/g, '2nd cliff'],
+    [/2 días tras earnings/g, '2 days after earnings'],
+    [/tras earnings/g, 'after earnings'],
+    [/fecha aún no oficial/g, 'date not yet official'],
+    [/mejor estimación/g, 'best estimate'],
+    // ── fechas (AL FINAL, para no romper las frases largas) ──
+    [/~ ?(\d{1,2}) (ene|feb|mar|abr|may|jun|jul|ago|sep|oct|nov|dic) (\d{4})/g, (m, d, mo, y) => `~ ${SPXR_MON_EN[mo]} ${d}, ${y}`],
+    [/(^|[\s(])(\d{1,2}) (ene|feb|mar|abr|may|jun|jul|ago|sep|oct|nov|dic) (\d{4})/g, (m, p, d, mo, y) => `${p}${SPXR_MON_EN[mo]} ${d}, ${y}`],
+    [/~ ?(ene|feb|mar|abr|may|jun|jul|ago|sep|oct|nov|dic) (\d{4})/g, (m, mo, y) => `~ ${SPXR_MON_EN[mo]} ${y}`],
+  ];
+  R.forEach(([re, rep]) => { t = t.replace(re, rep); });
+  return t;
+}
+
 // ── Clasifica las posiciones SpaceX del detalle abierto y arma el modelo del reporte ──
 function spxrBuildData(d, live) {
   const inv = d.inv;
@@ -9551,44 +9617,55 @@ function spxrCalendar(shA, shB) {
   return { rows, TOT: Math.round(TOT), pool: Math.round(pool), ext: Math.round(ext) };
 }
 
-// ── Narrativa "¿Qué pasó con la posición?" por caso ──
-function spxrNarrative(D) {
+// ── Narrativa "¿Qué pasó con la posición?" por caso (ES/EN) ──
+function spxrNarrative(D, EN) {
+  const T = (es, en) => (EN ? en : es);
   const ps = [];
   const dirV = D.act.filter(a => !a.indirect && (!a.isReinvTarget || !D.hasReinv)).map(a => `<b>${a.short}</b> (${SPXR_MONEY(a.commitment)})`);
   const indV = D.act.filter(a => a.indirect);
-  const join = arr => arr.join(', ').replace(/, ([^,]*)$/, ' y $1');
+  const join = arr => arr.join(', ').replace(/, ([^,]*)$/, T(' y $1', ' and $1'));
   let p1;
   if (dirV.length && indV.length) {
-    p1 = `<b>1. La posición.</b> El inversionista tiene exposición directa a SpaceX a través de ${join(dirV)}, y exposición <b>indirecta</b> como parte de ${join(indV.map(a => `<b>${a.short.replace(' (indirecta)', '')}</b> (${SPXR_SH(a.shares)} acc)`))}${D.hasSold ? ' (más las porciones ya liquidadas que se describen abajo)' : ''}. Capital original: <b>${SPXR_MONEY(D.original)}</b>. Reflejando el <b>split 5:1</b>, la tenencia activa total es de <b>${SPXR_SH(D.totSh)} acciones post-split</b>.`;
+    p1 = T(`<b>1. La posición.</b> El inversionista tiene exposición directa a SpaceX a través de ${join(dirV)}, y exposición <b>indirecta</b> como parte de ${join(indV.map(a => `<b>${a.short.replace(' (indirecta)', '')}</b> (${SPXR_SH(a.shares)} acc)`))}${D.hasSold ? ' (más las porciones ya liquidadas que se describen abajo)' : ''}. Capital original: <b>${SPXR_MONEY(D.original)}</b>. Reflejando el <b>split 5:1</b>, la tenencia activa total es de <b>${SPXR_SH(D.totSh)} acciones post-split</b>.`,
+           `<b>1. The position.</b> The investor holds direct SpaceX exposure through ${join(dirV)}, and <b>indirect</b> exposure as part of ${join(indV.map(a => `<b>${a.short.replace(' (indirecta)', '')}</b> (${SPXR_SH(a.shares)} sh)`))}${D.hasSold ? ' (plus the portions already liquidated, described below)' : ''}. Original capital: <b>${SPXR_MONEY(D.original)}</b>. Reflecting the <b>5:1 split</b>, the total active holding is <b>${SPXR_SH(D.totSh)} post-split shares</b>.`);
   } else if (indV.length) {
-    p1 = `<b>1. Exposición a SpaceX.</b> El inversionista <b>no</b> tiene un vehículo directo (SPV) de SpaceX. Su exposición proviene de SpaceX como una de las empresas dentro de ${indV.length === 1 ? 'un fondo diversificado de MVP: el' : 'los fondos diversificados'} ${join(indV.map(a => `<b>${a.short.replace(' (indirecta)', '')}</b>`))}. Reflejando el <b>split 5:1</b>, la tenencia indirecta es de <b>${SPXR_SH(D.totSh)} acciones post-split</b>, a un costo promedio del fondo de ${join(indV.map(a => `<b>${SPXR_P2(a.commitment / a.shares)}</b>/acción`))}. Estas cifras no reflejan retenciones por gastos ni carried interest.`;
+    p1 = T(`<b>1. Exposición a SpaceX.</b> El inversionista <b>no</b> tiene un vehículo directo (SPV) de SpaceX. Su exposición proviene de SpaceX como una de las empresas dentro de ${indV.length === 1 ? 'un fondo diversificado de MVP: el' : 'los fondos diversificados'} ${join(indV.map(a => `<b>${a.short.replace(' (indirecta)', '')}</b>`))}. Reflejando el <b>split 5:1</b>, la tenencia indirecta es de <b>${SPXR_SH(D.totSh)} acciones post-split</b>, a un costo promedio del fondo de ${join(indV.map(a => `<b>${SPXR_P2(a.commitment / a.shares)}</b>/acción`))}. Estas cifras no reflejan retenciones por gastos ni carried interest.`,
+           `<b>1. SpaceX exposure.</b> The investor does <b>not</b> hold a direct SpaceX vehicle (SPV). Their exposure comes from SpaceX as one of the companies within ${indV.length === 1 ? 'an MVP diversified fund:' : 'the diversified funds'} ${join(indV.map(a => `<b>${a.short.replace(' (indirecta)', '')}</b>`))}. Reflecting the <b>5:1 split</b>, the indirect holding is <b>${SPXR_SH(D.totSh)} post-split shares</b>, at an average fund cost of ${join(indV.map(a => `<b>${SPXR_P2(a.commitment / a.shares)}</b>/share`))}. These figures do not reflect withholding for expenses or carried interest.`);
   } else {
-    p1 = `<b>1. La posición.</b> El inversionista tiene exposición directa a SpaceX a través de ${D.act.length === 1 ? 'el vehículo' : 'los vehículos'} ${join(dirV)}${D.hasSold ? ' (más las porciones ya liquidadas que se describen abajo)' : ''}. Capital original: <b>${SPXR_MONEY(D.original)}</b>. Reflejando el <b>split 5:1</b>, la tenencia activa es de <b>${SPXR_SH(D.totSh)} acciones post-split</b>.`;
+    p1 = T(`<b>1. La posición.</b> El inversionista tiene exposición directa a SpaceX a través de ${D.act.length === 1 ? 'el vehículo' : 'los vehículos'} ${join(dirV)}${D.hasSold ? ' (más las porciones ya liquidadas que se describen abajo)' : ''}. Capital original: <b>${SPXR_MONEY(D.original)}</b>. Reflejando el <b>split 5:1</b>, la tenencia activa es de <b>${SPXR_SH(D.totSh)} acciones post-split</b>.`,
+           `<b>1. The position.</b> The investor holds direct SpaceX exposure through ${D.act.length === 1 ? 'the vehicle' : 'the vehicles'} ${join(dirV)}${D.hasSold ? ' (plus the portions already liquidated, described below)' : ''}. Original capital: <b>${SPXR_MONEY(D.original)}</b>. Reflecting the <b>5:1 split</b>, the active holding is <b>${SPXR_SH(D.totSh)} post-split shares</b>.`);
   }
   ps.push(p1);
   if (D.hasSold) {
-    const pps = D.soldPps ? ` a un precio bruto de ${SPXR_P2(D.soldPps * 5)}/acción (${SPXR_P2(D.soldPps)} post-split)` : '';
-    const fecha = D.soldDate ? new Date(D.soldDate.slice(0, 10) + 'T12:00:00').toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+    const pps = D.soldPps ? T(` a un precio bruto de ${SPXR_P2(D.soldPps * 5)}/acción (${SPXR_P2(D.soldPps)} post-split)`, ` at a gross price of ${SPXR_P2(D.soldPps * 5)}/share (${SPXR_P2(D.soldPps)} post-split)`) : '';
+    const fecha = D.soldDate ? new Date(D.soldDate.slice(0, 10) + 'T12:00:00').toLocaleDateString(EN ? 'en-US' : 'es-MX', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
     if (D.hasReinv && D.cashOut <= 0.01) {
-      ps.push(`<b>2. Liquidación parcial y reinversión (${fecha}).</b> Un fondo institucional subyacente vendió <b>${SPXR_SH(D.soldShares)} acciones</b>${pps}. La totalidad de los <b>${SPXR_MONEY(D.reinvP)}</b> recibidos se reinvirtió en el vehículo directo <b>Serie VI-26A QP</b> — no es capital adicional ni efectivo entregado.`);
+      ps.push(T(`<b>2. Liquidación parcial y reinversión (${fecha}).</b> Un fondo institucional subyacente vendió <b>${SPXR_SH(D.soldShares)} acciones</b>${pps}. La totalidad de los <b>${SPXR_MONEY(D.reinvP)}</b> recibidos se reinvirtió en el vehículo directo <b>Serie VI-26A QP</b> — no es capital adicional ni efectivo entregado.`,
+                `<b>2. Partial liquidation and reinvestment (${fecha}).</b> An underlying institutional fund sold <b>${SPXR_SH(D.soldShares)} shares</b>${pps}. The entire <b>${SPXR_MONEY(D.reinvP)}</b> received was reinvested into the direct vehicle <b>Series VI-26A QP</b> — it is neither additional capital nor cash delivered.`));
     } else if (D.hasReinv) {
-      ps.push(`<b>2. Liquidación parcial (${fecha}).</b> Un fondo institucional subyacente vendió <b>${SPXR_SH(D.soldShares)} acciones</b>${pps}. Del producto, <b>${SPXR_MONEY(D.reinvP)}</b> se reinvirtió en la <b>Serie VI-26A QP</b> y <b>${SPXR_MONEY(D.cashOut)}</b> se entregó en efectivo.`);
+      ps.push(T(`<b>2. Liquidación parcial (${fecha}).</b> Un fondo institucional subyacente vendió <b>${SPXR_SH(D.soldShares)} acciones</b>${pps}. Del producto, <b>${SPXR_MONEY(D.reinvP)}</b> se reinvirtió en la <b>Serie VI-26A QP</b> y <b>${SPXR_MONEY(D.cashOut)}</b> se entregó en efectivo.`,
+                `<b>2. Partial liquidation (${fecha}).</b> An underlying institutional fund sold <b>${SPXR_SH(D.soldShares)} shares</b>${pps}. Of the proceeds, <b>${SPXR_MONEY(D.reinvP)}</b> was reinvested into <b>Series VI-26A QP</b> and <b>${SPXR_MONEY(D.cashOut)}</b> was delivered in cash.`));
     } else {
-      ps.push(`<b>2. Liquidación parcial (${fecha}).</b> Un fondo institucional subyacente vendió <b>${SPXR_SH(D.soldShares)} acciones</b>${pps}. El inversionista recibió <b>${SPXR_MONEY(D.cashOut)} en efectivo</b> — un múltiplo de <b>${SPXR_X(D.cashOut / D.soldCost)}</b> sobre el costo de esa porción (${SPXR_MONEY(D.soldCost)}). Este efectivo ya fue entregado; no está sujeto al lock-up.`);
+      ps.push(T(`<b>2. Liquidación parcial (${fecha}).</b> Un fondo institucional subyacente vendió <b>${SPXR_SH(D.soldShares)} acciones</b>${pps}. El inversionista recibió <b>${SPXR_MONEY(D.cashOut)} en efectivo</b> — un múltiplo de <b>${SPXR_X(D.cashOut / D.soldCost)}</b> sobre el costo de esa porción (${SPXR_MONEY(D.soldCost)}). Este efectivo ya fue entregado; no está sujeto al lock-up.`,
+                `<b>2. Partial liquidation (${fecha}).</b> An underlying institutional fund sold <b>${SPXR_SH(D.soldShares)} shares</b>${pps}. The investor received <b>${SPXR_MONEY(D.cashOut)} in cash</b> — a <b>${SPXR_X(D.cashOut / D.soldCost)}</b> multiple on that portion's cost (${SPXR_MONEY(D.soldCost)}). This cash has already been delivered; it is not subject to the lock-up.`));
     }
   }
-  ps.push(`<b>${D.hasSold ? '3' : '2'}. Valuación actual.</b> Al precio de cierre de hoy de <b>${SPXR_P2(D.live.P)}</b> por acción${D.live.EVB ? ` (valuación de SpaceX ~ $${SPXR_INT(D.live.EVB)} mmd)` : ''}, las <b>${SPXR_SH(D.totSh)} acciones activas</b> valen <b>${SPXR_MONEY(D.totVal)}</b>, un múltiplo de <b>${SPXR_X(D.totVal / D.totCost)}</b> sobre su costo (${SPXR_MONEY(D.totCost)}).`);
-  ps.push(`<b>${D.hasSold ? '4' : '3'}. Distribución (en proceso).</b> Aún no se ha distribuido ni liquidado la posición activa. Las acciones están sujetas a un lock-up con liberación escalonada (ver detalle abajo). El inversionista deberá elegir entre <b>acciones (in-kind)</b> o <b>efectivo</b> mediante el formulario de Trident.`);
+  ps.push(T(`<b>${D.hasSold ? '3' : '2'}. Valuación actual.</b> Al precio de cierre de hoy de <b>${SPXR_P2(D.live.P)}</b> por acción${D.live.EVB ? ` (valuación de SpaceX ~ $${SPXR_INT(D.live.EVB)} mmd)` : ''}, las <b>${SPXR_SH(D.totSh)} acciones activas</b> valen <b>${SPXR_MONEY(D.totVal)}</b>, un múltiplo de <b>${SPXR_X(D.totVal / D.totCost)}</b> sobre su costo (${SPXR_MONEY(D.totCost)}).`,
+            `<b>${D.hasSold ? '3' : '2'}. Current valuation.</b> At today's closing price of <b>${SPXR_P2(D.live.P)}</b> per share${D.live.EVB ? ` (SpaceX valuation ~ $${SPXR_INT(D.live.EVB)}bn)` : ''}, the <b>${SPXR_SH(D.totSh)} active shares</b> are worth <b>${SPXR_MONEY(D.totVal)}</b>, a <b>${SPXR_X(D.totVal / D.totCost)}</b> multiple on their cost (${SPXR_MONEY(D.totCost)}).`));
+  ps.push(T(`<b>${D.hasSold ? '4' : '3'}. Distribución (en proceso).</b> Aún no se ha distribuido ni liquidado la posición activa. Las acciones están sujetas a un lock-up con liberación escalonada (ver detalle abajo). El inversionista deberá elegir entre <b>acciones (in-kind)</b> o <b>efectivo</b> mediante el formulario de Trident.`,
+            `<b>${D.hasSold ? '4' : '3'}. Distribution (in progress).</b> The active position has not yet been distributed or liquidated. The shares are subject to a staggered-release lock-up (see detail below). The investor will need to choose between <b>shares (in-kind)</b> or <b>cash</b> via the Trident election form.`));
   return ps;
 }
 
 // ── HTML del reporte — sistema visual del reporte de portafolio MVP (naranja/Outfit) ──
-function spxrHtml(D) {
+function spxrHtml(D, EN) {
+  const T = (es, en) => (EN ? en : es);
+  const XL = s => (EN ? spxrEn(s) : s);
   const E = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const name = (D.combined && D.inv._accounts && D.inv._accounts.length <= 3)
     ? D.inv._accounts.map(a => a.name).join(' + ') : D.inv.name;
   const P = D.live.P;
-  const hoy = new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' });
+  const hoy = new Date().toLocaleDateString(EN ? 'en-US' : 'es-MX', { day: 'numeric', month: 'long', year: 'numeric' });
 
   const kpi = (label, value, cls) => `<div class="kpi ${cls || ''}"><div class="kl">${label}</div><div class="kv">${value}</div></div>`;
   const sec = t => `<div class="sec">${t}</div>`;
@@ -9597,14 +9674,14 @@ function spxrHtml(D) {
   const vrows = D.act.map(a => {
     const entry = a.shares ? a.commitment / a.shares : null;
     const val = a.shares * P;
-    const tag = a.isReinvTarget && D.hasReinv ? ' — <b>reinversión</b>' : ' (activa)';
+    const tag = a.isReinvTarget && D.hasReinv ? T(' — <b>reinversión</b>', ' — <b>reinvestment</b>') : T(' (activa)', ' (active)');
     const cta = (D.combined && a.acct) ? `<span class="acct">${E(a.acct)}</span> · ` : '';
-    return `<tr><td>${cta}${E(a.short)}${tag}</td><td class="n">${SPXR_SH(a.shares)}</td><td class="n">${entry ? SPXR_P2(entry) : '—'}</td><td class="n">${SPXR_P2(P)}</td><td class="n">${SPXR_MONEY(a.commitment)}</td><td class="n b">${SPXR_MONEY(val)}</td><td class="n b">${entry ? SPXR_X(P / entry) : '—'}</td></tr>`;
+    return `<tr><td>${cta}${E(EN ? a.short.replace(' (indirecta)', ' (indirect)') : a.short)}${tag}</td><td class="n">${SPXR_SH(a.shares)}</td><td class="n">${entry ? SPXR_P2(entry) : '—'}</td><td class="n">${SPXR_P2(P)}</td><td class="n">${SPXR_MONEY(a.commitment)}</td><td class="n b">${SPXR_MONEY(val)}</td><td class="n b">${entry ? SPXR_X(P / entry) : '—'}</td></tr>`;
   });
   const totRow = D.hasReinv
-    ? `<tr class="tot"><td>Total posición actual SpaceX</td><td class="n">${SPXR_SH(D.totSh)}</td><td></td><td class="n">${SPXR_P2(P)}</td><td class="n">${SPXR_MONEY(D.original)}*</td><td class="n">${SPXR_MONEY(D.totVal)}</td><td class="n">${SPXR_X(D.totVal / D.original)}*</td></tr>`
-    : `<tr class="tot"><td>Total SpaceX</td><td class="n">${SPXR_SH(D.totSh)}</td><td></td><td class="n">${SPXR_P2(P)}</td><td class="n">${SPXR_MONEY(D.totCost)}</td><td class="n">${SPXR_MONEY(D.totVal)}</td><td class="n">${SPXR_X(D.totVal / D.totCost)}</td></tr>`;
-  const tableFn = `Acciones y costo/acción: cartas del IPO de SpaceX de cada vehículo (Altareturn). Base post-split 5:1. Valor actual = acciones × ${SPXR_P2(P)} (precio de cierre de hoy).${D.hasReinv ? ` * Múltiplo sobre el capital original de ${SPXR_MONEY(D.original)}. El capital de la Serie VI-26A QP (${SPXR_MONEY(D.reinvP)}) proviene de la liquidación parcial reinvertida — no es capital adicional aportado.` : ' MOIC = valor actual / costo.'}`;
+    ? `<tr class="tot"><td>${T('Total posición actual SpaceX', 'Total current SpaceX position')}</td><td class="n">${SPXR_SH(D.totSh)}</td><td></td><td class="n">${SPXR_P2(P)}</td><td class="n">${SPXR_MONEY(D.original)}*</td><td class="n">${SPXR_MONEY(D.totVal)}</td><td class="n">${SPXR_X(D.totVal / D.original)}*</td></tr>`
+    : `<tr class="tot"><td>${T('Total SpaceX', 'SpaceX Total')}</td><td class="n">${SPXR_SH(D.totSh)}</td><td></td><td class="n">${SPXR_P2(P)}</td><td class="n">${SPXR_MONEY(D.totCost)}</td><td class="n">${SPXR_MONEY(D.totVal)}</td><td class="n">${SPXR_X(D.totVal / D.totCost)}</td></tr>`;
+  const tableFn = T(`Acciones y costo/acción: cartas del IPO de SpaceX de cada vehículo (Altareturn). Base post-split 5:1. Valor actual = acciones × ${SPXR_P2(P)} (precio de cierre de hoy).${D.hasReinv ? ` * Múltiplo sobre el capital original de ${SPXR_MONEY(D.original)}. El capital de la Serie VI-26A QP (${SPXR_MONEY(D.reinvP)}) proviene de la liquidación parcial reinvertida — no es capital adicional aportado.` : ' MOIC = valor actual / costo.'}`, `Shares and cost/share: SpaceX IPO letters for each vehicle (Altareturn). Post-split 5:1 basis. Current value = shares × ${SPXR_P2(P)} (today\'s closing price).${D.hasReinv ? ` * Multiple on original capital of ${SPXR_MONEY(D.original)}. The Series VI-26A QP capital (${SPXR_MONEY(D.reinvP)}) comes from the reinvested partial liquidation — it is not additional contributed capital.` : ' MOIC = current value / cost.'}`);
 
   // Distribuciones recibidas (solo venta en EFECTIVO)
   let distSec = '';
@@ -9614,33 +9691,33 @@ function spxrHtml(D) {
       if (SPX_REINV_IS_NOTE(x.notes)) return;
       const val = (SPXR_N(x.cash_proceeds) || 0) + (SPXR_N(x.value_in_kind) || 0);
       if (val <= 0) return;
-      const f = x.distribution_date ? new Date(x.distribution_date.slice(0, 10) + 'T12:00:00').toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' }).replace(/\./g, '') : '—';
-      dRows.push(`<tr><td>${f}</td><td>${E(s.short)} — liquidación parcial</td><td>${x.value_in_kind ? 'Especie' : 'Efectivo'}</td><td class="n">${x.shares_distributed ? SPXR_SH(+x.shares_distributed) : '—'}</td><td class="n">${SPXR_N(x.price_per_share) != null ? SPXR_P2(+x.price_per_share) : '—'}</td><td class="n b">${SPXR_MONEY(val)}</td></tr>`);
+      const f = x.distribution_date ? new Date(x.distribution_date.slice(0, 10) + 'T12:00:00').toLocaleDateString(EN ? 'en-US' : 'es-MX', { day: 'numeric', month: 'short', year: 'numeric' }).replace(/\./g, '') : '—';
+      dRows.push(`<tr><td>${f}</td><td>${E(s.short)} — ${T('liquidación parcial', 'partial liquidation')}</td><td>${x.value_in_kind ? T('Especie', 'In-kind') : T('Efectivo', 'Cash')}</td><td class="n">${x.shares_distributed ? SPXR_SH(+x.shares_distributed) : '—'}</td><td class="n">${SPXR_N(x.price_per_share) != null ? SPXR_P2(+x.price_per_share) : '—'}</td><td class="n b">${SPXR_MONEY(val)}</td></tr>`);
     }));
     if (dRows.length) {
-      distSec = `${sec('Distribuciones recibidas')}
-  <table><thead><tr><th>Fecha</th><th>Vehículo</th><th>Tipo</th><th class="n">Acciones</th><th class="n">PPS</th><th class="n">Valor</th></tr></thead>
+      distSec = `${sec(T('Distribuciones recibidas', 'Distributions received'))}
+  <table><thead><tr><th>${T('Fecha', 'Date')}</th><th>${T('Vehículo', 'Vehicle')}</th><th>${T('Tipo', 'Type')}</th><th class="n">${T('Acciones', 'Shares')}</th><th class="n">PPS</th><th class="n">${T('Valor', 'Value')}</th></tr></thead>
   <tbody>${dRows.join('')}</tbody></table>
-  <div class="fn">Efectivo ya entregado; no está sujeto al lock-up ni forma parte del MOIC de la posición activa. PPS = precio bruto de venta en base post-split.</div>`;
+  <div class="fn">${T('Efectivo ya entregado; no está sujeto al lock-up ni forma parte del MOIC de la posición activa. PPS = precio bruto de venta en base post-split.', 'Cash already delivered; it is not subject to the lock-up and is not part of the active position\'s MOIC. PPS = gross sale price on a post-split basis.')}</div>`;
     }
   }
 
   // ¿Cómo y cuándo?
   const como = [];
-  como.push(`Las <b>${SPXR_SH(D.totSh)} acciones activas</b> se liberan según ${D.shA > 0 && D.shB > 0 ? '<b>dos calendarios</b>. La tabla de abajo los <b>combina</b>: cada fila es una fecha y la columna <b>Acciones</b> es el total que se distribuye ese día.' : 'el calendario de abajo.'}`);
+  como.push(T(`Las <b>${SPXR_SH(D.totSh)} acciones activas</b> se liberan según ${D.shA > 0 && D.shB > 0 ? '<b>dos calendarios</b>. La tabla de abajo los <b>combina</b>: cada fila es una fecha y la columna <b>Acciones</b> es el total que se distribuye ese día.' : 'el calendario de abajo.'}`, `The <b>${SPXR_SH(D.totSh)} active shares</b> are released according to ${D.shA > 0 && D.shB > 0 ? '<b>two schedules</b>. The table below <b>combines</b> them: each row is a date and the <b>Shares</b> column is the total distributed that day.' : 'the schedule below.'}`));
   const aList = D.act.filter(a => !a.indirect && a.struct === 'A').map(a => a.short)
-    .concat(D.act.filter(a => a.indirect && a.fund === 'IV').map(() => '20% del Fund IV'));
+    .concat(D.act.filter(a => a.indirect && a.fund === 'IV').map(() => T('20% del Fund IV', '20% of Fund IV')));
   const bList = D.act.filter(a => !a.indirect && a.struct === 'B').map(a => a.short)
-    .concat(D.act.filter(a => a.indirect && a.fund === 'IV').map(() => '80% del Fund IV'))
+    .concat(D.act.filter(a => a.indirect && a.fund === 'IV').map(() => T('80% del Fund IV', '80% of Fund IV')))
     .concat(D.act.filter(a => a.indirect && a.fund === 'V').map(() => 'Fund V'));
-  if (D.shA > 0) como.push(`<b>Calendario 1 — Liberación en dos mitades (~${SPXR_INT(D.shA)} acciones: ${aList.join(', ')}).</b> La 1ª mitad (~${SPXR_INT(D.shA / 2)}) se libera en los primeros ~6 meses; la 2ª mitad en un lock-up extendido que corre hasta ~agosto 2027.`);
-  if (D.shB > 0) como.push(`<b>Calendario ${D.shA > 0 ? '2' : 'único'} — Escalonado de 180 días (~${SPXR_INT(D.shB)} acciones: ${bList.join(', ')}).</b> Se libera completo dentro de los primeros 180 días; expira el 9 de diciembre de 2026.`);
-  como.push(`La fecha del primer earnings de SpaceX aún no es oficial; el primer tramo (20%) se libera ~2 días hábiles después del reporte — la mejor estimación disponible es el <b>~17 de agosto de 2026</b>.`);
+  if (D.shA > 0) como.push(T(`<b>Calendario 1 — Liberación en dos mitades (~${SPXR_INT(D.shA)} acciones: ${aList.join(', ')}).</b> La 1ª mitad (~${SPXR_INT(D.shA / 2)}) se libera en los primeros ~6 meses; la 2ª mitad en un lock-up extendido que corre hasta ~agosto 2027.`, `<b>Schedule 1 — Release in two halves (~${SPXR_INT(D.shA)} shares: ${aList.join(', ')}).</b> The 1st half (~${SPXR_INT(D.shA / 2)}) is released within the first ~6 months; the 2nd half under an extended lock-up running until ~August 2027.`));
+  if (D.shB > 0) como.push(T(`<b>Calendario ${D.shA > 0 ? '2' : 'único'} — Escalonado de 180 días (~${SPXR_INT(D.shB)} acciones: ${bList.join(', ')}).</b> Se libera completo dentro de los primeros 180 días; expira el 9 de diciembre de 2026.`, `<b>Schedule ${D.shA > 0 ? '2' : '(single)'} — Staggered over 180 days (~${SPXR_INT(D.shB)} shares: ${bList.join(', ')}).</b> Fully released within the first 180 days; expires December 9, 2026.`));
+  como.push(T(`La fecha del primer earnings de SpaceX aún no es oficial; el primer tramo (20%) se libera ~2 días hábiles después del reporte — la mejor estimación disponible es el <b>~17 de agosto de 2026</b>.`, `The date of SpaceX's first earnings report is not yet official; the first tranche (20%) is released ~2 business days after the report — the best available estimate is <b>~August 17, 2026</b>.`));
 
-  const calRows = D.calendar.rows.map(r => `<tr${r.bonus ? ' class="bono"' : ''}><td>${E(r.date)}</td><td>${E(r.label)}</td><td class="n b">${r.bonus ? '+' : ''}${SPXR_INT(r.sh)}</td><td class="n">${r.pct.toFixed(1)}%</td><td class="n">${r.acum == null ? '—' : r.acum.toFixed(1) + '%'}</td><td class="det">${E(r.scope)}</td></tr>`).join('');
-  const anexo1 = SPX_STRUCTURES.B.phases.map(f => `<tr><td>${E(f.hito)}</td><td class="n">${E(f.pct)}</td><td class="det">${E(f.detalle)}</td></tr>`).join('');
-  const anexo2 = D.shA > 0 ? (SPX_STRUCTURES.A.groups[1].phases.map(f => `<tr><td>${E(f.hito)}</td><td class="n">${E(f.pct)}</td><td class="det">${E(f.detalle || '')}</td></tr>`).join('')) : null;
-  const paras = spxrNarrative(D).map(p => `<p class="para">${p}</p>`).join('');
+  const calRows = D.calendar.rows.map(r => `<tr${r.bonus ? ' class="bono"' : ''}><td>${E(XL(r.date))}</td><td>${E(XL(r.label))}</td><td class="n b">${r.bonus ? '+' : ''}${SPXR_INT(r.sh)}</td><td class="n">${r.pct.toFixed(1)}%</td><td class="n">${r.acum == null ? '—' : r.acum.toFixed(1) + '%'}</td><td class="det">${E(XL(r.scope))}</td></tr>`).join('');
+  const anexo1 = SPX_STRUCTURES.B.phases.map(f => `<tr><td>${E(XL(f.hito))}</td><td class="n">${E(f.pct)}</td><td class="det">${E(XL(f.detalle))}</td></tr>`).join('');
+  const anexo2 = D.shA > 0 ? (SPX_STRUCTURES.A.groups[1].phases.map(f => `<tr><td>${E(XL(f.hito))}</td><td class="n">${E(f.pct)}</td><td class="det">${E(XL(f.detalle || ''))}</td></tr>`).join('')) : null;
+  const paras = spxrNarrative(D, EN).map(p => `<p class="para">${p}</p>`).join('');
 
   return `<!doctype html><html><head><meta charset="utf-8"><style>
 ${SPXR_FONT_FACES}
@@ -9683,41 +9760,41 @@ tr.bono td{background:#fdf6ec;color:#9a6c1f}
 </style></head><body><div class="page">
   <div class="topbar"></div>
   <div class="hero">
-    <div class="eyebrow">MVP · Reporte SpaceX</div>
+    <div class="eyebrow">MVP · ${T('Reporte SpaceX', 'SpaceX Report')}</div>
     <div class="htitle">Space Exploration Technologies</div>
-    <div class="hsub"><b>${E(name)}</b>${D.combined ? ` · posición consolidada (${D.inv._accounts.length} cuentas)` : ''} · ${D.act.length} vehículo${D.act.length === 1 ? '' : 's'} activo${D.act.length === 1 ? '' : 's'} · Generado ${hoy}</div>
-    <div class="hsub">IPO 12-jun-2026 · base <b>post-split 5:1</b> · Precio de cierre de hoy: <b>${SPXR_P2(P)} USD/acción</b>${D.live.EVB ? ` · Valuación ~ $${SPXR_INT(D.live.EVB)} mmd` : ''}</div>
+    <div class="hsub"><b>${E(name)}</b>${D.combined ? ` · ${T('posición consolidada', 'consolidated position')} (${D.inv._accounts.length} ${T('cuentas', 'accounts')})` : ''} · ${D.act.length} ${T('vehículo' + (D.act.length === 1 ? '' : 's') + ' activo' + (D.act.length === 1 ? '' : 's'), 'active vehicle' + (D.act.length === 1 ? '' : 's'))} · ${T('Generado', 'Generated')} ${hoy}</div>
+    <div class="hsub">${T('IPO 12-jun-2026 · base <b>post-split 5:1</b> · Precio de cierre de hoy: ', 'IPO Jun 12, 2026 · <b>post-split 5:1</b> basis · Today\'s closing price: ')}<b>${SPXR_P2(P)} USD${T('/acción', '/share')}</b>${D.live.EVB ? ` · ${T('Valuación', 'Valuation')} ~ $${SPXR_INT(D.live.EVB)} ${T('mmd', 'bn')}` : ''}</div>
     <div class="accentbar"></div>
   </div>
   <div class="rbody">
   <div class="kpis">
-    ${kpi('Acciones SpaceX', SPXR_SH(D.totSh), 'accent')}
-    ${D.hasReinv ? kpi('Capital original', SPXR_MONEY(D.original), '') : kpi('Costo (entrada)', SPXR_MONEY(D.totCost), '')}
-    ${kpi('Valor actual', SPXR_MONEY(D.totVal), 'pos')}
-    ${D.hasReinv ? kpi('Múltiplo s/ original', SPXR_X(D.totVal / D.original), '') : kpi('Múltiplo', SPXR_X(D.totVal / D.totCost), '')}
+    ${kpi(T('Acciones SpaceX', 'SpaceX Shares'), SPXR_SH(D.totSh), 'accent')}
+    ${D.hasReinv ? kpi(T('Capital original', 'Original Capital'), SPXR_MONEY(D.original), '') : kpi(T('Costo (entrada)', 'Cost (entry)'), SPXR_MONEY(D.totCost), '')}
+    ${kpi(T('Valor actual', 'Current Value'), SPXR_MONEY(D.totVal), 'pos')}
+    ${D.hasReinv ? kpi(T('Múltiplo s/ original', 'Multiple on Original'), SPXR_X(D.totVal / D.original), '') : kpi(T('Múltiplo', 'Multiple'), SPXR_X(D.totVal / D.totCost), '')}
   </div>
-  ${sec('¿Qué pasó con la posición?')}
+  ${sec(T('¿Qué pasó con la posición?', 'What happened with the position?'))}
   ${paras}
-  ${sec('Detalle por vehículo')}
-  <table><thead><tr><th>${D.combined ? 'Cuenta · Vehículo / Estatus' : 'Vehículo / Estatus'}</th><th class="n">Acciones</th><th class="n">PPS Entrada</th><th class="n">PPS Actual</th><th class="n">Inversión</th><th class="n">Valor actual</th><th class="n">MOIC</th></tr></thead>
+  ${sec(T('Detalle por vehículo', 'Detail by vehicle'))}
+  <table><thead><tr><th>${D.combined ? T('Cuenta · Vehículo / Estatus', 'Account · Vehicle / Status') : T('Vehículo / Estatus', 'Vehicle / Status')}</th><th class="n">${T('Acciones', 'Shares')}</th><th class="n">${T('PPS Entrada', 'Entry PPS')}</th><th class="n">${T('PPS Actual', 'Current PPS')}</th><th class="n">${T('Inversión', 'Investment')}</th><th class="n">${T('Valor actual', 'Current value')}</th><th class="n">MOIC</th></tr></thead>
   <tbody>${vrows.join('')}${totRow}</tbody></table>
   <div class="fn">${tableFn}</div>
   ${distSec}
-  ${sec('¿Cómo y cuándo se liberan las acciones?')}
+  ${sec(T('¿Cómo y cuándo se liberan las acciones?', 'How and when are the shares released?'))}
   ${como.map(p => `<p class="para">${p}</p>`).join('')}
-  ${sec('Calendario combinado de distribuciones')}
-  <table><thead><tr><th>Fecha</th><th>Evento</th><th class="n">Acciones</th><th class="n">% total</th><th class="n">Acum. %</th><th>Detalle</th></tr></thead>
-  <tbody>${calRows}<tr class="tot"><td colspan="2">Total liberado</td><td class="n">${SPXR_INT(D.calendar.TOT)}</td><td class="n">100%</td><td></td><td class="det">Bono condicional adelantaría parte del remanente</td></tr></tbody></table>
-  <div class="fn">Acciones por fecha = suma de lo que libera cada calendario ese día (redondeadas). La fecha del earnings Q2 2026 aún no es oficial (~17 ago 2026 es la mejor estimación); hitos posteriores estimados con la misma cadencia. El prospecto final es la autoridad. El bono +10% es condicional y no se incluye en el acumulado base.</div>
-  <div class="note"><b>Split 5:1:</b> todas las acciones están en base post-split. <b>Precio:</b> el valor de ${SPXR_MONEY(D.totVal)} usa el precio de cierre de hoy de ${SPXR_P2(P)}/acción y se mueve con el precio público de SpaceX. <b>Cifras no realizadas:</b> el monto final dependerá del precio al liberarse cada tramo y de la elección cash/in-kind; las cifras no reflejan retenciones por gastos ni carried interest.${D.hasSold && D.cashOut > 0.01 ? ` <b>Venta previa:</b> el efectivo de la liquidación parcial (${SPXR_MONEY(D.cashOut)}) ya fue entregado y no está sujeto al lock-up.` : ''}</div>
-  ${sec('Anexo 1 — Distribución de los primeros 180 días')}
-  <p class="para">Mecanismo de las acciones que se liberan en los primeros ~6 meses${D.shA > 0 && D.shB > 0 ? ` (todo el Calendario 2 + la 1ª mitad del Calendario 1: ${SPXR_INT(D.calendar.pool)} acciones)` : ` (${SPXR_INT(D.calendar.pool)} acciones)`}. Liberación escalonada ligada a desempeño; expira el 9 de diciembre de 2026. Porcentajes sobre las acciones sujetas a este calendario.</p>
-  <table><thead><tr><th>Hito / Fecha</th><th class="n">% liberado</th><th>Detalle</th></tr></thead><tbody>${anexo1}</tbody></table>
-  <div class="fn">${E(SPX_STRUCTURES.B.nota)}</div>
-  ${anexo2 ? `${sec('Anexo 2 — Segunda parte del Calendario 1 (lock-up extendido)')}
-  <p class="para">La 2ª mitad del Calendario 1 (~${SPXR_INT(D.calendar.ext)} acciones) NO se libera en los primeros 180 días, sino en un lock-up extendido entre ~febrero y agosto de 2027. Porcentajes sobre las acciones de esta segunda mitad.</p>
-  <table><thead><tr><th>Hito / Fecha</th><th class="n">% liberado</th><th>Detalle</th></tr></thead><tbody>${anexo2}</tbody></table>
-  <div class="fn">Fechas estimadas; el prospecto final es la autoridad controladora. Liquidez total de esta mitad ~ agosto 2027.</div>` : ''}
+  ${sec(T('Calendario combinado de distribuciones', 'Combined distribution schedule'))}
+  <table><thead><tr><th>${T('Fecha', 'Date')}</th><th>${T('Evento', 'Event')}</th><th class="n">${T('Acciones', 'Shares')}</th><th class="n">% total</th><th class="n">${T('Acum. %', 'Cum. %')}</th><th>${T('Detalle', 'Detail')}</th></tr></thead>
+  <tbody>${calRows}<tr class="tot"><td colspan="2">${T('Total liberado', 'Total released')}</td><td class="n">${SPXR_INT(D.calendar.TOT)}</td><td class="n">100%</td><td></td><td class="det">${T('Bono condicional adelantaría parte del remanente', 'A conditional bonus would bring forward part of the remainder')}</td></tr></tbody></table>
+  <div class="fn">${T('Acciones por fecha = suma de lo que libera cada calendario ese día (redondeadas). La fecha del earnings Q2 2026 aún no es oficial (~17 ago 2026 es la mejor estimación); hitos posteriores estimados con la misma cadencia. El prospecto final es la autoridad. El bono +10% es condicional y no se incluye en el acumulado base.', 'Shares per date = sum of what each schedule releases that day (rounded). The Q2 2026 earnings date is not yet official (~Aug 17, 2026 is the best estimate); later milestones estimated with the same cadence. The final prospectus is the controlling authority. The +10% bonus is conditional and is not included in the base cumulative.')}</div>
+  <div class="note">${T(`<b>Split 5:1:</b> todas las acciones están en base post-split. <b>Precio:</b> el valor de ${SPXR_MONEY(D.totVal)} usa el precio de cierre de hoy de ${SPXR_P2(P)}/acción y se mueve con el precio público de SpaceX. <b>Cifras no realizadas:</b> el monto final dependerá del precio al liberarse cada tramo y de la elección cash/in-kind; las cifras no reflejan retenciones por gastos ni carried interest.${D.hasSold && D.cashOut > 0.01 ? ` <b>Venta previa:</b> el efectivo de la liquidación parcial (${SPXR_MONEY(D.cashOut)}) ya fue entregado y no está sujeto al lock-up.` : ''}`, `<b>5:1 split:</b> all shares are on a post-split basis. <b>Price:</b> the ${SPXR_MONEY(D.totVal)} value uses today's closing price of ${SPXR_P2(P)}/share and moves with SpaceX's public price. <b>Unrealized figures:</b> the final amount will depend on the price when each tranche is released and on the cash/in-kind election; figures do not reflect withholding for expenses or carried interest.${D.hasSold && D.cashOut > 0.01 ? ` <b>Prior sale:</b> the cash from the partial liquidation (${SPXR_MONEY(D.cashOut)}) has already been delivered and is not subject to the lock-up.` : ''}`)}</div>
+  ${sec(T('Anexo 1 — Distribución de los primeros 180 días', 'Annex 1 — First 180 days release'))}
+  <p class="para">${T(`Mecanismo de las acciones que se liberan en los primeros ~6 meses${D.shA > 0 && D.shB > 0 ? ` (todo el Calendario 2 + la 1ª mitad del Calendario 1: ${SPXR_INT(D.calendar.pool)} acciones)` : ` (${SPXR_INT(D.calendar.pool)} acciones)`}. Liberación escalonada ligada a desempeño; expira el 9 de diciembre de 2026. Porcentajes sobre las acciones sujetas a este calendario.`, `Mechanics of the shares released within the first ~6 months${D.shA > 0 && D.shB > 0 ? ` (all of Schedule 2 + the 1st half of Schedule 1: ${SPXR_INT(D.calendar.pool)} shares)` : ` (${SPXR_INT(D.calendar.pool)} shares)`}. Staggered release tied to performance; expires December 9, 2026. Percentages are over the shares subject to this schedule.`)}</p>
+  <table><thead><tr><th>${T('Hito / Fecha', 'Milestone / Date')}</th><th class="n">${T('% liberado', '% released')}</th><th>${T('Detalle', 'Detail')}</th></tr></thead><tbody>${anexo1}</tbody></table>
+  <div class="fn">${E(XL(SPX_STRUCTURES.B.nota))}</div>
+  ${anexo2 ? `${sec(T('Anexo 2 — Segunda parte del Calendario 1 (lock-up extendido)', 'Annex 2 — Second half of Schedule 1 (extended lock-up)'))}
+  <p class="para">${T(`La 2ª mitad del Calendario 1 (~${SPXR_INT(D.calendar.ext)} acciones) NO se libera en los primeros 180 días, sino en un lock-up extendido entre ~febrero y agosto de 2027. Porcentajes sobre las acciones de esta segunda mitad.`, `The 2nd half of Schedule 1 (~${SPXR_INT(D.calendar.ext)} shares) is NOT released within the first 180 days, but under an extended lock-up between ~February and August 2027. Percentages are over the shares of this second half.`)}</p>
+  <table><thead><tr><th>${T('Hito / Fecha', 'Milestone / Date')}</th><th class="n">${T('% liberado', '% released')}</th><th>${T('Detalle', 'Detail')}</th></tr></thead><tbody>${anexo2}</tbody></table>
+  <div class="fn">${T('Fechas estimadas; el prospecto final es la autoridad controladora. Liquidez total de esta mitad ~ agosto 2027.', 'Estimated dates; the final prospectus is the controlling authority. Full liquidity of this half ~ August 2027.')}</div>` : ''}
   </div>
 </div></body></html>`;
 }
@@ -9786,7 +9863,8 @@ function spxrPageCuts(pageEl, capacityCss) {
 }
 
 // ── PDF: páginas imagen (mecanismo estándar) + Anexo 3 VECTORIAL con links clicables ──
-async function spxrRenderPdf(html, fileName, anexo3) {
+async function spxrRenderPdf(html, fileName, anexo3, EN) {
+  const T = (es, en) => (EN ? en : es);
   const old = document.getElementById('reportPrintFrame');
   if (old) old.remove();
   const iframe = document.createElement('iframe');
@@ -9843,10 +9921,10 @@ async function spxrRenderPdf(html, fileName, anexo3) {
       pdf.setFillColor(232, 101, 13); pdf.rect(L, top - 11, 4, 14, 'F');
       pdf.setTextColor(42, 37, 33);
       pdf.setFont('helvetica', 'bold'); pdf.setFontSize(11);
-      pdf.text('Anexo 3 — Cartas del IPO (descarga)', L + 10, top);
+      pdf.text(T('Anexo 3 — Cartas del IPO (descarga)', 'Annex 3 — IPO Letters (download)'), L + 10, top);
       pdf.setDrawColor(232, 227, 221); pdf.setLineWidth(0.8); pdf.line(L, top + 8, pageW - L, top + 8);
       pdf.setFont('helvetica', 'normal'); pdf.setFontSize(9.5); pdf.setTextColor(110, 101, 93);
-      pdf.text('Liga directa a la carta oficial del IPO de SpaceX de cada vehículo (incluye el número de acciones post-split).', L, top + 26);
+      pdf.text(T('Liga directa a la carta oficial del IPO de SpaceX de cada vehículo (incluye el número de acciones post-split).', 'Direct link to the official SpaceX IPO letter for each vehicle (includes the post-split share count).'), L, top + 26);
       let yy = top + 50;
       anexo3.items.forEach(it => {
         pdf.setFont('helvetica', 'bold'); pdf.setFontSize(10); pdf.setTextColor(36, 31, 27);
@@ -9854,17 +9932,18 @@ async function spxrRenderPdf(html, fileName, anexo3) {
         const w = pdf.getTextWidth(`${it.cuenta} · ${it.serie}`);
         if (it.url) {
           pdf.setFont('helvetica', 'normal'); pdf.setTextColor(232, 101, 13);
-          pdf.textWithLink('Descargar carta del IPO', L + w + 14, yy, { url: it.url });
-          const lw = pdf.getTextWidth('Descargar carta del IPO');
+          const dlTxt = T('Descargar carta del IPO', 'Download IPO letter');
+          pdf.textWithLink(dlTxt, L + w + 14, yy, { url: it.url });
+          const lw = pdf.getTextWidth(dlTxt);
           pdf.setDrawColor(232, 101, 13); pdf.setLineWidth(0.6); pdf.line(L + w + 14, yy + 2, L + w + 14 + lw, yy + 2);
         } else {
           pdf.setFont('helvetica', 'italic'); pdf.setTextColor(154, 143, 132);
-          pdf.text('Aun no disponible (carta del IPO pendiente de emision)', L + w + 14, yy);
+          pdf.text(T('Aun no disponible (carta del IPO pendiente de emision)', 'Not yet available (IPO letter pending issuance)'), L + w + 14, yy);
         }
         yy += 22;
       });
       pdf.setFont('helvetica', 'italic'); pdf.setFontSize(8); pdf.setTextColor(154, 143, 132);
-      pdf.text('Los enlaces abren la carta en el navegador. Documento informativo; el prospecto final y las cartas oficiales son la autoridad.', L, yy + 10);
+      pdf.text(T('Los enlaces abren la carta en el navegador. Documento informativo; el prospecto final y las cartas oficiales son la autoridad.', 'Links open the letter in the browser. Informational document; the final prospectus and official letters are the controlling authority.'), L, yy + 10);
     }
     pdf.save(fileName);
   } finally {
@@ -9876,12 +9955,15 @@ async function spxrRenderPdf(html, fileName, anexo3) {
 async function exportSpacexReport() {
   const d = lastInvestorDetail;
   if (!d || !d.inv) return toast('Abre primero el detalle del inversionista');
+  const lang = await pickExportLang();
+  if (!lang) return;
+  const EN = lang === 'en';
   try {
-    toast('Generando Reporte SpaceX…');
+    toast(EN ? 'Generating SpaceX Report…' : 'Generando Reporte SpaceX…');
     const live = await spxrLivePrice();
     const D = spxrBuildData(d, live);
     if (!D) return toast('Este inversionista no tiene posiciones directas de SpaceX');
-    const html = spxrHtml(D);
+    const html = spxrHtml(D, EN);
     const anexo3 = {
       items: D.act.map(a => ({
         cuenta: (D.combined && a.acct) ? a.acct : D.inv.name,
@@ -9891,8 +9973,8 @@ async function exportSpacexReport() {
     };
     const slugBase = (D.combined && D.inv._accounts && D.inv._accounts.length <= 3) ? D.inv._accounts.map(a => a.name).join('_') : D.inv.name;
     const slug = String(slugBase).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
-    await spxrRenderPdf(html, `Reporte_SpaceX_${slug}.pdf`, anexo3);
-    toast('Reporte SpaceX descargado');
+    await spxrRenderPdf(html, `${EN ? 'SpaceX_Report' : 'Reporte_SpaceX'}_${slug}.pdf`, anexo3, EN);
+    toast(EN ? 'SpaceX Report downloaded' : 'Reporte SpaceX descargado');
   } catch (e) {
     console.error('[spacex-report]', e);
     toast('No se pudo generar el reporte: ' + (e.message || e));
