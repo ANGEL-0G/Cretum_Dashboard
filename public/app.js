@@ -9395,8 +9395,9 @@ function campTemplateDownload() {
 
 const SPXR_NAVY = '#0f2849', SPXR_BLUE = '#1c4e80', SPXR_GREY = '#8a93a3';
 const SPXR_FONT_FACES = [
-  ['Playfair', 700, 'Playfair-Bold.ttf'],
-  ['InterR', 400, 'Inter-Regular.ttf'], ['InterR', 600, 'Inter-SemiBold.ttf'], ['InterR', 700, 'Inter-Bold.ttf'],
+  ['Outfit', 400, 'Outfit-Regular.ttf'], ['Outfit', 700, 'Outfit-Bold.ttf'],
+  ['Instrument', 400, 'InstrumentSans-Regular.ttf'], ['Instrument', 700, 'InstrumentSans-Bold.ttf'],
+  ['Geist', 400, 'GeistMono-Regular.ttf'],
 ].map(([f, w, file]) => `@font-face{font-family:'${f}';font-weight:${w};src:url('/fonts/${file}') format('truetype');}`).join('\n');
 
 const SPXR_IS_SPACEX = p => (p.companies?.name || '') === 'Space X';
@@ -9581,35 +9582,31 @@ function spxrNarrative(D) {
   return ps;
 }
 
-// ── HTML del reporte (identidad v2: navy + Playfair/Inter) ──
+// ── HTML del reporte — sistema visual del reporte de portafolio MVP (naranja/Outfit) ──
 function spxrHtml(D) {
   const E = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const name = (D.combined && D.inv._accounts && D.inv._accounts.length <= 3)
     ? D.inv._accounts.map(a => a.name).join(' + ') : D.inv.name;
   const P = D.live.P;
+  const hoy = new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' });
 
-  const kpi = (label, value, note, green) => `
-    <div class="kpi"><div class="kpi-rule"></div><div>
-      <div class="kpi-v${green ? ' green' : ''}">${value}</div>
-      <div class="kpi-l">${label}</div>
-      <div class="kpi-n">${note}</div>
-    </div></div>`;
+  const kpi = (label, value, cls) => `<div class="kpi ${cls || ''}"><div class="kl">${label}</div><div class="kv">${value}</div></div>`;
+  const sec = t => `<div class="sec">${t}</div>`;
 
-  const sec = t => `<div class="sec"><span class="sec-rule"></span><span class="sec-t">${t}</span><span class="sec-hair"></span></div>`;
-
-  // Tabla detalle por vehículo
+  // Tabla detalle por vehículo (solo ACTIVAS — regla del template)
   const vrows = D.act.map(a => {
     const entry = a.shares ? a.commitment / a.shares : null;
     const val = a.shares * P;
     const tag = a.isReinvTarget && D.hasReinv ? ' — <b>reinversión</b>' : ' (activa)';
-    const cta = (D.combined && a.acct) ? `${E(a.acct)} · ` : '';
-    return `<tr><td>${cta}${E(a.short)}${tag}</td><td class="num">${SPXR_SH(a.shares)}</td><td class="num">${entry ? SPXR_P2(entry) : '—'}</td><td class="num">${SPXR_P2(P)}</td><td class="num">${SPXR_MONEY(a.commitment)}</td><td class="num b">${SPXR_MONEY(val)}</td><td class="num b">${entry ? SPXR_X(P / entry) : '—'}</td></tr>`;
+    const cta = (D.combined && a.acct) ? `<span class="acct">${E(a.acct)}</span> · ` : '';
+    return `<tr><td>${cta}${E(a.short)}${tag}</td><td class="n">${SPXR_SH(a.shares)}</td><td class="n">${entry ? SPXR_P2(entry) : '—'}</td><td class="n">${SPXR_P2(P)}</td><td class="n">${SPXR_MONEY(a.commitment)}</td><td class="n b">${SPXR_MONEY(val)}</td><td class="n b">${entry ? SPXR_X(P / entry) : '—'}</td></tr>`;
   });
-  // ⛔ REGLA (template v2, dos casos — Eugenio 2026-07-09). La fila de VENDIDAS nunca existe.
-  //  · Con reinversión 26A QP (formato Avtem): total = activas, Inversión = capital ORIGINAL*, múltiplo s/ original*.
-  //  · Sin reinversión (efectivo, formato Cecilia): total = activas (valor ÷ costo); el efectivo va como
-  //    "Distribuciones recibidas" abajo de la tabla y NO cuenta en ningún MOIC.
-  // Distribuciones recibidas (solo venta en EFECTIVO): filas desde las cartas de distribución de las vendidas
+  const totRow = D.hasReinv
+    ? `<tr class="tot"><td>Total posición actual SpaceX</td><td class="n">${SPXR_SH(D.totSh)}</td><td></td><td class="n">${SPXR_P2(P)}</td><td class="n">${SPXR_MONEY(D.original)}*</td><td class="n">${SPXR_MONEY(D.totVal)}</td><td class="n">${SPXR_X(D.totVal / D.original)}*</td></tr>`
+    : `<tr class="tot"><td>Total SpaceX</td><td class="n">${SPXR_SH(D.totSh)}</td><td></td><td class="n">${SPXR_P2(P)}</td><td class="n">${SPXR_MONEY(D.totCost)}</td><td class="n">${SPXR_MONEY(D.totVal)}</td><td class="n">${SPXR_X(D.totVal / D.totCost)}</td></tr>`;
+  const tableFn = `Acciones y costo/acción: cartas del IPO de SpaceX de cada vehículo (Altareturn). Base post-split 5:1. Valor actual = acciones × ${SPXR_P2(P)} (precio de cierre de hoy).${D.hasReinv ? ` * Múltiplo sobre el capital original de ${SPXR_MONEY(D.original)}. El capital de la Serie VI-26A QP (${SPXR_MONEY(D.reinvP)}) proviene de la liquidación parcial reinvertida — no es capital adicional aportado.` : ' MOIC = valor actual / costo.'}`;
+
+  // Distribuciones recibidas (solo venta en EFECTIVO)
   let distSec = '';
   if (D.cashOut > 0.01) {
     const dRows = [];
@@ -9618,20 +9615,17 @@ function spxrHtml(D) {
       const val = (SPXR_N(x.cash_proceeds) || 0) + (SPXR_N(x.value_in_kind) || 0);
       if (val <= 0) return;
       const f = x.distribution_date ? new Date(x.distribution_date.slice(0, 10) + 'T12:00:00').toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' }).replace(/\./g, '') : '—';
-      dRows.push(`<tr><td>${f}</td><td>${E(s.short)} — liquidación parcial</td><td>${x.value_in_kind ? 'Especie' : 'Efectivo'}</td><td class="num">${x.shares_distributed ? SPXR_SH(+x.shares_distributed) : '—'}</td><td class="num">${SPXR_N(x.price_per_share) != null ? SPXR_P2(+x.price_per_share) : '—'}</td><td class="num b">${SPXR_MONEY(val)}</td></tr>`);
+      dRows.push(`<tr><td>${f}</td><td>${E(s.short)} — liquidación parcial</td><td>${x.value_in_kind ? 'Especie' : 'Efectivo'}</td><td class="n">${x.shares_distributed ? SPXR_SH(+x.shares_distributed) : '—'}</td><td class="n">${SPXR_N(x.price_per_share) != null ? SPXR_P2(+x.price_per_share) : '—'}</td><td class="n b">${SPXR_MONEY(val)}</td></tr>`);
     }));
     if (dRows.length) {
       distSec = `${sec('Distribuciones recibidas')}
-  <table><thead><tr><th>Fecha</th><th>Vehículo</th><th>Tipo</th><th class="num">Acciones</th><th class="num">PPS</th><th class="num">Valor</th></tr></thead>
+  <table><thead><tr><th>Fecha</th><th>Vehículo</th><th>Tipo</th><th class="n">Acciones</th><th class="n">PPS</th><th class="n">Valor</th></tr></thead>
   <tbody>${dRows.join('')}</tbody></table>
   <div class="fn">Efectivo ya entregado; no está sujeto al lock-up ni forma parte del MOIC de la posición activa. PPS = precio bruto de venta en base post-split.</div>`;
     }
   }
-  const totRow = D.hasReinv
-    ? `<tr class="tot"><td>Total posición actual SpaceX</td><td class="num">${SPXR_SH(D.totSh)}</td><td></td><td class="num">${SPXR_P2(P)}</td><td class="num">${SPXR_MONEY(D.original)}*</td><td class="num">${SPXR_MONEY(D.totVal)}</td><td class="num">${SPXR_X(D.totVal / D.original)}*</td></tr>`
-    : `<tr class="tot"><td>Total SpaceX</td><td class="num">${SPXR_SH(D.totSh)}</td><td></td><td class="num">${SPXR_P2(P)}</td><td class="num">${SPXR_MONEY(D.totCost)}</td><td class="num">${SPXR_MONEY(D.totVal)}</td><td class="num">${SPXR_X(D.totVal / D.totCost)}</td></tr>`;
 
-  // Narrativa "cómo y cuándo"
+  // ¿Cómo y cuándo?
   const como = [];
   como.push(`Las <b>${SPXR_SH(D.totSh)} acciones activas</b> se liberan según ${D.shA > 0 && D.shB > 0 ? '<b>dos calendarios</b>. La tabla de abajo los <b>combina</b>: cada fila es una fecha y la columna <b>Acciones</b> es el total que se distribuye ese día.' : 'el calendario de abajo.'}`);
   const aList = D.act.filter(a => !a.indirect && a.struct === 'A').map(a => a.short)
@@ -9643,98 +9637,88 @@ function spxrHtml(D) {
   if (D.shB > 0) como.push(`<b>Calendario ${D.shA > 0 ? '2' : 'único'} — Escalonado de 180 días (~${SPXR_INT(D.shB)} acciones: ${bList.join(', ')}).</b> Se libera completo dentro de los primeros 180 días; expira el 9 de diciembre de 2026.`);
   como.push(`La fecha del primer earnings de SpaceX aún no es oficial; el primer tramo (20%) se libera ~2 días hábiles después del reporte — la mejor estimación disponible es el <b>~17 de agosto de 2026</b>.`);
 
-  const calRows = D.calendar.rows.map(r => `<tr${r.bonus ? ' class="bono"' : ''}><td>${E(r.date)}</td><td>${E(r.label)}</td><td class="num b">${r.bonus ? '+' : ''}${SPXR_INT(r.sh)}</td><td class="num">${r.pct.toFixed(1)}%</td><td class="num">${r.acum == null ? '-' : r.acum.toFixed(1) + '%'}</td><td class="det">${E(r.scope)}</td></tr>`).join('');
-
-  const anexo1 = SPX_STRUCTURES.B.phases.map(f => `<tr><td>${E(f.hito)}</td><td class="num">${E(f.pct)}</td><td class="det">${E(f.detalle)}</td></tr>`).join('');
-  const anexo2 = D.shA > 0 ? (SPX_STRUCTURES.A.groups[1].phases.map(f => `<tr><td>${E(f.hito)}</td><td class="num">${E(f.pct)}</td><td class="det">${E(f.detalle || '')}</td></tr>`).join('')) : null;
-
-  const paras = spxrNarrative(D).map(p => `<p class="body">${p}</p>`).join('');
+  const calRows = D.calendar.rows.map(r => `<tr${r.bonus ? ' class="bono"' : ''}><td>${E(r.date)}</td><td>${E(r.label)}</td><td class="n b">${r.bonus ? '+' : ''}${SPXR_INT(r.sh)}</td><td class="n">${r.pct.toFixed(1)}%</td><td class="n">${r.acum == null ? '—' : r.acum.toFixed(1) + '%'}</td><td class="det">${E(r.scope)}</td></tr>`).join('');
+  const anexo1 = SPX_STRUCTURES.B.phases.map(f => `<tr><td>${E(f.hito)}</td><td class="n">${E(f.pct)}</td><td class="det">${E(f.detalle)}</td></tr>`).join('');
+  const anexo2 = D.shA > 0 ? (SPX_STRUCTURES.A.groups[1].phases.map(f => `<tr><td>${E(f.hito)}</td><td class="n">${E(f.pct)}</td><td class="det">${E(f.detalle || '')}</td></tr>`).join('')) : null;
+  const paras = spxrNarrative(D).map(p => `<p class="para">${p}</p>`).join('');
 
   return `<!doctype html><html><head><meta charset="utf-8"><style>
 ${SPXR_FONT_FACES}
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#fff}
-.page{width:816px;padding:52px 56px 46px;background:#fff;font-family:'InterR',sans-serif;color:#232a35;font-size:11.5px;line-height:1.5}
-.hdr{display:flex;justify-content:space-between;border-bottom:1px solid #dde3ec;padding-bottom:8px;margin-bottom:22px}
-.hdr div{font-size:9px;letter-spacing:1.6px;font-weight:600;color:${SPXR_NAVY};text-transform:uppercase}
-.hdr .r{color:${SPXR_GREY}}
-.eyebrow{font-size:9.5px;letter-spacing:2px;font-weight:600;color:${SPXR_GREY};text-transform:uppercase;margin-bottom:7px}
-.title{font-family:'Playfair',serif;font-weight:700;font-size:27px;color:${SPXR_NAVY};margin-bottom:9px}
-.rule{width:96px;height:2px;background:${SPXR_NAVY};margin-bottom:12px}
-.invname{font-family:'Playfair',serif;font-size:16px;color:${SPXR_BLUE};margin-bottom:7px}
-.meta{font-size:11px;color:#4f5866;margin-bottom:3px}
-.kpis{display:flex;gap:18px;margin:20px 0 6px}
-.kpi{display:flex;gap:9px;flex:1}
-.kpi-rule{width:3px;background:${SPXR_NAVY};border-radius:2px}
-.kpi-v{font-size:19px;font-weight:700;color:#1e3a5f}
-.kpi-v.green{color:#2e7d32}
-.kpi-l{font-size:8.5px;letter-spacing:1.3px;font-weight:600;text-transform:uppercase;color:#3a4152;margin-top:2px}
-.kpi-n{font-size:9px;color:${SPXR_GREY};margin-top:1px;font-style:italic}
-.sec{display:flex;align-items:center;gap:10px;margin:24px 0 10px}
-.sec-rule{width:22px;height:2.5px;background:${SPXR_NAVY}}
-.sec-t{font-size:10.5px;letter-spacing:1.8px;font-weight:700;color:${SPXR_NAVY};text-transform:uppercase;white-space:nowrap}
-.sec-hair{flex:1;height:1px;background:#dde3ec}
-.body{margin-bottom:7px;text-align:justify}
-table{width:100%;border-collapse:collapse;font-size:10.5px;margin-top:4px}
-th{background:${SPXR_NAVY};color:#fff;font-weight:600;font-size:9px;letter-spacing:.6px;text-transform:uppercase;padding:6px 7px;text-align:left}
-th.num{text-align:right}
-td{padding:5.5px 7px;border-bottom:1px solid #eef1f6;vertical-align:top}
-td.num{text-align:right;white-space:nowrap}
+html,body{background:#fff}
+body{font-family:'Instrument',sans-serif;color:#241f1b;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.page{width:816px;padding:0 0 26px;background:#fff}
+.topbar{height:5px;background:#E8650D}
+.hero{background:#f5f3f0;padding:20px 40px 15px;border-bottom:1px solid #e8e3dd}
+.eyebrow{font-family:'Geist',monospace;font-size:9.5px;letter-spacing:3px;color:#E8650D;text-transform:uppercase}
+.htitle{font-family:'Outfit',sans-serif;font-weight:700;font-size:28px;color:#2a2521;margin:6px 0 4px;letter-spacing:-.5px}
+.hsub{font-size:11.5px;color:#6e655d}.hsub b{color:#2a2521;font-weight:700}
+.accentbar{height:3px;width:92px;background:#E8650D;margin-top:11px;border-radius:2px}
+.rbody{padding:16px 40px 0}
+.rbody > *{margin-bottom:10px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:13px}
+.kpi{background:#fff;border:1px solid #e8e3dd;border-radius:11px;padding:11px 12px}
+.kpi.accent{border-top:3px solid #E8650D}
+.kl{font-family:'Geist',monospace;font-size:7.5px;letter-spacing:.8px;text-transform:uppercase;color:#9a8f84}
+.kv{font-family:'Outfit',sans-serif;font-weight:700;font-size:17px;margin-top:5px;letter-spacing:-.5px;color:#2a2521}
+.kpi.accent .kv{color:#E8650D}.kpi.pos .kv{color:#3d8a52}
+.sec{font-family:'Outfit',sans-serif;font-weight:700;font-size:13px;margin:8px 0 8px;display:flex;align-items:center;gap:8px;color:#2a2521}
+.sec::before{content:'';width:4px;height:14px;background:#E8650D;border-radius:2px}
+.para{font-size:10.5px;line-height:1.55;color:#473f38;text-align:justify;margin-bottom:7px}
+.para b{color:#241f1b}
+table{width:100%;border-collapse:collapse;font-size:9.5px}
+thead th{background:#3f3a36;color:#fff;font-family:'Geist',monospace;font-weight:400;font-size:8px;letter-spacing:.4px;text-transform:uppercase;padding:7px 8px;text-align:left}
+thead th.n{text-align:right}
+tbody td{padding:6px 8px;border-bottom:1px solid #efeae4;color:#473f38;vertical-align:top}
+tbody tr:nth-child(even){background:#faf8f5}
+td.n{text-align:right;font-family:'Geist',monospace;font-size:9px;color:#241f1b;white-space:nowrap}
 td.b{font-weight:700}
-td.det{color:#5a6372;font-size:9.8px}
-tr.tot td{background:#f4f6f9;font-weight:700;border-top:1.5px solid ${SPXR_NAVY}}
-tr.bono td{color:#8a6d1f;background:#fdf9ef}
-.fn{font-size:8.8px;color:${SPXR_GREY};margin-top:5px;line-height:1.45}
-.note{background:#f4f6f9;border-left:3px solid ${SPXR_NAVY};padding:9px 12px;font-size:10px;color:#3a4152;margin-top:6px}
+td.det{color:#8a8177;font-size:8.6px}
+td .acct{color:#9a8f84;font-size:8.6px}
+tr.tot td{background:#f5f3f0;font-weight:700;border-top:2px solid #E8650D;color:#241f1b}
+tr.bono td{background:#fdf6ec;color:#9a6c1f}
+.fn{font-family:'Geist',monospace;font-size:7.8px;color:#9a8f84;line-height:1.5;margin-top:5px}
+.note{background:#faf8f5;border-left:3px solid #E8650D;border-radius:0 8px 8px 0;padding:10px 13px;font-size:9.8px;line-height:1.55;color:#473f38}
+.note b{color:#241f1b}
 </style></head><body><div class="page">
-  <div class="hdr"><div>${E(name).toUpperCase()} · SPACEX</div><div class="r">Resumen de Posición</div></div>
-  <div class="eyebrow">Resumen de Posición — SpaceX</div>
-  <div class="title">Space Exploration Technologies (SpaceX)</div>
-  <div class="rule"></div>
-  <div class="invname">${E(name)}${D.combined ? ` — posición consolidada (${D.inv._accounts.length} cuentas)` : ''}</div>
-  <div class="meta">Vehículos: ${D.act.map(a => '<b>' + E(a.short) + '</b>').join(' · ')}</div>
-  <div class="meta">Evento: <b>IPO de SpaceX — 12 de junio de 2026</b> · Cifras en base <b>post-split 5:1</b></div>
-  <div class="meta">Precio de cierre de hoy: <b>${SPXR_P2(P)} USD/acción</b>${D.live.EVB ? ` · Valuación SpaceX ~ $${SPXR_INT(D.live.EVB)} mmd` : ''}</div>
-  <div class="kpis">
-    ${kpi('Acciones SpaceX', SPXR_SH(D.totSh), D.act.length + (D.act.length === 1 ? ' vehículo activo' : ' vehículos activos'), false)}
-    ${D.hasReinv
-      ? kpi('Capital original', SPXR_MONEY(D.original), 'la reinversión no es capital adicional', false)
-      : kpi('Costo (entrada)', SPXR_MONEY(D.totCost), 'acciones activas', false)}
-    ${kpi('Valor actual', SPXR_MONEY(D.totVal), '@ ' + SPXR_P2(P) + '/acción', true)}
-    ${D.hasReinv
-      ? kpi('Múltiplo s/ original', SPXR_X(D.totVal / D.original), 'no realizado + reinvertido', true)
-      : kpi('Múltiplo', SPXR_X(D.totVal / D.totCost), 'valor / costo', true)}
+  <div class="topbar"></div>
+  <div class="hero">
+    <div class="eyebrow">MVP · Reporte SpaceX</div>
+    <div class="htitle">Space Exploration Technologies</div>
+    <div class="hsub"><b>${E(name)}</b>${D.combined ? ` · posición consolidada (${D.inv._accounts.length} cuentas)` : ''} · ${D.act.length} vehículo${D.act.length === 1 ? '' : 's'} activo${D.act.length === 1 ? '' : 's'} · Generado ${hoy}</div>
+    <div class="hsub">IPO 12-jun-2026 · base <b>post-split 5:1</b> · Precio de cierre de hoy: <b>${SPXR_P2(P)} USD/acción</b>${D.live.EVB ? ` · Valuación ~ $${SPXR_INT(D.live.EVB)} mmd` : ''}</div>
+    <div class="accentbar"></div>
   </div>
-
+  <div class="rbody">
+  <div class="kpis">
+    ${kpi('Acciones SpaceX', SPXR_SH(D.totSh), 'accent')}
+    ${D.hasReinv ? kpi('Capital original', SPXR_MONEY(D.original), '') : kpi('Costo (entrada)', SPXR_MONEY(D.totCost), '')}
+    ${kpi('Valor actual', SPXR_MONEY(D.totVal), 'pos')}
+    ${D.hasReinv ? kpi('Múltiplo s/ original', SPXR_X(D.totVal / D.original), '') : kpi('Múltiplo', SPXR_X(D.totVal / D.totCost), '')}
+  </div>
   ${sec('¿Qué pasó con la posición?')}
   ${paras}
-
   ${sec('Detalle por vehículo')}
-  <table><thead><tr><th>${D.combined ? 'Cuenta · Vehículo / Estatus' : 'Vehículo / Estatus'}</th><th class="num">Acciones</th><th class="num">PPS Entrada</th><th class="num">PPS Actual</th><th class="num">Inversión</th><th class="num">Valor actual</th><th class="num">MOIC</th></tr></thead>
+  <table><thead><tr><th>${D.combined ? 'Cuenta · Vehículo / Estatus' : 'Vehículo / Estatus'}</th><th class="n">Acciones</th><th class="n">PPS Entrada</th><th class="n">PPS Actual</th><th class="n">Inversión</th><th class="n">Valor actual</th><th class="n">MOIC</th></tr></thead>
   <tbody>${vrows.join('')}${totRow}</tbody></table>
+  <div class="fn">${tableFn}</div>
   ${distSec}
-  <div class="fn">Acciones y costo/acción: cartas del IPO de SpaceX de cada vehículo (Altareturn). Base post-split 5:1. Valor actual = acciones × ${SPXR_P2(P)} (precio de cierre de hoy).${D.hasReinv ? ` * Múltiplo sobre el capital original de ${SPXR_MONEY(D.original)}. El capital de la Serie VI-26A QP (${SPXR_MONEY(D.reinvP)}) proviene de la liquidación parcial reinvertida — no es capital adicional aportado.` : ' MOIC = valor actual / costo.'}</div>
-
   ${sec('¿Cómo y cuándo se liberan las acciones?')}
-  ${como.map(p => `<p class="body">${p}</p>`).join('')}
-
+  ${como.map(p => `<p class="para">${p}</p>`).join('')}
   ${sec('Calendario combinado de distribuciones')}
-  <table><thead><tr><th>Fecha</th><th>Evento</th><th class="num">Acciones</th><th class="num">% total</th><th class="num">Acum. %</th><th>Detalle</th></tr></thead>
-  <tbody>${calRows}<tr class="tot"><td colspan="2">Total liberado</td><td class="num">${SPXR_INT(D.calendar.TOT)}</td><td class="num">100%</td><td></td><td class="det">Bono condicional adelantaría parte del remanente</td></tr></tbody></table>
+  <table><thead><tr><th>Fecha</th><th>Evento</th><th class="n">Acciones</th><th class="n">% total</th><th class="n">Acum. %</th><th>Detalle</th></tr></thead>
+  <tbody>${calRows}<tr class="tot"><td colspan="2">Total liberado</td><td class="n">${SPXR_INT(D.calendar.TOT)}</td><td class="n">100%</td><td></td><td class="det">Bono condicional adelantaría parte del remanente</td></tr></tbody></table>
   <div class="fn">Acciones por fecha = suma de lo que libera cada calendario ese día (redondeadas). La fecha del earnings Q2 2026 aún no es oficial (~17 ago 2026 es la mejor estimación); hitos posteriores estimados con la misma cadencia. El prospecto final es la autoridad. El bono +10% es condicional y no se incluye en el acumulado base.</div>
-
-  ${sec('Notas')}
-  <div class="note"><b>Split 5:1:</b> todas las acciones están en base post-split. <b>Precio:</b> el valor de ${SPXR_MONEY(D.totVal)} usa el precio de cierre de hoy de ${SPXR_P2(P)}/acción y se mueve con el precio público de SpaceX. <b>Cifras no realizadas:</b> el monto final dependerá del precio al liberarse cada tramo y de la elección cash/in-kind; las cifras no reflejan retenciones por gastos ni carried interest.${D.hasSold && D.cashOut > 0 ? ` <b>Venta previa:</b> el efectivo de la liquidación parcial (${SPXR_MONEY(D.cashOut)}) ya fue entregado y no está sujeto al lock-up.` : ''}</div>
-
+  <div class="note"><b>Split 5:1:</b> todas las acciones están en base post-split. <b>Precio:</b> el valor de ${SPXR_MONEY(D.totVal)} usa el precio de cierre de hoy de ${SPXR_P2(P)}/acción y se mueve con el precio público de SpaceX. <b>Cifras no realizadas:</b> el monto final dependerá del precio al liberarse cada tramo y de la elección cash/in-kind; las cifras no reflejan retenciones por gastos ni carried interest.${D.hasSold && D.cashOut > 0.01 ? ` <b>Venta previa:</b> el efectivo de la liquidación parcial (${SPXR_MONEY(D.cashOut)}) ya fue entregado y no está sujeto al lock-up.` : ''}</div>
   ${sec('Anexo 1 — Distribución de los primeros 180 días')}
-  <p class="body">Mecanismo de las acciones que se liberan en los primeros ~6 meses${D.shA > 0 ? ` (todo el Calendario ${D.shB > 0 ? '2' : ''} + la 1ª mitad del Calendario 1: ${SPXR_INT(D.calendar.pool)} acciones)` : ` (${SPXR_INT(D.calendar.pool)} acciones)`}. Liberación escalonada ligada a desempeño; expira el 9 de diciembre de 2026. Porcentajes sobre las acciones sujetas a este calendario.</p>
-  <table><thead><tr><th>Hito / Fecha</th><th class="num">% liberado</th><th>Detalle</th></tr></thead><tbody>${anexo1}</tbody></table>
+  <p class="para">Mecanismo de las acciones que se liberan en los primeros ~6 meses${D.shA > 0 && D.shB > 0 ? ` (todo el Calendario 2 + la 1ª mitad del Calendario 1: ${SPXR_INT(D.calendar.pool)} acciones)` : ` (${SPXR_INT(D.calendar.pool)} acciones)`}. Liberación escalonada ligada a desempeño; expira el 9 de diciembre de 2026. Porcentajes sobre las acciones sujetas a este calendario.</p>
+  <table><thead><tr><th>Hito / Fecha</th><th class="n">% liberado</th><th>Detalle</th></tr></thead><tbody>${anexo1}</tbody></table>
   <div class="fn">${E(SPX_STRUCTURES.B.nota)}</div>
-
   ${anexo2 ? `${sec('Anexo 2 — Segunda parte del Calendario 1 (lock-up extendido)')}
-  <p class="body">La 2ª mitad del Calendario 1 (~${SPXR_INT(D.calendar.ext)} acciones) NO se libera en los primeros 180 días, sino en un lock-up extendido entre ~febrero y agosto de 2027. Porcentajes sobre las acciones de esta segunda mitad.</p>
-  <table><thead><tr><th>Hito / Fecha</th><th class="num">% liberado</th><th>Detalle</th></tr></thead><tbody>${anexo2}</tbody></table>
+  <p class="para">La 2ª mitad del Calendario 1 (~${SPXR_INT(D.calendar.ext)} acciones) NO se libera en los primeros 180 días, sino en un lock-up extendido entre ~febrero y agosto de 2027. Porcentajes sobre las acciones de esta segunda mitad.</p>
+  <table><thead><tr><th>Hito / Fecha</th><th class="n">% liberado</th><th>Detalle</th></tr></thead><tbody>${anexo2}</tbody></table>
   <div class="fn">Fechas estimadas; el prospecto final es la autoridad controladora. Liquidez total de esta mitad ~ agosto 2027.</div>` : ''}
+  </div>
 </div></body></html>`;
 }
 
@@ -9748,7 +9732,11 @@ function spxrPageCuts(pageEl, capacityCss) {
   const relTop = el => Math.round(el.getBoundingClientRect().top - pageTop);
   const cands = new Set(), banned = new Set();
   let prevWasSec = false;
-  Array.from(pageEl.children).forEach(el => {
+  const kids = [];
+  Array.from(pageEl.children).forEach(ch => {
+    if (ch.classList.contains('rbody')) kids.push(...ch.children); else kids.push(ch);
+  });
+  kids.forEach(el => {
     const y = relTop(el);
     if (prevWasSec || el.classList.contains('fn')) banned.add(y); else cands.add(y);
     prevWasSec = el.classList.contains('sec');
@@ -9831,29 +9819,30 @@ async function spxrRenderPdf(html, fileName, anexo3) {
     if (anexo3 && anexo3.items.length) {
       pdf.addPage();
       const L = 56, top = 64;
-      pdf.setTextColor(15, 40, 73);
-      pdf.setFont('helvetica', 'bold'); pdf.setFontSize(10.5);
-      pdf.text('ANEXO 3 — CARTAS DEL IPO (DESCARGA)', L, top, { charSpace: 1.2 });
-      pdf.setDrawColor(221, 227, 236); pdf.setLineWidth(0.8); pdf.line(L, top + 8, pageW - L, top + 8);
-      pdf.setFont('helvetica', 'normal'); pdf.setFontSize(9.5); pdf.setTextColor(80, 88, 102);
+      pdf.setFillColor(232, 101, 13); pdf.rect(L, top - 11, 4, 14, 'F');
+      pdf.setTextColor(42, 37, 33);
+      pdf.setFont('helvetica', 'bold'); pdf.setFontSize(11);
+      pdf.text('Anexo 3 — Cartas del IPO (descarga)', L + 10, top);
+      pdf.setDrawColor(232, 227, 221); pdf.setLineWidth(0.8); pdf.line(L, top + 8, pageW - L, top + 8);
+      pdf.setFont('helvetica', 'normal'); pdf.setFontSize(9.5); pdf.setTextColor(110, 101, 93);
       pdf.text('Liga directa a la carta oficial del IPO de SpaceX de cada vehículo (incluye el número de acciones post-split).', L, top + 26);
       let yy = top + 50;
       anexo3.items.forEach(it => {
-        pdf.setFont('helvetica', 'bold'); pdf.setFontSize(10); pdf.setTextColor(35, 42, 53);
+        pdf.setFont('helvetica', 'bold'); pdf.setFontSize(10); pdf.setTextColor(36, 31, 27);
         pdf.text(`${it.cuenta} · ${it.serie}`, L, yy);
         const w = pdf.getTextWidth(`${it.cuenta} · ${it.serie}`);
         if (it.url) {
-          pdf.setFont('helvetica', 'normal'); pdf.setTextColor(21, 101, 192);
+          pdf.setFont('helvetica', 'normal'); pdf.setTextColor(232, 101, 13);
           pdf.textWithLink('Descargar carta del IPO', L + w + 14, yy, { url: it.url });
           const lw = pdf.getTextWidth('Descargar carta del IPO');
-          pdf.setDrawColor(21, 101, 192); pdf.setLineWidth(0.6); pdf.line(L + w + 14, yy + 2, L + w + 14 + lw, yy + 2);
+          pdf.setDrawColor(232, 101, 13); pdf.setLineWidth(0.6); pdf.line(L + w + 14, yy + 2, L + w + 14 + lw, yy + 2);
         } else {
-          pdf.setFont('helvetica', 'italic'); pdf.setTextColor(138, 147, 163);
+          pdf.setFont('helvetica', 'italic'); pdf.setTextColor(154, 143, 132);
           pdf.text('Aun no disponible (carta del IPO pendiente de emision)', L + w + 14, yy);
         }
         yy += 22;
       });
-      pdf.setFont('helvetica', 'italic'); pdf.setFontSize(8); pdf.setTextColor(138, 147, 163);
+      pdf.setFont('helvetica', 'italic'); pdf.setFontSize(8); pdf.setTextColor(154, 143, 132);
       pdf.text('Los enlaces abren la carta en el navegador. Documento informativo; el prospecto final y las cartas oficiales son la autoridad.', L, yy + 10);
     }
     pdf.save(fileName);
