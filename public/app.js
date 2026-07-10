@@ -7539,6 +7539,7 @@ body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;backgro
 .ft-co-sec-t{font-size:13px;color:#3d4559;line-height:1.5}
 .ft-co-chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:2px}
 .ft-co-chip{font-size:12px;font-weight:500;color:#3d4559;background:#eef0f5;padding:4px 11px;border-radius:999px}
+@media (max-width:640px){.doc{padding:16px}.ft-co-grid{grid-template-columns:1fr;gap:14px}.ft-co-card{padding:16px 17px}.doc-title{font-size:19px}.ft-co-vv{font-size:19px}.ft-co-name{font-size:15px}}
 @media print{.doc{padding:0;max-width:none}.ft-co-grid{gap:12px}}
 @page{margin:13mm}`;
   return `<!doctype html><html lang="${EN ? 'en' : 'es'}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(f.name)} — ${EN ? 'Companies' : 'Empresas'}</title>` +
