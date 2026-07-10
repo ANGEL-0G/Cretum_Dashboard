@@ -9645,6 +9645,8 @@ function spxrBuildData(d, live) {
     reinvP = qReinv;
   }
   const hasReinv = reinvP > 0 && (reinvRows.length > 0 || crossReinv > 0);
+  // Capital ADICIONAL aportado a la 26A QP por encima de lo reinvertido (casos David/Eduardo/Pla)
+  const addReinv = hasReinv ? Math.max(0, reinvRows.reduce((s, a) => s + a.commitment, 0) - reinvP) : 0;
 
   // Totales de la posición activa
   const totSh = act.reduce((s, a) => s + a.shares, 0);
@@ -9666,7 +9668,7 @@ function spxrBuildData(d, live) {
 
   return {
     inv, combined, live, act, sold, hasSold: sold.length > 0,
-    hasReinv, reinvP, reinvRows, crossReinv, cashOut, cashFracNoted, soldShares, soldCost, soldPps, soldDate,
+    hasReinv, reinvP, reinvRows, crossReinv, addReinv, cashOut, cashFracNoted, soldShares, soldCost, soldPps, soldDate,
     totSh, totCost, totVal, original, totalGenerado, shA, shB,
     calendar: spxrCalendar(shA, shB),
   };
@@ -9742,11 +9744,13 @@ function spxrNarrative(D, EN) {
     const fecha = D.soldDate ? new Date(D.soldDate.slice(0, 10) + 'T12:00:00').toLocaleDateString(EN ? 'en-US' : 'es-MX', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
     if (D.hasReinv && D.cashOut <= 0.01) {
       const crossTxt = (D.crossReinv > 0 && !D.reinvRows.length) ? T(' (posición mantenida en Cretum Partners GVV Fund, LP)', ' (position held in Cretum Partners GVV Fund, LP)') : '';
-      ps.push(T(`<b>2. Liquidación parcial y reinversión (${fecha}).</b> Un fondo institucional subyacente vendió <b>${SPXR_SH(D.soldShares)} acciones</b>${pps}. La totalidad de los <b>${SPXR_MONEY(D.reinvP)}</b> recibidos se reinvirtió en el vehículo directo <b>Serie VI-26A QP</b>${crossTxt} — no es capital adicional ni efectivo entregado.`,
-                `<b>2. Partial liquidation and reinvestment (${fecha}).</b> An underlying institutional fund sold <b>${SPXR_SH(D.soldShares)} shares</b>${pps}. The entire <b>${SPXR_MONEY(D.reinvP)}</b> received was reinvested into the direct vehicle <b>Series VI-26A QP</b>${crossTxt} — it is neither additional capital nor cash delivered.`));
+      const addTxt = D.addReinv > 0.01 ? T(` Adicionalmente, el inversionista aportó <b>${SPXR_MONEY(D.addReinv)}</b> de capital nuevo a la Serie VI-26A QP.`, ` Additionally, the investor contributed <b>${SPXR_MONEY(D.addReinv)}</b> of new capital to Series VI-26A QP.`) : '';
+      ps.push(T(`<b>2. Liquidación parcial y reinversión (${fecha}).</b> Un fondo institucional subyacente vendió <b>${SPXR_SH(D.soldShares)} acciones</b>${pps}. La totalidad de los <b>${SPXR_MONEY(D.reinvP)}</b> recibidos se reinvirtió en el vehículo directo <b>Serie VI-26A QP</b>${crossTxt} — es capital reciclado, no efectivo entregado.${addTxt}`,
+                `<b>2. Partial liquidation and reinvestment (${fecha}).</b> An underlying institutional fund sold <b>${SPXR_SH(D.soldShares)} shares</b>${pps}. The entire <b>${SPXR_MONEY(D.reinvP)}</b> received was reinvested into the direct vehicle <b>Series VI-26A QP</b>${crossTxt} — it is recycled capital, not cash delivered.${addTxt}`));
     } else if (D.hasReinv) {
-      ps.push(T(`<b>2. Liquidación parcial (${fecha}).</b> Un fondo institucional subyacente vendió <b>${SPXR_SH(D.soldShares)} acciones</b>${pps}. Del producto, <b>${SPXR_MONEY(D.reinvP)}</b> se reinvirtió en la <b>Serie VI-26A QP</b> y <b>${SPXR_MONEY(D.cashOut)}</b> se entregó en efectivo.`,
-                `<b>2. Partial liquidation (${fecha}).</b> An underlying institutional fund sold <b>${SPXR_SH(D.soldShares)} shares</b>${pps}. Of the proceeds, <b>${SPXR_MONEY(D.reinvP)}</b> was reinvested into <b>Series VI-26A QP</b> and <b>${SPXR_MONEY(D.cashOut)}</b> was delivered in cash.`));
+      const addTxt2 = D.addReinv > 0.01 ? T(` Adicionalmente, el inversionista aportó <b>${SPXR_MONEY(D.addReinv)}</b> de capital nuevo a la Serie VI-26A QP.`, ` Additionally, the investor contributed <b>${SPXR_MONEY(D.addReinv)}</b> of new capital to Series VI-26A QP.`) : '';
+      ps.push(T(`<b>2. Liquidación parcial (${fecha}).</b> Un fondo institucional subyacente vendió <b>${SPXR_SH(D.soldShares)} acciones</b>${pps}. Del producto, <b>${SPXR_MONEY(D.reinvP)}</b> se reinvirtió en la <b>Serie VI-26A QP</b> y <b>${SPXR_MONEY(D.cashOut)}</b> se entregó en efectivo.${addTxt2}`,
+                `<b>2. Partial liquidation (${fecha}).</b> An underlying institutional fund sold <b>${SPXR_SH(D.soldShares)} shares</b>${pps}. Of the proceeds, <b>${SPXR_MONEY(D.reinvP)}</b> was reinvested into <b>Series VI-26A QP</b> and <b>${SPXR_MONEY(D.cashOut)}</b> was delivered in cash.${addTxt2}`));
     } else {
       ps.push(T(`<b>2. Liquidación parcial (${fecha}).</b> Un fondo institucional subyacente vendió <b>${SPXR_SH(D.soldShares)} acciones</b>${pps}. El inversionista recibió <b>${SPXR_MONEY(D.cashOut)} en efectivo</b> — un múltiplo de <b>${SPXR_X(D.cashOut / D.soldCost)}</b> sobre el costo de esa porción (${SPXR_MONEY(D.soldCost)}). Este efectivo ya fue entregado; no está sujeto al lock-up.`,
                 `<b>2. Partial liquidation (${fecha}).</b> An underlying institutional fund sold <b>${SPXR_SH(D.soldShares)} shares</b>${pps}. The investor received <b>${SPXR_MONEY(D.cashOut)} in cash</b> — a <b>${SPXR_X(D.cashOut / D.soldCost)}</b> multiple on that portion's cost (${SPXR_MONEY(D.soldCost)}). This cash has already been delivered; it is not subject to the lock-up.`));
@@ -9785,7 +9789,9 @@ function spxrHtml(D, EN) {
     : `<tr class="tot"><td>${T('Total SpaceX', 'SpaceX Total')}</td><td class="n">${SPXR_SH(D.totSh)}</td><td></td><td class="n">${SPXR_P2(P)}</td><td class="n">${SPXR_MONEY(D.totCost)}</td><td class="n">${SPXR_MONEY(D.totVal)}</td><td class="n">${SPXR_X(D.totVal / D.totCost)}</td></tr>`;
   const reinvFn = !D.hasReinv ? T(' MOIC = valor actual / costo.', ' MOIC = current value / cost.')
     : (D.reinvRows.length
-      ? T(` * Múltiplo sobre el capital original de ${SPXR_MONEY(D.original)}. El capital de la Serie VI-26A QP (${SPXR_MONEY(D.reinvP)}) proviene de la liquidación parcial reinvertida — no es capital adicional aportado.`, ` * Multiple on original capital of ${SPXR_MONEY(D.original)}. The Series VI-26A QP capital (${SPXR_MONEY(D.reinvP)}) comes from the reinvested partial liquidation — it is not additional contributed capital.`)
+      ? (D.addReinv > 0.01
+        ? T(` * Múltiplo sobre el capital original de ${SPXR_MONEY(D.original)}. El capital de la Serie VI-26A QP se compone de ${SPXR_MONEY(D.reinvP)} reinvertidos de la liquidación parcial más ${SPXR_MONEY(D.addReinv)} de capital adicional aportado.`, ` * Multiple on original capital of ${SPXR_MONEY(D.original)}. The Series VI-26A QP capital consists of ${SPXR_MONEY(D.reinvP)} reinvested from the partial liquidation plus ${SPXR_MONEY(D.addReinv)} of additional contributed capital.`)
+        : T(` * Múltiplo sobre el capital original de ${SPXR_MONEY(D.original)}. El capital de la Serie VI-26A QP (${SPXR_MONEY(D.reinvP)}) proviene de la liquidación parcial reinvertida — no es capital adicional aportado.`, ` * Multiple on original capital of ${SPXR_MONEY(D.original)}. The Series VI-26A QP capital (${SPXR_MONEY(D.reinvP)}) comes from the reinvested partial liquidation — it is not additional contributed capital.`))
       : T(` * Múltiplo sobre el capital original de ${SPXR_MONEY(D.original)}. La reinversión (${SPXR_MONEY(D.reinvP)}, Serie VI-26A QP) se mantiene en Cretum Partners GVV Fund, LP y no aparece en esta tabla.`, ` * Multiple on original capital of ${SPXR_MONEY(D.original)}. The reinvestment (${SPXR_MONEY(D.reinvP)}, Series VI-26A QP) is held in Cretum Partners GVV Fund, LP and does not appear in this table.`));
   const tableFn = T(`Acciones y costo/acción: cartas del IPO de SpaceX de cada vehículo (Altareturn). Base post-split 5:1. Valor actual = acciones × ${SPXR_P2(P)} (precio de cierre de hoy).`, `Shares and cost/share: SpaceX IPO letters for each vehicle (Altareturn). Post-split 5:1 basis. Current value = shares × ${SPXR_P2(P)} (today\'s closing price).`) + reinvFn;
 
