@@ -7425,8 +7425,16 @@ function ftCompanyCards(f, opts) {
     if (_seenCo.has(base)) return false;
     _seenCo.add(base); return true;
   });
+  // Íconos SVG inline (Feather, MIT) — el HTML descargable no depende de FontAwesome (CDN falla offline / en el visor del teléfono).
+  const SVG_ICONS = {
+    cube: '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>',
+    globe: '<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',
+    trend: '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>',
+    info: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>'
+  };
+  const svgIco = (name, size) => `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle">${SVG_ICONS[name] || ''}</svg>`;
   const sec = (icon, title, body) =>
-    `<div class="ft-co-sec"><div class="ft-co-sec-ico"><i class="fa-solid ${icon}"></i></div>` +
+    `<div class="ft-co-sec"><div class="ft-co-sec-ico">${svgIco(icon, 16)}</div>` +
     `<div class="ft-co-sec-body"><div class="ft-co-sec-h">${escapeHtml(title)}</div>${body}</div></div>`;
   return allCos.map(r => {
     const cur = r.corpVal;
@@ -7453,8 +7461,12 @@ function ftCompanyCards(f, opts) {
     const domain = (f.logos || {})[r.company];
     const dn = info.displayName || r.company;
     const mono = `<span class="ft-co-mono">${escapeHtml(coInitials(dn))}</span>`;
+    const embedded = (opts.embeddedLogos || {})[r.company];
     let logoHtml;
-    if (override) {
+    if (embedded) {
+      // Logo embebido como data URI (para HTML descargable — se ve offline / en el teléfono).
+      logoHtml = `<div class="ft-co-logo">${mono}<img class="ft-co-logo-img" alt="" src="${embedded}" onerror="this.remove()"></div>`;
+    } else if (override) {
       logoHtml = `<div class="ft-co-logo">${mono}<img class="ft-co-logo-img" alt="" loading="lazy" src="${override}" onerror="this.remove()"></div>`;
     } else if (domain) {
       const g = `https://www.google.com/s2/favicons?sz=128&domain=${domain}`;
@@ -7491,17 +7503,17 @@ function ftCompanyCards(f, opts) {
           <div class="ft-co-valbox"><span class="ft-co-vl">${EN ? 'Entry' : 'Entrada'}</span><span class="ft-co-vv">${fmtBil(entry)}</span></div>
           <div class="ft-co-valbox"><span class="ft-co-vl">${EN ? 'Current valuation' : 'Valuación actual'}</span><span class="ft-co-vv ft-co-vv-now">${fmtBil(cur)}</span></div>
         </div>
-        <div class="ft-co-vnote"><i class="fa-solid fa-circle-info"></i> ${escapeHtml(valNote)}</div>
+        <div class="ft-co-vnote">${svgIco('info', 14)} ${escapeHtml(valNote)}</div>
         ${hasDetail ? `<hr class="ft-co-div">` : ''}
-        ${info.product ? sec('fa-cube', (EN ? 'Product · ' : 'Producto · ') + info.product.name, `<div class="ft-co-sec-t">${escapeHtml(info.product.desc)}</div>`) : ''}
-        ${info.markets ? sec('fa-globe', EN ? 'Target market' : 'Mercado objetivo', `<div class="ft-co-chips">${info.markets.map(m => `<span class="ft-co-chip">${escapeHtml(m)}</span>`).join('')}</div>`) : ''}
-        ${info.thesis ? sec('fa-arrow-trend-up', EN ? 'Investment thesis' : 'Tesis de inversión', `<div class="ft-co-sec-t">${escapeHtml(info.thesis)}</div>`) : ''}
+        ${info.product ? sec('cube', (EN ? 'Product · ' : 'Producto · ') + info.product.name, `<div class="ft-co-sec-t">${escapeHtml(info.product.desc)}</div>`) : ''}
+        ${info.markets ? sec('globe', EN ? 'Target market' : 'Mercado objetivo', `<div class="ft-co-chips">${info.markets.map(m => `<span class="ft-co-chip">${escapeHtml(m)}</span>`).join('')}</div>`) : ''}
+        ${info.thesis ? sec('trend', EN ? 'Investment thesis' : 'Tesis de inversión', `<div class="ft-co-sec-t">${escapeHtml(info.thesis)}</div>`) : ''}
       </div>`;
   }).join('');
 }
 
 // Documento HTML standalone (para descargar como HTML o imprimir a PDF)
-function ftCompaniesDocHtml(f, lang) {
+function ftCompaniesDocHtml(f, lang, logos) {
   const EN = lang === 'en';
   const cutoffPretty = new Date(f.cutoff + 'T00:00:00').toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
   const css = `
@@ -7530,7 +7542,8 @@ body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;backgro
 .ft-co-vv{font-size:21px;font-weight:700;color:#1a1f2e;line-height:1.1}
 .ft-co-vv-now{color:#e8650d}
 .ft-co-vnote{display:flex;align-items:flex-start;gap:7px;font-size:12px;color:#6b7589;line-height:1.45}
-.ft-co-vnote i{margin-top:2px;color:#9aa3b5}
+.ft-co-vnote svg{flex:none;margin-top:2px;color:#9aa3b5}
+.ft-co-sec-ico svg{color:#e8650d}
 .ft-co-div{border:none;border-top:1px solid #eef0f5;margin:14px 0}
 .ft-co-sec{display:flex;gap:12px;margin-bottom:14px}
 .ft-co-sec-ico{flex:0 0 auto;width:22px;text-align:center;color:#e8650d;font-size:15px;padding-top:1px}
@@ -7543,11 +7556,11 @@ body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;backgro
 @media print{.doc{padding:0;max-width:none}.ft-co-grid{gap:12px}}
 @page{margin:13mm}`;
   return `<!doctype html><html lang="${EN ? 'en' : 'es'}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(f.name)} — ${EN ? 'Companies' : 'Empresas'}</title>` +
-    `<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"><style>${css}</style></head>` +
+    `<style>${css}</style></head>` +
     `<body><div class="doc"><div class="doc-head"><div class="doc-title">${escapeHtml(f.name)} — ${EN ? 'Companies' : 'Empresas'}</div>` +
     `<div class="doc-sub">${escapeHtml(f.status)} · ${escapeHtml(f.confidentiality)} · Cutoff ${escapeHtml(cutoffPretty)}</div>` +
     `<div class="doc-note">${EN ? 'Corporate valuation. Entry is derived from PPS appreciation (current valuation ÷ MOIC).' : 'Valuación corporativa. La de entrada se deriva de la apreciación del PPS (valuación actual ÷ MOIC).'}</div></div>` +
-    `<div class="ft-co-grid">${ftCompanyCards(f, { lang })}</div></div></body></html>`;
+    `<div class="ft-co-grid">${ftCompanyCards(f, { lang, embeddedLogos: logos || {} })}</div></div></body></html>`;
 }
 
 // ── Export HTML del tracker (Valuation Overview) — auto-contenido, logos embebidos ──
@@ -7704,16 +7717,53 @@ body.anim .xr.xin{opacity:1;transform:none}
 </body></html>`;
 }
 
+// Baja los logos y los devuelve como data URIs {empresa: "data:image/..."} para embeberlos
+// en el HTML descargable (así se ven offline / en el teléfono, sin depender de URLs externas).
+async function ftEmbedLogos(f) {
+  const out = {};
+  const toDataUri = async (src) => {
+    try {
+      const r = await fetch(src); if (!r.ok) return null;
+      const b = await r.blob(); if (b.size < 60) return null;
+      return await new Promise(res => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = () => res(null); fr.readAsDataURL(b); });
+    } catch (e) { return null; }
+  };
+  const jobs = [];
+  const done = new Set();
+  // Overrides tienen prioridad (logo local o URL específica).
+  Object.entries(f.logoOverrides || {}).forEach(([name, ov]) => {
+    done.add(name);
+    const src = /^https?:/i.test(ov) ? ('/api/logo?u=' + encodeURIComponent(ov)) : ov; // local = mismo origen
+    jobs.push(toDataUri(src).then(d => { if (d) out[name] = d; }));
+  });
+  // Resto: favicon del dominio vía proxy same-origin.
+  Object.entries(f.logos || {}).forEach(([name, dom]) => {
+    if (done.has(name)) return;
+    const g = 'https://www.google.com/s2/favicons?sz=128&domain=' + dom;
+    jobs.push(toDataUri('/api/logo?u=' + encodeURIComponent(g)).then(d => { if (d) out[name] = d; }));
+  });
+  await Promise.all(jobs);
+  return out;
+}
+
 async function exportCompaniesHTML(fundId, btn) {
   const f = FUND_TRACKERS[fundId]; if (!f || !f.companyInfo) return;
   const lang = await pickExportLang(); if (!lang) return;
-  const blob = new Blob([ftCompaniesDocHtml(f, lang)], { type: 'text/html;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = `${f.name.replace(/[^a-z0-9]+/gi, '_')}_${lang === 'en' ? 'Companies' : 'Empresas'} · ${dlStamp()}.html`;
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 3000);
+  const orig = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generando…'; }
+  try {
+    const logos = await ftEmbedLogos(f);
+    const blob = new Blob([ftCompaniesDocHtml(f, lang, logos)], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `${f.name.replace(/[^a-z0-9]+/gi, '_')}_${lang === 'en' ? 'Companies' : 'Empresas'} · ${dlStamp()}.html`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
+    toast(EN_TOAST(lang, 'Companies HTML downloaded', 'HTML de empresas descargado'));
+  } catch (e) { console.error('[companies html]', e); toast('Error: ' + e.message); }
+  finally { if (btn) { btn.disabled = false; btn.innerHTML = orig; } }
 }
+function EN_TOAST(lang, en, es) { return lang === 'en' ? en : es; }
 
 // Lazy-load jsPDF (UMD)
 let _jspdfPromise = null;
