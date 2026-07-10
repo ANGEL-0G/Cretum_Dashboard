@@ -2544,6 +2544,34 @@ function openGvvDashboard() {
   if (page) page.classList.add('gvv-full');
 }
 
+// Descarga el HTML autocontenido del GVV Dashboard (archivo estático de cretumdesk).
+function downloadGvvHtml() {
+  const a = document.createElement('a');
+  a.href = '/gvv-detalle.html';
+  a.download = 'GVV-Fund-Dashboard.html';
+  document.body.appendChild(a); a.click(); a.remove();
+  toast('Descargando HTML del GVV…');
+}
+
+// Copia al portapapeles el link público del GVV en cretumpartners.com.
+function copyGvvPartnersLink(btn) {
+  const url = 'https://cretumpartners.com/gvv-detalle.html';
+  const ok = () => {
+    toast('Link de cretumpartners copiado');
+    if (btn) { const o = btn.innerHTML; btn.innerHTML = '<i class="fa-solid fa-check"></i> Copiado'; setTimeout(() => { btn.innerHTML = o; }, 1600); }
+  };
+  const fallback = () => {
+    const t = document.createElement('textarea');
+    t.value = url; t.style.position = 'fixed'; t.style.opacity = '0';
+    document.body.appendChild(t); t.select();
+    try { document.execCommand('copy'); ok(); } catch (e) { toast('No se pudo copiar: ' + url); }
+    t.remove();
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(ok).catch(fallback);
+  } else fallback();
+}
+
 /* ── Routing por hash (#org/vista) — persiste la vista al refrescar ── */
 let suppressHashChange = false;
 

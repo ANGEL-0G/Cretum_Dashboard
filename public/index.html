@@ -3698,8 +3698,14 @@ button,input,select{font-family:var(--font)}
 
   <!-- Dashboard GVV embebido (archivo estático servido por cretumdesk, carga lazy) -->
   <div id="ventasDash" style="display:none">
-    <button class="fm-back" type="button" onclick="ventasBackHome()"><i class="fa-solid fa-arrow-left"></i> Ventas</button>
-    <iframe id="ventasGvvFrame" title="GVV Dashboard" style="width:100%;height:calc(100vh - 112px);min-height:560px;border:1px solid var(--gray-200,#e0e3eb);border-radius:10px;background:#fff"></iframe>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+      <button class="fm-back" type="button" onclick="ventasBackHome()" style="margin:0"><i class="fa-solid fa-arrow-left"></i> Ventas</button>
+      <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="cdd-btn" type="button" onclick="downloadGvvHtml()"><i class="fa-solid fa-download"></i> Descargar HTML</button>
+        <button class="cdd-btn" type="button" onclick="copyGvvPartnersLink(this)"><i class="fa-solid fa-link"></i> Copiar link cretumpartners</button>
+      </div>
+    </div>
+    <iframe id="ventasGvvFrame" title="GVV Dashboard" style="width:100%;height:calc(100vh - 150px);min-height:540px;border:1px solid var(--gray-200,#e0e3eb);border-radius:10px;background:#fff"></iframe>
   </div>
 </div>
 
