@@ -6814,7 +6814,7 @@ const FUND_TRACKERS = {
       { company: 'Automattic, Inc.',                            invested: 904924,   pct: 0.007, mtm: 840508,   moic: 0.9288, corpVal: 3.312,  pps: 42.75,   entry: 46.03,   shares: 19661,    fdso: 77.5  },
       { company: 'Figure AI Inc.',                              invested: 873359,   pct: 0.007, mtm: 12490436, moic: 14.3016,corpVal: 39,     pps: 194.93,  entry: 13.63,   shares: 64076,    fdso: 200.1 },
       { company: 'Amazegroup, Inc.',                            invested: 786004,   pct: 0.006, mtm: 350505,   moic: 0.4459, corpVal: 0.015,  pps: 0.21,    entry: 0.47,    shares: 1666691,  fdso: 72.4  },
-      { company: 'Neutron Holdings, Inc., DBA Lime',            invested: 765039,   pct: 0.006, mtm: 3021661,  moic: 3.9497, corpVal: 4.061,  pps: 0.10,    entry: 0.03,    shares: 30307529, fdso: 40729.9},
+      { company: 'Neutron Holdings, Inc., DBA Lime',            invested: 765039,   pct: 0.006, mtm: 3021661,  moic: 3.9497, corpVal: 4.061,  pps: 67.20,   entry: 20.16,   shares: 45100.5,  fdso: 60.61},
       { company: 'Space Exploration Technologies Corp.',        invested: 375300,   pct: 0.003, mtm: 8444250,  moic: 22.500, corpVal: 1770,   pps: 135,     entry: 6,       shares: 62550,    fdso: 2373.8},
       { company: 'Payward Inc., DBA Kraken',                    invested: 248200,   pct: 0.002, mtm: 337347,   moic: 1.3592, corpVal: 20,     pps: 61.47,   entry: 45.23,   shares: 5488,     fdso: 325.4 },
       { company: 'Turo, Inc.',                                  invested: 99750,    pct: 0.001, mtm: 99750,    moic: 1.0000, corpVal: 2.906,  pps: 21,      entry: 21,      shares: 4750,     fdso: 140.2 }
@@ -7116,12 +7116,12 @@ const FUND_TRACKERS = {
    Al terminar el lock-up las investments quedarán distribuidas (distributed_at)
    → la query no regresa filas y el tracker vuelve a los valores del Excel oficial. */
 // Empresas públicas cuyo mark vive en la DB (cron Finnhub) y se aplica LIVE a los fund trackers.
-// displayMult: la fila del tracker está en base pre-split → precio real de mercado = pps × mult.
-// (Lime hizo reverse split 672-a-1 para su IPO; su DB y su fila del tracker siguen en base pre-split,
-// el cron ya escribe current_ev_pps = LIME/672, así que aquí se aplica directo sin convertir.)
+// displayMult: por si una fila del tracker quedara en otra base que la DB (hoy todas en base de mercado).
+// (Lime: re-baseada a POST-split 672:1 el 2026-07-11 — DB y fila del tracker ya en base de mercado;
+// shares por carta "Lime IPO" jul-2026, el cron escribe el precio LIME directo.)
 const LIVE_TRACKER_COMPANIES = [
   { dbId: 27, rowRe: /space exploration|spacex/i, name: 'SpaceX', label: 'SPCX', displayMult: 1 },
-  { dbId: 18, rowRe: /neutron|lime/i,             name: 'Lime',   label: 'LIME', displayMult: 672 },
+  { dbId: 18, rowRe: /neutron|lime/i,             name: 'Lime',   label: 'LIME', displayMult: 1 },
 ];
 const _liveMarks = {};        // dbId -> { pps, evB } (en la base de la DB/tracker)
 let _spcxFetchStarted = false;
