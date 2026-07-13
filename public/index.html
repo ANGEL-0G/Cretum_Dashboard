@@ -3619,6 +3619,15 @@ button,input,select{font-family:var(--font)}
   #pageVentas.gvv-full{max-width:none;padding:8px 12px 12px}
   #pageVentas.gvv-full .db-toolbar{display:none}
   #pageVentas.gvv-full .fm-back{margin-bottom:6px}
+  /* Pantalla completa del GVV embebido */
+  #gvvFsWrap{position:relative}
+  #gvvFsBtn{position:absolute;right:24px;bottom:24px;z-index:40;display:inline-flex;align-items:center;gap:9px;
+    background:var(--navy,#12386b);color:#fff;border:none;border-radius:999px;padding:12px 18px;
+    font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;box-shadow:0 6px 22px rgba(8,24,40,.32);transition:background .15s,transform .15s}
+  #gvvFsBtn:hover{background:#0e2c50;transform:translateY(-1px)}
+  #gvvFsWrap:fullscreen{background:#e9edf3}
+  #gvvFsWrap:fullscreen #ventasGvvFrame{height:100vh;min-height:0;border:none;border-radius:0}
+  #gvvFsWrap:fullscreen #gvvFsBtn{position:fixed;right:24px;bottom:24px}
   /* Transición galería ↔ detalle: se reproduce sola en cada display:none→block */
   @keyframes fmIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
   #formsDetail{animation:fmIn .24s cubic-bezier(.23,1,.32,1)}
@@ -3705,7 +3714,10 @@ button,input,select{font-family:var(--font)}
         <button class="cdd-btn" type="button" onclick="copyGvvPartnersLink(this)"><i class="fa-solid fa-link"></i> Copiar link cretumpartners</button>
       </div>
     </div>
-    <iframe id="ventasGvvFrame" title="GVV Dashboard" style="width:100%;height:calc(100vh - 150px);min-height:540px;border:1px solid var(--gray-200,#e0e3eb);border-radius:10px;background:#fff"></iframe>
+    <div id="gvvFsWrap">
+      <iframe id="ventasGvvFrame" title="GVV Dashboard" style="width:100%;height:calc(100vh - 150px);min-height:540px;border:1px solid var(--gray-200,#e0e3eb);border-radius:10px;background:#fff;display:block"></iframe>
+      <button id="gvvFsBtn" type="button" onclick="toggleGvvFullscreen()" title="Pantalla completa"><i class="fa-solid fa-expand"></i> <span>Pantalla completa</span></button>
+    </div>
   </div>
 </div>
 

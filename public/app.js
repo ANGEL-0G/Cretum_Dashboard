@@ -2572,6 +2572,31 @@ function copyGvvPartnersLink(btn) {
   } else fallback();
 }
 
+// Pantalla completa del GVV embebido: el wrapper (iframe + botón) entra a fullscreen nativo.
+function toggleGvvFullscreen() {
+  const w = document.getElementById('gvvFsWrap');
+  if (!w) return;
+  if (document.fullscreenElement) {
+    (document.exitFullscreen || document.webkitExitFullscreen || function(){}).call(document);
+  } else {
+    const req = w.requestFullscreen || w.webkitRequestFullscreen;
+    if (req) { const r = req.call(w); if (r && r.catch) r.catch(() => toast('No se pudo abrir pantalla completa')); }
+    else toast('Tu navegador no permite pantalla completa aquí');
+  }
+}
+// Mantiene el botón sincronizado (icono/texto) al entrar/salir, incluido salir con Esc.
+function _gvvFsSync() {
+  const b = document.getElementById('gvvFsBtn');
+  if (!b) return;
+  const on = !!(document.fullscreenElement || document.webkitFullscreenElement);
+  b.innerHTML = on
+    ? '<i class="fa-solid fa-compress"></i> <span>Salir</span>'
+    : '<i class="fa-solid fa-expand"></i> <span>Pantalla completa</span>';
+  b.title = on ? 'Salir de pantalla completa' : 'Pantalla completa';
+}
+document.addEventListener('fullscreenchange', _gvvFsSync);
+document.addEventListener('webkitfullscreenchange', _gvvFsSync);
+
 /* ── Routing por hash (#org/vista) — persiste la vista al refrescar ── */
 let suppressHashChange = false;
 
