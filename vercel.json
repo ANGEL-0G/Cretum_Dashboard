@@ -1,61 +1,214 @@
 {
   "version": 2,
   "builds": [
-    { "src": "public/index.html",   "use": "@vercel/static" },
-    { "src": "public/portal.html",  "use": "@vercel/static" },
-    { "src": "public/portal-mvp.html", "use": "@vercel/static" },
-    { "src": "public/form.html",    "use": "@vercel/static" },
-    { "src": "public/app.js",       "use": "@vercel/static" },
-    { "src": "public/logo.png",     "use": "@vercel/static" },
-    { "src": "public/logo-icon.png", "use": "@vercel/static" },
-    { "src": "public/logo-mvp.png",  "use": "@vercel/static" },
-    { "src": "public/chaos-industries.png", "use": "@vercel/static" },
-    { "src": "api/tasks.js",             "use": "@vercel/node" },
-    { "src": "api/reminder.js",          "use": "@vercel/node" },
-    { "src": "api/config.js",            "use": "@vercel/node" },
-    { "src": "api/dropbox.js",           "use": "@vercel/node" },
-    { "src": "api/sheets.js",            "use": "@vercel/node" },
-    { "src": "api/portal.js",            "use": "@vercel/node" },
-    { "src": "api/contacts.js",          "use": "@vercel/node" },
-    { "src": "api/forms.js",             "use": "@vercel/node" },
-    { "src": "api/notify-assignment.js", "use": "@vercel/node" },
-    { "src": "api/logo.js",              "use": "@vercel/node" },
-    { "src": "public/fonts/*.ttf",       "use": "@vercel/static" },
-    { "src": "public/gvv-detalle.html",  "use": "@vercel/static" },
-    { "src": "public/docs/*.pdf",        "use": "@vercel/static" },
-    { "src": "public/docs/gvv/*.pdf",    "use": "@vercel/static" },
-    { "src": "public/og/*.png",          "use": "@vercel/static" }
+    {
+      "src": "public/index.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "public/portal.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "public/portal-mvp.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "public/form.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "public/app.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "public/logo.png",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "public/logo-icon.png",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "public/logo-mvp.png",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "public/chaos-industries.png",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "api/tasks.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/prices.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/reminder.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/config.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/dropbox.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/sheets.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/portal.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/contacts.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/forms.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/notify-assignment.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/logo.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "public/fonts/*.ttf",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "public/gvv-detalle.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "public/docs/*.pdf",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "public/docs/gvv/*.pdf",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "public/og/*.png",
+      "use": "@vercel/static"
+    }
   ],
   "routes": [
-    { "src": "/(.*)", "continue": true, "headers": {
+    {
+      "src": "/(.*)",
+      "continue": true,
+      "headers": {
         "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
         "X-Content-Type-Options": "nosniff",
         "X-Frame-Options": "SAMEORIGIN",
         "Referrer-Policy": "strict-origin-when-cross-origin",
         "Permissions-Policy": "geolocation=(), microphone=(), camera=(), payment=()"
-    } },
-    { "src": "/api/tasks",              "dest": "/api/tasks.js" },
-    { "src": "/api/reminder",           "dest": "/api/reminder.js" },
-    { "src": "/api/config",             "dest": "/api/config.js" },
-    { "src": "/api/dropbox",            "dest": "/api/dropbox.js" },
-    { "src": "/api/sheets",             "dest": "/api/sheets.js" },
-    { "src": "/api/portal",             "dest": "/api/portal.js" },
-    { "src": "/api/contacts",           "dest": "/api/contacts.js" },
-    { "src": "/api/forms",              "dest": "/api/forms.js" },
-    { "src": "/api/notify-assignment",  "dest": "/api/notify-assignment.js" },
-    { "src": "/api/logo",                "dest": "/api/logo.js" },
-    { "src": "/fonts/(.+\\.ttf)",        "dest": "/public/fonts/$1" },
-    { "src": "/portal-mvp",    "dest": "/public/portal-mvp.html" },
-    { "src": "/portal",        "dest": "/public/portal.html" },
-    { "src": "/form",          "dest": "/public/form.html" },
-    { "src": "/app.js",        "dest": "/public/app.js" },
-    { "src": "/logo.png",      "dest": "/public/logo.png" },
-    { "src": "/logo-icon.png", "dest": "/public/logo-icon.png" },
-    { "src": "/logo-mvp.png",  "dest": "/public/logo-mvp.png" },
-    { "src": "/chaos-industries.png", "dest": "/public/chaos-industries.png" },
-    { "src": "/gvv-detalle.html", "dest": "/public/gvv-detalle.html" },
-    { "src": "/docs/(.*)",     "dest": "/public/docs/$1" },
-    { "src": "/og/(.*)",       "dest": "/public/og/$1" },
-    { "src": "/(.*)",          "dest": "/public/index.html" }
+      }
+    },
+    {
+      "src": "/api/tasks",
+      "dest": "/api/tasks.js"
+    },
+    {
+      "src": "/api/reminder",
+      "dest": "/api/reminder.js"
+    },
+    {
+      "src": "/api/prices",
+      "dest": "/api/prices.js"
+    },
+    {
+      "src": "/api/config",
+      "dest": "/api/config.js"
+    },
+    {
+      "src": "/api/dropbox",
+      "dest": "/api/dropbox.js"
+    },
+    {
+      "src": "/api/sheets",
+      "dest": "/api/sheets.js"
+    },
+    {
+      "src": "/api/portal",
+      "dest": "/api/portal.js"
+    },
+    {
+      "src": "/api/contacts",
+      "dest": "/api/contacts.js"
+    },
+    {
+      "src": "/api/forms",
+      "dest": "/api/forms.js"
+    },
+    {
+      "src": "/api/notify-assignment",
+      "dest": "/api/notify-assignment.js"
+    },
+    {
+      "src": "/api/logo",
+      "dest": "/api/logo.js"
+    },
+    {
+      "src": "/fonts/(.+\\.ttf)",
+      "dest": "/public/fonts/$1"
+    },
+    {
+      "src": "/portal-mvp",
+      "dest": "/public/portal-mvp.html"
+    },
+    {
+      "src": "/portal",
+      "dest": "/public/portal.html"
+    },
+    {
+      "src": "/form",
+      "dest": "/public/form.html"
+    },
+    {
+      "src": "/app.js",
+      "dest": "/public/app.js"
+    },
+    {
+      "src": "/logo.png",
+      "dest": "/public/logo.png"
+    },
+    {
+      "src": "/logo-icon.png",
+      "dest": "/public/logo-icon.png"
+    },
+    {
+      "src": "/logo-mvp.png",
+      "dest": "/public/logo-mvp.png"
+    },
+    {
+      "src": "/chaos-industries.png",
+      "dest": "/public/chaos-industries.png"
+    },
+    {
+      "src": "/gvv-detalle.html",
+      "dest": "/public/gvv-detalle.html"
+    },
+    {
+      "src": "/docs/(.*)",
+      "dest": "/public/docs/$1"
+    },
+    {
+      "src": "/og/(.*)",
+      "dest": "/public/og/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/public/index.html"
+    }
   ]
 }
