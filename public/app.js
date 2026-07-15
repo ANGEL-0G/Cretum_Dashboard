@@ -10473,7 +10473,7 @@ function renderFrDetail() {
              : `<button class="dbx-btn primary" onclick="frOpenProspect()"><i class="fa-solid fa-plus"></i> Prospecto</button>
                 <button class="dbx-btn" onclick="frOpenOppModal(${o.id})"><i class="fa-solid fa-pen"></i> Editar</button>
                 <button class="dbx-btn" onclick="frCloseOpp()"><i class="fa-solid fa-flag-checkered"></i> Cerrar levantamiento</button>`}
-        <button class="dbx-btn" onclick="frExportCsv()"><i class="fa-solid fa-file-csv"></i> CSV</button>
+        <button class="dbx-btn" onclick="frExportXlsx()"><i class="fa-solid fa-file-excel"></i> Excel</button>
         <button class="dbx-btn" onclick="frToggleLog()"><i class="fa-solid fa-clock-rotate-left"></i> Bitácora</button>
       </div>
     </div>
@@ -10691,20 +10691,103 @@ async function frToggleLog() {
     </div>`).join('') : '<div class="fr-empty-line">Sin movimientos registrados.</div>';
 }
 
-/* ── export CSV ── */
-function frExportCsv() {
+/* ── export Excel ── */
+async function frExportXlsx() {
   const o = frOpps.find(x => x.id === frCurrentOppId);
   const rows = frProspectsOf(o.id).slice().sort((a, b) => a.stage - b.stage || (+b.commitment || 0) - (+a.commitment || 0));
-  const esc = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
-  const head = ['Etapa', 'Clasificación', 'Inversionista', 'Commitment USD', 'LP Fund V', 'Responsable', 'Fee upfront %', 'Carry %', 'Último contacto', 'Próximo paso', 'Fecha próximo paso', 'Notas'];
-  const lines = [head.join(',')].concat(rows.map(r => [
-    r.stage, FR_STAGES[r.stage].label, r.investor_name, r.commitment ?? '', r.is_lp_fund_v ? 'LP' : 'NO',
-    r.responsables ?? '', r.fees_upfront ?? '', r.fees_carry ?? '', r.last_contact ?? '', r.next_step ?? '', r.next_step_date ?? '', r.notes ?? '',
-  ].map(esc).join(',')));
-  const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+  toast('Generando Excel…');
+  await loadScript('https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js');
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'MVP Manager';
+  const ORANGE = 'FFE8650D', INK = 'FF1A1F2E', GRAY = 'FF8A93A6', CARD = 'FFF7F9FC', BORDER = 'FFDDE3EC', WHITE = 'FFFFFFFF';
+  const STAGE_FILL = { 1: 'FFDDF0E4', 2: 'FFFBF0D3', 3: 'FFDCE8F8', 4: 'FFFBE3D0', 5: 'FFF6DBD8' };
+  const thin = { style: 'thin', color: { argb: BORDER } };
+  const border = { top: thin, left: thin, bottom: thin, right: thin };
+  const ws = wb.addWorksheet('Fund Rising', { views: [{ showGridLines: false }] });
+  const s = frStats(o.id);
+
+  ws.mergeCells('A1:J1');
+  ws.getCell('A1').value = o.name;
+  ws.getCell('A1').font = { size: 20, bold: true, color: { argb: ORANGE } };
+  ws.getRow(1).height = 28;
+  ws.mergeCells('A2:J2');
+  const meta = [FR_TYPES[o.vehicle_type] || o.vehicle_type];
+  if (o.company) meta.push(o.company);
+  if (o.deadline) meta.push('cierra ' + frDate(o.deadline));
+  meta.push('generado ' + new Date().toLocaleDateString('es-MX'));
+  ws.getCell('A2').value = meta.join('   ·   ');
+  ws.getCell('A2').font = { size: 10, color: { argb: GRAY } };
+
+  const kpis = [
+    ['CONFIRMADO (ETAPA 1)', s.confirmed, '"$"#,##0'],
+    ['PIPELINE PONDERADO', Math.round(s.weighted), '"$"#,##0'],
+    ['META', +o.target_amount || null, '"$"#,##0'],
+    ['PROSPECTOS', s.n, '#,##0'],
+  ];
+  kpis.forEach((k, i) => {
+    const col = 1 + i * 2;
+    ws.mergeCells(4, col, 4, col + 1); ws.mergeCells(5, col, 5, col + 1);
+    const lc = ws.getCell(4, col); lc.value = k[0];
+    lc.font = { size: 7.5, bold: true, color: { argb: GRAY } };
+    lc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: CARD } };
+    const vc = ws.getCell(5, col); vc.value = k[1] ?? '—';
+    if (typeof k[1] === 'number') vc.numFmt = k[2];
+    vc.font = { size: 13, bold: true, color: { argb: i === 0 ? ORANGE : INK } };
+    vc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: CARD } };
+  });
+
+  const HEAD = ['Etapa', 'Inversionista', 'Commitment USD', 'LP Fund V', 'Responsable(s)', 'Fee %', 'Carry %', 'Últ. contacto', 'Próximo paso', 'Notas'];
+  const WIDTHS = [14, 32, 16, 10, 30, 8, 8, 13, 30, 40];
+  let r = 7;
+  for (let st = 1; st <= 5; st++) {
+    const list = rows.filter(x => x.stage === st);
+    if (!list.length) continue;
+    const sub = list.reduce((a, x) => a + (+x.commitment || 0), 0);
+    ws.mergeCells(r, 1, r, 8);
+    const hc = ws.getCell(r, 1);
+    hc.value = `${st} · ${FR_STAGES[st].label} — ${FR_STAGES[st].desc}`;
+    hc.font = { bold: true, size: 11, color: { argb: INK } };
+    hc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: STAGE_FILL[st] } };
+    ws.mergeCells(r, 9, r, 10);
+    const sc = ws.getCell(r, 9);
+    sc.value = `${list.length} · $${Math.round(sub).toLocaleString('en-US')}`;
+    sc.font = { bold: true, size: 11, color: { argb: INK } };
+    sc.alignment = { horizontal: 'right' };
+    sc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: STAGE_FILL[st] } };
+    ws.getRow(r).height = 20;
+    r++;
+    HEAD.forEach((h, i) => {
+      const c = ws.getCell(r, i + 1);
+      c.value = h;
+      c.font = { size: 8, bold: true, color: { argb: WHITE } };
+      c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF3F3A36' } };
+      c.border = border;
+    });
+    r++;
+    list.forEach((x, idx) => {
+      const vals = [x.stage, x.investor_name, +x.commitment || null, x.is_lp_fund_v == null ? '' : (x.is_lp_fund_v ? 'LP' : 'NO'),
+                    x.responsables || '', x.fees_upfront ?? '', x.fees_carry ?? '', x.last_contact ? frDate(x.last_contact) : '',
+                    (x.next_step || '') + (x.next_step_date ? ` (${frDate(x.next_step_date)})` : ''), x.notes || ''];
+      vals.forEach((v, i) => {
+        const c = ws.getCell(r, i + 1);
+        c.value = v;
+        if (i === 2 && v != null) c.numFmt = '"$"#,##0';
+        c.font = { size: 10, color: { argb: INK } };
+        c.border = border;
+        if (idx % 2) c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF4F7FC' } };
+      });
+      ws.getCell(r, 2).font = { size: 10, bold: true, color: { argb: INK } };
+      r++;
+    });
+    r++;  // renglón de aire entre etapas
+  }
+  WIDTHS.forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `FundRising_${o.name.replace(/[^a-zA-Z0-9]+/g, '_')}.csv`;
+  a.download = `FundRising_${o.name.replace(/[^a-zA-Z0-9]+/g, '_')}.xlsx`;
   a.click();
   URL.revokeObjectURL(a.href);
 }
