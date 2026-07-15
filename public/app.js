@@ -10550,7 +10550,7 @@ function frOpenProspect(pid) {
   document.getElementById('frProStage').value = r?.stage || 3;
   document.getElementById('frProCommit').value = r?.commitment ?? '';
   document.getElementById('frProLp').checked = !!r?.is_lp_fund_v;
-  document.getElementById('frProResp').value = r?.responsables || '';
+  frRenderRespPills(r?.responsables || '');
   const defU = (lp) => lp ? (o?.fees_upfront ?? '') : (o?.fees_upfront_nolp ?? o?.fees_upfront ?? '');
   const defC = (lp) => lp ? (o?.fees_carry ?? '') : (o?.fees_carry_nolp ?? o?.fees_carry ?? '');
   document.getElementById('frProFeeU').value = r ? (r.fees_upfront ?? '') : defU(false);
@@ -10563,6 +10563,25 @@ function frOpenProspect(pid) {
   document.getElementById('frProspectModal').classList.add('show');
   document.getElementById('frProName').focus();
 }
+function frRenderRespPills(current) {
+  const wrap = document.getElementById('frProRespPills');
+  if (!wrap) return;
+  const sel = new Set(String(current || '').split('/').map(s => s.trim()).filter(Boolean));
+  const people = Object.entries(USERS).filter(([, v]) => !v.hidden);
+  // yo primero (también seleccionable), luego el resto
+  people.sort(([a], [b]) => (a === currentUser ? -1 : (b === currentUser ? 1 : 0)));
+  wrap.innerHTML = people.map(([uid, v]) => `
+    <button type="button" class="multi-pill${sel.has(v.name) || sel.has(v.nameRaw) ? ' on' : ''}" data-name="${escapeHtml(v.nameRaw || v.name)}" onclick="toggleAssignee(this)">
+      <span class="multi-pill-av">${v.initials}</span>
+      <span class="multi-pill-name">${escapeHtml(v.name)}${uid === currentUser ? ' (yo)' : ''}</span>
+    </button>`).join('');
+}
+
+function frSelectedResp() {
+  return [...document.querySelectorAll('#frProRespPills .multi-pill.on')]
+    .map(b => b.dataset.name).join(' / ');
+}
+
 function frLpToggleFees(cb) {
   // En alta nueva, si el usuario no ha personalizado los fees, cambia a los defaults del grupo (LP / no LP)
   if (frEditingProspectId || !window._frDefFees) return;
@@ -10583,7 +10602,7 @@ async function frSaveProspect() {
     stage: +document.getElementById('frProStage').value,
     commitment: num('frProCommit'),
     is_lp_fund_v: document.getElementById('frProLp').checked,
-    responsables: document.getElementById('frProResp').value.trim() || null,
+    responsables: frSelectedResp() || null,
     fees_upfront: num('frProFeeU'),
     fees_carry: num('frProFeeC'),
     last_contact: document.getElementById('frProLast').value || null,
