@@ -2169,9 +2169,6 @@ const ORG_MODULES = {
     { view: 'portal', icon: 'fa-share-nodes', title: 'Portal de clientes',
       desc: 'Sube dashboards de MVP y da acceso a clientes con su propio usuario',
       iconClass: 'home-ico-portal' },
-    { view: 'altareturn', icon: 'fa-chart-line', title: 'Altareturn',
-      desc: 'Ingesta y consulta de documentos del portafolio MVP',
-      iconClass: 'home-ico-reports', disabled: true },
   ],
 };
 
