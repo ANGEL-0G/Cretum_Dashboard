@@ -2160,6 +2160,9 @@ const ORG_MODULES = {
     { view: 'fundTrackers', icon: 'fa-chart-column', title: 'MVP Fund Trackers',
       desc: 'Valuación de fondos por empresa subyacente',
       iconClass: 'home-ico-trackers' },
+    { view: 'fundraising', icon: 'fa-hand-holding-dollar', title: 'Fund Rising Tracker',
+      desc: 'Seguimiento del levantamiento de capital',
+      iconClass: 'home-ico-fundraising' },
     { view: 'reports', icon: 'fa-chart-pie', title: 'Reportes',
       desc: 'Genera el reporte de distribuciones de un LP desde las cartas de Altareturn',
       iconClass: 'home-ico-reportes' },
@@ -2187,6 +2190,7 @@ const ORG_NAV = {
     { view: 'home',         icon: 'fa-house',         label: 'Inicio' },
     { view: 'db',           icon: 'fa-database',      label: 'Base de Datos' },
     { view: 'fundTrackers', icon: 'fa-chart-column',  label: 'Fund Trackers' },
+    { view: 'fundraising',  icon: 'fa-hand-holding-dollar', label: 'Fund Rising Tracker' },
     { view: 'reports',      icon: 'fa-chart-pie',     label: 'Reportes' },
     { view: 'portal',       icon: 'fa-share-nodes',   label: 'Portal de clientes' },
   ],
@@ -2488,6 +2492,8 @@ function switchView(view, isBack = false) {
   document.getElementById('pageDbx').classList.toggle('active', view === 'dropbox');
   const pageFt = document.getElementById('pageFundTrackers');
   if (pageFt) pageFt.classList.toggle('active', view === 'fundTrackers');
+  const pageFr = document.getElementById('pageFundraising');
+  if (pageFr) pageFr.classList.toggle('active', view === 'fundraising');
   document.getElementById('pageCampaigns').classList.toggle('active', view === 'campaigns');
   const pageRep = document.getElementById('pageReports');
   if (pageRep) pageRep.classList.toggle('active', view === 'reports');
@@ -2508,6 +2514,7 @@ function switchView(view, isBack = false) {
     'db':           'Base de Datos',
     'dropbox':      'Dropbox',
     'fundTrackers': 'Fund Trackers',
+    'fundraising':  'Fund Rising Tracker',
     'campaigns':    'Campañas',
     'reports':      'Reportes',
     'forms':        'Formularios',
