@@ -10265,7 +10265,9 @@ const FR_STAGES = {
   4: { label: 'Frío',       desc: 'Ya no creemos que cierre',      prob: 0.10, cls: 'fr-s4' },
   5: { label: 'Pass',       desc: 'Confirmó que no invertirá',     prob: 0.00, cls: 'fr-s5' },
 };
-const FR_TYPES = { fondo: 'Fondo', directo: 'Directo', spv: 'SPV' };
+// Todas las oportunidades de MVP viven en un SPV (estructura legal); la clasificación
+// útil es Fondo vs Directo, y si el directo es co-inversión (solo LPs Fund V) o abierta.
+const FR_TYPES = { fondo: 'Fondo', 'directo-coinv': 'Directo · Co-inversión', directo: 'Directo · Abierta', spv: 'Directo' };
 
 let frLoaded = false;
 let frOpps = [];
