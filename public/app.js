@@ -10454,7 +10454,7 @@ function renderFrDetail() {
         <span class="fr-type">${FR_TYPES[o.vehicle_type] || o.vehicle_type}</span>
         ${ro ? '<span class="fr-closed-badge">LEVANTAMIENTO TERMINADO</span>' : ''}
         <div class="ft-hero-title" style="margin-top:6px">${escapeHtml(o.name)}</div>
-        <div class="ft-hero-sub">${escapeHtml(o.company || '')}${o.deadline ? ' · cierra ' + frDate(o.deadline) : ''}${(o.fees_upfront != null || o.fees_carry != null) ? ' · fees ' + frFees(o.fees_upfront, o.fees_carry) : ''}</div>
+        <div class="ft-hero-sub">${escapeHtml(o.company || '')}${o.deadline ? ' · cierra ' + frDate(o.deadline) : ''}${(o.fees_upfront != null || o.fees_carry != null) ? ' · fees LP ' + frFees(o.fees_upfront, o.fees_carry) : ''}${(o.fees_upfront_nolp != null || o.fees_carry_nolp != null) ? ' · no LP ' + frFees(o.fees_upfront_nolp, o.fees_carry_nolp) : ''}</div>
         ${o.notes ? `<div class="fr-opp-notes">${escapeHtml(o.notes)}</div>` : ''}
       </div>
       <div class="fr-det-actions">
@@ -10500,6 +10500,8 @@ function frOpenOppModal(id) {
   document.getElementById('frOppDeadline').value = o?.deadline || '';
   document.getElementById('frOppFeeU').value = o?.fees_upfront ?? '';
   document.getElementById('frOppFeeC').value = o?.fees_carry ?? '';
+  document.getElementById('frOppFeeUN').value = o?.fees_upfront_nolp ?? '';
+  document.getElementById('frOppFeeCN').value = o?.fees_carry_nolp ?? '';
   document.getElementById('frOppNotes').value = o?.notes || '';
   document.getElementById('frOppModal').classList.add('show');
   document.getElementById('frOppName').focus();
@@ -10518,6 +10520,8 @@ async function frSaveOpp() {
     deadline: document.getElementById('frOppDeadline').value || null,
     fees_upfront: num('frOppFeeU'),
     fees_carry: num('frOppFeeC'),
+    fees_upfront_nolp: num('frOppFeeUN'),
+    fees_carry_nolp: num('frOppFeeCN'),
     notes: document.getElementById('frOppNotes').value.trim() || null,
   };
   let err;
@@ -10547,8 +10551,11 @@ function frOpenProspect(pid) {
   document.getElementById('frProCommit').value = r?.commitment ?? '';
   document.getElementById('frProLp').checked = !!r?.is_lp_fund_v;
   document.getElementById('frProResp').value = r?.responsables || '';
-  document.getElementById('frProFeeU').value = r ? (r.fees_upfront ?? '') : (o?.fees_upfront ?? '');
-  document.getElementById('frProFeeC').value = r ? (r.fees_carry ?? '') : (o?.fees_carry ?? '');
+  const defU = (lp) => lp ? (o?.fees_upfront ?? '') : (o?.fees_upfront_nolp ?? o?.fees_upfront ?? '');
+  const defC = (lp) => lp ? (o?.fees_carry ?? '') : (o?.fees_carry_nolp ?? o?.fees_carry ?? '');
+  document.getElementById('frProFeeU').value = r ? (r.fees_upfront ?? '') : defU(false);
+  document.getElementById('frProFeeC').value = r ? (r.fees_carry ?? '') : defC(false);
+  window._frDefFees = { defU, defC };
   document.getElementById('frProLast').value = r?.last_contact || '';
   document.getElementById('frProNext').value = r?.next_step || '';
   document.getElementById('frProNextDate').value = r?.next_step_date || '';
@@ -10556,6 +10563,13 @@ function frOpenProspect(pid) {
   document.getElementById('frProspectModal').classList.add('show');
   document.getElementById('frProName').focus();
 }
+function frLpToggleFees(cb) {
+  // En alta nueva, si el usuario no ha personalizado los fees, cambia a los defaults del grupo (LP / no LP)
+  if (frEditingProspectId || !window._frDefFees) return;
+  document.getElementById('frProFeeU').value = window._frDefFees.defU(cb.checked);
+  document.getElementById('frProFeeC').value = window._frDefFees.defC(cb.checked);
+}
+
 function frCloseProspectModal() { document.getElementById('frProspectModal').classList.remove('show'); }
 
 async function frSaveProspect() {

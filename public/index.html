@@ -4288,10 +4288,16 @@ button,input,select{font-family:var(--font)}
           <input class="form-input" type="date" id="frOppDeadline"></div>
       </div>
       <div class="form-row-2">
-        <div class="form-field"><label class="form-label">Fee upfront % <span class="form-label-opt">default</span></label>
+        <div class="form-field"><label class="form-label">Fee upfront % · LPs <span class="form-label-opt">default</span></label>
           <input class="form-input" type="number" step="0.5" id="frOppFeeU" placeholder="3"></div>
-        <div class="form-field"><label class="form-label">Carry % <span class="form-label-opt">default</span></label>
+        <div class="form-field"><label class="form-label">Carry % · LPs <span class="form-label-opt">default</span></label>
           <input class="form-input" type="number" step="0.5" id="frOppFeeC" placeholder="10"></div>
+      </div>
+      <div class="form-row-2">
+        <div class="form-field"><label class="form-label">Fee upfront % · No LPs <span class="form-label-opt">default</span></label>
+          <input class="form-input" type="number" step="0.5" id="frOppFeeUN" placeholder="3"></div>
+        <div class="form-field"><label class="form-label">Carry % · No LPs <span class="form-label-opt">default</span></label>
+          <input class="form-input" type="number" step="0.5" id="frOppFeeCN" placeholder="15"></div>
       </div>
       <div class="form-field"><label class="form-label">Notas <span class="form-label-opt">opcional</span></label>
         <input class="form-input" id="frOppNotes" placeholder="Contexto de la oportunidad"></div>
@@ -4327,7 +4333,7 @@ button,input,select{font-family:var(--font)}
           <input class="form-input" id="frProResp" placeholder="p. ej. Armando Narchi / AO"></div>
         <div class="form-field" style="display:flex;align-items:end">
           <label style="display:flex;gap:8px;align-items:center;font-size:13px;cursor:pointer;padding-bottom:9px">
-            <input type="checkbox" id="frProLp"> LP actual del Fund V</label></div>
+            <input type="checkbox" id="frProLp" onchange="frLpToggleFees(this)"> LP actual del Fund V</label></div>
       </div>
       <div class="form-row-2">
         <div class="form-field"><label class="form-label">Fee upfront %</label>
@@ -4362,7 +4368,7 @@ button,input,select{font-family:var(--font)}
   </div>
 </div>
 
-<script src="/i18n.js?v=20260715-frtypes2"></script>
-<script src="/app.js?v=20260715-frtypes2"></script>
+<script src="/i18n.js?v=20260715-frfees"></script>
+<script src="/app.js?v=20260715-frfees"></script>
 </body>
 </html>
