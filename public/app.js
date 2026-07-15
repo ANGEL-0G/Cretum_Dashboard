@@ -110,10 +110,10 @@ async function enterApp(user) {
 
 function greetingForTime() {
   const h = new Date().getHours();
-  if (h < 6)  return 'Buenas noches';
-  if (h < 12) return 'Buenos días';
-  if (h < 19) return 'Buenas tardes';
-  return 'Buenas noches';
+  if (h < 6)  return t('Buenas noches');
+  if (h < 12) return t('Buenos días');
+  if (h < 19) return t('Buenas tardes');
+  return t('Buenas noches');
 }
 
 // Mostrar/ocultar la contraseña del login (ojo abierto/cerrado)
@@ -473,10 +473,11 @@ function scheduleSave() {
 }
 
 function setSyncStatus(s) {
+  window.__syncState = s;   // recordado para re-traducir al cambiar de idioma
   const dot = document.getElementById('syncDot');
   const lbl = document.getElementById('syncLabel');
   dot.className = 'sync-dot' + (s === 'saving' ? ' saving' : s === 'error' ? ' error' : '');
-  lbl.textContent = s === 'loading' ? 'Cargando…' : s === 'saving' ? 'Guardando…' : s === 'error' ? 'Sin conexión' : 'Sincronizado';
+  lbl.textContent = s === 'loading' ? t('Cargando…') : s === 'saving' ? t('Guardando…') : s === 'error' ? t('Sin conexión') : t('Sincronizado');
 }
 
 /* ═══════════════════════════════════════════
@@ -2223,11 +2224,11 @@ function applyOrgTheme() {
     if (currentOrg === 'cretum') {
       switchBtn.style.display = '';
       switchSep.style.display = '';
-      switchLbl.textContent = 'Cambiar a MVP';
+      switchLbl.textContent = t('Cambiar a MVP');
     } else if (currentOrg === 'mvp') {
       switchBtn.style.display = '';
       switchSep.style.display = '';
-      switchLbl.textContent = 'Cambiar a Cretum';
+      switchLbl.textContent = t('Cambiar a Cretum');
     } else {
       switchBtn.style.display = 'none';
       switchSep.style.display = 'none';
@@ -2303,23 +2304,23 @@ function renderHomeModules() {
     (!m.adminOnly || isAdmin) && (!m.editorOrAdmin || isEditorOrAdmin));
   el.innerHTML = mods.map(m => `
     <button class="home-module${m.disabled ? ' disabled' : ''}" data-mod="${m.view}"${m.disabled ? ' disabled aria-disabled="true"' : ` onclick="switchView('${m.view}')"`}>
-      ${m.disabled ? '<span class="home-module-badge">Pronto</span>' : ''}
+      ${m.disabled ? `<span class="home-module-badge">${t('Pronto')}</span>` : ''}
       ${(!m.disabled && m.view === 'tasks' && pendingInviteCount() > 0) ? '<span class="home-module-pulse" aria-label="Tienes tareas por aceptar"></span>' : ''}
       <div class="home-module-ico ${m.iconClass}"><i class="${m.iconBrand ? 'fa-brands' : 'fa-solid'} ${m.icon}"></i></div>
       <div class="home-module-content">
-        <div class="home-module-title">${m.title}</div>
-        <div class="home-module-desc">${m.desc}</div>
+        <div class="home-module-title">${t(m.title)}</div>
+        <div class="home-module-desc">${t(m.desc)}</div>
       </div>
     </button>
   `).join('');
-  document.getElementById('homeQuestion').textContent = '¿Con qué quieres empezar hoy?';
+  document.getElementById('homeQuestion').textContent = t('¿Con qué quieres empezar hoy?');
 
   // Próximamente — items dependen del org
   const soonGrid = document.getElementById('homeSoonGrid');
   if (soonGrid) {
     const soonItems = ORG_SOON[currentOrg] || [];
     soonGrid.innerHTML = soonItems.map(it => `
-      <div class="home-soon-item"><i class="${it.icon}"></i> ${it.label}</div>
+      <div class="home-soon-item"><i class="${it.icon}"></i> ${t(it.label)}</div>
     `).join('');
   }
 
@@ -2427,7 +2428,7 @@ function renderNavList() {
   list.innerHTML = items.map(it => `
     <button class="nav-item" data-view="${it.view}" onclick="switchView('${it.view}')">
       <i class="${it.brand ? 'fa-brands' : 'fa-solid'} ${it.icon}"></i>
-      <span>${it.label}</span>
+      <span>${t(it.label)}</span>
     </button>
   `).join('');
   highlightActiveNav();
@@ -2438,6 +2439,24 @@ function highlightActiveNav() {
     b.classList.toggle('active', b.dataset.view === currentView);
   });
 }
+
+// Hook que llama i18n.js al cambiar de idioma: re-traduce lo dinámico (saludos,
+// menú, nav, tareas, estado de sync) sin recargar la página.
+window.__afterLang = function () {
+  try {
+    if (currentProfile) {
+      const firstName = (currentProfile.full_name || '').split(' ')[0] || t('tú');
+      const greet = greetingForTime();
+      ['homeGreet', 'selGreet'].forEach(id => { const e = document.getElementById(id); if (e) e.textContent = greet; });
+      ['homeUserName', 'selUserName'].forEach(id => { const e = document.getElementById(id); if (e) e.textContent = firstName; });
+    }
+    if (typeof applyOrgTheme === 'function') applyOrgTheme();
+    if (typeof renderHomeModules === 'function' && currentOrg) renderHomeModules();
+    if (typeof renderNavList === 'function') renderNavList();
+    if (typeof render === 'function' && currentUser) render();
+    if (typeof setSyncStatus === 'function') setSyncStatus(window.__syncState || 'ok');
+  } catch (e) { console.error('[afterLang]', e); }
+};
 
 let viewHistory = [];
 
@@ -2915,6 +2934,9 @@ function fuzzyMatch(q, text, threshold) {
    Todo vía /api/portal (service role server-side). Solo admin llega aquí.
    ═══════════════════════════════════════════════════════════════════════ */
 let ptDashboards = [], ptUsers = [], ptAccess = [];
+// Estado del modal de dashboard: tipo (html|file), archivo nuevo pendiente, y
+// el archivo actual cuando se edita (para conservarlo si no se sube otro).
+let ptDashKind = 'html', ptPendingFile = null, ptEditFile = null;
 let portalOrg = 'cretum';   // empresa que se gestiona en el módulo Portal (según currentOrg)
 
 // Todo el equipo VE los dashboards y accesos (sin contraseñas); solo editores/
@@ -3088,17 +3110,52 @@ function ptDashOpen(id) {
   document.getElementById('ptDashTitleInp').value = d ? d.title : '';
   document.getElementById('ptDashSlug').value = d ? d.slug : '';
   document.getElementById('ptDashHtml').value = '';
+  // Reset del estado de tipo/archivo
+  ptPendingFile = null; ptEditFile = null;
+  document.getElementById('ptDashFile').value = '';
+  document.getElementById('ptFileLabel').textContent = 'Elige un archivo PDF o HTML…';
+  const fc = document.getElementById('ptFileCurrent'); fc.style.display = 'none'; fc.textContent = '';
+  ptSetKind('html');
   const msg = document.getElementById('ptDashMsg'); msg.textContent = ''; msg.className = 'camp-modal-msg';
-  // Resetea la vista previa al abrir
   const pw = document.getElementById('ptDashPreviewWrap'); if (pw) pw.style.display = 'none';
   const pb = document.getElementById('ptPrevBtn'); if (pb) pb.innerHTML = '<i class="fa-solid fa-eye"></i> Vista previa';
   document.getElementById('ptDashModal').classList.add('show');
-  if (d) {  // trae el HTML actual para editar
+  if (d) {  // trae el contenido actual para editar
     document.getElementById('ptDashHtml').value = 'Cargando…';
     portalApi({ action: 'get_dashboard', id: d.id })
-      .then(full => { document.getElementById('ptDashHtml').value = full.html || ''; ptDashPreviewLive(); })
+      .then(full => {
+        if (full.kind === 'file') {
+          ptSetKind('file');
+          ptEditFile = { file_path: full.file_path, file_mime: full.file_mime, file_name: full.file_name };
+          const fc2 = document.getElementById('ptFileCurrent');
+          fc2.style.display = '';
+          fc2.innerHTML = `<i class="fa-solid fa-file"></i> Actual: ${escapeHtml(full.file_name || 'archivo')} <span style="color:var(--gray-400)">— sube otro para reemplazar</span>`;
+          document.getElementById('ptDashHtml').value = '';
+        } else {
+          ptSetKind('html');
+          document.getElementById('ptDashHtml').value = full.html || '';
+          ptDashPreviewLive();
+        }
+      })
       .catch(() => { document.getElementById('ptDashHtml').value = ''; });
   }
+}
+
+// Cambia el tipo de contenido del dashboard (Pegar HTML / Subir archivo).
+function ptSetKind(kind) {
+  ptDashKind = kind === 'file' ? 'file' : 'html';
+  document.querySelectorAll('.pt-kind-btn').forEach(b => b.classList.toggle('active', b.dataset.kind === ptDashKind));
+  document.getElementById('ptKindHtml').style.display = ptDashKind === 'html' ? '' : 'none';
+  document.getElementById('ptKindFile').style.display = ptDashKind === 'file' ? '' : 'none';
+}
+
+// Guarda el archivo elegido (aún sin subir) y muestra su nombre.
+function ptFilePicked(input) {
+  const f = input.files && input.files[0];
+  ptPendingFile = f || null;
+  document.getElementById('ptFileLabel').textContent = f
+    ? `${f.name} · ${(f.size / 1048576).toFixed(1)} MB`
+    : 'Elige un archivo PDF o HTML…';
 }
 
 // Vista previa del HTML del dashboard (iframe aislado, igual que lo ve el cliente)
@@ -3129,14 +3186,40 @@ async function ptDashSave() {
   const id = document.getElementById('ptDashId').value;
   const title = document.getElementById('ptDashTitleInp').value.trim();
   let slug = document.getElementById('ptDashSlug').value.trim();
-  const html = document.getElementById('ptDashHtml').value;
   const msg = document.getElementById('ptDashMsg');
   if (!title) { msg.textContent = 'Pon un título.'; msg.className = 'camp-modal-msg err'; return; }
   if (!slug) slug = ptSlugify(title);
-  if (!html.trim() && !id) { msg.textContent = 'Pega el HTML del dashboard.'; msg.className = 'camp-modal-msg err'; return; }
+
   try {
-    const body = { action: 'save_dashboard', slug, title, html };
+    const body = { action: 'save_dashboard', slug, title, kind: ptDashKind };
     if (id) body.id = +id;
+
+    if (ptDashKind === 'html') {
+      const html = document.getElementById('ptDashHtml').value;
+      if (!html.trim() && !id) { msg.textContent = 'Pega el HTML del dashboard.'; msg.className = 'camp-modal-msg err'; return; }
+      body.html = html;
+    } else {
+      // Tipo archivo: sube el nuevo a Storage, o conserva el actual si se edita sin cambiarlo.
+      if (ptPendingFile) {
+        if (ptPendingFile.size > 25 * 1048576) { msg.textContent = 'El archivo supera 25 MB.'; msg.className = 'camp-modal-msg err'; return; }
+        msg.textContent = 'Subiendo archivo…'; msg.className = 'camp-modal-msg';
+        const ext = (ptPendingFile.name.split('.').pop() || 'bin').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const path = `${currentOrg}/${slug || 'dash'}-${Date.now()}.${ext}`;
+        const { error: upErr } = await sb.storage.from('portal-files')
+          .upload(path, ptPendingFile, { contentType: ptPendingFile.type || undefined, upsert: false });
+        if (upErr) { msg.textContent = 'Error al subir: ' + upErr.message; msg.className = 'camp-modal-msg err'; return; }
+        body.file_path = path;
+        body.file_mime = ptPendingFile.type || '';
+        body.file_name = ptPendingFile.name;
+      } else if (id && ptEditFile && ptEditFile.file_path) {
+        body.file_path = ptEditFile.file_path;
+        body.file_mime = ptEditFile.file_mime || '';
+        body.file_name = ptEditFile.file_name || '';
+      } else {
+        msg.textContent = 'Elige un archivo (PDF o HTML).'; msg.className = 'camp-modal-msg err'; return;
+      }
+    }
+
     await portalApi(body);
     ptClose('ptDashModal');
     toast(id ? 'Dashboard actualizado' : 'Dashboard creado');
@@ -3156,13 +3239,24 @@ async function ptDashView(id) {
   const d = ptDashboards.find(x => x.id === id);
   document.getElementById('ptViewTitle').textContent = d ? d.title : 'Vista previa';
   const f = document.getElementById('ptViewFrame');
-  if (f) f.srcdoc = '<p style="font-family:sans-serif;color:#889;padding:24px">Cargando…</p>';
+  if (f) { f.removeAttribute('src'); f.srcdoc = '<p style="font-family:sans-serif;color:#889;padding:24px">Cargando…</p>'; }
   document.getElementById('ptViewModal').classList.add('show');
   try {
     const full = await portalApi({ action: 'get_dashboard', id });
-    if (f) f.srcdoc = full.html || '<p style="font-family:sans-serif;color:#889;padding:24px">Este dashboard no tiene HTML.</p>';
+    if (!f) return;
+    if (full.kind === 'file' && full.file_path) {
+      // Preview de archivo: firmamos una URL corta con la sesión de admin.
+      const { data: signed, error } = await sb.storage.from('portal-files').createSignedUrl(full.file_path, 300);
+      if (error || !signed) throw new Error(error?.message || 'No se pudo abrir el archivo');
+      f.removeAttribute('srcdoc');
+      f.src = signed.signedUrl;
+    } else {
+      f.removeAttribute('src');
+      f.srcdoc = full.html || '<p style="font-family:sans-serif;color:#889;padding:24px">Este dashboard no tiene contenido.</p>';
+    }
   } catch (err) {
-    if (f) f.srcdoc = `<p style="font-family:sans-serif;color:#c0392b;padding:24px">No se pudo cargar: ${escapeHtml(err.message)}</p>`;
+    f.removeAttribute('src');
+    f.srcdoc = `<p style="font-family:sans-serif;color:#c0392b;padding:24px">No se pudo cargar: ${escapeHtml(err.message)}</p>`;
   }
 }
 

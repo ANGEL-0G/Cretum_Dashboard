@@ -135,12 +135,20 @@ export default async function handler(req, res) {
       const org = reqOrg(req);
       const slug = String(req.body.slug || '');
       const { data: dash } = await sb.from('portal_dashboards')
-        .select('id, title, html, org').eq('slug', slug).maybeSingle();
+        .select('id, title, html, org, kind, file_path, file_mime, file_name').eq('slug', slug).maybeSingle();
       if (!dash || dash.org !== org) return res.status(404).json({ error: 'Dashboard no encontrado' });
       const { data: link } = await sb.from('portal_access')
         .select('user_id').eq('user_id', payload.uid).eq('dashboard_id', dash.id).maybeSingle();
       if (!link) return res.status(403).json({ error: 'Sin acceso a este dashboard' });
-      return res.status(200).json({ title: dash.title, html: dash.html });
+      // Dashboard tipo archivo: firmamos una URL temporal (1h) con service role.
+      // El bucket es privado; el cliente nunca ve una URL permanente.
+      if (dash.kind === 'file' && dash.file_path) {
+        const { data: signed, error: sErr } = await sb.storage.from('portal-files')
+          .createSignedUrl(dash.file_path, 3600);
+        if (sErr || !signed) return res.status(500).json({ error: 'No se pudo abrir el archivo' });
+        return res.status(200).json({ title: dash.title, kind: 'file', url: signed.signedUrl, mime: dash.file_mime || '', name: dash.file_name || '' });
+      }
+      return res.status(200).json({ title: dash.title, kind: 'html', html: dash.html });
     }
 
     /* ───────── ACCIONES INTERNAS (requieren sesión de la app) ───────── */
@@ -168,7 +176,9 @@ export default async function handler(req, res) {
     if (!(await canManage(req))) return res.status(403).json({ error: 'Solo editores o admins' });
 
     if (action === 'get_dashboard') {
-      const { data } = await sb.from('portal_dashboards').select('id, slug, title, html').eq('id', req.body.id).eq('org', org).maybeSingle();
+      const { data } = await sb.from('portal_dashboards')
+        .select('id, slug, title, html, kind, file_path, file_mime, file_name')
+        .eq('id', req.body.id).eq('org', org).maybeSingle();
       if (!data) return res.status(404).json({ error: 'No encontrado' });
       return res.status(200).json(data);
     }
@@ -176,24 +186,34 @@ export default async function handler(req, res) {
     if (action === 'save_dashboard') {
       const slug = String(req.body.slug || '').trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '');
       const title = String(req.body.title || '').trim();
-      const html = String(req.body.html || '');
+      const kind = req.body.kind === 'file' ? 'file' : 'html';
+      const html = kind === 'html' ? String(req.body.html || '') : '';
+      const file_path = kind === 'file' ? String(req.body.file_path || '') : null;
+      const file_mime = kind === 'file' ? String(req.body.file_mime || '') : null;
+      const file_name = kind === 'file' ? String(req.body.file_name || '') : null;
       if (!slug || !title) return res.status(400).json({ error: 'Falta slug o título' });
+      if (kind === 'file' && !file_path) return res.status(400).json({ error: 'Falta el archivo subido' });
+      const fields = { slug, title, kind, html, file_path, file_mime, file_name, updated_at: new Date().toISOString() };
       if (req.body.id) {
-        const { error } = await sb.from('portal_dashboards')
-          .update({ slug, title, html, updated_at: new Date().toISOString() })
-          .eq('id', req.body.id).eq('org', org);
+        // Si cambia el archivo, borramos el anterior del bucket para no dejar basura.
+        const { data: old } = await sb.from('portal_dashboards').select('file_path').eq('id', req.body.id).eq('org', org).maybeSingle();
+        const { error } = await sb.from('portal_dashboards').update(fields).eq('id', req.body.id).eq('org', org);
         if (error) throw error;
+        if (old?.file_path && old.file_path !== file_path) {
+          await sb.storage.from('portal-files').remove([old.file_path]).catch(() => {});
+        }
       } else {
-        const { error } = await sb.from('portal_dashboards')
-          .insert({ slug, title, html, org, updated_at: new Date().toISOString() });
+        const { error } = await sb.from('portal_dashboards').insert({ ...fields, org });
         if (error) throw error;
       }
       return res.status(200).json({ ok: true, slug });
     }
 
     if (action === 'delete_dashboard') {
+      const { data: old } = await sb.from('portal_dashboards').select('file_path').eq('id', req.body.id).eq('org', org).maybeSingle();
       const { error } = await sb.from('portal_dashboards').delete().eq('id', req.body.id).eq('org', org);
       if (error) throw error;
+      if (old?.file_path) await sb.storage.from('portal-files').remove([old.file_path]).catch(() => {});
       return res.status(200).json({ ok: true });
     }
 

@@ -1043,6 +1043,11 @@ button,input,select{font-family:var(--font)}
 .role-switch-btn.on{background:var(--navy);border-color:var(--navy);color:#fff}
 .role-switch-note{font-size:10.5px;color:var(--gray-400,#889);padding:4px 10px 6px;line-height:1.45}
 [data-theme="dark"] .role-switch-btn{background:rgba(255,255,255,.05)}
+/* Toggle de idioma ES/EN en ajustes */
+.lang-switch{display:inline-flex;gap:2px;background:var(--gray-100);border-radius:8px;padding:2px;flex-shrink:0}
+.lang-btn{border:0;background:transparent;padding:6px 12px;border-radius:6px;font-size:12px;font-weight:600;color:var(--gray-500);cursor:pointer;font-family:var(--mono);letter-spacing:.5px;transition:color .15s,background .15s}
+.lang-btn.active{background:var(--navy);color:#fff}
+[data-theme="dark"] .lang-switch{background:rgba(255,255,255,.06)}
 .settings-action > i{
   width:32px;height:32px;flex-shrink:0;
   display:flex;align-items:center;justify-content:center;
@@ -2594,30 +2599,30 @@ button,input,select{font-family:var(--font)}
   <div class="login-bg-shape login-bg-3"></div>
   <div class="login-box">
     <img src="/logo.png" alt="CRETUM Partners" class="login-logo">
-    <div class="login-title">Dashboard</div>
-    <div class="login-sub">Accede con tu cuenta del equipo</div>
+    <div class="login-title" data-i18n>Dashboard</div>
+    <div class="login-sub" data-i18n>Accede con tu cuenta del equipo</div>
     <div class="login-err" id="loginErr">
-      <i class="fa-solid fa-circle-exclamation"></i> Credenciales inválidas
+      <i class="fa-solid fa-circle-exclamation"></i> <span data-i18n>Credenciales inválidas</span>
     </div>
     <div class="login-field">
       <i class="fa-solid fa-envelope login-field-ico"></i>
-      <input class="fi" type="email" id="loginUser" placeholder="tu@email.com" autocomplete="username">
+      <input class="fi" type="email" id="loginUser" placeholder="tu@email.com" data-i18n-ph autocomplete="username">
     </div>
     <div class="login-field">
       <i class="fa-solid fa-lock login-field-ico"></i>
-      <input class="fi fi-pass" type="password" id="loginPass" placeholder="Contraseña"
+      <input class="fi fi-pass" type="password" id="loginPass" placeholder="Contraseña" data-i18n-ph
         autocomplete="current-password"
         onkeydown="if(event.key==='Enter')doLogin()">
-      <button type="button" class="login-eye" id="loginEye" onclick="toggleLoginPass()" aria-label="Mostrar contraseña" title="Mostrar contraseña" tabindex="-1">
+      <button type="button" class="login-eye" id="loginEye" onclick="toggleLoginPass()" aria-label="Mostrar contraseña" title="Mostrar contraseña" data-i18n-title tabindex="-1">
         <i class="fa-solid fa-eye"></i>
       </button>
     </div>
     <button class="btn-login" id="btnLogin" onclick="doLogin()">
-      <span>Entrar</span>
+      <span data-i18n>Entrar</span>
       <i class="fa-solid fa-arrow-right btn-arrow"></i>
     </button>
     <div class="login-foot">
-      <i class="fa-solid fa-shield-halved"></i> Acceso protegido · Cretum Partners
+      <i class="fa-solid fa-shield-halved"></i> <span data-i18n>Acceso protegido · Cretum Partners</span>
     </div>
   </div>
 </div>
@@ -2655,28 +2660,28 @@ button,input,select{font-family:var(--font)}
       <span id="orgSwitchLabel">Cambiar empresa</span>
     </button>
     <div class="nav-footer">
-      <button class="nav-close" onclick="closeNav()" aria-label="Cerrar menú">
+      <button class="nav-close" onclick="closeNav()" aria-label="Cerrar menú" data-i18n-title>
         <i class="fa-solid fa-xmark"></i>
       </button>
     </div>
   </aside>
 
   <div class="header">
-    <button class="hamburger" id="hamburgerBtn" onclick="openNav()" aria-label="Menú">
+    <button class="hamburger" id="hamburgerBtn" onclick="openNav()" aria-label="Menú" data-i18n-title>
       <i class="fa-solid fa-bars"></i>
     </button>
-    <button class="header-back" id="backBtn" onclick="goBack()" aria-label="Atrás" title="Atrás (pantalla anterior)" style="display:none">
+    <button class="header-back" id="backBtn" onclick="goBack()" aria-label="Atrás" title="Atrás (pantalla anterior)" data-i18n-title style="display:none">
       <i class="fa-solid fa-arrow-left"></i>
     </button>
-    <button class="header-brand" id="headerBrandBtn" onclick="headerBackToMenu()" title="Ir al menú de empresas" aria-label="Ir al menú de empresas">
+    <button class="header-brand" id="headerBrandBtn" onclick="headerBackToMenu()" title="Ir al menú de empresas" aria-label="Ir al menú de empresas" data-i18n-title>
       <div class="header-mark"><img src="/logo-icon.png" alt="" class="header-logo"></div>
       <div class="header-title" id="headerBrandText">Cretum · To Do</div>
     </button>
-    <div class="header-sync" id="syncStatus" title="Click para sincronizar ahora">
+    <div class="header-sync" id="syncStatus" title="Click para sincronizar ahora" data-i18n-title>
       <div class="sync-dot" id="syncDot"></div>
       <span id="syncLabel">Sincronizado</span>
     </div>
-    <button class="header-user" id="headerUserBtn" onclick="toggleSettings(event)" title="Tu cuenta">
+    <button class="header-user" id="headerUserBtn" onclick="toggleSettings(event)" title="Tu cuenta" data-i18n-title>
       <div class="header-av" id="headerAv">—</div>
       <span id="headerUser">—</span>
       <i class="fa-solid fa-chevron-down chev" style="font-size:10px;opacity:.7"></i>
@@ -2690,11 +2695,11 @@ button,input,select{font-family:var(--font)}
       <div style="flex:1;min-width:0">
         <div class="settings-userhead-namewrap">
           <div class="settings-userhead-name" id="dropdownUserName">—</div>
-          <button class="settings-userhead-edit" type="button" onclick="startEditName()" title="Editar nombre">
+          <button class="settings-userhead-edit" type="button" onclick="startEditName()" title="Editar nombre" data-i18n-title>
             <i class="fa-solid fa-pen"></i>
           </button>
         </div>
-        <input type="text" id="dropdownUserNameInput" class="settings-userhead-input" maxlength="60" placeholder="Tu nombre"
+        <input type="text" id="dropdownUserNameInput" class="settings-userhead-input" maxlength="60" placeholder="Tu nombre" data-i18n-ph
           style="display:none"
           onblur="saveProfileName(this.value)"
           onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}else if(event.key==='Escape'){event.preventDefault();this.dataset.canceled='1';this.blur()}">
@@ -2702,11 +2707,21 @@ button,input,select{font-family:var(--font)}
       </div>
     </div>
     <div class="settings-sep"></div>
-    <div class="settings-h">Preferencias</div>
+    <div class="settings-h" data-i18n>Preferencias</div>
+    <div class="settings-row">
+      <div style="flex:1">
+        <div class="settings-row-lbl" data-i18n>Idioma</div>
+        <div class="settings-row-sub" data-i18n>Cambia el idioma de la interfaz</div>
+      </div>
+      <div class="lang-switch">
+        <button type="button" class="lang-btn" data-lang="es" onclick="setLang('es')">ES</button>
+        <button type="button" class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
+      </div>
+    </div>
     <label class="settings-row">
       <div style="flex:1">
-        <div class="settings-row-lbl">Recordatorios por email</div>
-        <div class="settings-row-sub">Recibe un resumen automático de tus tareas</div>
+        <div class="settings-row-lbl" data-i18n>Recordatorios por email</div>
+        <div class="settings-row-sub" data-i18n>Recibe un resumen automático de tus tareas</div>
       </div>
       <span class="toggle">
         <input type="checkbox" id="reminderToggle" onchange="setReminderEnabled(this.checked)">
@@ -2715,22 +2730,22 @@ button,input,select{font-family:var(--font)}
     </label>
     <div class="settings-reminder-cfg" id="reminderConfig">
       <div class="reminder-cfg-row">
-        <label class="reminder-cfg-lbl">Día</label>
+        <label class="reminder-cfg-lbl" data-i18n>Día</label>
         <select id="reminderDay" class="reminder-cfg-sel" onchange="setReminderDay(this.value)"></select>
       </div>
       <div class="reminder-cfg-row">
-        <label class="reminder-cfg-lbl">Hora</label>
+        <label class="reminder-cfg-lbl" data-i18n>Hora</label>
         <select id="reminderHour" class="reminder-cfg-sel" onchange="setReminderHour(this.value)"></select>
       </div>
       <div class="reminder-cfg-note">
         <i class="fa-solid fa-circle-info"></i>
-        El resumen llega el día y la hora que elijas (hora del centro de México).
+        <span data-i18n>El resumen llega el día y la hora que elijas (hora del centro de México).</span>
       </div>
     </div>
     <label class="settings-row">
       <div style="flex:1">
-        <div class="settings-row-lbl">Modo oscuro</div>
-        <div class="settings-row-sub">Tema con fondo oscuro y mejor contraste de noche</div>
+        <div class="settings-row-lbl" data-i18n>Modo oscuro</div>
+        <div class="settings-row-sub" data-i18n>Tema con fondo oscuro y mejor contraste de noche</div>
       </div>
       <span class="toggle">
         <input type="checkbox" id="darkToggle" onchange="setDarkMode(this.checked)">
@@ -2741,32 +2756,32 @@ button,input,select{font-family:var(--font)}
     <button class="settings-action" id="sendReminderBtn" onclick="sendReminderNow()">
       <i class="fa-regular fa-paper-plane"></i>
       <div style="flex:1;text-align:left">
-        <div class="settings-row-lbl">Enviar resumen ahora</div>
-        <div class="settings-row-sub">Recibe el resumen semanal por email al instante</div>
+        <div class="settings-row-lbl" data-i18n>Enviar resumen ahora</div>
+        <div class="settings-row-sub" data-i18n>Recibe el resumen semanal por email al instante</div>
       </div>
     </button>
     <div class="settings-sep"></div>
     <button class="settings-action" id="mfaBtn" onclick="mfaOpen()">
       <i class="fa-solid fa-shield-halved"></i>
       <div style="flex:1;text-align:left">
-        <div class="settings-row-lbl">Verificación en dos pasos (2FA)</div>
-        <div class="settings-row-sub">Protege tu cuenta con un código de tu celular</div>
+        <div class="settings-row-lbl" data-i18n>Verificación en dos pasos (2FA)</div>
+        <div class="settings-row-sub" data-i18n>Protege tu cuenta con un código de tu celular</div>
       </div>
     </button>
     <div class="settings-sep" id="roleSwitchSep" style="display:none"></div>
     <div id="roleSwitchBlock" style="display:none">
-      <div class="settings-h">Ver como (prueba)</div>
+      <div class="settings-h" data-i18n>Ver como (prueba)</div>
       <div class="role-switch">
         <button class="role-switch-btn" data-role="admin"  type="button" onclick="setRolePreview('admin')">Admin</button>
         <button class="role-switch-btn" data-role="editor" type="button" onclick="setRolePreview('editor')">Editor</button>
         <button class="role-switch-btn" data-role="viewer" type="button" onclick="setRolePreview('viewer')">Viewer</button>
       </div>
-      <div class="role-switch-note"><i class="fa-solid fa-circle-info"></i> Cambia solo lo que TÚ ves, para probar. No toca la base; refresca para volver a tu rol real.</div>
+      <div class="role-switch-note"><i class="fa-solid fa-circle-info"></i> <span data-i18n>Cambia solo lo que TÚ ves, para probar. No toca la base; refresca para volver a tu rol real.</span></div>
     </div>
     <div class="settings-sep"></div>
     <button class="settings-logout" onclick="doLogout()">
       <i class="fa-solid fa-arrow-right-from-bracket"></i>
-      <span>Cerrar sesión</span>
+      <span data-i18n>Cerrar sesión</span>
     </button>
   </div>
 
@@ -2774,7 +2789,7 @@ button,input,select{font-family:var(--font)}
   <div class="page page-selector" id="pageSelector">
     <div class="selector-hero">
       <div class="selector-greeting"><span id="selGreet">Hola</span>, <span id="selUserName">—</span></div>
-      <div class="selector-question">Elige con cuál quieres trabajar</div>
+      <div class="selector-question" data-i18n>Elige con cuál quieres trabajar</div>
     </div>
     <div class="selector-cards">
       <button class="selector-card sel-cretum" onclick="selectOrg('cretum')">
@@ -2794,7 +2809,7 @@ button,input,select{font-family:var(--font)}
   <div class="page page-home" id="pageHome">
     <div class="home-hero" id="homeHero">
       <div class="home-greeting"><span id="homeGreet">Hola</span>, <span id="homeUserName">—</span></div>
-      <div class="home-question" id="homeQuestion">¿Con qué quieres empezar hoy?</div>
+      <div class="home-question" id="homeQuestion" data-i18n>¿Con qué quieres empezar hoy?</div>
     </div>
 
     <div class="home-kpis" id="homeKpis" style="display:none"></div>
@@ -2802,7 +2817,7 @@ button,input,select{font-family:var(--font)}
     <div class="home-modules" id="homeModules"></div>
 
     <div class="home-soon">
-      <div class="home-soon-h">Próximamente</div>
+      <div class="home-soon-h" data-i18n>Próximamente</div>
       <div class="home-soon-grid" id="homeSoonGrid"></div>
     </div>
   </div>
@@ -3594,6 +3609,17 @@ button,input,select{font-family:var(--font)}
   .pt-dash-cks{display:flex;flex-direction:column;gap:6px;max-height:180px;overflow:auto;border:1px solid var(--line,#e8ecf3);border-radius:8px;padding:8px}
   .pt-dash-cks label{display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer}
   #ptDashHtml{width:100%;min-height:200px;font-family:var(--mono,monospace);font-size:12px;border:1px solid var(--line,#d7dde8);border-radius:8px;padding:10px;resize:vertical}
+  /* Selector de tipo de contenido (Pegar HTML / Subir archivo) */
+  .pt-kind-switch{display:inline-flex;gap:2px;background:var(--gray-100,#eef0f5);border-radius:8px;padding:3px;margin-bottom:12px}
+  .pt-kind-btn{border:0;background:transparent;padding:7px 14px;border-radius:6px;font-size:12px;font-weight:500;color:var(--gray-500,#667);cursor:pointer;font-family:var(--font)}
+  .pt-kind-btn.active{background:var(--navy);color:#fff}
+  [data-theme="dark"] .pt-kind-switch{background:rgba(255,255,255,.06)}
+  .pt-file-drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:26px 16px;border:1.5px dashed var(--gray-300,#c4cad8);border-radius:10px;cursor:pointer;color:var(--gray-500,#667);transition:border-color .15s,background .15s;text-align:center}
+  .pt-file-drop:hover{border-color:var(--navy);background:var(--navy-ghost,#f0f4fa)}
+  .pt-file-drop i{font-size:24px;color:var(--navy)}
+  .pt-file-current{margin-top:10px;font-size:13px;color:var(--gray-700,#3d4559);display:flex;align-items:center;gap:8px}
+  .pt-file-hint{margin-top:8px;font-size:11px;color:var(--gray-400,#9aa3b5)}
+  [data-theme="dark"] .pt-file-drop:hover{background:rgba(93,143,245,.08)}
   .pt-preview-bar{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}
   .pt-preview-hint{font-size:11.5px;color:var(--ink-soft,#889)}
   .pt-preview-wrap{margin-top:10px;border:1px solid var(--line,#d7dde8);border-radius:8px;overflow:hidden;background:#fff}
@@ -3759,14 +3785,33 @@ button,input,select{font-family:var(--font)}
       <input id="ptDashTitleInp" class="camp-f-inp" placeholder="Ej. Fund V — Resumen Q2 2026">
       <label class="camp-f-lbl">Identificador (slug) <span class="camp-opt">se autogenera del título</span></label>
       <input id="ptDashSlug" class="camp-f-inp" placeholder="fund-v-q2-2026">
-      <label class="camp-f-lbl">HTML del dashboard</label>
-      <textarea id="ptDashHtml" placeholder="Pega aquí tu HTML" oninput="ptDashPreviewLive()"></textarea>
-      <div class="pt-preview-bar">
-        <button type="button" class="cdd-btn" id="ptPrevBtn" onclick="ptDashPreviewToggle()"><i class="fa-solid fa-eye"></i> Vista previa</button>
-        <span class="pt-preview-hint">Se renderiza aislado (sandbox), igual que lo verá el cliente.</span>
+      <label class="camp-f-lbl">Contenido</label>
+      <div class="pt-kind-switch">
+        <button type="button" class="pt-kind-btn active" data-kind="html" onclick="ptSetKind('html')">Pegar HTML</button>
+        <button type="button" class="pt-kind-btn" data-kind="file" onclick="ptSetKind('file')">Subir archivo</button>
       </div>
-      <div class="pt-preview-wrap" id="ptDashPreviewWrap" style="display:none">
-        <iframe id="ptDashPreview" class="pt-preview-frame" sandbox="allow-scripts allow-popups allow-forms" title="Vista previa del dashboard"></iframe>
+
+      <!-- Modo: pegar HTML -->
+      <div id="ptKindHtml">
+        <textarea id="ptDashHtml" placeholder="Pega aquí tu HTML" oninput="ptDashPreviewLive()"></textarea>
+        <div class="pt-preview-bar">
+          <button type="button" class="cdd-btn" id="ptPrevBtn" onclick="ptDashPreviewToggle()"><i class="fa-solid fa-eye"></i> Vista previa</button>
+          <span class="pt-preview-hint">Se renderiza aislado (sandbox), igual que lo verá el cliente.</span>
+        </div>
+        <div class="pt-preview-wrap" id="ptDashPreviewWrap" style="display:none">
+          <iframe id="ptDashPreview" class="pt-preview-frame" sandbox="allow-scripts allow-popups allow-forms" title="Vista previa del dashboard"></iframe>
+        </div>
+      </div>
+
+      <!-- Modo: subir archivo (PDF / HTML) -->
+      <div id="ptKindFile" style="display:none">
+        <label class="pt-file-drop" for="ptDashFile">
+          <i class="fa-solid fa-file-arrow-up"></i>
+          <span id="ptFileLabel">Elige un archivo PDF o HTML…</span>
+          <input type="file" id="ptDashFile" accept=".pdf,.html,.htm,application/pdf,text/html" onchange="ptFilePicked(this)" hidden>
+        </label>
+        <div class="pt-file-current" id="ptFileCurrent" style="display:none"></div>
+        <div class="pt-file-hint">Para presentaciones, expórtalas a PDF (se ven embebidas). Máx. ~25 MB.</div>
       </div>
       <div class="camp-modal-msg" id="ptDashMsg"></div>
     </div>
@@ -4129,6 +4174,7 @@ button,input,select{font-family:var(--font)}
   </div>
 </div>
 
-<script src="/app.js?v=20260709-spxradd"></script>
+<script src="/i18n.js?v=20260709-portalfiles"></script>
+<script src="/app.js?v=20260709-portalfiles"></script>
 </body>
 </html>

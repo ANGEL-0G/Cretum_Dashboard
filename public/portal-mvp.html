@@ -168,12 +168,20 @@
   }
 
   async function openDash(slug) {
+    const frame = document.getElementById('frame');
     try {
       const d = await api({ action:'view', slug, token });
-      document.getElementById('frame').srcdoc = d.html || '<p style="font-family:sans-serif;padding:40px;text-align:center;color:#667">Dashboard vacío.</p>';
+      if (d.kind === 'file' && d.url) {
+        frame.removeAttribute('srcdoc');
+        frame.src = d.url;                       // PDF/HTML servido por URL firmada
+      } else {
+        frame.removeAttribute('src');
+        frame.srcdoc = d.html || '<p style="font-family:sans-serif;padding:40px;text-align:center;color:#667">Dashboard vacío.</p>';
+      }
     } catch (err) {
       if (String(err.message).includes('expirada')) return logout();
-      document.getElementById('frame').srcdoc = `<p style="font-family:sans-serif;padding:40px;text-align:center;color:#c0392b">${err.message}</p>`;
+      frame.removeAttribute('src');
+      frame.srcdoc = `<p style="font-family:sans-serif;padding:40px;text-align:center;color:#c0392b">${err.message}</p>`;
     }
   }
 
@@ -182,6 +190,7 @@
     document.getElementById('app').style.display = 'none';
     document.getElementById('loginView').style.display = 'flex';
     document.getElementById('p').value = '';
+    document.getElementById('frame').removeAttribute('src');
     document.getElementById('frame').srcdoc = '';
   }
 </script>
