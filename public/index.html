@@ -1359,6 +1359,68 @@ button,input,select{font-family:var(--font)}
 [data-theme="dark"][data-org="mvp"] .home-ico-portal{background:rgba(248,149,64,.22);color:#f89540}
 .home-ico-trackers{background:rgba(176,125,32,.14);color:var(--amber)}
 .home-ico-fundraising{background:rgba(46,158,91,.14);color:#2E9E5B}
+/* ── Fund Rising Tracker ── */
+.dbx-btn.primary{background:var(--accent,#ED7824);border-color:var(--accent,#ED7824);color:#fff}
+.dbx-btn.primary:hover{filter:brightness(1.06)}
+[data-org="mvp"] .dbx-btn.primary{background:#ED7824;border-color:#ED7824}
+.fr-hero-row{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.fr-kpis,.fr-det-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:14px 0 22px}
+.fr-kpi{background:var(--card,#fff);border:1px solid var(--border,#e5e9f2);border-radius:14px;padding:14px 18px}
+.fr-kpi-v{font-size:22px;font-weight:800}
+.fr-kpi-l{font-size:11.5px;color:var(--muted,#8a93a6);margin-top:3px}
+.fr-kpi-warn .fr-kpi-v{color:#C0392B}
+.fr-sec-title{font-weight:800;font-size:15px;margin:26px 0 10px;display:flex;align-items:center;gap:10px}
+.fr-collapsible{cursor:pointer;user-select:none}
+.fr-count{background:var(--border,#e5e9f2);border-radius:999px;font-size:11px;padding:2px 9px}
+.fr-card{cursor:pointer}
+.fr-card-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}
+.fr-type{font-size:10px;letter-spacing:.8px;text-transform:uppercase;background:rgba(237,120,36,.13);color:#ED7824;border-radius:999px;padding:3px 10px;font-weight:700}
+.fr-deadline{font-size:10.5px;color:var(--muted,#8a93a6)}
+.fr-dl-soon{color:#B07D20;font-weight:700}
+.fr-dl-over{color:#C0392B;font-weight:700}
+.fr-progress{background:var(--border,#eef1f7);border-radius:6px;height:8px;margin:10px 0 6px;overflow:hidden}
+.fr-progress-bar{height:100%;background:#2E9E5B;border-radius:6px;transition:width .5s}
+[data-org="mvp"] .fr-progress-bar{background:#ED7824}
+.fr-card-nums{font-size:12.5px;color:var(--muted,#6a7386)}
+.fr-card-nums b{color:inherit;font-size:14px}
+.fr-card-chips{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.fr-chip{font-size:11px;font-weight:800;border-radius:999px;padding:2px 9px}
+.fr-chip-empty{font-size:11px;color:var(--muted,#9aa3b5)}
+.fr-s1{background:rgba(46,158,91,.16);color:#217346}
+.fr-s2{background:rgba(240,200,60,.22);color:#8a6d1a}
+.fr-s3{background:rgba(70,130,220,.15);color:#2d5fa8}
+.fr-s4{background:rgba(237,120,36,.15);color:#b35a12}
+.fr-s5{background:rgba(192,57,43,.13);color:#a03024}
+.fr-card-closed{font-size:12.5px;color:var(--muted,#6a7386);margin-top:8px}
+.fr-det-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;flex-wrap:wrap;margin-bottom:6px}
+.fr-det-actions{display:flex;gap:8px;flex-wrap:wrap}
+.fr-closed-badge{font-size:10px;letter-spacing:1.2px;background:rgba(192,57,43,.12);color:#a03024;border-radius:999px;padding:3px 10px;font-weight:800;margin-left:8px}
+.fr-opp-notes{font-size:12.5px;color:var(--muted,#6a7386);margin-top:6px;max-width:640px}
+.fr-stage-block{margin-bottom:22px}
+.fr-stage-head{display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:12px 12px 0 0;font-size:13px}
+.fr-stage-num{width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.10);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11.5px}
+.fr-stage-desc{font-size:11.5px;opacity:.75}
+.fr-stage-sub{margin-left:auto;font-weight:800}
+.fr-table{width:100%;border-collapse:collapse;background:var(--card,#fff);border:1px solid var(--border,#e5e9f2);border-top:0;border-radius:0 0 12px 12px;overflow:hidden;font-size:12.5px}
+.fr-table th{font-size:10px;letter-spacing:.6px;text-transform:uppercase;color:var(--muted,#8a93a6);text-align:left;padding:8px 10px;border-bottom:1px solid var(--border,#e5e9f2)}
+.fr-table td{padding:8px 10px;border-bottom:1px solid var(--border,#eef1f7);vertical-align:middle}
+.fr-table tr:last-child td{border-bottom:0}
+.fr-table .n{text-align:right;white-space:nowrap}
+.fr-table th.n{text-align:right}
+.fr-td-name{font-weight:700}
+.fr-lp{font-size:9px;letter-spacing:.5px;background:rgba(46,158,91,.16);color:#217346;border-radius:5px;padding:1.5px 6px;font-weight:800;vertical-align:middle}
+.fr-late{color:#C0392B;font-weight:700}
+.fr-td-notes{color:var(--muted,#8a93a6);max-width:180px}
+.fr-td-act{white-space:nowrap;text-align:right}
+.fr-stage-sel{font-size:11px;border:1px solid var(--border,#dfe4ee);border-radius:8px;padding:3px 5px;background:var(--card,#fff);margin-right:6px}
+.fr-ico-btn{border:none;background:none;cursor:pointer;color:var(--muted,#8a93a6);padding:4px 6px;border-radius:7px}
+.fr-ico-btn:hover{background:var(--border,#eef1f7);color:inherit}
+.fr-ico-del:hover{color:#C0392B}
+.fr-empty-line{color:var(--muted,#8a93a6);font-size:13px;padding:16px 4px}
+.fr-log{background:var(--card,#fff);border:1px solid var(--border,#e5e9f2);border-radius:12px;padding:12px 16px;margin-bottom:20px;max-height:260px;overflow:auto}
+.fr-log-row{font-size:12px;padding:5px 0;border-bottom:1px dashed var(--border,#eef1f7)}
+.fr-log-row:last-child{border-bottom:0}
+.fr-log-ts{color:var(--muted,#9aa3b5);font-size:11px;margin-right:8px}
 [data-org="mvp"] .home-ico-fundraising{background:rgba(237,120,36,.14);color:#ED7824}
 [data-org="mvp"] .home-ico-trackers{background:rgba(237,120,36,.14);color:#ED7824}
 [data-theme="dark"] .home-ico-dropbox{background:rgba(0,97,255,.22);color:#5b9aff}
@@ -3982,18 +4044,33 @@ button,input,select{font-family:var(--font)}
 
 <!-- VISTA: FUND RISING TRACKER -->
 <div class="page page-ft" id="pageFundraising">
-  <button class="db-back" onclick="headerBackToMenu()">
-    <i class="fa-solid fa-arrow-left"></i> Volver
-  </button>
-  <div class="ft-hero">
-    <div class="ft-hero-title">Fund Rising Tracker</div>
-    <div class="ft-hero-sub">Seguimiento del levantamiento de capital.</div>
+  <div id="frHome">
+    <button class="db-back" onclick="headerBackToMenu()">
+      <i class="fa-solid fa-arrow-left"></i> Volver
+    </button>
+    <div class="ft-hero fr-hero-row">
+      <div>
+        <div class="ft-hero-title">Fund Rising Tracker</div>
+        <div class="ft-hero-sub">Levantamiento de capital por oportunidad — prospectos, etapas y seguimiento.</div>
+      </div>
+      <button class="dbx-btn primary" onclick="frOpenOppModal()"><i class="fa-solid fa-plus"></i> Nueva oportunidad</button>
+    </div>
+    <div class="fr-kpis" id="frKpis"></div>
+    <div class="fr-sec-title">En levantamiento</div>
+    <div class="ft-cards" id="frActiveCards"></div>
+    <div class="fr-sec-title fr-collapsible" onclick="frToggleClosed()">
+      Levantamiento terminado <span class="fr-count" id="frClosedCount">0</span>
+      <i class="fa-solid fa-chevron-down" id="frClosedChev" style="margin-left:auto;transition:transform .25s"></i>
+    </div>
+    <div class="ft-cards" id="frClosedCards" style="display:none"></div>
   </div>
-  <div class="ft-empty">
-    <div class="ft-empty-ico"><i class="fa-solid fa-hand-holding-dollar"></i></div>
-    <div class="ft-empty-h">Vista en construcción</div>
-    <div>Esta sección se está definiendo; pronto estará disponible.</div>
+  <div id="frDetail" style="display:none">
+    <button class="db-back" onclick="frBackHome()">
+      <i class="fa-solid fa-arrow-left"></i> Volver
+    </button>
+    <div id="frDetailContent"></div>
   </div>
+  <datalist id="frInvestorsList"></datalist>
 </div>
 
 <!-- VISTA: MVP FUND TRACKERS -->
@@ -4180,6 +4257,95 @@ button,input,select{font-family:var(--font)}
 </div>
 
 <!-- Modal de confirmación -->
+<!-- MODAL: oportunidad Fund Rising -->
+<div class="modal-backdrop task-modal-backdrop" id="frOppModal" onclick="if(event.target===this)frCloseOppModal()">
+  <div class="task-modal-box">
+    <div class="task-modal-head">
+      <div class="task-modal-title" id="frOppTitle">Nueva oportunidad</div>
+      <button class="task-modal-close" onclick="frCloseOppModal()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="task-modal-body">
+      <div class="form-field"><label class="form-label">Nombre de la oportunidad</label>
+        <input class="form-input" id="frOppName" placeholder="p. ej. Saronic 26G" autocomplete="off"></div>
+      <div class="form-row-2">
+        <div class="form-field"><label class="form-label">Tipo</label>
+          <select class="form-input" id="frOppType">
+            <option value="directo">Directo (co-inversión)</option>
+            <option value="fondo">Fondo</option>
+            <option value="spv">SPV</option>
+          </select></div>
+        <div class="form-field"><label class="form-label">Empresa / vehículo <span class="form-label-opt">opcional</span></label>
+          <input class="form-input" id="frOppCompany" placeholder="p. ej. Saronic Technologies"></div>
+      </div>
+      <div class="form-row-2">
+        <div class="form-field"><label class="form-label">Meta USD <span class="form-label-opt">opcional</span></label>
+          <input class="form-input" type="number" id="frOppTarget" placeholder="3000000"></div>
+        <div class="form-field"><label class="form-label">Fecha límite de cierre <span class="form-label-opt">opcional</span></label>
+          <input class="form-input" type="date" id="frOppDeadline"></div>
+      </div>
+      <div class="form-row-2">
+        <div class="form-field"><label class="form-label">Fee upfront % <span class="form-label-opt">default</span></label>
+          <input class="form-input" type="number" step="0.5" id="frOppFeeU" placeholder="3"></div>
+        <div class="form-field"><label class="form-label">Carry % <span class="form-label-opt">default</span></label>
+          <input class="form-input" type="number" step="0.5" id="frOppFeeC" placeholder="10"></div>
+      </div>
+      <div class="form-field"><label class="form-label">Notas <span class="form-label-opt">opcional</span></label>
+        <input class="form-input" id="frOppNotes" placeholder="Contexto de la oportunidad"></div>
+      <button class="dbx-btn primary" style="width:100%;justify-content:center;margin-top:6px" onclick="frSaveOpp()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: prospecto Fund Rising -->
+<div class="modal-backdrop task-modal-backdrop" id="frProspectModal" onclick="if(event.target===this)frCloseProspectModal()">
+  <div class="task-modal-box">
+    <div class="task-modal-head">
+      <div class="task-modal-title" id="frProTitle">Nuevo prospecto</div>
+      <button class="task-modal-close" onclick="frCloseProspectModal()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="task-modal-body">
+      <div class="form-field"><label class="form-label">Inversionista</label>
+        <input class="form-input" id="frProName" list="frInvestorsList" placeholder="Nombre (autocompleta contra la DB)" autocomplete="off"></div>
+      <div class="form-row-2">
+        <div class="form-field"><label class="form-label">Etapa</label>
+          <select class="form-input" id="frProStage">
+            <option value="1">1 · Confirmado</option>
+            <option value="2">2 · En proceso</option>
+            <option value="3" selected>3 · Pipeline</option>
+            <option value="4">4 · Frío (no creemos)</option>
+            <option value="5">5 · Pass (dijo que no)</option>
+          </select></div>
+        <div class="form-field"><label class="form-label">Commitment USD</label>
+          <input class="form-input" type="number" id="frProCommit" placeholder="100000"></div>
+      </div>
+      <div class="form-row-2">
+        <div class="form-field"><label class="form-label">Responsable(s)</label>
+          <input class="form-input" id="frProResp" placeholder="p. ej. Armando Narchi / AO"></div>
+        <div class="form-field" style="display:flex;align-items:end">
+          <label style="display:flex;gap:8px;align-items:center;font-size:13px;cursor:pointer;padding-bottom:9px">
+            <input type="checkbox" id="frProLp"> LP actual del Fund V</label></div>
+      </div>
+      <div class="form-row-2">
+        <div class="form-field"><label class="form-label">Fee upfront %</label>
+          <input class="form-input" type="number" step="0.5" id="frProFeeU"></div>
+        <div class="form-field"><label class="form-label">Carry %</label>
+          <input class="form-input" type="number" step="0.5" id="frProFeeC"></div>
+      </div>
+      <div class="form-row-2">
+        <div class="form-field"><label class="form-label">Último contacto <span class="form-label-opt">opcional</span></label>
+          <input class="form-input" type="date" id="frProLast"></div>
+        <div class="form-field"><label class="form-label">Fecha próximo paso <span class="form-label-opt">opcional</span></label>
+          <input class="form-input" type="date" id="frProNextDate"></div>
+      </div>
+      <div class="form-field"><label class="form-label">Próximo paso <span class="form-label-opt">opcional</span></label>
+        <input class="form-input" id="frProNext" placeholder="p. ej. mandar deck y agendar llamada"></div>
+      <div class="form-field"><label class="form-label">Notas <span class="form-label-opt">opcional</span></label>
+        <input class="form-input" id="frProNotes"></div>
+      <button class="dbx-btn primary" style="width:100%;justify-content:center;margin-top:6px" onclick="frSaveProspect()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-backdrop" id="confirmModal" onclick="if(event.target===this)closeConfirm(false)">
   <div class="modal-box">
     <div class="modal-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
@@ -4193,6 +4359,6 @@ button,input,select{font-family:var(--font)}
 </div>
 
 <script src="/i18n.js?v=20260715-fundraising-mvp"></script>
-<script src="/app.js?v=20260715-fundraising-mvp"></script>
+<script src="/app.js?v=20260715-frtracker-mvp"></script>
 </body>
 </html>

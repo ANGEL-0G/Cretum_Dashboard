@@ -2534,6 +2534,7 @@ function switchView(view, isBack = false) {
   if (view === 'db' && !dbLoaded) loadDb();
   if (view === 'dropbox') openDropbox();
   if (view === 'fundTrackers') renderFundTrackerHome();
+  if (view === 'fundraising') loadFr();
   if (view === 'campaigns') loadCampaigns();
   if (view === 'reports') loadReports();
   if (view === 'portal') { portalOrg = currentOrg || 'cretum'; loadPortalAdmin(); }
@@ -10218,6 +10219,418 @@ async function spxrRenderPdf(html, fileName, anexo3, EN) {
   } finally {
     iframe.remove();
   }
+}
+
+/* ═══════════════════════════════════════════
+   FUND RISING TRACKER — levantamiento de capital por oportunidad.
+   Tablas: fr_opportunities, fr_prospects, fr_log (RLS: solo authenticated).
+   Etapas = probabilidad de cierre: 1 Confirmado, 2 En proceso, 3 Pipeline,
+   4 Frío (ya no creemos), 5 Pass (confirmó que no). Bitácora automática.
+═══════════════════════════════════════════ */
+
+const FR_STAGES = {
+  1: { label: 'Confirmado', desc: 'Firmado / fondeado',            prob: 1.00, cls: 'fr-s1' },
+  2: { label: 'En proceso', desc: 'Negociación activa',            prob: 0.75, cls: 'fr-s2' },
+  3: { label: 'Pipeline',   desc: 'Contactado, etapa temprana',    prob: 0.40, cls: 'fr-s3' },
+  4: { label: 'Frío',       desc: 'Ya no creemos que cierre',      prob: 0.10, cls: 'fr-s4' },
+  5: { label: 'Pass',       desc: 'Confirmó que no invertirá',     prob: 0.00, cls: 'fr-s5' },
+};
+const FR_TYPES = { fondo: 'Fondo', directo: 'Directo', spv: 'SPV' };
+
+let frLoaded = false;
+let frOpps = [];
+let frProspects = [];        // todos; se filtran por oportunidad
+let frInvestorNames = [];    // autocomplete contra la DB de inversionistas
+let frCurrentOppId = null;
+let frEditingProspectId = null;
+let frEditingOppId = null;
+
+const frMoney = v => (v == null || v === '' ? '—' : '$' + Math.round(+v).toLocaleString('en-US'));
+const frDate = v => (v ? new Date(v + (v.length === 10 ? 'T12:00:00' : '')).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' }).replace(/\./g, '') : '—');
+const frUser = () => (currentProfile && currentProfile.full_name) || 'equipo';
+const frFees = (u, c) => (u == null && c == null ? '—' : `${u ?? '—'}/${c ?? '—'}`);
+
+async function frLog(action, detail, oppId, prospectId) {
+  try {
+    await sb.from('fr_log').insert({ opportunity_id: oppId || null, prospect_id: prospectId || null, usuario: frUser(), action, detail: detail || null });
+  } catch (e) { /* la bitácora nunca bloquea */ }
+}
+
+async function loadFr(force) {
+  if (frLoaded && !force) { renderFrHome(); return; }
+  const [o, p] = await Promise.all([
+    sb.from('fr_opportunities').select('*').order('opened_at', { ascending: false }),
+    sb.from('fr_prospects').select('*').order('commitment', { ascending: false, nullsFirst: false }),
+  ]);
+  if (o.error || p.error) { toast('No se pudo cargar Fund Rising: ' + (o.error || p.error).message); return; }
+  frOpps = o.data || [];
+  frProspects = p.data || [];
+  frLoaded = true;
+  if (!frInvestorNames.length) {
+    sb.from('investors').select('id,name').order('name').limit(3000).then(({ data }) => {
+      frInvestorNames = data || [];
+      const dl = document.getElementById('frInvestorsList');
+      if (dl) dl.innerHTML = frInvestorNames.map(i => `<option value="${escapeHtml(i.name)}">`).join('');
+    });
+  }
+  if (frCurrentOppId && document.getElementById('frDetail').style.display !== 'none') renderFrDetail();
+  else renderFrHome();
+}
+
+function frProspectsOf(oppId) { return frProspects.filter(x => x.opportunity_id === oppId); }
+
+function frStats(oppId) {
+  const rows = frProspectsOf(oppId);
+  const s = { confirmed: 0, weighted: 0, total: 0, counts: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }, n: rows.length };
+  rows.forEach(r => {
+    const c = +r.commitment || 0;
+    s.counts[r.stage] = (s.counts[r.stage] || 0) + 1;
+    if (r.stage === 1) s.confirmed += c;
+    s.weighted += c * (FR_STAGES[r.stage]?.prob || 0);
+    if (r.stage <= 4) s.total += c;
+  });
+  return s;
+}
+
+/* ── HOME ── */
+function renderFrHome() {
+  document.getElementById('frHome').style.display = '';
+  document.getElementById('frDetail').style.display = 'none';
+  frCurrentOppId = null;
+  const act = frOpps.filter(o => o.status === 'active');
+  const closed = frOpps.filter(o => o.status === 'closed');
+
+  // KPIs globales (solo levantamientos activos)
+  let conf = 0, weighted = 0, nPros = 0, overdue = 0;
+  const hoy = new Date().toISOString().slice(0, 10);
+  act.forEach(o => {
+    const s = frStats(o.id);
+    conf += s.confirmed; weighted += s.weighted;
+    nPros += s.n - s.counts[5];
+  });
+  frProspects.forEach(r => {
+    const opp = frOpps.find(o => o.id === r.opportunity_id);
+    if (opp && opp.status === 'active' && r.stage >= 2 && r.stage <= 4 && r.next_step_date && r.next_step_date < hoy) overdue++;
+  });
+  document.getElementById('frKpis').innerHTML = `
+    <div class="fr-kpi"><div class="fr-kpi-v">${frMoney(conf)}</div><div class="fr-kpi-l">Confirmado (etapa 1)</div></div>
+    <div class="fr-kpi"><div class="fr-kpi-v">${frMoney(weighted)}</div><div class="fr-kpi-l">Pipeline ponderado</div></div>
+    <div class="fr-kpi"><div class="fr-kpi-v">${nPros}</div><div class="fr-kpi-l">Prospectos activos</div></div>
+    <div class="fr-kpi ${overdue ? 'fr-kpi-warn' : ''}"><div class="fr-kpi-v">${overdue}</div><div class="fr-kpi-l">Seguimientos vencidos</div></div>`;
+
+  const card = (o) => {
+    const s = frStats(o.id);
+    const target = +o.target_amount || 0;
+    const pct = target ? Math.min(100, s.confirmed / target * 100) : null;
+    const dl = o.deadline ? Math.ceil((new Date(o.deadline + 'T12:00:00') - Date.now()) / 86400000) : null;
+    const dlBadge = o.status === 'closed' ? '' : (dl == null ? '' :
+      `<span class="fr-deadline ${dl < 0 ? 'fr-dl-over' : (dl <= 15 ? 'fr-dl-soon' : '')}">${dl < 0 ? 'venció ' + frDate(o.deadline) : dl + ' días · cierra ' + frDate(o.deadline)}</span>`);
+    const chips = [1, 2, 3, 4, 5].filter(k => s.counts[k]).map(k =>
+      `<span class="fr-chip ${FR_STAGES[k].cls}" title="${FR_STAGES[k].label}">${s.counts[k]}</span>`).join('');
+    const closedSum = o.status === 'closed'
+      ? `<div class="fr-card-closed">Levantado: <b>${frMoney((o.closing_summary || {}).confirmed ?? s.confirmed)}</b> · ${(o.closing_summary || {}).n_confirmados ?? s.counts[1]} inversionistas · cerró ${frDate((o.closed_at || '').slice(0, 10))}</div>`
+      : '';
+    return `
+    <div class="ft-card fr-card" onclick="openFrOpp(${o.id})">
+      <div class="fr-card-top">
+        <span class="fr-type">${FR_TYPES[o.vehicle_type] || o.vehicle_type}</span>
+        ${dlBadge}
+      </div>
+      <div class="ft-card-title">${escapeHtml(o.name)}</div>
+      ${o.company ? `<div class="ft-card-sub">${escapeHtml(o.company)}</div>` : ''}
+      ${o.status === 'active' ? `
+      <div class="fr-progress"><div class="fr-progress-bar" style="width:${pct == null ? 0 : pct.toFixed(0)}%"></div></div>
+      <div class="fr-card-nums"><b>${frMoney(s.confirmed)}</b>${target ? ` / ${frMoney(target)} (${pct.toFixed(0)}%)` : ' confirmado'}</div>` : closedSum}
+      <div class="fr-card-chips">${chips || '<span class="fr-chip-empty">sin prospectos</span>'}</div>
+    </div>`;
+  };
+
+  document.getElementById('frActiveCards').innerHTML = act.length ? act.map(card).join('') :
+    '<div class="fr-empty-line">No hay levantamientos activos. Crea el primero con "+ Nueva oportunidad".</div>';
+  document.getElementById('frClosedCount').textContent = closed.length;
+  document.getElementById('frClosedCards').innerHTML = closed.length ? closed.map(card).join('') :
+    '<div class="fr-empty-line">Todavía no hay levantamientos cerrados.</div>';
+}
+
+function frToggleClosed() {
+  const el = document.getElementById('frClosedCards');
+  const ch = document.getElementById('frClosedChev');
+  const open = el.style.display === 'none';
+  el.style.display = open ? '' : 'none';
+  ch.style.transform = open ? 'rotate(180deg)' : '';
+}
+
+/* ── DETALLE ── */
+function openFrOpp(id) {
+  frCurrentOppId = id;
+  document.getElementById('frHome').style.display = 'none';
+  document.getElementById('frDetail').style.display = '';
+  renderFrDetail();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function frBackHome() { renderFrHome(); }
+
+function renderFrDetail() {
+  const o = frOpps.find(x => x.id === frCurrentOppId);
+  const host = document.getElementById('frDetailContent');
+  if (!o || !host) return;
+  const ro = o.status === 'closed';   // solo lectura
+  const s = frStats(o.id);
+  const target = +o.target_amount || 0;
+  const pct = target ? Math.min(100, s.confirmed / target * 100) : null;
+  const hoy = new Date().toISOString().slice(0, 10);
+  const rows = frProspectsOf(o.id);
+
+  const stageBlock = (k) => {
+    const st = FR_STAGES[k];
+    const list = rows.filter(r => r.stage === k);
+    if (!list.length) return '';
+    const sub = list.reduce((a, r) => a + (+r.commitment || 0), 0);
+    const tr = list.map(r => {
+      const late = !ro && r.stage >= 2 && r.stage <= 4 && r.next_step_date && r.next_step_date < hoy;
+      return `<tr>
+        <td class="fr-td-name">${escapeHtml(r.investor_name)}${r.is_lp_fund_v ? ' <span class="fr-lp" title="LP actual del Fund V">LP</span>' : ''}</td>
+        <td class="n">${frMoney(r.commitment)}</td>
+        <td>${escapeHtml(r.responsables || '—')}</td>
+        <td class="n">${frFees(r.fees_upfront, r.fees_carry)}</td>
+        <td>${frDate(r.last_contact)}</td>
+        <td class="${late ? 'fr-late' : ''}" title="${escapeHtml(r.next_step || '')}">${r.next_step ? escapeHtml(r.next_step.slice(0, 34)) + (r.next_step.length > 34 ? '…' : '') : '—'}${r.next_step_date ? ' <small>(' + frDate(r.next_step_date) + ')</small>' : ''}</td>
+        <td class="fr-td-notes" title="${escapeHtml(r.notes || '')}">${r.notes ? escapeHtml(r.notes.slice(0, 40)) + (r.notes.length > 40 ? '…' : '') : ''}</td>
+        <td class="fr-td-act">${ro ? '' : `
+          <select class="fr-stage-sel" onchange="frQuickStage(${r.id}, this.value)" onclick="event.stopPropagation()">
+            ${[1, 2, 3, 4, 5].map(n => `<option value="${n}" ${n === r.stage ? 'selected' : ''}>${n} · ${FR_STAGES[n].label}</option>`).join('')}
+          </select>
+          <button class="fr-ico-btn" title="Editar" onclick="frOpenProspect(${r.id})"><i class="fa-solid fa-pen"></i></button>
+          <button class="fr-ico-btn fr-ico-del" title="Eliminar" onclick="frDeleteProspect(${r.id})"><i class="fa-solid fa-trash"></i></button>`}
+        </td></tr>`;
+    }).join('');
+    return `
+    <div class="fr-stage-block">
+      <div class="fr-stage-head ${st.cls}">
+        <span class="fr-stage-num">${k}</span><b>${st.label}</b><span class="fr-stage-desc">${st.desc}</span>
+        <span class="fr-stage-sub">${list.length} · ${frMoney(sub)}</span>
+      </div>
+      <table class="fr-table"><thead><tr>
+        <th>Inversionista</th><th class="n">Commitment</th><th>Responsable</th><th class="n">Fees</th><th>Últ. contacto</th><th>Próximo paso</th><th>Notas</th><th></th>
+      </tr></thead><tbody>${tr}</tbody></table>
+    </div>`;
+  };
+
+  host.innerHTML = `
+    <div class="fr-det-head">
+      <div>
+        <span class="fr-type">${FR_TYPES[o.vehicle_type] || o.vehicle_type}</span>
+        ${ro ? '<span class="fr-closed-badge">LEVANTAMIENTO TERMINADO</span>' : ''}
+        <div class="ft-hero-title" style="margin-top:6px">${escapeHtml(o.name)}</div>
+        <div class="ft-hero-sub">${escapeHtml(o.company || '')}${o.deadline ? ' · cierra ' + frDate(o.deadline) : ''}${(o.fees_upfront != null || o.fees_carry != null) ? ' · fees ' + frFees(o.fees_upfront, o.fees_carry) : ''}</div>
+        ${o.notes ? `<div class="fr-opp-notes">${escapeHtml(o.notes)}</div>` : ''}
+      </div>
+      <div class="fr-det-actions">
+        ${ro ? `<button class="dbx-btn" onclick="frReopenOpp()"><i class="fa-solid fa-rotate-left"></i> Reabrir</button>`
+             : `<button class="dbx-btn primary" onclick="frOpenProspect()"><i class="fa-solid fa-plus"></i> Prospecto</button>
+                <button class="dbx-btn" onclick="frOpenOppModal(${o.id})"><i class="fa-solid fa-pen"></i> Editar</button>
+                <button class="dbx-btn" onclick="frCloseOpp()"><i class="fa-solid fa-flag-checkered"></i> Cerrar levantamiento</button>`}
+        <button class="dbx-btn" onclick="frExportCsv()"><i class="fa-solid fa-file-csv"></i> CSV</button>
+        <button class="dbx-btn" onclick="frToggleLog()"><i class="fa-solid fa-clock-rotate-left"></i> Bitácora</button>
+      </div>
+    </div>
+    <div class="fr-det-kpis">
+      <div class="fr-kpi"><div class="fr-kpi-v">${frMoney(s.confirmed)}</div><div class="fr-kpi-l">Confirmado${target ? ` · ${pct.toFixed(0)}% de ${frMoney(target)}` : ''}</div>
+        ${target ? `<div class="fr-progress"><div class="fr-progress-bar" style="width:${pct.toFixed(0)}%"></div></div>` : ''}</div>
+      <div class="fr-kpi"><div class="fr-kpi-v">${frMoney(s.weighted)}</div><div class="fr-kpi-l">Pipeline ponderado</div></div>
+      <div class="fr-kpi"><div class="fr-kpi-v">${s.n}</div><div class="fr-kpi-l">Prospectos (${s.counts[1]} confirmados)</div></div>
+    </div>
+    <div id="frLogPanel" class="fr-log" style="display:none"></div>
+    ${[1, 2, 3, 4, 5].map(stageBlock).join('') || '<div class="fr-empty-line">Sin prospectos todavía. Agrega el primero.</div>'}`;
+}
+
+async function frQuickStage(pid, val) {
+  const r = frProspects.find(x => x.id === pid);
+  const stage = +val;
+  if (!r || r.stage === stage) return;
+  const old = r.stage;
+  const { error } = await sb.from('fr_prospects').update({ stage, updated_at: new Date().toISOString() }).eq('id', pid);
+  if (error) { toast('Error: ' + error.message); return; }
+  r.stage = stage;
+  frLog('etapa', `${r.investor_name}: ${old} → ${stage} (${FR_STAGES[stage].label})`, r.opportunity_id, pid);
+  renderFrDetail();
+}
+
+/* ── modal OPORTUNIDAD ── */
+function frOpenOppModal(id) {
+  frEditingOppId = id || null;
+  const o = id ? frOpps.find(x => x.id === id) : null;
+  document.getElementById('frOppTitle').textContent = o ? 'Editar oportunidad' : 'Nueva oportunidad';
+  document.getElementById('frOppName').value = o?.name || '';
+  document.getElementById('frOppType').value = o?.vehicle_type || 'directo';
+  document.getElementById('frOppCompany').value = o?.company || '';
+  document.getElementById('frOppTarget').value = o?.target_amount || '';
+  document.getElementById('frOppDeadline').value = o?.deadline || '';
+  document.getElementById('frOppFeeU').value = o?.fees_upfront ?? '';
+  document.getElementById('frOppFeeC').value = o?.fees_carry ?? '';
+  document.getElementById('frOppNotes').value = o?.notes || '';
+  document.getElementById('frOppModal').classList.add('show');
+  document.getElementById('frOppName').focus();
+}
+function frCloseOppModal() { document.getElementById('frOppModal').classList.remove('show'); }
+
+async function frSaveOpp() {
+  const name = document.getElementById('frOppName').value.trim();
+  if (!name) { toast('Ponle nombre a la oportunidad'); return; }
+  const num = id => { const v = document.getElementById(id).value; return v === '' ? null : +v; };
+  const payload = {
+    name,
+    vehicle_type: document.getElementById('frOppType').value,
+    company: document.getElementById('frOppCompany').value.trim() || null,
+    target_amount: num('frOppTarget'),
+    deadline: document.getElementById('frOppDeadline').value || null,
+    fees_upfront: num('frOppFeeU'),
+    fees_carry: num('frOppFeeC'),
+    notes: document.getElementById('frOppNotes').value.trim() || null,
+  };
+  let err;
+  if (frEditingOppId) {
+    ({ error: err } = await sb.from('fr_opportunities').update(payload).eq('id', frEditingOppId));
+    if (!err) frLog('oportunidad editada', name, frEditingOppId, null);
+  } else {
+    payload.created_by = frUser();
+    let data;
+    ({ data, error: err } = await sb.from('fr_opportunities').insert(payload).select().single());
+    if (!err) frLog('oportunidad creada', name, data.id, null);
+  }
+  if (err) { toast('Error: ' + err.message); return; }
+  frCloseOppModal();
+  await loadFr(true);
+  toast(frEditingOppId ? 'Oportunidad actualizada' : 'Oportunidad creada');
+}
+
+/* ── modal PROSPECTO ── */
+function frOpenProspect(pid) {
+  frEditingProspectId = pid || null;
+  const r = pid ? frProspects.find(x => x.id === pid) : null;
+  const o = frOpps.find(x => x.id === frCurrentOppId);
+  document.getElementById('frProTitle').textContent = r ? 'Editar prospecto' : 'Nuevo prospecto';
+  document.getElementById('frProName').value = r?.investor_name || '';
+  document.getElementById('frProStage').value = r?.stage || 3;
+  document.getElementById('frProCommit').value = r?.commitment ?? '';
+  document.getElementById('frProLp').checked = !!r?.is_lp_fund_v;
+  document.getElementById('frProResp').value = r?.responsables || '';
+  document.getElementById('frProFeeU').value = r ? (r.fees_upfront ?? '') : (o?.fees_upfront ?? '');
+  document.getElementById('frProFeeC').value = r ? (r.fees_carry ?? '') : (o?.fees_carry ?? '');
+  document.getElementById('frProLast').value = r?.last_contact || '';
+  document.getElementById('frProNext').value = r?.next_step || '';
+  document.getElementById('frProNextDate').value = r?.next_step_date || '';
+  document.getElementById('frProNotes').value = r?.notes || '';
+  document.getElementById('frProspectModal').classList.add('show');
+  document.getElementById('frProName').focus();
+}
+function frCloseProspectModal() { document.getElementById('frProspectModal').classList.remove('show'); }
+
+async function frSaveProspect() {
+  const name = document.getElementById('frProName').value.trim();
+  if (!name) { toast('Falta el nombre del inversionista'); return; }
+  const num = id => { const v = document.getElementById(id).value; return v === '' ? null : +v; };
+  const match = frInvestorNames.find(i => i.name.toLowerCase() === name.toLowerCase());
+  const payload = {
+    investor_name: name,
+    investor_id: match ? match.id : null,
+    stage: +document.getElementById('frProStage').value,
+    commitment: num('frProCommit'),
+    is_lp_fund_v: document.getElementById('frProLp').checked,
+    responsables: document.getElementById('frProResp').value.trim() || null,
+    fees_upfront: num('frProFeeU'),
+    fees_carry: num('frProFeeC'),
+    last_contact: document.getElementById('frProLast').value || null,
+    next_step: document.getElementById('frProNext').value.trim() || null,
+    next_step_date: document.getElementById('frProNextDate').value || null,
+    notes: document.getElementById('frProNotes').value.trim() || null,
+    updated_at: new Date().toISOString(),
+  };
+  let err;
+  if (frEditingProspectId) {
+    ({ error: err } = await sb.from('fr_prospects').update(payload).eq('id', frEditingProspectId));
+    if (!err) frLog('prospecto editado', `${name} (${frMoney(payload.commitment)}, etapa ${payload.stage})`, frCurrentOppId, frEditingProspectId);
+  } else {
+    payload.opportunity_id = frCurrentOppId;
+    payload.created_by = frUser();
+    let data;
+    ({ data, error: err } = await sb.from('fr_prospects').insert(payload).select().single());
+    if (!err) frLog('prospecto creado', `${name} (${frMoney(payload.commitment)}, etapa ${payload.stage})`, frCurrentOppId, data.id);
+  }
+  if (err) { toast('Error: ' + err.message); return; }
+  frCloseProspectModal();
+  await loadFr(true);
+  toast('Guardado');
+}
+
+async function frDeleteProspect(pid) {
+  const r = frProspects.find(x => x.id === pid);
+  if (!r) return;
+  const ok = await showConfirm('¿Eliminar prospecto?', `${r.investor_name} (${frMoney(r.commitment)}) se eliminará de esta oportunidad. Quedará registrado en la bitácora.`);
+  if (!ok) return;
+  const { error } = await sb.from('fr_prospects').delete().eq('id', pid);
+  if (error) { toast('Error: ' + error.message); return; }
+  frLog('prospecto eliminado', `${r.investor_name} (${frMoney(r.commitment)}, etapa ${r.stage})`, frCurrentOppId, pid);
+  await loadFr(true);
+  toast('Prospecto eliminado');
+}
+
+/* ── cerrar / reabrir ── */
+async function frCloseOpp() {
+  const o = frOpps.find(x => x.id === frCurrentOppId);
+  const s = frStats(o.id);
+  const ok = await showConfirm('¿Cerrar levantamiento?',
+    `${o.name} se congelará con ${frMoney(s.confirmed)} confirmados de ${s.counts[1]} inversionistas y pasará a "Levantamiento terminado". Podrás reabrirlo si hace falta.`);
+  if (!ok) return;
+  const summary = { confirmed: s.confirmed, weighted: Math.round(s.weighted), n_confirmados: s.counts[1], counts: s.counts, total_prospects: s.n };
+  const { error } = await sb.from('fr_opportunities').update({ status: 'closed', closed_at: new Date().toISOString(), closing_summary: summary }).eq('id', o.id);
+  if (error) { toast('Error: ' + error.message); return; }
+  frLog('levantamiento cerrado', `${o.name}: ${frMoney(s.confirmed)} de ${s.counts[1]} inversionistas`, o.id, null);
+  await loadFr(true);
+  toast('Levantamiento cerrado');
+}
+
+async function frReopenOpp() {
+  const o = frOpps.find(x => x.id === frCurrentOppId);
+  const ok = await showConfirm('¿Reabrir levantamiento?', `${o.name} volverá a "En levantamiento" y se podrá editar de nuevo.`);
+  if (!ok) return;
+  const { error } = await sb.from('fr_opportunities').update({ status: 'active', closed_at: null }).eq('id', o.id);
+  if (error) { toast('Error: ' + error.message); return; }
+  frLog('levantamiento reabierto', o.name, o.id, null);
+  await loadFr(true);
+}
+
+/* ── bitácora ── */
+async function frToggleLog() {
+  const panel = document.getElementById('frLogPanel');
+  if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
+  panel.style.display = '';
+  panel.innerHTML = '<div class="fr-empty-line">Cargando bitácora…</div>';
+  const { data, error } = await sb.from('fr_log').select('*').eq('opportunity_id', frCurrentOppId).order('ts', { ascending: false }).limit(100);
+  if (error) { panel.innerHTML = '<div class="fr-empty-line">Error al cargar.</div>'; return; }
+  panel.innerHTML = (data && data.length) ? data.map(l => `
+    <div class="fr-log-row">
+      <span class="fr-log-ts">${new Date(l.ts).toLocaleString('es-MX', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+      <b>${escapeHtml(l.usuario || '')}</b> · ${escapeHtml(l.action)}${l.detail ? ': ' + escapeHtml(l.detail) : ''}
+    </div>`).join('') : '<div class="fr-empty-line">Sin movimientos registrados.</div>';
+}
+
+/* ── export CSV ── */
+function frExportCsv() {
+  const o = frOpps.find(x => x.id === frCurrentOppId);
+  const rows = frProspectsOf(o.id).slice().sort((a, b) => a.stage - b.stage || (+b.commitment || 0) - (+a.commitment || 0));
+  const esc = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+  const head = ['Etapa', 'Clasificación', 'Inversionista', 'Commitment USD', 'LP Fund V', 'Responsable', 'Fee upfront %', 'Carry %', 'Último contacto', 'Próximo paso', 'Fecha próximo paso', 'Notas'];
+  const lines = [head.join(',')].concat(rows.map(r => [
+    r.stage, FR_STAGES[r.stage].label, r.investor_name, r.commitment ?? '', r.is_lp_fund_v ? 'LP' : 'NO',
+    r.responsables ?? '', r.fees_upfront ?? '', r.fees_carry ?? '', r.last_contact ?? '', r.next_step ?? '', r.next_step_date ?? '', r.notes ?? '',
+  ].map(esc).join(',')));
+  const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `FundRising_${o.name.replace(/[^a-zA-Z0-9]+/g, '_')}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
 // ── Orquestador del botón ──
