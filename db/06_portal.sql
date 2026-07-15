@@ -7,7 +7,7 @@
 -- ═══════════════════════════════════════════════════════════════════════════
 CREATE TABLE IF NOT EXISTS portal_dashboards (
   id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  slug        TEXT UNIQUE NOT NULL,
+  slug        TEXT NOT NULL,                       -- único POR org (no global)
   title       TEXT NOT NULL,
   html        TEXT NOT NULL DEFAULT '',
   org         TEXT NOT NULL DEFAULT 'cretum',      -- 'cretum' | 'mvp' (portal por empresa)
@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS portal_dashboards (
 
 CREATE TABLE IF NOT EXISTS portal_users (
   id             BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  username       TEXT UNIQUE NOT NULL,            -- siempre en minúsculas
+  username       TEXT NOT NULL,                   -- minúsculas; único POR org (no global)
   password_hash  TEXT NOT NULL,                   -- scrypt: salt$hash (hex)
   label          TEXT,
   active         BOOLEAN NOT NULL DEFAULT TRUE,
@@ -28,6 +28,14 @@ CREATE TABLE IF NOT EXISTS portal_users (
 -- Migración para tablas existentes (idempotente)
 ALTER TABLE portal_dashboards ADD COLUMN IF NOT EXISTS org TEXT NOT NULL DEFAULT 'cretum';
 ALTER TABLE portal_users      ADD COLUMN IF NOT EXISTS org TEXT NOT NULL DEFAULT 'cretum';
+
+-- Unicidad POR ORG (no global): el mismo usuario/slug puede existir de forma
+-- independiente en 'cretum' y en 'mvp'. Quita la restricción global vieja
+-- (nombre por defecto de Postgres) y crea el índice único compuesto.
+ALTER TABLE portal_users      DROP CONSTRAINT IF EXISTS portal_users_username_key;
+ALTER TABLE portal_dashboards DROP CONSTRAINT IF EXISTS portal_dashboards_slug_key;
+CREATE UNIQUE INDEX IF NOT EXISTS portal_users_org_username_key  ON portal_users      (org, username);
+CREATE UNIQUE INDEX IF NOT EXISTS portal_dashboards_org_slug_key ON portal_dashboards (org, slug);
 
 CREATE TABLE IF NOT EXISTS portal_access (
   user_id       BIGINT NOT NULL REFERENCES portal_users(id) ON DELETE CASCADE,

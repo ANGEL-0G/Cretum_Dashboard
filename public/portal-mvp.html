@@ -162,6 +162,9 @@
   let token = '';
   let dashboards = [];
 
+  // Disuasivo de descarga: sin menú contextual (Guardar como / Guardar imagen).
+  document.addEventListener('contextmenu', e => e.preventDefault());
+
   async function api(body) {
     const r = await fetch('/api/portal', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ org: ORG, ...body }) });
     const d = await r.json().catch(() => ({}));
@@ -230,7 +233,9 @@
       const d = await api({ action:'view', slug, token });
       if (d.kind === 'file' && d.url) {
         frame.removeAttribute('srcdoc');
-        frame.src = d.url;                       // PDF/HTML servido por URL firmada
+        // PDF: ocultamos la barra del visor (descarga/impresión) con #toolbar=0.
+        const isPdf = /pdf/i.test(d.mime || '') || /\.pdf(\?|#|$)/i.test(d.url);
+        frame.src = isPdf ? d.url + '#toolbar=0&navpanes=0' : d.url;
       } else {
         frame.removeAttribute('src');
         frame.srcdoc = d.html || '<p style="font-family:sans-serif;padding:40px;text-align:center;color:#667">Dashboard vacío.</p>';

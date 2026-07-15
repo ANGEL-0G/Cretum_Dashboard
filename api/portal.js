@@ -135,7 +135,7 @@ export default async function handler(req, res) {
       const org = reqOrg(req);
       const slug = String(req.body.slug || '');
       const { data: dash } = await sb.from('portal_dashboards')
-        .select('id, title, html, org, kind, file_path, file_mime, file_name').eq('slug', slug).maybeSingle();
+        .select('id, title, html, org, kind, file_path, file_mime, file_name').eq('slug', slug).eq('org', org).maybeSingle();
       if (!dash || dash.org !== org) return res.status(404).json({ error: 'Dashboard no encontrado' });
       const { data: link } = await sb.from('portal_access')
         .select('user_id').eq('user_id', payload.uid).eq('dashboard_id', dash.id).maybeSingle();
