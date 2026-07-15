@@ -3154,13 +3154,35 @@ function ptSetKind(kind) {
   document.getElementById('ptKindFile').style.display = ptDashKind === 'file' ? '' : 'none';
 }
 
+// Extensiones aceptadas → MIME confiable (no confiamos en file.type, que a veces
+// llega vacío y Supabase entonces lo guarda como text/plain = "sale el código").
+const PT_FILE_MIME = { pdf: 'application/pdf', html: 'text/html', htm: 'text/html' };
+function ptFileExt(name) { return (name.split('.').pop() || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
+
 // Guarda el archivo elegido (aún sin subir) y muestra su nombre.
-function ptFilePicked(input) {
-  const f = input.files && input.files[0];
+function ptFilePicked(input) { ptSetFile(input.files && input.files[0]); }
+
+function ptSetFile(f) {
+  const label = document.getElementById('ptFileLabel');
+  if (f && !PT_FILE_MIME[ptFileExt(f.name)]) {
+    ptPendingFile = null;
+    label.textContent = 'Solo se aceptan archivos PDF o HTML.';
+    return;
+  }
   ptPendingFile = f || null;
-  document.getElementById('ptFileLabel').textContent = f
+  label.textContent = f
     ? `${f.name} · ${(f.size / 1048576).toFixed(1)} MB`
-    : 'Elige un archivo PDF o HTML…';
+    : 'Arrastra un PDF o HTML aquí, o haz clic para elegirlo';
+}
+
+// ── Arrastrar y soltar sobre la zona de archivo ──
+function ptFileDragOver(ev) { ev.preventDefault(); document.getElementById('ptFileDrop').classList.add('dragover'); }
+function ptFileDragLeave(ev) { ev.preventDefault(); document.getElementById('ptFileDrop').classList.remove('dragover'); }
+function ptFileDrop(ev) {
+  ev.preventDefault();
+  document.getElementById('ptFileDrop').classList.remove('dragover');
+  const f = ev.dataTransfer && ev.dataTransfer.files && ev.dataTransfer.files[0];
+  if (f) ptSetFile(f);
 }
 
 // Vista previa del HTML del dashboard (iframe aislado, igual que lo ve el cliente)
@@ -3203,18 +3225,26 @@ async function ptDashSave() {
       const html = document.getElementById('ptDashHtml').value;
       if (!html.trim() && !id) { msg.textContent = 'Pega el HTML del dashboard.'; msg.className = 'camp-modal-msg err'; return; }
       body.html = html;
+    } else if (ptPendingFile && (ptFileExt(ptPendingFile.name) === 'html' || ptFileExt(ptPendingFile.name) === 'htm')) {
+      // HTML subido: lo leemos como texto y lo guardamos como HTML (se renderiza vía srcdoc,
+      // igual que el HTML pegado). Así nunca "sale el código" por un content-type equivocado.
+      if (ptPendingFile.size > 25 * 1048576) { msg.textContent = 'El archivo supera 25 MB.'; msg.className = 'camp-modal-msg err'; return; }
+      msg.textContent = 'Leyendo archivo…'; msg.className = 'camp-modal-msg';
+      body.kind = 'html';
+      body.html = await ptPendingFile.text();
     } else {
-      // Tipo archivo: sube el nuevo a Storage, o conserva el actual si se edita sin cambiarlo.
+      // Tipo archivo (PDF): sube el nuevo a Storage, o conserva el actual si se edita sin cambiarlo.
       if (ptPendingFile) {
         if (ptPendingFile.size > 25 * 1048576) { msg.textContent = 'El archivo supera 25 MB.'; msg.className = 'camp-modal-msg err'; return; }
         msg.textContent = 'Subiendo archivo…'; msg.className = 'camp-modal-msg';
-        const ext = (ptPendingFile.name.split('.').pop() || 'bin').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const ext = ptFileExt(ptPendingFile.name) || 'bin';
+        const mime = PT_FILE_MIME[ext] || ptPendingFile.type || 'application/octet-stream';
         const path = `${currentOrg}/${slug || 'dash'}-${Date.now()}.${ext}`;
         const { error: upErr } = await sb.storage.from('portal-files')
-          .upload(path, ptPendingFile, { contentType: ptPendingFile.type || undefined, upsert: false });
+          .upload(path, ptPendingFile, { contentType: mime, upsert: false });
         if (upErr) { msg.textContent = 'Error al subir: ' + upErr.message; msg.className = 'camp-modal-msg err'; return; }
         body.file_path = path;
-        body.file_mime = ptPendingFile.type || '';
+        body.file_mime = mime;
         body.file_name = ptPendingFile.name;
       } else if (id && ptEditFile && ptEditFile.file_path) {
         body.file_path = ptEditFile.file_path;

@@ -3680,6 +3680,9 @@ button,input,select{font-family:var(--font)}
   [data-theme="dark"] .pt-kind-switch{background:rgba(255,255,255,.06)}
   .pt-file-drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:26px 16px;border:1.5px dashed var(--gray-300,#c4cad8);border-radius:10px;cursor:pointer;color:var(--gray-500,#667);transition:border-color .15s,background .15s;text-align:center}
   .pt-file-drop:hover{border-color:var(--navy);background:var(--navy-ghost,#f0f4fa)}
+  .pt-file-drop.dragover{border-color:var(--navy);border-style:solid;background:var(--navy-ghost,#f0f4fa)}
+  .pt-file-drop.dragover i{transform:translateY(-2px)}
+  .pt-file-drop i{transition:transform .15s}
   .pt-file-drop i{font-size:24px;color:var(--navy)}
   .pt-file-current{margin-top:10px;font-size:13px;color:var(--gray-700,#3d4559);display:flex;align-items:center;gap:8px}
   .pt-file-hint{margin-top:8px;font-size:11px;color:var(--gray-400,#9aa3b5)}
@@ -3869,9 +3872,10 @@ button,input,select{font-family:var(--font)}
 
       <!-- Modo: subir archivo (PDF / HTML) -->
       <div id="ptKindFile" style="display:none">
-        <label class="pt-file-drop" for="ptDashFile">
+        <label class="pt-file-drop" id="ptFileDrop" for="ptDashFile"
+               ondragover="ptFileDragOver(event)" ondragleave="ptFileDragLeave(event)" ondrop="ptFileDrop(event)">
           <i class="fa-solid fa-file-arrow-up"></i>
-          <span id="ptFileLabel">Elige un archivo PDF o HTML…</span>
+          <span id="ptFileLabel">Arrastra un PDF o HTML aquí, o haz clic para elegirlo</span>
           <input type="file" id="ptDashFile" accept=".pdf,.html,.htm,application/pdf,text/html" onchange="ptFilePicked(this)" hidden>
         </label>
         <div class="pt-file-current" id="ptFileCurrent" style="display:none"></div>
@@ -4358,7 +4362,7 @@ button,input,select{font-family:var(--font)}
   </div>
 </div>
 
-<script src="/i18n.js?v=20260715-fundraising-mvp"></script>
-<script src="/app.js?v=20260715-frtracker-mvp"></script>
+<script src="/i18n.js?v=20260715-portaldrop"></script>
+<script src="/app.js?v=20260715-portaldrop"></script>
 </body>
 </html>
