@@ -168,6 +168,14 @@ button,input,select{font-family:var(--font)}
 }
 .header-sync:hover{background:rgba(255,255,255,.22)}
 .header-sync[title]{position:relative}
+/* Botón "System": abre el mapa del sistema (grafo) en pestaña nueva */
+.header-sys{
+  display:flex;align-items:center;gap:6px;font-size:11px;
+  background:rgba(255,255,255,.12);padding:5px 12px;border-radius:20px;
+  cursor:pointer;transition:background .15s;color:inherit;border:0;font-family:inherit;
+}
+.header-sys:hover{background:rgba(255,255,255,.22)}
+.header-sys i{font-size:11px}
 .sync-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 .sync-dot.saving{background:var(--amber);animation:none}
@@ -2568,6 +2576,8 @@ button,input,select{font-family:var(--font)}
   .header-title{font-size:11px;letter-spacing:.2px;white-space:nowrap}
   .header-sync{padding:4px 9px;font-size:10px;gap:4px}
   .header-sync span{display:none}
+  .header-sys{padding:4px 9px;font-size:10px;gap:4px}
+  .header-sys span{display:none}
   .header-user{padding:4px 10px 4px 4px;gap:6px}
   .header-user span{display:none}
   .header-user .chev{display:none}
@@ -2764,6 +2774,10 @@ button,input,select{font-family:var(--font)}
       <div class="sync-dot" id="syncDot"></div>
       <span id="syncLabel">Sincronizado</span>
     </div>
+    <button class="header-sys" id="systemMapBtn" onclick="window.open('/system-map','_blank','noopener')" title="Mapa del sistema" data-i18n-title>
+      <i class="fa-solid fa-circle-nodes"></i>
+      <span>System</span>
+    </button>
     <button class="header-user" id="headerUserBtn" onclick="toggleSettings(event)" title="Tu cuenta" data-i18n-title>
       <div class="header-av" id="headerAv">—</div>
       <span id="headerUser">—</span>
@@ -4387,7 +4401,7 @@ button,input,select{font-family:var(--font)}
   </div>
 </div>
 
-<script src="/i18n.js?v=20260715-frdark"></script>
-<script src="/app.js?v=20260715-frdark"></script>
+<script src="/i18n.js?v=20260715-sysmap"></script>
+<script src="/app.js?v=20260715-sysmap"></script>
 </body>
 </html>

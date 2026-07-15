@@ -26,6 +26,10 @@
       "use": "@vercel/static"
     },
     {
+      "src": "public/system-map.html",
+      "use": "@vercel/static"
+    },
+    {
       "src": "public/logo.png",
       "use": "@vercel/static"
     },
@@ -185,6 +189,10 @@
     {
       "src": "/i18n.js",
       "dest": "/public/i18n.js"
+    },
+    {
+      "src": "/system-map",
+      "dest": "/public/system-map.html"
     },
     {
       "src": "/logo.png",
