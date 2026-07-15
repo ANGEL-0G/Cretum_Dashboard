@@ -22,6 +22,10 @@
       "use": "@vercel/static"
     },
     {
+      "src": "public/i18n.js",
+      "use": "@vercel/static"
+    },
+    {
       "src": "public/logo.png",
       "use": "@vercel/static"
     },
@@ -177,6 +181,10 @@
     {
       "src": "/app.js",
       "dest": "/public/app.js"
+    },
+    {
+      "src": "/i18n.js",
+      "dest": "/public/i18n.js"
     },
     {
       "src": "/logo.png",
