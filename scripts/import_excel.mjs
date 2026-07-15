@@ -14,6 +14,17 @@ import { readFileSync, existsSync } from 'node:fs';
 import * as XLSX from 'xlsx';
 import pg from 'pg';
 
+// ⛔ CANDADO (2026-07-15): este script hace TRUNCATE de contacts + investments — borra TODO
+// y rompe las FKs con investment_distributions (~1,800 filas del pipeline Altareturn).
+// La DB actual ya NO se puede reconstruir solo desde el Excel. Para actualizaciones usar
+// scripts/update_from_csv.mjs (UPDATE-only, con DRY_RUN). Si de verdad necesitas el import
+// destructivo: corre con CONFIRM_TRUNCATE=1 y haz pg_dump ANTES.
+if (process.env.CONFIRM_TRUNCATE !== '1') {
+  console.error('ABORT: import_excel.mjs TRUNCA contacts+investments (destruiria las distribuciones).');
+  console.error('Usa scripts/update_from_csv.mjs. Para forzar: CONFIRM_TRUNCATE=1 (con pg_dump previo).');
+  process.exit(1);
+}
+
 const DEFAULT_XLSX = String.raw`C:\Users\Angel Oliveros Cretu\Documents\Cretum\Proyecto BD\data\Cretum_MVP LP Tracking Sheet.xlsx`;
 const XLSX_PATH = process.env.XLSX_PATH || DEFAULT_XLSX;
 const SHEET = 'MVP Data Base 2026';
