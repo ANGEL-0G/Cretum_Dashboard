@@ -88,13 +88,38 @@
     transition:all .25s cubic-bezier(.34,1.5,.64,1);
   }
   .exit:hover{background:var(--red);border-color:var(--red);color:#fff;transform:scale(1.09);box-shadow:0 8px 22px rgba(192,57,43,.45)}
-  .picker{
+  /* Volver al menú (solo si el cliente tiene varios dashboards) */
+  .nav-back{
     position:fixed;top:16px;left:16px;z-index:10;
-    background:rgba(255,255,255,.85);color:var(--ink);
+    background:rgba(255,255,255,.85);color:var(--navy);
     border:1px solid rgba(150,120,90,.28);border-radius:10px;
-    padding:8px 30px 8px 12px;font-size:13px;font-family:var(--font);cursor:pointer;max-width:60vw;
-    -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);outline:none;
+    padding:9px 15px;font-size:13px;font-weight:500;font-family:var(--font);cursor:pointer;
+    display:flex;align-items:center;gap:8px;
+    -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    transition:background .2s cubic-bezier(.2,.6,.3,1),transform .2s cubic-bezier(.2,.6,.3,1),box-shadow .2s;
   }
+  .nav-back:hover{background:#fff;transform:translateY(-1px);box-shadow:0 8px 22px rgba(237,120,36,.20)}
+  .nav-back span{font-size:14px;line-height:1}
+
+  /* Menú de dashboards: respaldo cuando hay varios y no se entró por enlace directo */
+  .menu-view{position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;padding:24px;background:#fffdfb;overflow:auto}
+  .menu-card{width:460px;max-width:100%;text-align:center}
+  .menu-logo{width:180px;max-width:70%;display:block;margin:0 auto 22px;filter:drop-shadow(0 4px 12px rgba(237,120,36,.16))}
+  .menu-title{font-size:12.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gray-400);margin-bottom:20px}
+  .menu-list{display:flex;flex-direction:column;gap:10px}
+  .menu-item{
+    display:flex;align-items:center;gap:13px;width:100%;text-align:left;
+    background:rgba(255,255,255,.92);border:1.5px solid var(--line);border-radius:12px;
+    padding:15px 17px;font-size:15px;font-weight:500;color:var(--ink);font-family:var(--font);cursor:pointer;
+    box-shadow:0 2px 8px rgba(160,80,20,.06);
+    transition:border-color .2s cubic-bezier(.2,.6,.3,1),transform .2s cubic-bezier(.2,.6,.3,1),box-shadow .2s;
+  }
+  .menu-item:hover{border-color:var(--navy-mid);transform:translateY(-2px);box-shadow:0 10px 26px rgba(237,120,36,.14)}
+  .menu-item .mi-ico{width:38px;height:38px;flex:0 0 38px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--navy),var(--navy-mid));color:#fff;font-size:15px}
+  .menu-item .mi-nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .menu-item .mi-arrow{color:var(--gray-300);font-size:19px;transition:transform .2s cubic-bezier(.2,.6,.3,1),color .2s}
+  .menu-item:hover .mi-arrow{color:var(--navy-mid);transform:translateX(3px)}
+  @media (prefers-reduced-motion:reduce){.nav-back,.menu-item,.menu-item .mi-arrow{transition:none}}
 </style>
 </head>
 <body>
@@ -119,8 +144,16 @@
 
   <!-- App -->
   <div id="app">
-    <select id="picker" class="picker" onchange="openDash(this.value)" style="display:none"></select>
+    <button class="nav-back" id="backBtn" onclick="showMenu()" style="display:none"><span aria-hidden="true">☰</span> Mis dashboards</button>
     <button class="exit" onclick="logout()">Salir</button>
+    <!-- Menú de respaldo: solo si el cliente tiene varios dashboards y entra sin enlace directo -->
+    <div id="menuView" class="menu-view" style="display:none">
+      <div class="menu-card">
+        <img src="/logo-mvp.png" alt="MVP" class="menu-logo">
+        <div class="menu-title">Tus dashboards</div>
+        <div class="menu-list" id="menuList"></div>
+      </div>
+    </div>
     <iframe id="frame" sandbox="allow-scripts allow-popups allow-forms"></iframe>
   </div>
 
@@ -152,23 +185,47 @@
     return false;
   }
 
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
   function enterApp(dl) {
     dashboards = dl || [];
     document.getElementById('loginView').style.display = 'none';
     document.getElementById('app').style.display = 'block';
-    const picker = document.getElementById('picker');
-    if (dashboards.length > 1) {
-      picker.style.display = '';
-      picker.innerHTML = dashboards.map(x => `<option value="${x.slug}">${x.title.replace(/</g,'&lt;')}</option>`).join('');
-    } else {
-      picker.style.display = 'none';
-    }
-    if (dashboards.length) openDash(dashboards[0].slug);
-    else document.getElementById('frame').srcdoc = '<p style="font-family:sans-serif;color:#667;padding:40px;text-align:center">No tienes dashboards asignados todavía.</p>';
+    // Enlace directo: /portal-mvp#slug abre esa campaña sin pasar por el menú
+    const slug = decodeURIComponent((location.hash || '').replace(/^#/, '')).trim();
+    const target = slug && dashboards.find(d => d.slug === slug);
+    if (target) return openDash(target.slug);
+    if (dashboards.length === 1) return openDash(dashboards[0].slug);
+    if (!dashboards.length) return showEmpty();
+    showMenu();                                  // varios y sin enlace directo → menú
+  }
+
+  function showEmpty() {
+    document.getElementById('menuView').style.display = 'none';
+    document.getElementById('backBtn').style.display = 'none';
+    const frame = document.getElementById('frame');
+    frame.removeAttribute('src');
+    frame.srcdoc = '<p style="font-family:sans-serif;color:#667;padding:40px;text-align:center">No tienes dashboards asignados todavía.</p>';
+  }
+
+  function showMenu() {
+    const list = document.getElementById('menuList');
+    list.innerHTML = dashboards.map(d =>
+      `<button class="menu-item" data-slug="${esc(d.slug)}">
+         <span class="mi-ico" aria-hidden="true">▦</span>
+         <span class="mi-nm">${esc(d.title)}</span>
+         <span class="mi-arrow" aria-hidden="true">›</span>
+       </button>`).join('');
+    list.querySelectorAll('.menu-item').forEach(b => b.onclick = () => openDash(b.dataset.slug));
+    document.getElementById('menuView').style.display = 'flex';
+    document.getElementById('backBtn').style.display = 'none';
   }
 
   async function openDash(slug) {
     const frame = document.getElementById('frame');
+    document.getElementById('menuView').style.display = 'none';
+    document.getElementById('backBtn').style.display = dashboards.length > 1 ? 'flex' : 'none';
+    try { if (location.hash.replace(/^#/, '') !== slug) location.hash = slug; } catch (e) {}
     try {
       const d = await api({ action:'view', slug, token });
       if (d.kind === 'file' && d.url) {
@@ -181,17 +238,19 @@
     } catch (err) {
       if (String(err.message).includes('expirada')) return logout();
       frame.removeAttribute('src');
-      frame.srcdoc = `<p style="font-family:sans-serif;padding:40px;text-align:center;color:#c0392b">${err.message}</p>`;
+      frame.srcdoc = `<p style="font-family:sans-serif;padding:40px;text-align:center;color:#c0392b">${esc(err.message)}</p>`;
     }
   }
 
   function logout() {
     token = '';
     document.getElementById('app').style.display = 'none';
+    document.getElementById('menuView').style.display = 'none';
+    document.getElementById('backBtn').style.display = 'none';
     document.getElementById('loginView').style.display = 'flex';
     document.getElementById('p').value = '';
-    document.getElementById('frame').removeAttribute('src');
-    document.getElementById('frame').srcdoc = '';
+    const frame = document.getElementById('frame');
+    frame.removeAttribute('src'); frame.srcdoc = '';
   }
 </script>
 </body>

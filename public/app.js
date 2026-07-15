@@ -2988,10 +2988,21 @@ function renderPtDashboards() {
     <div class="sub">${base} · ${escapeHtml(d.slug)}</div>
     <div class="acts">
       <button class="cdd-btn" onclick="ptDashView(${d.id})"><i class="fa-solid fa-eye"></i> Previsualizar</button>
+      <button class="cdd-btn" onclick="ptCopyLink('${base}', '${escapeHtml(d.slug)}', this)"><i class="fa-solid fa-link"></i> Copiar enlace</button>
       ${manage ? `<button class="cdd-btn" onclick="ptDashOpen(${d.id})"><i class="fa-solid fa-pen"></i> Editar</button>
       <button class="cdd-btn camp-btn-danger" onclick="ptDashDelete(${d.id})"><i class="fa-solid fa-trash"></i> Eliminar</button>` : ''}
     </div>
   </div>`).join('');
+}
+
+// Copia el enlace directo de una campaña: el cliente lo abre y, tras iniciar
+// sesión, va directo a ese dashboard (ancla #slug, sin pasar por un menú).
+function ptCopyLink(base, slug, btn) {
+  const url = `${location.origin}${base}#${slug}`;
+  const done = () => { if (btn) { const o = btn.innerHTML; btn.innerHTML = '<i class="fa-solid fa-check"></i> Copiado'; setTimeout(() => { btn.innerHTML = o; }, 1600); } };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(done).catch(() => { prompt('Copia el enlace:', url); });
+  } else { prompt('Copia el enlace:', url); }
 }
 
 function renderPtUsers() {
