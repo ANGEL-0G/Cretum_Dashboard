@@ -27,6 +27,9 @@
   --amber:#b07d20;--amber-bg:#fdf3dc;
   --red:#c0392b;--red-bg:#fcecea;
   --blue:#2980b9;--blue-bg:#e8f3fb;
+  /* Alias que usa el módulo Fund Rising (otra convención de nombres). Apuntan a
+     variables que YA voltean en modo oscuro, así el módulo se adapta solo. */
+  --card:var(--white);--border:var(--gray-200);--muted:var(--gray-500);
   --r-sm:5px;--r-md:8px;--r-lg:12px;--r-xl:16px;
   --font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
   --shadow-sm:0 1px 4px rgba(26,58,107,.08);--shadow-md:0 4px 16px rgba(26,58,107,.12);
@@ -1423,6 +1426,20 @@ button,input,select{font-family:var(--font)}
 .fr-log-row{font-size:12px;padding:5px 0;border-bottom:1px dashed var(--border,#eef1f7)}
 .fr-log-row:last-child{border-bottom:0}
 .fr-log-ts{color:var(--muted,#9aa3b5);font-size:11px;margin-right:8px}
+/* Modo oscuro: los textos de estado/badges estaban fijos en tonos oscuros
+   (pensados para fondo claro). Los aclaramos para que tengan contraste. */
+[data-theme="dark"] .fr-late,
+[data-theme="dark"] .fr-dl-over,
+[data-theme="dark"] .fr-kpi-warn .fr-kpi-v,
+[data-theme="dark"] .fr-ico-del:hover{color:var(--red)}
+[data-theme="dark"] .fr-dl-soon{color:var(--amber)}
+[data-theme="dark"] .fr-type{color:var(--navy-light)}
+[data-theme="dark"] .fr-s1,[data-theme="dark"] .fr-lp{color:#5fd39a}
+[data-theme="dark"] .fr-s2{color:#e6c860}
+[data-theme="dark"] .fr-s3{color:#7bb0ee}
+[data-theme="dark"] .fr-s4{color:#f0975a}
+[data-theme="dark"] .fr-s5,[data-theme="dark"] .fr-closed-badge{color:#e87b6a}
+[data-theme="dark"] .fr-stage-num{background:rgba(255,255,255,.14)}
 [data-org="mvp"] .home-ico-fundraising{background:rgba(237,120,36,.14);color:#ED7824}
 [data-org="mvp"] .home-ico-trackers{background:rgba(237,120,36,.14);color:#ED7824}
 [data-theme="dark"] .home-ico-dropbox{background:rgba(0,97,255,.22);color:#5b9aff}
@@ -4370,7 +4387,7 @@ button,input,select{font-family:var(--font)}
   </div>
 </div>
 
-<script src="/i18n.js?v=20260715-portalguard"></script>
-<script src="/app.js?v=20260715-portalguard"></script>
+<script src="/i18n.js?v=20260715-frdark"></script>
+<script src="/app.js?v=20260715-frdark"></script>
 </body>
 </html>
