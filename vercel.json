@@ -30,6 +30,22 @@
       "use": "@vercel/static"
     },
     {
+      "src": "public/manifest.json",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "public/app-icon-180.png",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "public/app-icon-192.png",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "public/app-icon-512.png",
+      "use": "@vercel/static"
+    },
+    {
       "src": "public/logo.png",
       "use": "@vercel/static"
     },
@@ -193,6 +209,22 @@
     {
       "src": "/system-map",
       "dest": "/public/system-map.html"
+    },
+    {
+      "src": "/manifest.json",
+      "dest": "/public/manifest.json"
+    },
+    {
+      "src": "/app-icon-180.png",
+      "dest": "/public/app-icon-180.png"
+    },
+    {
+      "src": "/app-icon-192.png",
+      "dest": "/public/app-icon-192.png"
+    },
+    {
+      "src": "/app-icon-512.png",
+      "dest": "/public/app-icon-512.png"
     },
     {
       "src": "/logo.png",
