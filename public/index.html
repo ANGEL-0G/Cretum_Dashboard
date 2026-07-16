@@ -20,6 +20,23 @@
   window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); window.__deferredInstall = e; });
   window.addEventListener('appinstalled', function () { window.__deferredInstall = null; });
 </script>
+<!-- Pantallas de arranque iOS (reemplazan el ícono "C" al abrir la app instalada) -->
+<link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)" href="/splash/splash-750x1334.png">
+<link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (prefers-color-scheme: dark)" href="/splash/splash-750x1334-dark.png">
+<link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2)" href="/splash/splash-828x1792.png">
+<link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (prefers-color-scheme: dark)" href="/splash/splash-828x1792-dark.png">
+<link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3)" href="/splash/splash-1242x2688.png">
+<link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (prefers-color-scheme: dark)" href="/splash/splash-1242x2688-dark.png">
+<link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)" href="/splash/splash-1125x2436.png">
+<link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (prefers-color-scheme: dark)" href="/splash/splash-1125x2436-dark.png">
+<link rel="apple-touch-startup-image" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)" href="/splash/splash-1170x2532.png">
+<link rel="apple-touch-startup-image" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (prefers-color-scheme: dark)" href="/splash/splash-1170x2532-dark.png">
+<link rel="apple-touch-startup-image" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3)" href="/splash/splash-1284x2778.png">
+<link rel="apple-touch-startup-image" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (prefers-color-scheme: dark)" href="/splash/splash-1284x2778-dark.png">
+<link rel="apple-touch-startup-image" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3)" href="/splash/splash-1179x2556.png">
+<link rel="apple-touch-startup-image" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (prefers-color-scheme: dark)" href="/splash/splash-1179x2556-dark.png">
+<link rel="apple-touch-startup-image" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3)" href="/splash/splash-1290x2796.png">
+<link rel="apple-touch-startup-image" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (prefers-color-scheme: dark)" href="/splash/splash-1290x2796-dark.png">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha384-/o6I2CkkWC//PSjvWC/eYN7l3xM3tJm8ZzVkCOfp//W05QcE3mlGskpoHB6XqI+B" crossorigin="anonymous" referrerpolicy="no-referrer">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.0/dist/umd/supabase.min.js" integrity="sha384-DjOvX/sJLsmbMrw4wTvf6l3kiGBjdxyOO6X2MTFwOOXGkjN/mE08BoDzrpaaIjil" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -196,6 +213,33 @@ button,input,select{font-family:var(--font)}
 .settings-row-install:hover{background:var(--navy-ghost)}
 [data-theme="dark"] .settings-row-install:hover{background:rgba(255,255,255,.05)}
 @media (display-mode: standalone){ #installRow{display:none} }
+
+/* ── Splash de arranque (overlay a pantalla completa, se desvanece) ── */
+#appSplash{
+  position:fixed;inset:0;z-index:2147483000;   /* por encima de todo: overlay de arranque */
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:#ffffff;transition:opacity .48s ease;
+}
+#appSplash.hide{opacity:0;pointer-events:none}
+#appSplash .sp-inner{display:flex;flex-direction:column;align-items:center;gap:28px;position:relative}
+#appSplash .sp-mosaic{width:min(300px,62vw);height:auto;display:block;position:relative;z-index:1}
+#appSplash .sp-word{font-family:Georgia,'Times New Roman',serif;font-weight:500;font-size:clamp(38px,12vw,52px);line-height:1;letter-spacing:.01em}
+#appSplash .sp-cre{color:#14294a}
+#appSplash .sp-desk{color:#5f95c8}
+#appSplash .sp-tag{font-size:12px;letter-spacing:.5em;text-transform:uppercase;color:#9db4ce;padding-left:.5em}
+#appSplash .sp-foot{position:absolute;bottom:44px;font-size:11px;letter-spacing:.34em;text-transform:uppercase;color:#c2ccd9}
+/* Variante oscura (navy con glow) — se decide por el tema del <html> */
+[data-theme="dark"] #appSplash{background:linear-gradient(160deg,#1c4270 0%,#12294a 60%,#0c1d38 100%)}
+[data-theme="dark"] #appSplash .sp-cre{color:#eef4fc}
+[data-theme="dark"] #appSplash .sp-desk{color:#8fb8dd}
+[data-theme="dark"] #appSplash .sp-tag{color:#6f97c2}
+[data-theme="dark"] #appSplash .sp-foot{color:#4d6c93}
+[data-theme="dark"] #appSplash .sp-inner::before{
+  content:"";position:absolute;left:50%;top:64px;transform:translate(-50%,-50%);
+  width:min(340px,72vw);height:190px;border-radius:50%;
+  background:radial-gradient(ellipse at 62% 45%,rgba(255,255,255,.16),transparent 68%);filter:blur(6px);z-index:0;
+}
+@media (prefers-reduced-motion:reduce){#appSplash{transition:none}}
 .sync-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 .sync-dot.saving{background:var(--amber);animation:none}
@@ -2705,6 +2749,32 @@ button,input,select{font-family:var(--font)}
 </head>
 <body>
 
+<!-- SPLASH DE ARRANQUE (se desvanece al cargar; cambia claro/navy según el tema) -->
+<div id="appSplash" aria-hidden="true">
+  <div class="sp-inner">
+    <img src="/logo-icon.png" alt="" class="sp-mosaic">
+    <div class="sp-word"><span class="sp-cre">Cretum</span><span class="sp-desk">Desk</span></div>
+    <div class="sp-tag">Partners Platform</div>
+  </div>
+  <div class="sp-foot">by Cretum Partners</div>
+</div>
+<script>
+  (function () {
+    var sp = document.getElementById('appSplash');
+    if (!sp) return;
+    var start = Date.now();
+    function hide() {
+      var wait = Math.max(0, 650 - (Date.now() - start));   // tiempo mínimo visible
+      setTimeout(function () {
+        sp.classList.add('hide');
+        setTimeout(function () { sp.style.display = 'none'; }, 480);
+      }, wait);
+    }
+    if (document.readyState === 'complete') hide();
+    else window.addEventListener('load', hide);
+  })();
+</script>
+
 <!-- LOGIN -->
 <div id="loginWrap">
   <div class="login-bg-shape login-bg-1"></div>
@@ -4428,7 +4498,7 @@ button,input,select{font-family:var(--font)}
   </div>
 </div>
 
-<script src="/i18n.js?v=20260716-install"></script>
-<script src="/app.js?v=20260716-install"></script>
+<script src="/i18n.js?v=20260716-splash"></script>
+<script src="/app.js?v=20260716-splash"></script>
 </body>
 </html>
