@@ -46,6 +46,10 @@
       "use": "@vercel/static"
     },
     {
+      "src": "public/app-icon-1024.png",
+      "use": "@vercel/static"
+    },
+    {
       "src": "public/logo.png",
       "use": "@vercel/static"
     },
@@ -225,6 +229,10 @@
     {
       "src": "/app-icon-512.png",
       "dest": "/public/app-icon-512.png"
+    },
+    {
+      "src": "/app-icon-1024.png",
+      "dest": "/public/app-icon-1024.png"
     },
     {
       "src": "/logo.png",
