@@ -13,6 +13,13 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Cretum Desk">
 <meta name="theme-color" content="#1a3a6b">
+<script>
+  // Captura temprano el evento de instalación (Android/Chrome/escritorio) para
+  // poder disparar el instalador nativo desde el menú. iOS no emite este evento.
+  window.__deferredInstall = null;
+  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); window.__deferredInstall = e; });
+  window.addEventListener('appinstalled', function () { window.__deferredInstall = null; });
+</script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha384-/o6I2CkkWC//PSjvWC/eYN7l3xM3tJm8ZzVkCOfp//W05QcE3mlGskpoHB6XqI+B" crossorigin="anonymous" referrerpolicy="no-referrer">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.0/dist/umd/supabase.min.js" integrity="sha384-DjOvX/sJLsmbMrw4wTvf6l3kiGBjdxyOO6X2MTFwOOXGkjN/mE08BoDzrpaaIjil" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -184,6 +191,11 @@ button,input,select{font-family:var(--font)}
 }
 .header-sys:hover{background:rgba(255,255,255,.22)}
 .header-sys i{font-size:11px}
+/* Fila "Instalar app": clickable; se oculta si ya corre instalada (standalone) */
+.settings-row-install{border-radius:10px;transition:background .15s}
+.settings-row-install:hover{background:var(--navy-ghost)}
+[data-theme="dark"] .settings-row-install:hover{background:rgba(255,255,255,.05)}
+@media (display-mode: standalone){ #installRow{display:none} }
 .sync-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 .sync-dot.saving{background:var(--amber);animation:none}
@@ -2823,6 +2835,13 @@ button,input,select{font-family:var(--font)}
         <button type="button" class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
       </div>
     </div>
+    <div class="settings-row settings-row-install" id="installRow" onclick="installApp()" style="cursor:pointer">
+      <div style="flex:1">
+        <div class="settings-row-lbl" data-i18n>Instalar app</div>
+        <div class="settings-row-sub" data-i18n>Agrega Cretum Desk a tu pantalla de inicio</div>
+      </div>
+      <i class="fa-solid fa-arrow-up-right-from-square" style="color:var(--gray-400);font-size:13px"></i>
+    </div>
     <label class="settings-row">
       <div style="flex:1">
         <div class="settings-row-lbl" data-i18n>Recordatorios por email</div>
@@ -4409,7 +4428,7 @@ button,input,select{font-family:var(--font)}
   </div>
 </div>
 
-<script src="/i18n.js?v=20260716-i18nfull"></script>
-<script src="/app.js?v=20260716-i18nfull"></script>
+<script src="/i18n.js?v=20260716-install"></script>
+<script src="/app.js?v=20260716-install"></script>
 </body>
 </html>

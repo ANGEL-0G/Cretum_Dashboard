@@ -880,6 +880,19 @@ const EN = {
   "Último contacto": "Last contact",
   "Fecha próximo paso": "Next-step date",
   "p. ej. mandar deck y agendar llamada": "e.g. send deck and schedule call",
+
+  // ── Instalar como app ──
+  'Instalar app': 'Install app',
+  'Agrega Cretum Desk a tu pantalla de inicio': 'Add Cretum Desk to your home screen',
+  'La app ya está instalada': 'The app is already installed',
+  'Instalar Cretum Desk': 'Install Cretum Desk',
+  'Abre esta página en Safari (no en Chrome).': 'Open this page in Safari (not Chrome).',
+  'Toca el botón Compartir de Safari.': 'Tap the Share button in Safari.',
+  'Elige "Agregar a inicio".': 'Choose "Add to Home Screen".',
+  'Confirma con "Agregar".': 'Confirm with "Add".',
+  'Abre el menú de tu navegador.': 'Open your browser menu.',
+  'Elige "Instalar app" o "Agregar a pantalla de inicio".': 'Choose "Install app" or "Add to Home Screen".',
+  'Entendido': 'Got it',
 };
 
 let LANG = 'es';

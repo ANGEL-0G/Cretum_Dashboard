@@ -10838,3 +10838,46 @@ async function exportSpacexReport() {
     toast('No se pudo generar el reporte: ' + (e.message || e));
   }
 }
+
+/* ═══════════════════════════════════════════
+   INSTALAR COMO APP (PWA / pantalla de inicio)
+   — beforeinstallprompt se captura temprano en index.html (window.__deferredInstall).
+   — En iOS no hay API: mostramos una guía con los pasos de Safari.
+═══════════════════════════════════════════ */
+function isStandalone() {
+  return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+}
+function isIOS() { return /iphone|ipad|ipod/i.test(navigator.userAgent); }
+
+async function installApp() {
+  if (isStandalone()) { toast(t('La app ya está instalada')); return; }
+  const dp = window.__deferredInstall;
+  if (dp) {                              // Android / Chrome / escritorio: instalador nativo real
+    try { dp.prompt(); await dp.userChoice; } catch (e) {}
+    window.__deferredInstall = null;
+    return;
+  }
+  showInstallHelp();                     // iOS Safari (y navegadores sin API): guía manual
+}
+
+function showInstallHelp() {
+  const ios = isIOS();
+  const steps = ios
+    ? [t('Abre esta página en Safari (no en Chrome).'),
+       t('Toca el botón Compartir de Safari.'),
+       t('Elige "Agregar a inicio".'),
+       t('Confirma con "Agregar".')]
+    : [t('Abre el menú de tu navegador.'),
+       t('Elige "Instalar app" o "Agregar a pantalla de inicio".')];
+  const ol = steps.map(s => `<li style="margin:0 0 10px;line-height:1.5">${s}</li>`).join('');
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(10,15,25,.55);display:flex;align-items:center;justify-content:center;padding:20px';
+  wrap.onclick = (e) => { if (e.target === wrap) wrap.remove(); };
+  wrap.innerHTML = `<div style="background:var(--white);color:var(--gray-900);max-width:360px;width:100%;border-radius:16px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.4);font-family:var(--font)">
+    <div style="font-size:17px;font-weight:600;margin-bottom:14px">${t('Instalar Cretum Desk')}</div>
+    <ol style="padding-left:20px;margin:0 0 18px;font-size:14px;color:var(--gray-700)">${ol}</ol>
+    <button style="width:100%;padding:11px;border:0;border-radius:10px;background:var(--navy);color:#fff;font-size:14px;font-weight:500;cursor:pointer;font-family:var(--font)">${t('Entendido')}</button>
+  </div>`;
+  wrap.querySelector('button').onclick = () => wrap.remove();
+  document.body.appendChild(wrap);
+}
