@@ -7289,6 +7289,8 @@ const FUND_TRACKERS = {
 const LIVE_TRACKER_COMPANIES = [
   { dbId: 27, rowRe: /space exploration|spacex/i, name: 'SpaceX', label: 'SPCX', displayMult: 1 },
   { dbId: 18, rowRe: /neutron|lime/i,             name: 'Lime',   label: 'LIME', displayMult: 1 },
+  // Sin posiciones SPV en la DB → su mark vivo viene de la tabla live_marks (cron Finnhub).
+  { ticker: 'HAWK', rowRe: /hawkeye/i, name: 'HawkEye 360', label: 'HAWK', displayMult: 1 },
 ];
 const _liveMarks = {};        // dbId -> { pps, evB } (en la base de la DB/tracker)
 let _spcxFetchStarted = false;
@@ -7298,21 +7300,36 @@ const SPCX_ROW_RE = /space exploration|spacex/i;
 function fetchSpacexLiveMark() {
   if (_spcxFetchStarted || !sb) return;
   _spcxFetchStarted = true;
+  const arrived = (key, pps, evB) => {
+    if (!pps) return;
+    _liveMarks[key] = { pps, evB };
+    applySpacexLiveToTrackers();
+    const det = document.getElementById('ftDetail');
+    if (det && det.classList.contains('show') && _spcxCurrentFund) {
+      renderFundTrackerDetail(_spcxCurrentFund);
+    }
+  };
   LIVE_TRACKER_COMPANIES.forEach(cfg => {
-    sb.from('investments')
-      .select('current_ev_pps,current_ev_b')
-      .eq('company_id', cfg.dbId)
-      .is('distributed_at', null)
-      .limit(1)
-      .then(({ data, error }) => {
-        if (error || !data || !data.length || !data[0].current_ev_pps) return;
-        _liveMarks[cfg.dbId] = { pps: data[0].current_ev_pps, evB: data[0].current_ev_b };
-        applySpacexLiveToTrackers();
-        const det = document.getElementById('ftDetail');
-        if (det && det.classList.contains('show') && _spcxCurrentFund) {
-          renderFundTrackerDetail(_spcxCurrentFund);
-        }
-      });
+    if (cfg.dbId) {
+      sb.from('investments')
+        .select('current_ev_pps,current_ev_b')
+        .eq('company_id', cfg.dbId)
+        .is('distributed_at', null)
+        .limit(1)
+        .then(({ data, error }) => {
+          if (error || !data || !data.length) return;
+          arrived(cfg.dbId, data[0].current_ev_pps, data[0].current_ev_b);
+        });
+    } else if (cfg.ticker) {
+      sb.from('live_marks')
+        .select('pps,ev_b')
+        .eq('ticker', cfg.ticker)
+        .limit(1)
+        .then(({ data, error }) => {
+          if (error || !data || !data.length) return;
+          arrived(cfg.ticker, data[0].pps, data[0].ev_b);
+        });
+    }
   });
 }
 
@@ -7344,7 +7361,7 @@ function applySpacexLiveToTrackers() {
     if (!f || f.placeholder || !f.active) continue;
     const notes = [];
     for (const cfg of LIVE_TRACKER_COMPANIES) {
-      const mk = _liveMarks[cfg.dbId];
+      const mk = _liveMarks[cfg.dbId || cfg.ticker];
       if (!mk) continue;
       let hit = false;
       for (const row of f.active) {
