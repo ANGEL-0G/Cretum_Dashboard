@@ -66,7 +66,7 @@
   --font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
   --shadow-sm:0 1px 4px rgba(26,58,107,.08);--shadow-md:0 4px 16px rgba(26,58,107,.12);
 }
-html,body{min-height:100%;font-family:var(--font);background:var(--gray-50);color:var(--gray-900);font-size:14px;transition:background-color .25s ease, color .25s ease}
+html,body{min-height:100%;font-family:var(--font);background:var(--gray-50);color:var(--gray-900);font-size:14px;-webkit-text-size-adjust:100%;text-size-adjust:100%;transition:background-color .25s ease, color .25s ease}
 /* Evita el scroll horizontal de toda la página (al deslizar derecha salía
    un espacio en blanco). 'clip' recorta sin crear contenedor de scroll, así
    que NO rompe el sticky ni el scroll interno de tablas (.db-list-wrap). */
@@ -4492,7 +4492,7 @@ button,input,select{font-family:var(--font)}
   </div>
 </div>
 
-<script src="/i18n.js?v=20260716-logo"></script>
-<script src="/app.js?v=20260716-logo"></script>
+<script src="/i18n.js?v=20260716-textsize"></script>
+<script src="/app.js?v=20260716-textsize"></script>
 </body>
 </html>
