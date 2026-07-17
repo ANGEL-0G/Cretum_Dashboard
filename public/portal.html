@@ -79,29 +79,37 @@
   /* ───────── DASHBOARD ───────── */
   #app{display:none;height:100%}
   #frame{width:100%;height:100%;border:0;background:#fff;display:block}
-  /* Botón flotante: transparente hasta hover → rojo y crece */
-  .exit{
-    position:fixed;top:16px;right:16px;z-index:10;
-    background:rgba(255,255,255,.04);color:var(--soft);
-    border:1px solid rgba(120,130,150,.28);border-radius:10px;
-    padding:9px 16px;font-size:13px;font-family:var(--font);cursor:pointer;
-    display:flex;align-items:center;gap:7px;
-    -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
-    transition:all .25s cubic-bezier(.34,1.5,.64,1);
+  /* Control flotante compacto: un botón chico (⋯) que despliega opciones — ocupa
+     mínimo espacio para no tapar el contenido del dashboard. */
+  .pt-fab{position:fixed;top:14px;right:14px;z-index:12}
+  .pt-fab-btn{
+    width:40px;height:40px;border-radius:50%;cursor:pointer;
+    background:rgba(255,255,255,.82);color:var(--navy);
+    border:1px solid rgba(120,130,150,.26);
+    display:flex;align-items:center;justify-content:center;font-size:22px;line-height:0;
+    -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+    box-shadow:0 2px 10px rgba(20,40,80,.12);
+    transition:background .18s,transform .18s,box-shadow .18s;
   }
-  .exit:hover{background:var(--red);border-color:var(--red);color:#fff;transform:scale(1.09);box-shadow:0 8px 22px rgba(192,57,43,.45)}
-  /* Volver al menú (solo si el cliente tiene varios dashboards) */
-  .nav-back{
-    position:fixed;top:16px;left:16px;z-index:10;
-    background:rgba(255,255,255,.85);color:var(--navy);
-    border:1px solid rgba(120,130,150,.28);border-radius:10px;
-    padding:9px 15px;font-size:13px;font-weight:500;font-family:var(--font);cursor:pointer;
-    display:flex;align-items:center;gap:8px;
-    -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
-    transition:background .2s cubic-bezier(.2,.6,.3,1),transform .2s cubic-bezier(.2,.6,.3,1),box-shadow .2s;
+  .pt-fab-btn:hover{background:#fff;transform:translateY(-1px);box-shadow:0 8px 20px rgba(20,40,80,.18)}
+  .pt-fab-btn span{pointer-events:none}
+  .pt-fab-menu{
+    position:absolute;top:48px;right:0;min-width:212px;
+    background:rgba(255,255,255,.97);border:1px solid rgba(120,130,150,.2);border-radius:12px;
+    box-shadow:0 14px 40px rgba(20,40,80,.2);padding:6px;
+    -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+    opacity:0;transform:translateY(-6px) scale(.98);pointer-events:none;transform-origin:top right;
+    transition:opacity .16s ease,transform .16s cubic-bezier(.2,.7,.3,1);
   }
-  .nav-back:hover{background:#fff;transform:translateY(-1px);box-shadow:0 8px 22px rgba(26,58,107,.18)}
-  .nav-back span{font-size:14px;line-height:1}
+  .pt-fab-menu.open{opacity:1;transform:none;pointer-events:auto}
+  .pt-fab-item{
+    display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+    background:none;border:0;border-radius:8px;padding:10px 12px;
+    font-family:var(--font);font-size:13.5px;color:var(--ink);cursor:pointer;
+  }
+  .pt-fab-item:hover{background:rgba(0,0,0,.05)}
+  .pt-fab-item .pt-fab-i{font-size:15px;width:18px;text-align:center;color:var(--navy)}
+  @media (prefers-reduced-motion:reduce){.pt-fab-btn,.pt-fab-menu{transition:none}}
 
   /* Menú de dashboards: respaldo cuando hay varios y no se entró por enlace directo */
   .menu-view{position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;padding:24px;background:#fbfdff;overflow:auto}
@@ -121,7 +129,7 @@
   .menu-item .mi-nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .menu-item .mi-arrow{color:var(--gray-300);font-size:19px;transition:transform .2s cubic-bezier(.2,.6,.3,1),color .2s}
   .menu-item:hover .mi-arrow{color:var(--navy);transform:translateX(3px)}
-  @media (prefers-reduced-motion:reduce){.nav-back,.menu-item,.menu-item .mi-arrow{transition:none}}
+  @media (prefers-reduced-motion:reduce){.menu-item,.menu-item .mi-arrow{transition:none}}
 </style>
 </head>
 <body>
@@ -146,8 +154,15 @@
 
   <!-- App -->
   <div id="app">
-    <button class="nav-back" id="backBtn" onclick="showMenu()" style="display:none"><span aria-hidden="true">☰</span> Mis dashboards</button>
-    <button class="exit" onclick="logout()">Salir</button>
+    <div class="pt-fab" id="ptFab">
+      <button class="pt-fab-btn" id="ptFabBtn" onclick="toggleFabMenu(event)" aria-label="Opciones" aria-haspopup="true" aria-expanded="false" title="Opciones">
+        <span aria-hidden="true">⋯</span>
+      </button>
+      <div class="pt-fab-menu" id="ptFabMenu" role="menu">
+        <button class="pt-fab-item" id="ptFabAll" role="menuitem" onclick="showMenu();closeFabMenu()"><span class="pt-fab-i" aria-hidden="true">▦</span> Ver todos mis dashboards</button>
+        <button class="pt-fab-item" role="menuitem" onclick="logout()"><span class="pt-fab-i" aria-hidden="true">⎋</span> Cerrar sesión</button>
+      </div>
+    </div>
     <!-- Menú de respaldo: solo si el cliente tiene varios dashboards y entra sin enlace directo -->
     <div id="menuView" class="menu-view" style="display:none">
       <div class="menu-card">
@@ -206,7 +221,6 @@
 
   function showEmpty() {
     document.getElementById('menuView').style.display = 'none';
-    document.getElementById('backBtn').style.display = 'none';
     const frame = document.getElementById('frame');
     frame.removeAttribute('src');
     frame.srcdoc = '<p style="font-family:sans-serif;color:#667;padding:40px;text-align:center">No tienes dashboards asignados todavía.</p>';
@@ -222,13 +236,11 @@
        </button>`).join('');
     list.querySelectorAll('.menu-item').forEach(b => b.onclick = () => openDash(b.dataset.slug));
     document.getElementById('menuView').style.display = 'flex';
-    document.getElementById('backBtn').style.display = 'none';
   }
 
   async function openDash(slug) {
     const frame = document.getElementById('frame');
     document.getElementById('menuView').style.display = 'none';
-    document.getElementById('backBtn').style.display = dashboards.length > 1 ? 'flex' : 'none';
     try { if (location.hash.replace(/^#/, '') !== slug) location.hash = slug; } catch (e) {}
     try {
       const d = await api({ action:'view', slug, token });
@@ -250,14 +262,38 @@
 
   function logout() {
     token = '';
+    closeFabMenu();
     document.getElementById('app').style.display = 'none';
     document.getElementById('menuView').style.display = 'none';
-    document.getElementById('backBtn').style.display = 'none';
     document.getElementById('loginView').style.display = 'flex';
     document.getElementById('p').value = '';
     const frame = document.getElementById('frame');
     frame.removeAttribute('src'); frame.srcdoc = '';
   }
+
+  // ── Menú flotante compacto (⋯): Ver todos mis dashboards / Cerrar sesión ──
+  function toggleFabMenu(e) {
+    if (e) e.stopPropagation();
+    const menu = document.getElementById('ptFabMenu');
+    const open = !menu.classList.contains('open');
+    if (open) {
+      const inMenu = document.getElementById('menuView').style.display !== 'none';
+      // "Ver todos" solo tiene sentido si hay varios y estás viendo un dashboard
+      document.getElementById('ptFabAll').style.display = (dashboards.length > 1 && !inMenu) ? 'flex' : 'none';
+    }
+    menu.classList.toggle('open', open);
+    document.getElementById('ptFabBtn').setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  function closeFabMenu() {
+    const menu = document.getElementById('ptFabMenu');
+    if (menu) menu.classList.remove('open');
+    const btn = document.getElementById('ptFabBtn');
+    if (btn) btn.setAttribute('aria-expanded', 'false');
+  }
+  document.addEventListener('click', (e) => {
+    const fab = document.getElementById('ptFab');
+    if (fab && !fab.contains(e.target)) closeFabMenu();
+  });
 </script>
 </body>
 </html>
