@@ -898,6 +898,11 @@ const EN = {
   'Enlace del portal': 'Portal link',
   'Título de Usuario': 'User title',
   'Nombre del Cliente': 'Client name',
+  'Crear dashboard': 'Create dashboard',
+  'Sube un HTML o PDF nuevo': 'Upload a new HTML or PDF',
+  'Crear usuario': 'Create user',
+  'Da acceso a un cliente': 'Give a client access',
+  'Consultar datos existentes': 'View existing data',
 };
 
 let LANG = 'es';

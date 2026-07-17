@@ -3731,6 +3731,32 @@ button,input,select{font-family:var(--font)}
   [data-theme="dark"] .pt-sharebar{background:rgba(93,143,245,.08);border-color:rgba(93,143,245,.18)}
   .pt-intro{font-size:13px;color:var(--ink-soft,#778);margin:0 0 18px;max-width:760px;line-height:1.55}
 
+  /* Hub de acciones — 3 tarjetas (crear dashboard / crear usuario / consultar) */
+  .pt-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:0}
+  .pt-action{display:flex;align-items:center;gap:13px;text-align:left;width:100%;
+    background:var(--white,#fff);border:1px solid var(--line,#e3e8f0);border-radius:14px;padding:16px;
+    cursor:pointer;font-family:inherit;box-shadow:var(--shadow-sm,0 1px 4px rgba(26,58,107,.06));
+    transition:border-color .18s cubic-bezier(.23,1,.32,1),box-shadow .18s cubic-bezier(.23,1,.32,1),transform .12s cubic-bezier(.23,1,.32,1);
+    animation:ptCardIn .3s cubic-bezier(.23,1,.32,1) both}
+  .pt-action:nth-child(1){animation-delay:.02s}
+  .pt-action:nth-child(2){animation-delay:.07s}
+  .pt-action:nth-child(3){animation-delay:.12s}
+  @media (hover:hover) and (pointer:fine){.pt-action:hover{border-color:var(--navy-light,var(--navy));box-shadow:var(--shadow-md,0 8px 20px -10px rgba(15,23,42,.18));transform:translateY(-2px)}}
+  .pt-action:active{transform:scale(.98)}
+  .pt-action-ico{flex-shrink:0;width:44px;height:44px;display:grid;place-items:center;border-radius:12px;background:var(--navy-pale,#e8eef7);color:var(--navy);font-size:18px}
+  .pt-action-ico-user{background:var(--green-bg,#e8f7f0);color:var(--green,#1a8c5b)}
+  .pt-action-ico-data{background:var(--amber-bg,#fdf3dc);color:var(--amber,#b07d20)}
+  .pt-action-tx{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+  .pt-action-t{font-size:14.5px;font-weight:600;color:var(--gray-900)}
+  .pt-action-d{font-size:12px;color:var(--gray-500,#667)}
+  .pt-action-chev{margin-left:auto;color:var(--gray-300,#c4cad8);font-size:12px;transition:transform .2s cubic-bezier(.23,1,.32,1)}
+  .pt-action[aria-expanded="true"]{border-color:var(--navy-light,var(--navy))}
+  .pt-action[aria-expanded="true"] .pt-action-chev{transform:rotate(180deg);color:var(--navy)}
+  .pt-data{margin-top:18px;animation:ptDataIn .26s cubic-bezier(.23,1,.32,1)}
+  @keyframes ptCardIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  @keyframes ptDataIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.pt-action{animation:none} .pt-data{animation:none} .pt-action:hover{transform:none} .pt-action-chev{transition:none}}
+
   .pt-grid{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start}
   .pt-col{flex:1;min-width:300px}
   .pt-col h3{font-size:14px;font-weight:600;color:var(--navy);margin:0 0 12px;display:flex;align-items:center;gap:8px;justify-content:space-between}
@@ -3920,20 +3946,32 @@ button,input,select{font-family:var(--font)}
       <a class="btn-primary" id="ptOpenLink" href="/portal" target="_blank" rel="noopener" style="text-decoration:none"><i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir portal</a>
     </div>
   </div>
-  <p class="pt-intro">
-    Sube dashboards (HTML o PDF) y crea un acceso por cliente: cada quien entra solo a lo suyo.
-    Comparte el enlace de arriba junto con su usuario y contraseña. Esta zona es independiente de tu sesión interna.
-  </p>
-  <div class="pt-grid">
-    <div class="pt-col">
-      <h3><span><i class="fa-solid fa-display"></i> Dashboards</span>
-        <button class="btn-primary" id="ptNewDashBtn" type="button" onclick="ptDashOpen()" style="padding:6px 12px;font-size:12.5px"><i class="fa-solid fa-plus"></i> Nuevo</button></h3>
-      <div class="pt-list" id="ptDashList"></div>
-    </div>
-    <div class="pt-col">
-      <h3><span><i class="fa-solid fa-key"></i> Accesos</span>
-        <button class="btn-primary" id="ptNewUserBtn" type="button" onclick="ptUserOpen()" style="padding:6px 12px;font-size:12.5px"><i class="fa-solid fa-user-plus"></i> Nuevo</button></h3>
-      <div class="pt-list" id="ptUserList"></div>
+  <div class="pt-actions">
+    <button class="pt-action" id="ptActionDash" type="button" onclick="ptDashOpen()">
+      <div class="pt-action-ico"><i class="fa-solid fa-plus"></i></div>
+      <div class="pt-action-tx"><span class="pt-action-t">Crear dashboard</span><span class="pt-action-d">Sube un HTML o PDF nuevo</span></div>
+    </button>
+    <button class="pt-action" id="ptActionUser" type="button" onclick="ptUserOpen()">
+      <div class="pt-action-ico pt-action-ico-user"><i class="fa-solid fa-user-plus"></i></div>
+      <div class="pt-action-tx"><span class="pt-action-t">Crear usuario</span><span class="pt-action-d">Da acceso a un cliente</span></div>
+    </button>
+    <button class="pt-action" id="ptDataBtn" type="button" onclick="ptToggleData()" aria-expanded="false" aria-controls="ptData">
+      <div class="pt-action-ico pt-action-ico-data"><i class="fa-solid fa-folder-open"></i></div>
+      <div class="pt-action-tx"><span class="pt-action-t">Consultar datos existentes</span><span class="pt-action-d" id="ptDataCount">—</span></div>
+      <i class="fa-solid fa-chevron-down pt-action-chev"></i>
+    </button>
+  </div>
+
+  <div class="pt-data" id="ptData" hidden>
+    <div class="pt-grid">
+      <div class="pt-col">
+        <h3><span><i class="fa-solid fa-display"></i> Dashboards</span></h3>
+        <div class="pt-list" id="ptDashList"></div>
+      </div>
+      <div class="pt-col">
+        <h3><span><i class="fa-solid fa-key"></i> Accesos</span></h3>
+        <div class="pt-list" id="ptUserList"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -4467,7 +4505,7 @@ button,input,select{font-family:var(--font)}
   </div>
 </div>
 
-<script src="/i18n.js?v=20260716-portalux"></script>
-<script src="/app.js?v=20260716-portalux"></script>
+<script src="/i18n.js?v=20260716-portalhub"></script>
+<script src="/app.js?v=20260716-portalhub"></script>
 </body>
 </html>

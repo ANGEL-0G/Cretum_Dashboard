@@ -2963,19 +2963,44 @@ async function loadPortalAdmin() {
   const base = portalOrg === 'mvp' ? '/portal-mvp' : '/portal';
   const openLink = document.getElementById('ptOpenLink'); if (openLink) openLink.href = base;
   const urlText = document.getElementById('ptUrlText'); if (urlText) urlText.textContent = 'cretumdesk.com' + base;
-  // Botones "Nuevo": solo editores/admins (viewers ven la lista en modo lectura)
+  // Acciones de crear: solo editores/admins (viewers solo consultan)
   const manage = ptCanManage();
-  const nd = document.getElementById('ptNewDashBtn'); if (nd) nd.style.display = manage ? '' : 'none';
-  const nu = document.getElementById('ptNewUserBtn'); if (nu) nu.style.display = manage ? '' : 'none';
+  const ad = document.getElementById('ptActionDash'); if (ad) ad.style.display = manage ? '' : 'none';
+  const au = document.getElementById('ptActionUser'); if (au) au.style.display = manage ? '' : 'none';
   const dl = document.getElementById('ptDashList'), ul = document.getElementById('ptUserList');
   if (dl) dl.innerHTML = '<div class="pt-empty"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
   try {
     const d = await portalApi({ action: 'admin_list' });
     ptDashboards = d.dashboards || []; ptUsers = d.users || []; ptAccess = d.access || [];
-    renderPtDashboards(); renderPtUsers();
+    renderPtDashboards(); renderPtUsers(); ptUpdateDataCount();
   } catch (err) {
     if (dl) dl.innerHTML = `<div class="pt-empty">Error: ${escapeHtml(err.message)}</div>`;
   }
+}
+
+// Muestra/oculta la sección "Datos existentes" (listas de dashboards y accesos).
+function ptToggleData() {
+  const data = document.getElementById('ptData');
+  const btn = document.getElementById('ptDataBtn');
+  if (!data) return;
+  const show = data.hasAttribute('hidden');
+  if (show) {
+    data.removeAttribute('hidden');
+    if (btn) btn.setAttribute('aria-expanded', 'true');
+    const smooth = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+    try { data.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'nearest' }); } catch (e) {}
+  } else {
+    data.setAttribute('hidden', '');
+    if (btn) btn.setAttribute('aria-expanded', 'false');
+  }
+}
+
+// Resumen en la tarjeta "Consultar datos existentes": cuántos hay.
+function ptUpdateDataCount() {
+  const el = document.getElementById('ptDataCount');
+  if (!el) return;
+  const d = ptDashboards.length, u = ptUsers.length;
+  el.textContent = `${d} dashboard${d === 1 ? '' : 's'} · ${u} acceso${u === 1 ? '' : 's'}`;
 }
 
 function renderPtDashboards() {
