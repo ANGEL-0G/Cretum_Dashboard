@@ -82,21 +82,27 @@
   /* Control flotante compacto: un botón chico (⋯) que despliega opciones — ocupa
      mínimo espacio para no tapar el contenido del dashboard. */
   .pt-fab{position:fixed;top:calc(14px + env(safe-area-inset-top,0px));left:14px;z-index:12}
+  /* Pastilla glass: translúcida + desenfoque → deja ver el contenido detrás */
   .pt-fab-btn{
-    width:44px;height:44px;border-radius:50%;cursor:pointer;
-    background:#fff;color:var(--navy);
-    border:1px solid rgba(120,130,150,.35);
-    display:flex;align-items:center;justify-content:center;font-size:22px;line-height:0;
-    box-shadow:0 3px 14px rgba(20,40,80,.22),0 0 0 1px rgba(255,255,255,.6);
+    display:flex;align-items:center;gap:8px;cursor:pointer;
+    padding:9px 15px;border-radius:999px;
+    background:rgba(255,255,255,.5);color:var(--navy);
+    border:1px solid rgba(255,255,255,.55);
+    font-family:var(--font);font-size:13.5px;font-weight:600;line-height:1;
+    -webkit-backdrop-filter:blur(16px) saturate(180%);backdrop-filter:blur(16px) saturate(180%);
+    box-shadow:0 4px 18px rgba(20,40,80,.18);
     transition:background .18s,color .18s,transform .12s,box-shadow .18s,border-color .18s;
   }
-  .pt-fab-btn:hover{box-shadow:0 6px 20px rgba(20,40,80,.3)}
-  .pt-fab-btn:active{transform:scale(.94)}
-  /* Al abrir/presionar se ilumina con el color de marca (navy en Cretum) */
+  .pt-fab-btn:hover{background:rgba(255,255,255,.66)}
+  .pt-fab-btn:active{transform:scale(.97)}
+  /* Al abrir se ilumina con el color de marca (navy en Cretum) */
   .pt-fab-btn[aria-expanded="true"]{background:var(--navy);color:#fff;border-color:var(--navy);box-shadow:0 8px 24px rgba(26,58,107,.45)}
   .pt-fab-btn span{pointer-events:none}
+  .pt-fab-ic{font-size:14px}
+  .pt-fab-ch{font-size:11px;opacity:.75;transition:transform .2s cubic-bezier(.2,.7,.3,1)}
+  .pt-fab-btn[aria-expanded="true"] .pt-fab-ch{transform:rotate(180deg)}
   .pt-fab-menu{
-    position:absolute;top:52px;left:0;min-width:248px;max-width:min(300px,86vw);max-height:min(70vh,440px);overflow-y:auto;
+    position:absolute;top:48px;left:0;min-width:248px;max-width:min(300px,86vw);max-height:min(70vh,440px);overflow-y:auto;
     background:rgba(255,255,255,.98);border:1px solid rgba(120,130,150,.2);border-radius:14px;
     box-shadow:0 14px 40px rgba(20,40,80,.22);padding:6px;
     -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
@@ -168,8 +174,10 @@
   <!-- App -->
   <div id="app">
     <div class="pt-fab" id="ptFab">
-      <button class="pt-fab-btn" id="ptFabBtn" onclick="toggleFabMenu(event)" aria-label="Opciones" aria-haspopup="true" aria-expanded="false" title="Opciones">
-        <span aria-hidden="true">⋯</span>
+      <button class="pt-fab-btn" id="ptFabBtn" onclick="toggleFabMenu(event)" aria-label="Mis dashboards" aria-haspopup="true" aria-expanded="false" title="Mis dashboards">
+        <span class="pt-fab-ic" aria-hidden="true">▦</span>
+        <span class="pt-fab-lbl">Mis Dashboards</span>
+        <span class="pt-fab-ch" aria-hidden="true">▾</span>
       </button>
       <div class="pt-fab-menu" id="ptFabMenu" role="menu"></div>
     </div>
