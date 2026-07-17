@@ -195,6 +195,7 @@
 <script>
   let token = '';
   let dashboards = [];
+  let currentSlug = '';   // dashboard abierto; NO escribimos #slug en la URL al navegar
 
   // Disuasivo de descarga: sin menú contextual (Guardar como / Guardar imagen).
   document.addEventListener('contextmenu', e => e.preventDefault());
@@ -259,7 +260,7 @@
   async function openDash(slug) {
     const frame = document.getElementById('frame');
     document.getElementById('menuView').style.display = 'none';
-    try { if (location.hash.replace(/^#/, '') !== slug) location.hash = slug; } catch (e) {}
+    currentSlug = slug;
     try {
       const d = await api({ action:'view', slug, token });
       if (d.kind === 'file' && d.url) {
@@ -280,7 +281,9 @@
 
   function logout() {
     token = '';
+    currentSlug = '';
     closeFabMenu();
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}   // limpia el #slug
     document.getElementById('app').style.display = 'none';
     document.getElementById('menuView').style.display = 'none';
     document.getElementById('loginView').style.display = 'flex';
@@ -293,7 +296,7 @@
   function buildFabMenu() {
     const menu = document.getElementById('ptFabMenu');
     const inMenu = document.getElementById('menuView').style.display !== 'none';
-    const cur = decodeURIComponent((location.hash || '').replace(/^#/, '')).trim();
+    const cur = currentSlug;
     let html = '';
     if (dashboards.length > 1) {
       html += '<div class="pt-fab-hd">Mis dashboards</div>';
