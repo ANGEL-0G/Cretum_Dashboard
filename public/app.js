@@ -3176,7 +3176,7 @@ function ptDashOpen(id) {
   document.getElementById('ptDashFile').value = '';
   document.getElementById('ptFileLabel').textContent = 'Elige un archivo PDF o HTML…';
   const fc = document.getElementById('ptFileCurrent'); fc.style.display = 'none'; fc.textContent = '';
-  ptSetKind('html');
+  ptSetKind('file');   // por defecto en nuevos: subir archivo (opción más usada)
   const msg = document.getElementById('ptDashMsg'); msg.textContent = ''; msg.className = 'camp-modal-msg';
   const pw = document.getElementById('ptDashPreviewWrap'); if (pw) pw.style.display = 'none';
   const pb = document.getElementById('ptPrevBtn'); if (pb) pb.innerHTML = '<i class="fa-solid fa-eye"></i> Vista previa';
