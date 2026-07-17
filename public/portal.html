@@ -98,8 +98,8 @@
   @media (prefers-reduced-motion:reduce){.pt-fab-btn{transition:none}}
 
   /* Menú de dashboards: respaldo cuando hay varios y no se entró por enlace directo */
-  .menu-view{position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;padding:24px;background:#fbfdff;overflow:auto}
-  .menu-card{width:460px;max-width:100%;text-align:center}
+  .menu-view{position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;padding:24px;background:#fbfdff;overflow:auto;animation:pvMenuIn .26s ease-out}
+  .menu-card{width:460px;max-width:100%;text-align:center;animation:pvCardIn .34s cubic-bezier(.23,1,.32,1)}
   .menu-logo{width:180px;max-width:70%;display:block;margin:0 auto 22px;filter:drop-shadow(0 4px 12px rgba(26,58,107,.14))}
   .menu-title{font-size:12.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gray-400);margin-bottom:20px}
   .menu-list{display:flex;flex-direction:column;gap:10px}
@@ -109,6 +109,7 @@
     padding:15px 17px;font-size:15px;font-weight:500;color:var(--ink);font-family:var(--font);cursor:pointer;
     box-shadow:0 2px 8px rgba(30,64,130,.05);
     transition:border-color .2s cubic-bezier(.2,.6,.3,1),transform .2s cubic-bezier(.2,.6,.3,1),box-shadow .2s;
+    animation:pvItemIn .34s cubic-bezier(.23,1,.32,1) backwards;
   }
   .menu-item:hover{border-color:var(--navy);transform:translateY(-2px);box-shadow:0 10px 26px rgba(30,64,130,.12)}
   .menu-item .mi-ico{width:38px;height:38px;flex:0 0 38px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--navy),var(--navy-mid));color:#fff;font-size:15px}
@@ -118,7 +119,22 @@
   .menu-logout{margin-top:18px;background:none;border:0;color:var(--soft);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;padding:9px 14px;border-radius:9px;transition:color .15s,background .15s}
   .menu-logout:hover{color:var(--red);background:rgba(0,0,0,.04)}
   .menu-empty{font-size:13px;color:var(--soft);padding:6px 0 2px}
-  @media (prefers-reduced-motion:reduce){.menu-item,.menu-item .mi-arrow{transition:none}}
+  /* Transiciones de navegación (menú ↔ dashboard) */
+  .menu-view.closing{animation:pvMenuOut .19s ease-out forwards}
+  .menu-item:nth-child(1){animation-delay:.03s}
+  .menu-item:nth-child(2){animation-delay:.08s}
+  .menu-item:nth-child(3){animation-delay:.13s}
+  .menu-item:nth-child(4){animation-delay:.18s}
+  .menu-item:nth-child(5){animation-delay:.23s}
+  .menu-item:nth-child(n+6){animation-delay:.27s}
+  @keyframes pvMenuIn{from{opacity:0}to{opacity:1}}
+  @keyframes pvMenuOut{from{opacity:1}to{opacity:0}}
+  @keyframes pvCardIn{from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:none}}
+  @keyframes pvItemIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){
+    .menu-item,.menu-item .mi-arrow{transition:none}
+    .menu-view,.menu-card,.menu-item,.menu-view.closing{animation:none}
+  }
 </style>
 </head>
 <body>
@@ -228,9 +244,18 @@
     document.getElementById('ptFab').style.display = 'none';   // en el menú no hace falta el botón "← Menú"
   }
 
+  // Oculta el menú con un fade suave, revelando el dashboard detrás.
+  function hideMenuView() {
+    const mv = document.getElementById('menuView');
+    if (mv.style.display === 'none') return;
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) { mv.style.display = 'none'; return; }
+    mv.classList.add('closing');
+    setTimeout(() => { mv.style.display = 'none'; mv.classList.remove('closing'); }, 190);
+  }
+
   async function openDash(slug) {
     const frame = document.getElementById('frame');
-    document.getElementById('menuView').style.display = 'none';
+    hideMenuView();
     document.getElementById('ptFab').style.display = '';       // mostrar botón "← Menú" al ver un dashboard
     currentSlug = slug;
     try {
