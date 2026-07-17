@@ -1134,20 +1134,9 @@ function setView(v) {
   tkMoveViewSlider();
   render();
 }
-const TK_VIEWS = {
-  lista:     { label: 'Lista',        ico: 'fa-list' },
-  kanban:    { label: 'Kanban',       ico: 'fa-table-columns' },
-  timeline:  { label: 'Timeline',     ico: 'fa-timeline' },
-  proyectos: { label: 'Por proyecto', ico: 'fa-layer-group' },
-};
-
 function syncViewButtons() {
   const isNotas = tkView === 'notas';
-  const v = TK_VIEWS[tkView] || TK_VIEWS.kanban;
-  const lbl = document.getElementById('viewPickLbl');
-  const ico = document.getElementById('viewPickIco');
-  if (lbl) lbl.textContent = v.label;
-  if (ico) ico.className = 'fa-solid ' + v.ico + ' tk-view-lead';
+  // El botón dice fijo "Tipo de vista"; la vista activa se marca dentro del menú.
   document.getElementById('viewPickBtn')?.classList.toggle('active', !isNotas);
   document.getElementById('notesViewBtn')?.classList.toggle('active', isNotas);
   document.querySelectorAll('.tk-view-opt').forEach(o =>
