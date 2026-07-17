@@ -393,19 +393,37 @@ button,input,select{font-family:var(--font)}
 .tk-new-btn:hover{background:var(--navy-mid);box-shadow:0 6px 18px rgba(26,58,107,.3);transform:translateY(-1px)}
 .tk-new-btn:active{transform:translateY(0) scale(.99)}
 .tk-new-btn i{font-size:12px}
-.tk-view-toggle{position:relative;display:flex;gap:2px;background:var(--gray-100);border-radius:var(--r-md);padding:3px;margin-left:auto}
-.tk-view-slider{
-  position:absolute;top:3px;bottom:3px;left:3px;width:0;
-  background:var(--white);border-radius:var(--r-sm);box-shadow:var(--shadow-sm);
-  transition:left .18s cubic-bezier(.4,0,.2,1),width .18s cubic-bezier(.4,0,.2,1);
-  z-index:0;pointer-events:none;
+/* Vistas agrupadas en un desplegable + botón aparte "Notas Personales" */
+.tk-view-toggle{display:flex;align-items:center;gap:8px;margin-left:auto}
+.tk-view-picker{position:relative}
+.tk-view-pick-btn,.tk-notes-btn{
+  display:flex;align-items:center;gap:8px;background:var(--white);border:1px solid var(--gray-200);
+  border-radius:var(--r-md);padding:8px 13px;font-family:var(--font);font-size:13px;font-weight:500;
+  color:var(--gray-700);cursor:pointer;transition:border-color .15s,background .15s,color .15s;white-space:nowrap;
 }
-.tk-view-btn{
-  position:relative;z-index:1;
-  padding:7px 12px;border-radius:var(--r-sm);border:none;
-  background:transparent;color:var(--gray-400);cursor:pointer;transition:color .15s;
+.tk-view-pick-btn:hover,.tk-notes-btn:hover{border-color:var(--navy-light,var(--navy))}
+.tk-view-pick-btn .tk-view-chev{font-size:10px;color:var(--gray-400);margin-left:2px;transition:transform .2s cubic-bezier(.23,1,.32,1)}
+.tk-view-pick-btn[aria-expanded="true"] .tk-view-chev{transform:rotate(180deg)}
+.tk-view-pick-btn.active{border-color:var(--navy);color:var(--navy)}
+.tk-view-pick-btn .tk-view-lead{color:var(--navy)}
+.tk-view-menu{
+  position:absolute;top:calc(100% + 6px);left:0;min-width:180px;z-index:50;
+  background:var(--white);border:1px solid var(--gray-200);border-radius:var(--r-lg);box-shadow:var(--shadow-md);padding:5px;
+  opacity:0;transform:translateY(-6px) scale(.98);pointer-events:none;transform-origin:top left;
+  transition:opacity .15s ease,transform .15s cubic-bezier(.23,1,.32,1);
 }
-.tk-view-btn.on{color:var(--navy)}   /* el fondo blanco lo da el slider deslizante */
+.tk-view-menu.open{opacity:1;transform:none;pointer-events:auto}
+.tk-view-opt{
+  display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:0;border-radius:8px;
+  padding:9px 11px;font-family:var(--font);font-size:13px;color:var(--gray-700);cursor:pointer;transition:background .13s
+}
+.tk-view-opt i{width:16px;text-align:center;color:var(--gray-400)}
+.tk-view-opt:hover{background:var(--gray-50)}
+.tk-view-opt.on{background:var(--navy-ghost);color:var(--navy);font-weight:500}
+.tk-view-opt.on i{color:var(--navy)}
+.tk-notes-btn.active{background:var(--navy);border-color:var(--navy);color:#fff}
+.tk-notes-btn.active i{color:#fff}
+@media (prefers-reduced-motion:reduce){.tk-view-menu,.tk-view-pick-btn .tk-view-chev{transition:none}}
 
 /* ── STATS ── */
 /* Stats esbeltas: número + etiqueta en una línea, completadas atenuadas */
@@ -3036,22 +3054,20 @@ button,input,select{font-family:var(--font)}
         <i class="fa-solid fa-plus"></i> Nueva tarea
       </button>
       <div class="tk-view-toggle" id="viewToggle">
-        <div class="tk-view-slider" id="tkViewSlider"></div>
-        <button class="tk-view-btn" id="vbtn-lista" onclick="setView('lista')" title="Lista">
-          <i class="fa-solid fa-list"></i>
-        </button>
-        <button class="tk-view-btn on" id="vbtn-kanban" onclick="setView('kanban')" title="Kanban">
-          <i class="fa-solid fa-table-columns"></i>
-        </button>
-        <button class="tk-view-btn" id="vbtn-timeline" onclick="setView('timeline')" title="Timeline">
-          <i class="fa-solid fa-timeline"></i>
-        </button>
-        <button class="tk-view-btn" id="vbtn-proyectos" onclick="setView('proyectos')" title="Por proyecto">
-          <i class="fa-solid fa-layer-group"></i>
-        </button>
-        <button class="tk-view-btn" id="vbtn-notas" onclick="setView('notas')" title="Notas">
-          <i class="fa-solid fa-note-sticky"></i>
-        </button>
+        <div class="tk-view-picker">
+          <button class="tk-view-pick-btn" id="viewPickBtn" onclick="toggleViewMenu(event)" aria-haspopup="true" aria-expanded="false" title="Elegir vista">
+            <i class="fa-solid fa-table-columns tk-view-lead" id="viewPickIco"></i>
+            <span id="viewPickLbl">Kanban</span>
+            <i class="fa-solid fa-chevron-down tk-view-chev"></i>
+          </button>
+          <div class="tk-view-menu" id="viewMenu" role="menu">
+            <button class="tk-view-opt" data-view="lista" role="menuitem" onclick="pickView('lista')"><i class="fa-solid fa-list"></i> Lista</button>
+            <button class="tk-view-opt" data-view="kanban" role="menuitem" onclick="pickView('kanban')"><i class="fa-solid fa-table-columns"></i> Kanban</button>
+            <button class="tk-view-opt" data-view="timeline" role="menuitem" onclick="pickView('timeline')"><i class="fa-solid fa-timeline"></i> Timeline</button>
+            <button class="tk-view-opt" data-view="proyectos" role="menuitem" onclick="pickView('proyectos')"><i class="fa-solid fa-layer-group"></i> Por proyecto</button>
+          </div>
+        </div>
+        <button class="tk-notes-btn" id="notesViewBtn" onclick="setView('notas')" title="Notas Personales"><i class="fa-solid fa-note-sticky"></i> Notas Personales</button>
       </div>
     </div>
 
@@ -4536,7 +4552,7 @@ button,input,select{font-family:var(--font)}
   </div>
 </div>
 
-<script src="/i18n.js?v=20260716-notes"></script>
-<script src="/app.js?v=20260716-notes"></script>
+<script src="/i18n.js?v=20260716-viewmenu"></script>
+<script src="/app.js?v=20260716-viewmenu"></script>
 </body>
 </html>

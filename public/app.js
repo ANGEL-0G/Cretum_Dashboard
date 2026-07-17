@@ -1134,10 +1134,44 @@ function setView(v) {
   tkMoveViewSlider();
   render();
 }
+const TK_VIEWS = {
+  lista:     { label: 'Lista',        ico: 'fa-list' },
+  kanban:    { label: 'Kanban',       ico: 'fa-table-columns' },
+  timeline:  { label: 'Timeline',     ico: 'fa-timeline' },
+  proyectos: { label: 'Por proyecto', ico: 'fa-layer-group' },
+};
+
 function syncViewButtons() {
-  ['lista', 'kanban', 'timeline', 'proyectos', 'notas'].forEach(k =>
-    document.getElementById('vbtn-' + k)?.classList.toggle('on', k === tkView));
+  const isNotas = tkView === 'notas';
+  const v = TK_VIEWS[tkView] || TK_VIEWS.kanban;
+  const lbl = document.getElementById('viewPickLbl');
+  const ico = document.getElementById('viewPickIco');
+  if (lbl) lbl.textContent = v.label;
+  if (ico) ico.className = 'fa-solid ' + v.ico + ' tk-view-lead';
+  document.getElementById('viewPickBtn')?.classList.toggle('active', !isNotas);
+  document.getElementById('notesViewBtn')?.classList.toggle('active', isNotas);
+  document.querySelectorAll('.tk-view-opt').forEach(o =>
+    o.classList.toggle('on', o.dataset.view === tkView));
 }
+
+// Desplegable de vistas
+function toggleViewMenu(e) {
+  if (e) e.stopPropagation();
+  const m = document.getElementById('viewMenu');
+  const open = !m.classList.contains('open');
+  m.classList.toggle('open', open);
+  document.getElementById('viewPickBtn')?.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+function closeViewMenu() {
+  const m = document.getElementById('viewMenu');
+  if (m) m.classList.remove('open');
+  document.getElementById('viewPickBtn')?.setAttribute('aria-expanded', 'false');
+}
+function pickView(v) { closeViewMenu(); setView(v); }
+document.addEventListener('click', (e) => {
+  const p = document.querySelector('.tk-view-picker');
+  if (p && !p.contains(e.target)) closeViewMenu();
+});
 
 /* ═══════════════════════════════════════════
    NOTAS PERSONALES (por blocs) — privadas por usuario (RLS en user_notes)
