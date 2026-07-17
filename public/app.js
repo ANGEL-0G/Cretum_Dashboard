@@ -2984,13 +2984,18 @@ function renderPtDashboards() {
   const base = portalOrg === 'mvp' ? '/portal-mvp' : '/portal';
   const manage = ptCanManage();
   el.innerHTML = ptDashboards.map(d => `<div class="pt-item">
-    <div class="nm">${escapeHtml(d.title)}</div>
-    <div class="sub">${base} · ${escapeHtml(d.slug)}</div>
+    <div class="pt-item-main">
+      <div class="pt-ico"><i class="fa-solid fa-display"></i></div>
+      <div class="pt-item-text">
+        <div class="nm">${escapeHtml(d.title)}</div>
+        <div class="sub">${base}#${escapeHtml(d.slug)}</div>
+      </div>
+    </div>
     <div class="acts">
-      <button class="cdd-btn" onclick="ptDashView(${d.id})"><i class="fa-solid fa-eye"></i> Previsualizar</button>
-      <button class="cdd-btn" onclick="ptCopyLink('${base}', '${escapeHtml(d.slug)}', this)"><i class="fa-solid fa-link"></i> Copiar enlace</button>
-      ${manage ? `<button class="cdd-btn" onclick="ptDashOpen(${d.id})"><i class="fa-solid fa-pen"></i> Editar</button>
-      <button class="cdd-btn camp-btn-danger" onclick="ptDashDelete(${d.id})"><i class="fa-solid fa-trash"></i> Eliminar</button>` : ''}
+      <button class="pt-act-primary" onclick="ptCopyLink('${base}', '${escapeHtml(d.slug)}', this)"><i class="fa-solid fa-link"></i> Copiar enlace</button>
+      <button class="pt-act-ico" title="Previsualizar" aria-label="Previsualizar" onclick="ptDashView(${d.id})"><i class="fa-solid fa-eye"></i></button>
+      ${manage ? `<button class="pt-act-ico" title="Editar" aria-label="Editar" onclick="ptDashOpen(${d.id})"><i class="fa-solid fa-pen"></i></button>
+      <button class="pt-act-ico danger" title="Eliminar" aria-label="Eliminar" onclick="ptDashDelete(${d.id})"><i class="fa-solid fa-trash"></i></button>` : ''}
     </div>
   </div>`).join('');
 }
@@ -3005,6 +3010,16 @@ function ptCopyLink(base, slug, btn) {
   } else { prompt('Copia el enlace:', url); }
 }
 
+// Copia el enlace GENERAL del portal (sin dashboard específico), según la org activa.
+function ptCopyPortalLink(btn) {
+  const base = portalOrg === 'mvp' ? '/portal-mvp' : '/portal';
+  const url = `${location.origin}${base}`;
+  const done = () => { if (btn) { const o = btn.innerHTML; btn.innerHTML = '<i class="fa-solid fa-check"></i> Copiado'; setTimeout(() => { btn.innerHTML = o; }, 1600); } };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(done).catch(() => { prompt('Copia el enlace:', url); });
+  } else { prompt('Copia el enlace:', url); }
+}
+
 function renderPtUsers() {
   const el = document.getElementById('ptUserList');
   if (!ptUsers.length) { el.innerHTML = `<div class="pt-empty">Aún no hay accesos.${ptCanManage() ? ' Crea el primero.' : ''}</div>`; return; }
@@ -3013,11 +3028,16 @@ function renderPtUsers() {
   el.innerHTML = ptUsers.map(u => {
     const n = countFor(u.id);
     return `<div class="pt-item">
-      <div class="nm">${escapeHtml(u.label || u.username)} ${u.active ? '' : '<span class="pt-badge off">inactivo</span>'}</div>
-      <div class="sub">usuario: ${escapeHtml(u.username)} · <span class="pt-badge">${n} dashboard${n === 1 ? '' : 's'}</span></div>
+      <div class="pt-item-main">
+        <div class="pt-ico pt-ico-user"><i class="fa-solid fa-user"></i></div>
+        <div class="pt-item-text">
+          <div class="nm">${escapeHtml(u.label || u.username)} ${u.active ? '' : '<span class="pt-badge off">inactivo</span>'}</div>
+          <div class="sub">usuario: ${escapeHtml(u.username)} · <span class="pt-badge">${n} dashboard${n === 1 ? '' : 's'}</span></div>
+        </div>
+      </div>
       ${manage ? `<div class="acts">
-        <button class="cdd-btn" onclick="ptUserOpen(${u.id})"><i class="fa-solid fa-pen"></i> Editar</button>
-        <button class="cdd-btn camp-btn-danger" onclick="ptUserDelete(${u.id})"><i class="fa-solid fa-trash"></i> Eliminar</button>
+        <button class="pt-act-ico" title="Editar" aria-label="Editar" onclick="ptUserOpen(${u.id})"><i class="fa-solid fa-pen"></i></button>
+        <button class="pt-act-ico danger" title="Eliminar" aria-label="Eliminar" onclick="ptUserDelete(${u.id})"><i class="fa-solid fa-trash"></i></button>
       </div>` : ''}
     </div>`;
   }).join('');

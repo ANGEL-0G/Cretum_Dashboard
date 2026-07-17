@@ -893,6 +893,11 @@ const EN = {
   'Abre el menú de tu navegador.': 'Open your browser menu.',
   'Elige "Instalar app" o "Agregar a pantalla de inicio".': 'Choose "Install app" or "Add to Home Screen".',
   'Entendido': 'Got it',
+
+  // ── Portal (rediseño) ──
+  'Enlace del portal': 'Portal link',
+  'Título de Usuario': 'User title',
+  'Nombre del Cliente': 'Client name',
 };
 
 let LANG = 'es';

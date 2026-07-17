@@ -3283,7 +3283,11 @@ button,input,select{font-family:var(--font)}
     .camp-cancel-badge{display:inline-block;font-size:9px;font-weight:700;color:#fff;background:#c0392b;padding:1px 5px;border-radius:8px;letter-spacing:.5px;text-decoration:none;vertical-align:middle;margin-left:4px}
     /* mini-modales de campañas */
     .camp-modal-backdrop{position:fixed;inset:0;background:rgba(15,20,35,.45);display:none;align-items:center;justify-content:center;z-index:1000;padding:20px}
-    .camp-modal-backdrop.show{display:flex}
+    .camp-modal-backdrop.show{display:flex;animation:cmpFade .18s ease}
+    .camp-modal-backdrop.show .camp-modal{animation:cmpPop .24s cubic-bezier(.23,1,.32,1)}
+    @keyframes cmpFade{from{opacity:0}to{opacity:1}}
+    @keyframes cmpPop{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
+    @media (prefers-reduced-motion:reduce){.camp-modal-backdrop.show,.camp-modal-backdrop.show .camp-modal{animation:none}}
     .camp-modal{background:var(--white,#fff);border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.25);width:100%;max-width:440px;max-height:90vh;overflow:auto;display:flex;flex-direction:column}
     .camp-modal-wide{max-width:920px}
     .camp-modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--line,#eee)}
@@ -3717,19 +3721,45 @@ button,input,select{font-family:var(--font)}
 
 <!-- ════════════ PORTAL DE CLIENTES (admin) ════════════ -->
 <style>
+  /* Barra del enlace general del portal — siempre visible y a la mano */
+  .pt-sharebar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
+    background:var(--navy-ghost,#f0f4fa);border:1px solid var(--navy-pale,#e2ebf8);border-radius:12px;padding:13px 16px;margin:0 0 12px}
+  .pt-sharebar-info{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .pt-sharebar-lbl{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--navy-light,#3b65b0)}
+  .pt-sharebar-url{font-size:15px;font-weight:600;color:var(--navy);font-family:var(--mono,monospace);word-break:break-all}
+  .pt-sharebar-acts{display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap}
+  [data-theme="dark"] .pt-sharebar{background:rgba(93,143,245,.08);border-color:rgba(93,143,245,.18)}
+  .pt-intro{font-size:13px;color:var(--ink-soft,#778);margin:0 0 18px;max-width:760px;line-height:1.55}
+
   .pt-grid{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start}
   .pt-col{flex:1;min-width:300px}
-  .pt-col h3{font-size:14px;color:var(--navy);margin:0 0 10px;display:flex;align-items:center;gap:8px;justify-content:space-between}
-  .pt-list{display:flex;flex-direction:column;gap:8px}
-  .pt-item{border:1px solid var(--line,#e3e8f0);border-radius:10px;padding:11px 13px;background:var(--white,#fff)}
-  .pt-item .nm{font-weight:600;font-size:13.5px}
-  .pt-item .sub{font-size:11.5px;color:var(--ink-soft,#889);margin-top:3px;word-break:break-all}
-  .pt-item .acts{display:flex;gap:8px;margin-top:11px}
-  .pt-item .acts .cdd-btn{flex:1;min-width:0;max-width:none;justify-content:center;align-items:center;gap:7px;padding:9px 10px;font-size:12.5px;white-space:nowrap}
-  @media (max-width:560px){ .pt-item .acts{flex-wrap:wrap} .pt-item .acts .cdd-btn{flex:1 1 calc(50% - 8px)} }
+  .pt-col h3{font-size:14px;font-weight:600;color:var(--navy);margin:0 0 12px;display:flex;align-items:center;gap:8px;justify-content:space-between}
+  .pt-col h3 span{display:inline-flex;align-items:center;gap:8px}
+  .pt-list{display:flex;flex-direction:column;gap:10px}
+  .pt-item{border:1px solid var(--line,#e3e8f0);border-radius:12px;padding:14px;background:var(--white,#fff);
+    transition:border-color .16s,box-shadow .16s,transform .16s;animation:ptIn .28s cubic-bezier(.23,1,.32,1) both}
+  .pt-item:hover{border-color:var(--navy-light,var(--navy));box-shadow:var(--shadow-md,0 8px 20px -10px rgba(15,23,42,.18));transform:translateY(-1px)}
+  .pt-item-main{display:flex;align-items:flex-start;gap:12px}
+  .pt-ico{flex-shrink:0;width:38px;height:38px;display:grid;place-items:center;border-radius:10px;background:var(--navy-pale,#e8eef7);color:var(--navy);font-size:15px}
+  .pt-ico-user{background:var(--green-bg,#e8f7f0);color:var(--green,#1a8c5b)}
+  .pt-item-text{min-width:0;flex:1}
+  .pt-item .nm{font-weight:600;font-size:14px;color:var(--gray-900);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .pt-item .sub{font-size:12px;color:var(--ink-soft,#889);margin-top:3px;word-break:break-word}
+  .pt-item .acts{display:flex;gap:6px;margin-top:12px;align-items:center}
+  .pt-act-primary{flex:1;min-width:0;display:inline-flex;align-items:center;justify-content:center;gap:7px;
+    background:var(--navy-ghost,#f0f4fa);color:var(--navy);border:1px solid var(--navy-pale,#e2ebf8);border-radius:8px;
+    padding:8px 12px;font-size:12.5px;font-weight:500;font-family:inherit;cursor:pointer;white-space:nowrap;transition:background .15s}
+  .pt-act-primary:hover{background:var(--navy-pale,#e2ebf8)}
+  .pt-act-ico{flex-shrink:0;width:34px;height:34px;display:grid;place-items:center;border-radius:8px;border:1px solid var(--line,#e3e8f0);
+    background:var(--white,#fff);color:var(--gray-500,#667);cursor:pointer;font-size:13px;transition:background .15s,color .15s,border-color .15s}
+  .pt-act-ico:hover{background:var(--gray-50,#f6f8fc);color:var(--navy);border-color:var(--navy-light,var(--navy))}
+  .pt-act-ico.danger:hover{background:var(--red-bg,#fcecea);color:var(--red,#c0392b);border-color:var(--red,#c0392b)}
+  [data-theme="dark"] .pt-act-ico:hover{background:rgba(255,255,255,.06)}
+  @keyframes ptIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  @media (prefers-reduced-motion:reduce){.pt-item{animation:none} .pt-item:hover{transform:none}}
   .pt-badge{font-size:10.5px;padding:2px 8px;border-radius:20px;background:var(--navy-ghost,#eef3fb);color:var(--navy)}
   .pt-badge.off{background:#fbe6e3;color:#c0392b}
-  .pt-empty{padding:24px;text-align:center;color:var(--ink-soft,#889);font-size:13px}
+  .pt-empty{padding:28px 24px;text-align:center;color:var(--ink-soft,#889);font-size:13px;border:1px dashed var(--line,#e3e8f0);border-radius:12px}
   .pt-dash-cks{display:flex;flex-direction:column;gap:6px;max-height:180px;overflow:auto;border:1px solid var(--line,#e8ecf3);border-radius:8px;padding:8px}
   .pt-dash-cks label{display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer}
   #ptDashHtml{width:100%;min-height:200px;font-family:var(--mono,monospace);font-size:12px;border:1px solid var(--line,#d7dde8);border-radius:8px;padding:10px;resize:vertical}
@@ -3879,11 +3909,20 @@ button,input,select{font-family:var(--font)}
 <div class="page page-db" id="pagePortal">
   <div class="db-toolbar">
     <div class="db-title-block"><i class="fa-solid fa-share-nodes"></i> Portal de clientes</div>
-    <a class="cdd-btn" id="ptOpenLink" href="/portal" target="_blank" rel="noopener" style="text-decoration:none"><i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir portal</a>
   </div>
-  <p style="font-size:13px;color:var(--ink-soft,#778);margin:0 0 16px;max-width:760px">
-    Sube dashboards (HTML) y crea usuarios-cliente con acceso solo a los suyos. Comparte el enlace
-    <strong id="ptUrlText">cretumdesk.com/portal</strong> + usuario y contraseña. Esta zona es independiente de tu sesión interna.
+  <div class="pt-sharebar">
+    <div class="pt-sharebar-info">
+      <span class="pt-sharebar-lbl">Enlace del portal</span>
+      <span class="pt-sharebar-url" id="ptUrlText">cretumdesk.com/portal</span>
+    </div>
+    <div class="pt-sharebar-acts">
+      <button class="cdd-btn" type="button" onclick="ptCopyPortalLink(this)"><i class="fa-solid fa-link"></i> Copiar enlace</button>
+      <a class="btn-primary" id="ptOpenLink" href="/portal" target="_blank" rel="noopener" style="text-decoration:none"><i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir portal</a>
+    </div>
+  </div>
+  <p class="pt-intro">
+    Sube dashboards (HTML o PDF) y crea un acceso por cliente: cada quien entra solo a lo suyo.
+    Comparte el enlace de arriba junto con su usuario y contraseña. Esta zona es independiente de tu sesión interna.
   </p>
   <div class="pt-grid">
     <div class="pt-col">
@@ -3975,11 +4014,11 @@ button,input,select{font-family:var(--font)}
     <div class="camp-modal-body">
       <input type="hidden" id="ptUserId">
       <label class="camp-f-lbl">Usuario <span class="camp-req">*</span></label>
-      <input id="ptUserName" class="camp-f-inp" placeholder="cliente_fondo_v" autocapitalize="none">
-      <label class="camp-f-lbl">Nombre legible <span class="camp-opt">opcional</span></label>
-      <input id="ptUserLabel" class="camp-f-inp" placeholder="Familia Pérez">
+      <input id="ptUserName" class="camp-f-inp" placeholder="Nombre del Cliente" autocapitalize="none">
+      <label class="camp-f-lbl">Título de Usuario <span class="camp-opt">opcional</span></label>
+      <input id="ptUserLabel" class="camp-f-inp" placeholder="Dashboard GVV">
       <label class="camp-f-lbl" id="ptUserPwLbl">Contraseña <span class="camp-req">*</span></label>
-      <input id="ptUserPw" class="camp-f-inp" type="text" placeholder="contraseña a compartir">
+      <input id="ptUserPw" class="camp-f-inp" type="text">
       <label class="camp-f-lbl">Dashboards con acceso</label>
       <div class="pt-dash-cks" id="ptUserDashes"></div>
       <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-top:12px;cursor:pointer">
@@ -4428,7 +4467,7 @@ button,input,select{font-family:var(--font)}
   </div>
 </div>
 
-<script src="/i18n.js?v=20260716-nosplash"></script>
-<script src="/app.js?v=20260716-nosplash"></script>
+<script src="/i18n.js?v=20260716-portalux"></script>
+<script src="/app.js?v=20260716-portalux"></script>
 </body>
 </html>
