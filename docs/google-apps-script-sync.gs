@@ -59,7 +59,11 @@ function doPost(e) {
 
     // 3) Reescribe la hoja completa
     var nCols = p.header.length;
-    sh.getDataRange().breakApart();
+    // Deshace TODAS las combinaciones de la hoja (no solo el rango de datos):
+    // si una sync previa tenía más meses, esas combinaciones de encabezado se
+    // extienden más allá de los datos actuales y breakApart() sobre getDataRange()
+    // falla con "You must select all cells in a merged range to merge or unmerge them".
+    sh.getRange(1, 1, sh.getMaxRows(), sh.getMaxColumns()).breakApart();
     sh.clear();
     var all = [p.header].concat(rows);
     sh.getRange(1, 1, all.length, nCols).setValues(all);
