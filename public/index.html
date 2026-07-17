@@ -557,6 +557,25 @@ button,input,select{font-family:var(--font)}
 .kb-action:active{transform:translateY(0) scale(.99)}
 .kb-action i{font-size:11px}
 
+/* ── NOTAS PERSONALES (por blocs) ── */
+.notes-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:2px 0 16px;flex-wrap:wrap}
+.notes-title{font-size:15px;font-weight:600;color:var(--navy);display:flex;align-items:center;gap:9px}
+.notes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.note-block{display:flex;flex-direction:column;background:var(--white);border:1px solid var(--gray-100);border-radius:var(--r-lg);box-shadow:var(--shadow-sm);overflow:hidden;transition:box-shadow .18s cubic-bezier(.23,1,.32,1),border-color .18s;animation:noteIn .28s cubic-bezier(.23,1,.32,1) both}
+.note-block:hover{box-shadow:var(--shadow-md);border-color:var(--gray-200)}
+.note-head{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--gray-100)}
+.note-title{flex:1;min-width:0;border:0;background:none;font-family:var(--font);font-size:14px;font-weight:600;color:var(--gray-900);outline:none}
+.note-title::placeholder{color:var(--gray-400)}
+.note-del{background:none;border:0;color:var(--gray-400);cursor:pointer;padding:5px 7px;border-radius:7px;font-size:12px;transition:color .15s,background .15s}
+.note-del:hover{color:var(--red);background:var(--red-bg)}
+.note-body{border:0;background:none;resize:vertical;min-height:150px;padding:12px;font-family:var(--font);font-size:13.5px;color:var(--gray-700);line-height:1.55;outline:none}
+.note-body::placeholder{color:var(--gray-400)}
+.note-foot{padding:5px 12px 9px;min-height:20px;display:flex;justify-content:flex-end}
+.note-saved{font-size:11px;color:var(--gray-400)}
+.notes-empty{grid-column:1/-1;padding:44px 20px;text-align:center;color:var(--gray-500);font-size:13.5px;border:1px dashed var(--gray-200);border-radius:var(--r-lg)}
+@keyframes noteIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.note-block{animation:none}}
+
 /* ── TIMELINE ── */
 .timeline-view{display:flex;flex-direction:column}
 .tl-day{margin-bottom:20px}
@@ -3030,11 +3049,14 @@ button,input,select{font-family:var(--font)}
         <button class="tk-view-btn" id="vbtn-proyectos" onclick="setView('proyectos')" title="Por proyecto">
           <i class="fa-solid fa-layer-group"></i>
         </button>
+        <button class="tk-view-btn" id="vbtn-notas" onclick="setView('notas')" title="Notas">
+          <i class="fa-solid fa-note-sticky"></i>
+        </button>
       </div>
     </div>
 
     <!-- Stats -->
-    <div class="tk-stats">
+    <div class="tk-stats" id="tkStats">
       <div class="tk-stat"><div class="tk-stat-n" id="sPend">0</div><div class="tk-stat-l">Pendientes</div></div>
       <div class="tk-stat"><div class="tk-stat-n" id="sProg">0</div><div class="tk-stat-l">En progreso</div></div>
       <div class="tk-stat tk-stat-done"><div class="tk-stat-n" id="sDone">0</div><div class="tk-stat-l">Completadas</div></div>
@@ -3048,6 +3070,15 @@ button,input,select{font-family:var(--font)}
 
     <!-- View container -->
     <div id="viewContainer"></div>
+
+    <!-- Notas personales (por blocs) — privadas por usuario -->
+    <div id="notesPanel" style="display:none">
+      <div class="notes-bar">
+        <div class="notes-title"><i class="fa-solid fa-note-sticky"></i> Notas personales</div>
+        <button class="tk-new-btn" onclick="addNoteBlock()"><i class="fa-solid fa-plus"></i> Nuevo bloc</button>
+      </div>
+      <div class="notes-grid" id="notesGrid"></div>
+    </div>
 
   </div>
 
@@ -4505,7 +4536,7 @@ button,input,select{font-family:var(--font)}
   </div>
 </div>
 
-<script src="/i18n.js?v=20260716-uploadfirst"></script>
-<script src="/app.js?v=20260716-uploadfirst"></script>
+<script src="/i18n.js?v=20260716-notes"></script>
+<script src="/app.js?v=20260716-notes"></script>
 </body>
 </html>

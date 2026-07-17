@@ -11,6 +11,9 @@ let tkView = (() => { try { return localStorage.getItem('tkView') || 'kanban'; }
 let tkScope = 'personal';
 let tkType = 'simple';
 let tkId = Date.now();
+let notesData = [];              // blocs de notas personales (user_notes)
+let notesLoaded = false;
+const noteSaveTimers = {};       // debounce de guardado por bloc
 let saveTimer = null;
 
 /* ═══════════════════════════════════════════
@@ -542,6 +545,22 @@ function myTasks() {
    RENDER
 ═══════════════════════════════════════════ */
 function render() {
+  // ── Vista Notas (personal): oculta lo de tareas y muestra los blocs ──
+  const isNotas = tkView === 'notas' && tkScope === 'personal';
+  const np = document.getElementById('notesPanel');
+  if (np) np.style.display = isNotas ? '' : 'none';
+  if (isNotas) {
+    ['tkStats', 'viewContainer', 'invitesEl'].forEach(id => { const e = document.getElementById(id); if (e) e.style.display = 'none'; });
+    const ntb = document.getElementById('newTaskBtn'); if (ntb) ntb.style.display = 'none';
+    const clrB = document.getElementById('tkClearBanner'); if (clrB) clrB.style.display = 'none';
+    syncViewButtons();
+    requestAnimationFrame(tkMoveViewSlider);
+    refreshTodoBadge();
+    if (!notesLoaded) loadNotes();
+    return;
+  }
+  ['tkStats', 'viewContainer', 'invitesEl'].forEach(id => { const e = document.getElementById(id); if (e) e.style.display = ''; });
+
   // invites para el usuario actual
   const myInvites = state.invites.filter(iv => iv.to === currentUser);
   document.getElementById('invitesEl').innerHTML = myInvites.map(iv => {
@@ -1116,8 +1135,107 @@ function setView(v) {
   render();
 }
 function syncViewButtons() {
-  ['lista', 'kanban', 'timeline', 'proyectos'].forEach(k =>
+  ['lista', 'kanban', 'timeline', 'proyectos', 'notas'].forEach(k =>
     document.getElementById('vbtn-' + k)?.classList.toggle('on', k === tkView));
+}
+
+/* ═══════════════════════════════════════════
+   NOTAS PERSONALES (por blocs) — privadas por usuario (RLS en user_notes)
+   El frontend lee/escribe directo con el cliente Supabase autenticado.
+═══════════════════════════════════════════ */
+async function loadNotes() {
+  const grid = document.getElementById('notesGrid');
+  if (grid && !notesData.length) grid.innerHTML = '<div class="notes-empty"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
+  try {
+    const { data, error } = await sb.from('user_notes')
+      .select('id,title,content,position,updated_at')
+      .order('position', { ascending: true }).order('created_at', { ascending: true });
+    if (error) throw error;
+    notesData = data || [];
+    notesLoaded = true;
+    renderNotes();
+  } catch (err) {
+    notesLoaded = false;
+    if (grid) {
+      const falta = /relation|does not exist|schema cache|not find the table/i.test(err.message || '');
+      grid.innerHTML = `<div class="notes-empty">No se pudieron cargar las notas.${falta ? ' Falta correr la migración de BD (db/08_notes.sql).' : ''}</div>`;
+    }
+  }
+}
+
+function renderNotes() {
+  const grid = document.getElementById('notesGrid');
+  if (!grid) return;
+  if (!notesData.length) {
+    grid.innerHTML = '<div class="notes-empty">Aún no tienes notas. Crea tu primer bloc con “Nuevo bloc”.</div>';
+    return;
+  }
+  grid.innerHTML = notesData.map(n => `
+    <div class="note-block" data-id="${n.id}">
+      <div class="note-head">
+        <input class="note-title" value="${escapeHtml(n.title || '')}" placeholder="Título del bloc" maxlength="120"
+               oninput="onNoteInput('${n.id}','title',this.value)">
+        <button class="note-del" title="Eliminar bloc" aria-label="Eliminar bloc" onclick="deleteNote('${n.id}')"><i class="fa-solid fa-trash"></i></button>
+      </div>
+      <textarea class="note-body" placeholder="Escribe aquí tus notas…" oninput="onNoteInput('${n.id}','content',this.value)">${escapeHtml(n.content || '')}</textarea>
+      <div class="note-foot"><span class="note-saved" data-id="${n.id}"></span></div>
+    </div>`).join('');
+}
+
+function onNoteInput(id, field, value) {
+  const n = notesData.find(x => String(x.id) === String(id));
+  if (n) n[field] = value;
+  const saved = document.querySelector('.note-saved[data-id="' + id + '"]');
+  if (saved) saved.textContent = '';
+  clearTimeout(noteSaveTimers[id]);
+  noteSaveTimers[id] = setTimeout(() => saveNote(id), 600);
+}
+
+async function saveNote(id) {
+  const n = notesData.find(x => String(x.id) === String(id));
+  if (!n) return;
+  const saved = document.querySelector('.note-saved[data-id="' + id + '"]');
+  if (saved) saved.textContent = 'Guardando…';
+  try {
+    const { error } = await sb.from('user_notes')
+      .update({ title: n.title, content: n.content, updated_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) throw error;
+    if (saved) { saved.textContent = 'Guardado'; setTimeout(() => { if (saved.textContent === 'Guardado') saved.textContent = ''; }, 1500); }
+  } catch (err) {
+    if (saved) saved.textContent = 'Error al guardar';
+  }
+}
+
+async function addNoteBlock() {
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) { toast('Sesión no válida'); return; }
+    const { data, error } = await sb.from('user_notes')
+      .insert({ user_id: uid, title: '', content: '', position: notesData.length })
+      .select('id,title,content,position,updated_at').single();
+    if (error) throw error;
+    notesData.push(data);
+    notesLoaded = true;
+    renderNotes();
+    const t = document.querySelector('.note-block[data-id="' + data.id + '"] .note-title');
+    if (t) t.focus();
+  } catch (err) {
+    const falta = /relation|does not exist|schema cache|not find the table/i.test(err.message || '');
+    toast('No se pudo crear la nota' + (falta ? ': falta la migración de BD' : ''));
+  }
+}
+
+async function deleteNote(id) {
+  if (!confirm('¿Borrar este bloc de notas? No se puede deshacer.')) return;
+  try {
+    const { error } = await sb.from('user_notes').delete().eq('id', id);
+    if (error) throw error;
+    notesData = notesData.filter(x => String(x.id) !== String(id));
+    renderNotes();
+    toast('Bloc borrado');
+  } catch (err) { toast('No se pudo borrar'); }
 }
 function setScope(s) {
   tkScope = s;
