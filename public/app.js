@@ -11,6 +11,7 @@ let tkView = (() => { try { return localStorage.getItem('tkView') || 'kanban'; }
 let tkScope = 'personal';
 let tkType = 'simple';
 let tkId = Date.now();
+let lastTaskView = (() => { try { const v = localStorage.getItem('tkLastView'); return (v && v !== 'notas') ? v : 'kanban'; } catch { return 'kanban'; } })();
 let notesData = [];              // blocs de notas personales (user_notes)
 let notesLoaded = false;
 const noteSaveTimers = {};       // debounce de guardado por bloc
@@ -1129,11 +1130,14 @@ function toggleOtroMember(uid) {
 ═══════════════════════════════════════════ */
 function setView(v) {
   tkView = v;
+  if (v !== 'notas') { lastTaskView = v; try { localStorage.setItem('tkLastView', v); } catch {} }
   try { localStorage.setItem('tkView', v); } catch {}
   syncViewButtons();
   tkMoveViewSlider();
   render();
 }
+// Regresa a las tareas desde Notas (botón "← Tareas", clave en móvil).
+function backToTasks() { setView(lastTaskView || 'kanban'); }
 function syncViewButtons() {
   const isNotas = tkView === 'notas';
   // El botón dice fijo "Tipo de vista"; la vista activa se marca dentro del menú.
@@ -1193,16 +1197,64 @@ function renderNotes() {
     grid.innerHTML = '<div class="notes-empty">Aún no tienes notas. Crea tu primer bloc con “Nuevo bloc”.</div>';
     return;
   }
-  grid.innerHTML = notesData.map(n => `
-    <div class="note-block" data-id="${n.id}">
+  const collapsed = getCollapsedNotes();
+  grid.innerHTML = notesData.map(n => {
+    const isCol = collapsed.has(String(n.id));
+    return `
+    <div class="note-block${isCol ? ' collapsed' : ''}" data-id="${n.id}">
       <div class="note-head">
+        <button class="note-collapse" title="Plegar / desplegar" aria-label="Plegar o desplegar" onclick="toggleNoteCollapse('${n.id}')"><i class="fa-solid fa-chevron-down"></i></button>
         <input class="note-title" value="${escapeHtml(n.title || '')}" placeholder="Título del bloc" maxlength="120"
                oninput="onNoteInput('${n.id}','title',this.value)">
+        <button class="note-share" title="Compartir con el equipo" aria-label="Compartir" onclick="shareNote('${n.id}')"><i class="fa-solid fa-share-nodes"></i></button>
         <button class="note-del" title="Eliminar bloc" aria-label="Eliminar bloc" onclick="deleteNote('${n.id}')"><i class="fa-solid fa-trash"></i></button>
       </div>
       <textarea class="note-body" placeholder="Escribe aquí tus notas…" oninput="onNoteInput('${n.id}','content',this.value)">${escapeHtml(n.content || '')}</textarea>
       <div class="note-foot"><span class="note-saved" data-id="${n.id}"></span></div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
+}
+
+// Plegado por bloc (solo título) — estado en localStorage, útil en móvil.
+function getCollapsedNotes() {
+  try { return new Set(JSON.parse(localStorage.getItem('notesCollapsed') || '[]')); } catch { return new Set(); }
+}
+function toggleNoteCollapse(id) {
+  const s = getCollapsedNotes(), k = String(id);
+  if (s.has(k)) s.delete(k); else s.add(k);
+  try { localStorage.setItem('notesCollapsed', JSON.stringify([...s])); } catch {}
+  const block = document.querySelector('.note-block[data-id="' + id + '"]');
+  if (block) block.classList.toggle('collapsed', s.has(k));
+}
+
+// ── Compartir una nota con miembros del equipo ──
+let shareNoteId = null;
+function shareNote(id) {
+  shareNoteId = id;
+  const box = document.getElementById('noteShareList');
+  const members = Object.entries(USERS).filter(([uid, u]) => uid !== currentUser && !u.hidden)
+    .sort((a, b) => (a[1].name || '').localeCompare(b[1].name || '', 'es'));
+  box.innerHTML = members.length
+    ? members.map(([uid, u]) => `<label class="ns-item"><input type="checkbox" value="${uid}"><span class="ns-av">${escapeHtml(u.initials || '')}</span><span class="ns-nm">${escapeHtml(u.name || uid)}</span></label>`).join('')
+    : '<div class="notes-empty" style="padding:14px">No hay otros miembros del equipo.</div>';
+  const msg = document.getElementById('noteShareMsg'); if (msg) msg.textContent = '';
+  document.getElementById('noteShareModal').classList.add('show');
+}
+async function doShareNote() {
+  const to = [...document.querySelectorAll('#noteShareList input:checked')].map(c => c.value);
+  const msg = document.getElementById('noteShareMsg');
+  if (!to.length) { if (msg) msg.textContent = 'Selecciona al menos un miembro.'; return; }
+  if (msg) msg.textContent = 'Compartiendo…';
+  try {
+    const r = await authedFetch('/api/notes-share', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ noteId: shareNoteId, to }),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || !d.ok) throw new Error(d.error || ('HTTP ' + r.status));
+    document.getElementById('noteShareModal').classList.remove('show');
+    toast(d.shared > 1 ? `Nota compartida con ${d.shared} personas` : 'Nota compartida');
+  } catch (err) { if (msg) msg.textContent = 'No se pudo compartir: ' + err.message; }
 }
 
 function onNoteInput(id, field, value) {

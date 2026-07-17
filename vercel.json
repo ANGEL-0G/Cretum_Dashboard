@@ -106,6 +106,10 @@
       "use": "@vercel/node"
     },
     {
+      "src": "api/notes-share.js",
+      "use": "@vercel/node"
+    },
+    {
       "src": "api/logo.js",
       "use": "@vercel/node"
     },
@@ -181,6 +185,10 @@
     {
       "src": "/api/notify-assignment",
       "dest": "/api/notify-assignment.js"
+    },
+    {
+      "src": "/api/notes-share",
+      "dest": "/api/notes-share.js"
     },
     {
       "src": "/api/logo",
