@@ -1050,8 +1050,28 @@ function setLang(l) {
   }
 })();
 
+/** Restaura el texto ORIGINAL (ES) en un subtree, sin cambiar el idioma global.
+ *  Para exports que clonan DOM: revertir → clonar → applyI18n() re-traduce. */
+function revertI18n(root) {
+  try {
+    root = root || document;
+    const base = root.nodeType === 3 ? root.parentNode : root;
+    const w = document.createTreeWalker(base, NodeFilter.SHOW_TEXT);
+    const tn = []; let n; while ((n = w.nextNode())) tn.push(n);
+    tn.forEach(nd => { const o = _tnOrig.get(nd); if (o != null && nd.nodeValue !== o) nd.nodeValue = o; });
+    if (base.querySelectorAll) base.querySelectorAll('[placeholder],[title],[aria-label]').forEach(el => {
+      const o = _atOrig.get(el);
+      if (!o) return;
+      if (o.ph != null) el.setAttribute('placeholder', o.ph);
+      if (o.ti != null) el.setAttribute('title', o.ti);
+      if (o.ar != null) el.setAttribute('aria-label', o.ar);
+    });
+  } catch (e) { /* nunca romper un export por i18n */ }
+}
+
 // Exponer en window para uso desde app.js y onclick inline.
 window.t = t;
+window.revertI18n = revertI18n;
 window.setLang = setLang;
 window.applyI18n = applyI18n;
 window.currentLang = currentLang;

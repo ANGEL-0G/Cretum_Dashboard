@@ -5469,7 +5469,12 @@ async function exportInvestorHtml() {
   const EN = lang === 'en';
   const LOC = EN ? 'en-US' : 'es-MX';
   const { inv } = lastInvestorDetail;
-  const clone = document.getElementById('dbDetailContent').cloneNode(true);
+  // La interfaz en EN traduce el DOM en vivo (i18n) — revertir a ES antes de clonar para que
+  // el export controle su propio idioma y los filtros por texto ('Contactos') sigan funcionando.
+  const detailEl = document.getElementById('dbDetailContent');
+  if (window.revertI18n) revertI18n(detailEl);
+  const clone = detailEl.cloneNode(true);
+  if (window.currentLang && currentLang() === 'en' && window.applyI18n) applyI18n(detailEl);
   try {
     // 1) Fuera controles internos (export, picker de columnas, edición)
     clone.querySelectorAll('.db-detail-export, .db-pos-toolbar, .db-contact-del, .cdd, button').forEach(el => el.remove());
