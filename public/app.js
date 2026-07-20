@@ -12,8 +12,11 @@ let tkScope = 'personal';
 let tkType = 'simple';
 let tkId = Date.now();
 let notesData = [];              // blocs de notas personales (user_notes)
+let foldersData = [];            // carpetas de notas (note_folders)
+let currentFolder = null;        // null = General (notas sin carpeta)
 let notesLoaded = false;
-const noteSaveTimers = {};       // debounce de guardado por bloc
+const noteSaveTimers = {};       // debounce de guardado por bloc/carpeta
+const NOTE_COLORS = ['#cbd5e1', '#f5b842', '#4ade80', '#5d8ff5', '#b98cff', '#f472b6', '#f2765d'];
 let saveTimer = null;
 
 /* ═══════════════════════════════════════════
@@ -1151,45 +1154,143 @@ async function loadNotes() {
   const grid = document.getElementById('notesGrid');
   if (grid && !notesData.length) grid.innerHTML = '<div class="notes-empty"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
   try {
-    const { data, error } = await sb.from('user_notes')
-      .select('id,title,content,position,updated_at')
-      .order('position', { ascending: true }).order('created_at', { ascending: true });
-    if (error) throw error;
-    notesData = data || [];
+    const [fRes, nRes] = await Promise.all([
+      sb.from('note_folders').select('id,name,color,position').order('position', { ascending: true }).order('created_at', { ascending: true }),
+      sb.from('user_notes').select('id,title,content,color,folder_id,position,updated_at').order('position', { ascending: true }).order('created_at', { ascending: true }),
+    ]);
+    if (fRes.error) throw fRes.error;
+    if (nRes.error) throw nRes.error;
+    foldersData = fRes.data || [];
+    notesData = nRes.data || [];
+    if (currentFolder && !foldersData.some(f => f.id === currentFolder)) currentFolder = null;
     notesLoaded = true;
-    renderNotes();
+    renderDrawer();
   } catch (err) {
     notesLoaded = false;
     if (grid) {
-      const falta = /relation|does not exist|schema cache|not find the table/i.test(err.message || '');
-      grid.innerHTML = `<div class="notes-empty">No se pudieron cargar las notas.${falta ? ' Falta correr la migración de BD (db/08_notes.sql).' : ''}</div>`;
+      const falta = /relation|does not exist|schema cache|not find the table|column/i.test(err.message || '');
+      grid.innerHTML = `<div class="notes-empty">No se pudieron cargar las notas.${falta ? ' Falta correr la migración de BD (db/09_note_folders.sql).' : ''}</div>`;
     }
   }
+}
+
+// Pinta el drawer completo: chips de carpetas + barra de carpeta activa + notas.
+function renderDrawer() { renderFolders(); renderFolderBar(); renderNotes(); }
+
+function renderFolders() {
+  const el = document.getElementById('notesFolders');
+  if (!el) return;
+  const chip = (active, onclick, style, inner) =>
+    `<button class="nf-chip${active ? ' active' : ''}"${style ? ` style="${style}"` : ''} onclick="${onclick}">${inner}</button>`;
+  let html = chip(currentFolder === null, "selectFolder(null)", '', '<i class="fa-solid fa-note-sticky"></i> General');
+  html += foldersData.map(f =>
+    chip(currentFolder === f.id, `selectFolder('${f.id}')`, `--fc:${f.color || '#cbd5e1'}`, `<span class="nf-dot"></span>${escapeHtml(f.name || 'Carpeta')}`)
+  ).join('');
+  html += `<button class="nf-chip nf-add" onclick="addFolder()"><i class="fa-solid fa-folder-plus"></i> Carpeta</button>`;
+  el.innerHTML = html;
+}
+
+function renderFolderBar() {
+  const bar = document.getElementById('notesFolderBar');
+  if (!bar) return;
+  const f = foldersData.find(x => x.id === currentFolder);
+  if (!f) { bar.style.display = 'none'; bar.innerHTML = ''; return; }
+  bar.style.display = 'flex';
+  bar.innerHTML = `
+    <input class="nf-name" value="${escapeHtml(f.name || '')}" placeholder="Nombre de la carpeta" maxlength="60" oninput="onFolderRename('${f.id}',this.value)">
+    <div class="nf-swatches">${NOTE_COLORS.map(c => `<button class="nf-sw${f.color === c ? ' on' : ''}" style="background:${c}" aria-label="Color" onclick="setFolderColor('${f.id}','${c}')"></button>`).join('')}</div>
+    <button class="nf-del" title="Borrar carpeta" aria-label="Borrar carpeta" onclick="deleteFolder('${f.id}')"><i class="fa-solid fa-trash"></i></button>`;
+}
+
+function selectFolder(id) { currentFolder = id; renderDrawer(); }
+
+async function addFolder() {
+  const name = (prompt('Nombre de la carpeta:') || '').trim();
+  if (!name) return;
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const uid = session?.user?.id; if (!uid) return;
+    const color = NOTE_COLORS[(foldersData.length + 1) % NOTE_COLORS.length];
+    const { data, error } = await sb.from('note_folders')
+      .insert({ user_id: uid, name, color, position: foldersData.length })
+      .select('id,name,color,position').single();
+    if (error) throw error;
+    foldersData.push(data); currentFolder = data.id; renderDrawer();
+  } catch (err) {
+    const falta = /relation|does not exist|schema cache|column/i.test(err.message || '');
+    toast('No se pudo crear la carpeta' + (falta ? ': falta la migración de BD' : ''));
+  }
+}
+
+function onFolderRename(id, val) {
+  const f = foldersData.find(x => x.id === id); if (f) f.name = val;
+  clearTimeout(noteSaveTimers['f' + id]);
+  noteSaveTimers['f' + id] = setTimeout(async () => {
+    try { await sb.from('note_folders').update({ name: val, updated_at: new Date().toISOString() }).eq('id', id); renderFolders(); } catch (e) {}
+  }, 600);
+}
+
+async function setFolderColor(id, color) {
+  const f = foldersData.find(x => x.id === id); if (f) f.color = color;
+  renderFolders(); renderFolderBar();
+  try { await sb.from('note_folders').update({ color, updated_at: new Date().toISOString() }).eq('id', id); } catch (e) {}
+}
+
+async function deleteFolder(id) {
+  const f = foldersData.find(x => x.id === id);
+  const n = notesData.filter(x => x.folder_id === id).length;
+  if (!confirm(`¿Borrar la carpeta "${f?.name || ''}"?` + (n ? ` Sus ${n} nota(s) pasarán a General.` : ''))) return;
+  try {
+    const { error } = await sb.from('note_folders').delete().eq('id', id);
+    if (error) throw error;
+    foldersData = foldersData.filter(x => x.id !== id);
+    notesData.forEach(x => { if (x.folder_id === id) x.folder_id = null; });  // on delete set null en BD
+    currentFolder = null;
+    renderDrawer();
+    toast('Carpeta borrada');
+  } catch (err) { toast('No se pudo borrar la carpeta'); }
 }
 
 function renderNotes() {
   const grid = document.getElementById('notesGrid');
   if (!grid) return;
-  if (!notesData.length) {
-    grid.innerHTML = '<div class="notes-empty">Aún no tienes notas. Crea tu primer bloc con “Nuevo bloc”.</div>';
+  const list = notesData.filter(n => (n.folder_id || null) === (currentFolder || null));
+  if (!list.length) {
+    grid.innerHTML = `<div class="notes-empty">${currentFolder ? 'Esta carpeta está vacía.' : 'Sin notas generales.'} Crea una con “Nueva nota”.</div>`;
     return;
   }
   const collapsed = getCollapsedNotes();
-  grid.innerHTML = notesData.map(n => {
+  grid.innerHTML = list.map(n => {
     const isCol = collapsed.has(String(n.id));
+    const c = n.color || '';
+    const swatches = NOTE_COLORS.map(col => `<button class="nc-sw${n.color === col ? ' on' : ''}" style="background:${col}" aria-label="Color" onclick="setNoteColor('${n.id}','${col}')"></button>`).join('')
+      + `<button class="nc-sw nc-none${!n.color ? ' on' : ''}" title="Sin color" aria-label="Sin color" onclick="setNoteColor('${n.id}','')"><i class="fa-solid fa-xmark"></i></button>`;
     return `
-    <div class="note-block${isCol ? ' collapsed' : ''}" data-id="${n.id}">
+    <div class="note-block${isCol ? ' collapsed' : ''}" data-id="${n.id}"${c ? ` style="border-top:3px solid ${c}"` : ''}>
       <div class="note-head">
         <button class="note-collapse" title="Plegar / desplegar" aria-label="Plegar o desplegar" onclick="toggleNoteCollapse('${n.id}')"><i class="fa-solid fa-chevron-down"></i></button>
-        <input class="note-title" value="${escapeHtml(n.title || '')}" placeholder="Título del bloc" maxlength="120"
+        <input class="note-title" value="${escapeHtml(n.title || '')}" placeholder="Título de la nota" maxlength="120"
                oninput="onNoteInput('${n.id}','title',this.value)">
+        <button class="note-color" title="Color" aria-label="Color" onclick="toggleNoteColors('${n.id}')"><i class="fa-solid fa-palette"></i></button>
         <button class="note-share" title="Compartir con el equipo" aria-label="Compartir" onclick="shareNote('${n.id}')"><i class="fa-solid fa-share-nodes"></i></button>
-        <button class="note-del" title="Eliminar bloc" aria-label="Eliminar bloc" onclick="deleteNote('${n.id}')"><i class="fa-solid fa-trash"></i></button>
+        <button class="note-del" title="Eliminar nota" aria-label="Eliminar nota" onclick="deleteNote('${n.id}')"><i class="fa-solid fa-trash"></i></button>
       </div>
+      <div class="note-colors" id="ncolors-${n.id}" style="display:none">${swatches}</div>
       <textarea class="note-body" placeholder="Escribe aquí tus notas…" oninput="onNoteInput('${n.id}','content',this.value)">${escapeHtml(n.content || '')}</textarea>
       <div class="note-foot"><span class="note-saved" data-id="${n.id}"></span></div>
     </div>`;
   }).join('');
+}
+
+function toggleNoteColors(id) {
+  const el = document.getElementById('ncolors-' + id);
+  if (el) el.style.display = el.style.display === 'none' ? 'flex' : 'none';
+}
+async function setNoteColor(id, color) {
+  const n = notesData.find(x => String(x.id) === String(id));
+  if (n) n.color = color || null;
+  renderNotes();
+  try { await sb.from('user_notes').update({ color: color || null, updated_at: new Date().toISOString() }).eq('id', id); } catch (e) {}
 }
 
 // Plegado por bloc (solo título) — estado en localStorage, útil en móvil.
@@ -1218,7 +1319,7 @@ function openNotesDrawer() {
   const dt = document.getElementById('notesDrawerDate');
   if (dt) dt.textContent = notesTodayLabel();
   if (bd) bd.classList.add('show');
-  if (!notesLoaded) loadNotes(); else renderNotes();
+  if (!notesLoaded) loadNotes(); else renderDrawer();
 }
 function closeNotesDrawer() {
   document.getElementById('notesDrawerBackdrop')?.classList.remove('show');
@@ -1292,10 +1393,10 @@ async function addNoteBlock() {
     if (!uid) { toast('Sesión no válida'); return; }
     // Nuevo cuaderno titulado con la fecha de hoy (el usuario puede cambiarlo).
     const { data, error } = await sb.from('user_notes')
-      .insert({ user_id: uid, title: notesTodayLabel(), content: '', position: notesData.length })
-      .select('id,title,content,position,updated_at').single();
+      .insert({ user_id: uid, title: notesTodayLabel(), content: '', position: notesData.length, folder_id: currentFolder })
+      .select('id,title,content,color,folder_id,position,updated_at').single();
     if (error) throw error;
-    notesData.unshift(data);   // el más reciente arriba
+    notesData.unshift(data);   // la más reciente arriba (dentro de la carpeta actual)
     notesLoaded = true;
     renderNotes();
     const b = document.querySelector('.note-block[data-id="' + data.id + '"] .note-body');
