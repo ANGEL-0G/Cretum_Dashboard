@@ -613,6 +613,26 @@ button,input,select{font-family:var(--font)}
 .ns-av{width:26px;height:26px;flex-shrink:0;border-radius:50%;background:var(--navy-pale);color:var(--navy);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600}
 .ns-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ns-hint{font-size:12px;color:var(--gray-500);margin-top:10px;line-height:1.45}
+/* Botón flotante de notas (perpetuo) + drawer tipo cuaderno */
+.notes-fab{position:fixed;right:20px;bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:900;
+  width:52px;height:52px;border-radius:50%;border:none;cursor:pointer;display:none;align-items:center;justify-content:center;
+  font-size:20px;background:var(--navy);color:#fff;box-shadow:0 8px 24px -6px rgba(26,58,107,.55);
+  transition:transform .16s cubic-bezier(.23,1,.32,1),box-shadow .16s}
+.notes-fab:hover{transform:translateY(-2px);box-shadow:0 12px 30px -8px rgba(26,58,107,.6)}
+.notes-fab:active{transform:scale(.94)}
+.notes-drawer-backdrop{position:fixed;inset:0;z-index:1200;background:rgba(15,20,35,.45);display:none;justify-content:flex-end;opacity:0;transition:opacity .22s ease}
+.notes-drawer-backdrop.show{display:flex;opacity:1}
+.notes-drawer{width:min(460px,94vw);height:100%;background:var(--gray-50);display:flex;flex-direction:column;
+  box-shadow:-14px 0 44px rgba(15,23,42,.25);transform:translateX(100%);transition:transform .28s cubic-bezier(.32,.72,0,1);overflow:hidden}
+.notes-drawer-backdrop.show .notes-drawer{transform:none}
+.notes-drawer-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 18px 12px;border-bottom:1px solid var(--gray-200);background:var(--white)}
+.notes-drawer-title{font-size:16px;font-weight:600;color:var(--navy);display:flex;align-items:center;gap:9px}
+.notes-drawer-date{font-size:12px;color:var(--gray-500);margin-top:3px;text-transform:capitalize}
+.notes-drawer-acts{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.notes-drawer-x{background:none;border:0;color:var(--gray-500);font-size:18px;cursor:pointer;padding:4px 8px;border-radius:8px;transition:color .15s,background .15s}
+.notes-drawer-x:hover{color:var(--navy);background:var(--gray-100)}
+.notes-grid-drawer{grid-template-columns:1fr;padding:16px;overflow-y:auto;flex:1;align-content:start}
+@media (prefers-reduced-motion:reduce){.notes-fab,.notes-drawer-backdrop,.notes-drawer{transition:none}}
 
 /* ── TIMELINE ── */
 .timeline-view{display:flex;flex-direction:column}
@@ -3087,7 +3107,6 @@ button,input,select{font-family:var(--font)}
             <button class="tk-view-opt" data-view="proyectos" role="menuitem" onclick="pickView('proyectos')"><i class="fa-solid fa-layer-group"></i> Por proyecto</button>
           </div>
         </div>
-        <button class="tk-notes-btn" id="notesViewBtn" onclick="setView('notas')" title="Notas Personales"><i class="fa-solid fa-note-sticky"></i> Notas Personales</button>
       </div>
     </div>
 
@@ -3106,16 +3125,6 @@ button,input,select{font-family:var(--font)}
 
     <!-- View container -->
     <div id="viewContainer"></div>
-
-    <!-- Notas personales (por blocs) — privadas por usuario -->
-    <div id="notesPanel" style="display:none">
-      <div class="notes-bar">
-        <button class="notes-back" onclick="backToTasks()"><i class="fa-solid fa-arrow-left"></i> Tareas</button>
-        <div class="notes-title"><i class="fa-solid fa-note-sticky"></i> Notas personales</div>
-        <button class="tk-new-btn" onclick="addNoteBlock()"><i class="fa-solid fa-plus"></i> Nuevo bloc</button>
-      </div>
-      <div class="notes-grid" id="notesGrid"></div>
-    </div>
 
   </div>
 
@@ -4159,6 +4168,27 @@ button,input,select{font-family:var(--font)}
   </div>
 </div>
 
+<!-- Botón flotante de notas (perpetuo en el dashboard) -->
+<button class="notes-fab" id="notesFab" onclick="openNotesDrawer()" style="display:none" title="Mis notas" aria-label="Mis notas">
+  <i class="fa-solid fa-book"></i>
+</button>
+<!-- Drawer de notas (cuadernos, con fecha automática) -->
+<div class="notes-drawer-backdrop" id="notesDrawerBackdrop" onclick="if(event.target===this)closeNotesDrawer()">
+  <aside class="notes-drawer" id="notesDrawer" role="dialog" aria-label="Mis notas">
+    <div class="notes-drawer-head">
+      <div class="notes-drawer-headtx">
+        <div class="notes-drawer-title"><i class="fa-solid fa-book"></i> Mis notas</div>
+        <div class="notes-drawer-date" id="notesDrawerDate"></div>
+      </div>
+      <div class="notes-drawer-acts">
+        <button class="tk-new-btn" onclick="addNoteBlock()"><i class="fa-solid fa-plus"></i> Nuevo</button>
+        <button class="notes-drawer-x" onclick="closeNotesDrawer()" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+    </div>
+    <div class="notes-grid notes-grid-drawer" id="notesGrid"></div>
+  </aside>
+</div>
+
 <div class="toast" id="toast"><i class="fa-solid fa-circle-check"></i><span id="toastMsg"></span></div>
 
 <!-- Overlay de transición entre empresas -->
@@ -4593,7 +4623,7 @@ button,input,select{font-family:var(--font)}
   </div>
 </div>
 
-<script src="/i18n.js?v=20260720-fixexport"></script>
-<script src="/app.js?v=20260720-fixexport"></script>
+<script src="/i18n.js?v=20260720-notesfab"></script>
+<script src="/app.js?v=20260720-notesfab"></script>
 </body>
 </html>

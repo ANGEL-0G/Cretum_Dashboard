@@ -7,11 +7,10 @@ let currentProfile = null;       // { full_name, initials, role }
 let roleReal = null;             // rol REAL del usuario (el toggle "Ver como" muta currentProfile.role solo en memoria)
 let USERS = {};                  // map UUID → { name, initials, role }
 let state = { simple: [], progress: [], assigned: [], invites: [] };
-let tkView = (() => { try { return localStorage.getItem('tkView') || 'kanban'; } catch { return 'kanban'; } })();
+let tkView = (() => { try { const v = localStorage.getItem('tkView'); return ['lista', 'kanban', 'timeline', 'proyectos'].includes(v) ? v : 'kanban'; } catch { return 'kanban'; } })();
 let tkScope = 'personal';
 let tkType = 'simple';
 let tkId = Date.now();
-let lastTaskView = (() => { try { const v = localStorage.getItem('tkLastView'); return (v && v !== 'notas') ? v : 'kanban'; } catch { return 'kanban'; } })();
 let notesData = [];              // blocs de notas personales (user_notes)
 let notesLoaded = false;
 const noteSaveTimers = {};       // debounce de guardado por bloc
@@ -546,22 +545,6 @@ function myTasks() {
    RENDER
 ═══════════════════════════════════════════ */
 function render() {
-  // ── Vista Notas (personal): oculta lo de tareas y muestra los blocs ──
-  const isNotas = tkView === 'notas' && tkScope === 'personal';
-  const np = document.getElementById('notesPanel');
-  if (np) np.style.display = isNotas ? '' : 'none';
-  if (isNotas) {
-    ['tkStats', 'viewContainer', 'invitesEl'].forEach(id => { const e = document.getElementById(id); if (e) e.style.display = 'none'; });
-    const ntb = document.getElementById('newTaskBtn'); if (ntb) ntb.style.display = 'none';
-    const clrB = document.getElementById('tkClearBanner'); if (clrB) clrB.style.display = 'none';
-    syncViewButtons();
-    requestAnimationFrame(tkMoveViewSlider);
-    refreshTodoBadge();
-    if (!notesLoaded) loadNotes();
-    return;
-  }
-  ['tkStats', 'viewContainer', 'invitesEl'].forEach(id => { const e = document.getElementById(id); if (e) e.style.display = ''; });
-
   // invites para el usuario actual
   const myInvites = state.invites.filter(iv => iv.to === currentUser);
   document.getElementById('invitesEl').innerHTML = myInvites.map(iv => {
@@ -1130,19 +1113,13 @@ function toggleOtroMember(uid) {
 ═══════════════════════════════════════════ */
 function setView(v) {
   tkView = v;
-  if (v !== 'notas') { lastTaskView = v; try { localStorage.setItem('tkLastView', v); } catch {} }
   try { localStorage.setItem('tkView', v); } catch {}
   syncViewButtons();
   tkMoveViewSlider();
   render();
 }
-// Regresa a las tareas desde Notas (botón "← Tareas", clave en móvil).
-function backToTasks() { setView(lastTaskView || 'kanban'); }
 function syncViewButtons() {
-  const isNotas = tkView === 'notas';
   // El botón dice fijo "Tipo de vista"; la vista activa se marca dentro del menú.
-  document.getElementById('viewPickBtn')?.classList.toggle('active', !isNotas);
-  document.getElementById('notesViewBtn')?.classList.toggle('active', isNotas);
   document.querySelectorAll('.tk-view-opt').forEach(o =>
     o.classList.toggle('on', o.dataset.view === tkView));
 }
@@ -1227,6 +1204,26 @@ function toggleNoteCollapse(id) {
   if (block) block.classList.toggle('collapsed', s.has(k));
 }
 
+// ── Botón flotante + drawer de notas (perpetuo en el dashboard) ──
+// Visible solo con una empresa elegida (no en login ni en el selector).
+function updateNotesFab() {
+  const fab = document.getElementById('notesFab');
+  if (!fab) return;
+  const login = document.getElementById('loginWrap');
+  const onLogin = login && login.style.display !== 'none';
+  fab.style.display = (currentOrg && currentView !== 'selector' && !onLogin) ? 'inline-flex' : 'none';
+}
+function openNotesDrawer() {
+  const bd = document.getElementById('notesDrawerBackdrop');
+  const dt = document.getElementById('notesDrawerDate');
+  if (dt) dt.textContent = notesTodayLabel();
+  if (bd) bd.classList.add('show');
+  if (!notesLoaded) loadNotes(); else renderNotes();
+}
+function closeNotesDrawer() {
+  document.getElementById('notesDrawerBackdrop')?.classList.remove('show');
+}
+
 // ── Compartir una nota con miembros del equipo ──
 let shareNoteId = null;
 function shareNote(id) {
@@ -1282,20 +1279,27 @@ async function saveNote(id) {
   }
 }
 
+// Fecha legible de hoy (CDMX-friendly) para titular el cuaderno automáticamente.
+function notesTodayLabel() {
+  try { return new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }); }
+  catch { return ''; }
+}
+
 async function addNoteBlock() {
   try {
     const { data: { session } } = await sb.auth.getSession();
     const uid = session?.user?.id;
     if (!uid) { toast('Sesión no válida'); return; }
+    // Nuevo cuaderno titulado con la fecha de hoy (el usuario puede cambiarlo).
     const { data, error } = await sb.from('user_notes')
-      .insert({ user_id: uid, title: '', content: '', position: notesData.length })
+      .insert({ user_id: uid, title: notesTodayLabel(), content: '', position: notesData.length })
       .select('id,title,content,position,updated_at').single();
     if (error) throw error;
-    notesData.push(data);
+    notesData.unshift(data);   // el más reciente arriba
     notesLoaded = true;
     renderNotes();
-    const t = document.querySelector('.note-block[data-id="' + data.id + '"] .note-title');
-    if (t) t.focus();
+    const b = document.querySelector('.note-block[data-id="' + data.id + '"] .note-body');
+    if (b) b.focus();
   } catch (err) {
     const falta = /relation|does not exist|schema cache|not find the table/i.test(err.message || '');
     toast('No se pudo crear la nota' + (falta ? ': falta la migración de BD' : ''));
@@ -2722,6 +2726,7 @@ function switchView(view, isBack = false) {
   const brandBtn = document.getElementById('headerBrandBtn');
   if (brandBtn) brandBtn.disabled = (view === 'selector');
 
+  updateNotesFab();   // botón flotante de notas: visible con empresa elegida
   closeNav();
 
   if (view === 'db' && !dbLoaded) loadDb();
