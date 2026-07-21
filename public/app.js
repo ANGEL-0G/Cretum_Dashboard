@@ -7981,7 +7981,7 @@ const DO_DOMAINS = {
   'Diamond Foundry': 'diamondfoundry.com', 'Base Power': 'basepowercompany.com', 'Rappi': 'rappi.com',
   'Agility Robotics': 'agilityrobotics.com', 'Kraken': 'kraken.com', 'Lime': 'li.me',
   'Automattic Inc.': 'automattic.com', 'Mach Industries': 'machindustries.com', 'Patreon': 'patreon.com',
-  'Trusted': 'trustedhealth.com', 'Cohesity': 'cohesity.com', 'Bolt': 'bolt.com', 'Aumni': 'aumni.fund',
+  'Trusted': 'trustedhealth.com', 'Cohesity': 'cohesity.com', 'Bolt': 'bolt.com',
   'Airbnb': 'airbnb.com', 'Klarna': 'klarna.com', 'Spotify': 'spotify.com', 'Instacart': 'instacart.com',
   'Coinbase': 'coinbase.com', 'DraftKings': 'draftkings.com', 'Lyft': 'lyft.com', 'Palantir': 'palantir.com',
   'Pinterest': 'pinterest.com', 'Rent The Runway': 'renttherunway.com', 'SoFi': 'sofi.com',
