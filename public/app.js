@@ -7995,6 +7995,7 @@ async function loadDirectOppsData(force) {
       rows: [], committedAct: 0, nav: 0, paidIn: 0, dist: 0, lps: new Set(), nAct: 0, nTerm: 0, pps: null,
     });
     const d = distByInv[r.id] || 0;
+    r.__d = d;
     c.rows.push(r);
     c.paidIn += n(r.commitment);
     c.dist += d;
@@ -8013,6 +8014,7 @@ async function loadDirectOppsData(force) {
     ...c, nLps: c.lps.size,
     moicU: c.committedAct ? c.nav / c.committedAct : 0,
     moicT: c.paidIn ? (c.nav + c.dist) / c.paidIn : 0,
+    dpi: c.paidIn ? c.dist / c.paidIn : 0,
   })).sort((a, b) => (b.nav + b.dist) - (a.nav + a.dist));
   _doData = { list };
   return _doData;
@@ -8035,8 +8037,8 @@ async function openDirectOpps(force) {
 }
 
 function _doLiveBadge(c) {
-  if (c.id === 27 || c.id === 18) return '<span class="do-live">@ mercado · al minuto</span>';
-  if (c.pub) return '<span class="do-live do-live-day">pública · cierre diario</span>';
+  if (c.id === 27 || c.id === 18) return '<span class="do-live">@ mercado</span>';
+  if (c.pub) return '<span class="do-live do-live-day">pública</span>';
   return '';
 }
 
@@ -8067,9 +8069,11 @@ function renderDoHome() {
       </div>
     </div>
     <input class="form-input do-search" placeholder="Buscar empresa…" value="${escapeHtml(_doQuery)}"
-      oninput="_doQuery=this.value;renderDoHome();const i=document.querySelector('.do-search');i.focus();i.setSelectionRange(i.value.length,i.value.length)">
-    <div class="ft-cards">` +
-    shown.map(c => `
+      oninput="_doQuery=this.value;renderDoHome();const i=document.querySelector('.do-search');i.focus();i.setSelectionRange(i.value.length,i.value.length)">` +
+    (() => {
+      const act = shown.filter(c => c.nAct > 0);
+      const term = shown.filter(c => c.nAct === 0).sort((a, b) => b.dist - a.dist);
+      const cardAct = c => `
       <div class="ft-card" onclick="openDirectOpp(${c.id})">
         <div class="ft-card-ico"><i class="fa-solid fa-building"></i></div>
         <div class="ft-card-body">
@@ -8083,9 +8087,25 @@ function renderDoHome() {
           </div>
         </div>
         <div class="ft-card-chev"><i class="fa-solid fa-chevron-right"></i></div>
-      </div>`).join('') +
-    `</div>
-    <div class="do-foot">Fondos diversificados (Fund IV/V…) viven en sus propios trackers. SpaceX neta las reinversiones 22F→26A QP en los totales (las filas individuales muestran su capital completo).</div>`;
+      </div>`;
+      const cardTerm = c => `
+      <div class="ft-card do-card-term" onclick="openDirectOpp(${c.id})">
+        <div class="ft-card-ico"><i class="fa-solid fa-flag-checkered"></i></div>
+        <div class="ft-card-body">
+          <div class="ft-card-title">${escapeHtml(c.name)}</div>
+          <div class="ft-card-meta">
+            <span><strong>${fmtUsdShort(c.dist)}</strong> distribuido</span>
+            <span class="${moicClass(c.dpi)}"><strong>${c.dpi.toFixed(2)}x</strong> DPI</span>
+            <span><strong>${c.nLps}</strong> LPs</span>
+            <span><strong>${c.nTerm}</strong> posiciones</span>
+          </div>
+        </div>
+        <div class="ft-card-chev"><i class="fa-solid fa-chevron-right"></i></div>
+      </div>`;
+      return (act.length ? `<div class="do-sec-h">En cartera <span class="do-count">${act.length}</span></div><div class="ft-cards">${act.map(cardAct).join('')}</div>` : '') +
+        (term.length ? `<div class="do-sec-h do-sec-term">Terminadas (100% distribuidas) <span class="do-count">${term.length}</span></div><div class="ft-cards">${term.map(cardTerm).join('')}</div>` : '');
+    })() +
+    `<div class="do-foot">Fondos diversificados (Fund IV/V…) viven en sus propios trackers. SpaceX neta las reinversiones 22F→26A QP en los totales (las filas individuales muestran su capital completo). DPI = distribuido ÷ aportado.</div>`;
 }
 
 function openDirectOpp(cid) {
@@ -8110,18 +8130,22 @@ function openDirectOpp(cid) {
     <td class="ft-num ${s.com ? moicClass(s.nav / s.com) : ''}">${s.com ? (s.nav / s.com).toFixed(2) + 'x' : '—'}</td></tr>`).join('');
 
   // inversionistas: activas primero por valor
-  const rows = c.rows.slice().sort((a, b) => (!!a.distributed_at - !!b.distributed_at) || ((n(b.commitment_actual) || n(b.commitment)) - (n(a.commitment_actual) || n(a.commitment))));
+  const rows = c.rows.slice().sort((a, b) => (!!a.distributed_at - !!b.distributed_at)
+    || (a.distributed_at ? (n(b.__d) - n(a.__d)) : ((n(b.commitment_actual) || n(b.commitment)) - (n(a.commitment_actual) || n(a.commitment)))));
   const invRows = rows.map(r => {
     const term = !!r.distributed_at;
     const val = term ? null : (n(r.commitment_actual) || n(r.commitment));
-    const moic = term ? null : (n(r.commitment) ? val / n(r.commitment) : null);
+    const d = n(r.__d);
+    // Activa: MOIC = (valor + distros parciales) ÷ aportado. Terminada: DPI = distribuido ÷ aportado.
+    const mult = n(r.commitment) ? (term ? d / n(r.commitment) : (val + d) / n(r.commitment)) : null;
     return `<tr class="${term ? 'do-term' : ''}">
       <td>${escapeHtml((r.investors || {}).name || '—')}</td>
       <td class="do-dim">${escapeHtml(cleanSer((r.series || {}).name))}</td>
       <td>${term ? '<span class="do-chip do-chip-t">Terminada</span>' : '<span class="do-chip do-chip-a">Activa</span>'}</td>
       <td class="ft-num">${fmtUsdShort(n(r.commitment))}</td>
       <td class="ft-num">${val != null ? fmtUsdShort(val) : '—'}</td>
-      <td class="ft-num ${moic != null ? moicClass(moic) : ''}">${moic != null ? moic.toFixed(2) + 'x' : '—'}</td>
+      <td class="ft-num">${d > 0.5 ? fmtUsdShort(d) : '—'}</td>
+      <td class="ft-num ${mult != null ? moicClass(mult) : ''}">${mult != null ? mult.toFixed(2) + 'x' : '—'}</td>
     </tr>`;
   }).join('');
 
@@ -8138,10 +8162,12 @@ function openDirectOpp(cid) {
         </div>
       </div>
       <div class="ft-stats">
-        <div><div class="ft-stat-l">Levantado (activo)</div><div class="ft-stat-v">${fmtUsdShort(c.committedAct)}</div></div>
+        <div><div class="ft-stat-l">Aportado histórico</div><div class="ft-stat-v">${fmtUsdShort(c.paidIn)}</div></div>
+        ${c.nAct ? `<div><div class="ft-stat-l">Levantado (activo)</div><div class="ft-stat-v">${fmtUsdShort(c.committedAct)}</div></div>
         <div><div class="ft-stat-l">Valor hoy (NAV)</div><div class="ft-stat-v">${fmtUsdShort(c.nav)}</div></div>
-        <div><div class="ft-stat-l">MOIC no realizado</div><div class="ft-stat-v ${moicClass(c.moicU)}">${c.moicU.toFixed(2)}x</div></div>
+        <div><div class="ft-stat-l">MOIC no realizado</div><div class="ft-stat-v ${moicClass(c.moicU)}">${c.moicU.toFixed(2)}x</div></div>` : ''}
         <div><div class="ft-stat-l">Distribuido</div><div class="ft-stat-v">${fmtUsdShort(c.dist)}</div></div>
+        <div><div class="ft-stat-l">DPI</div><div class="ft-stat-v ${moicClass(c.dpi)}">${c.dpi.toFixed(2)}x</div></div>
         <div><div class="ft-stat-l">MOIC total${c.netted ? ' (neto)' : ''}</div><div class="ft-stat-v ${moicClass(c.moicT)}">${c.moicT.toFixed(2)}x</div></div>
       </div>
     </div>
@@ -8154,7 +8180,7 @@ function openDirectOpp(cid) {
     <div class="ft-section">
       <div class="ft-section-title">Inversionistas (${c.rows.length} posiciones)</div>
       <div class="ft-table-wrap"><table class="ft-table">
-        <thead><tr><th>Inversionista</th><th>Serie</th><th>Estado</th><th class="ft-num">Comprometido</th><th class="ft-num">Valor hoy</th><th class="ft-num">MOIC</th></tr></thead>
+        <thead><tr><th>Inversionista</th><th>Serie</th><th>Estado</th><th class="ft-num">Comprometido</th><th class="ft-num">Valor hoy</th><th class="ft-num">Distribuido</th><th class="ft-num">MOIC / DPI</th></tr></thead>
         <tbody>${invRows}</tbody></table></div>
     </div>
     ${c.netted ? '<div class="do-foot">Totales netos de reinversiones 22F→26A QP (el capital reciclado se cuenta una vez); las filas muestran el capital completo de cada posición. Posiciones terminadas: su historia está en las cartas de distribución.</div>' : ''}
