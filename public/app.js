@@ -2644,45 +2644,190 @@ let _mvpKpisLoaded = false;
 // y por el modal "Full LATAM MVP Snapshot" de Base de Datos.
 async function _computeMvpSnapshot() {
   const [inv, dist, comps] = await Promise.all([
-    sbFetchAll('investments', 'investor_id,company_id,commitment,commitment_actual,distributed_at'),
-    sbFetchAll('investment_distributions', 'value_in_kind,cash_proceeds'),
+    sbFetchAll('investments', 'id,investor_id,company_id,commitment,commitment_actual,distributed_at'),
+    sbFetchAll('investment_distributions', 'investment_id,value_in_kind,cash_proceeds,distribution_date,notes'),
     sbFetchAll('companies', 'id,name')
   ]);
   const n = v => (Number(v) || 0);
   // Neteo de reinversiones 22F→26A QP (no inflar comprometido ni distribuido).
   let netTot = { totalRecycled: 0, totalReinvested: 0 };
   try { netTot = await loadReinvestNettingMap(); } catch (e) { console.warn('netting map', e); }
+
+  const invById = Object.fromEntries(inv.map(r => [r.id, r]));
   const active = inv.filter(r => !r.distributed_at);
-  const committed = active.reduce((s, r) => s + n(r.commitment), 0) - netTot.totalRecycled;   // comprometido real
+  const term = inv.filter(r => r.distributed_at);
+
+  // ── Base común (todo el negocio, neto de reinversiones) ──
+  const paidIn = inv.reduce((s, r) => s + n(r.commitment), 0) - netTot.totalRecycled;
   const nav = active.reduce((s, r) => s + (n(r.commitment_actual) || n(r.commitment)), 0);
-  const distrib = dist.reduce((s, r) => s + n(r.value_in_kind) + n(r.cash_proceeds), 0) - netTot.totalReinvested;  // distribuido real
-  const paidIn = inv.reduce((s, r) => s + n(r.commitment), 0) - netTot.totalRecycled;          // paid-in total (activo + distribuido)
-  const moic = paidIn ? (nav + distrib) / paidIn : 0;   // MOIC/TVPI: (NAV + distribuido) / paid-in real
-  const nInv = new Set(inv.map(r => r.investor_id)).size;
-  const nPos = active.length;
+  const distGross = dist.reduce((s, r) => s + n(r.value_in_kind) + n(r.cash_proceeds), 0);
+  const distrib = distGross - netTot.totalReinvested;
+  const tvpi = paidIn ? (nav + distrib) / paidIn : 0;
+  const dpi = paidIn ? distrib / paidIn : 0;
+  const rvpi = paidIn ? nav / paidIn : 0;
+
+  // ── Cartera ACTIVA ──
+  const committedAct = active.reduce((s, r) => s + n(r.commitment), 0) - netTot.totalRecycled;
+  const unrealMoic = committedAct ? nav / committedAct : 0;
+
+  // ── REALIZADO (posiciones terminadas) ──
+  // Todas las reinversiones netadas provienen de distros de filas terminadas (22F vendidas),
+  // así que distribuido-de-terminadas NETO = bruto de esas filas − total reinvertido.
+  const commitTerm = term.reduce((s, r) => s + n(r.commitment), 0);
+  let distTermGross = 0, distFromActive = 0;
+  const byYear = {};
+  dist.forEach(r => {
+    const v = n(r.value_in_kind) + n(r.cash_proceeds);
+    const row = invById[r.investment_id];
+    if (row && !row.distributed_at) distFromActive += v; else distTermGross += v;
+    // flujo por año, excluyendo las distros marcadas como reinversión (aprox del neto)
+    if (!/reinver|reinvest/i.test(r.notes || '')) {
+      const y = (r.distribution_date || '').slice(0, 4);
+      if (y) byYear[y] = (byYear[y] || 0) + v;
+    }
+  });
+  const distTermNet = distTermGross - netTot.totalReinvested;
+  const realizedMoic = commitTerm ? distTermNet / commitTerm : 0;
+
+  // ── NAV por empresa + fondos vs directos ──
   const cname = Object.fromEntries(comps.map(c => [c.id, c.name]));
   const byCo = {};
-  active.forEach(r => { const k = r.company_id; byCo[k] = (byCo[k] || 0) + (n(r.commitment_actual) || n(r.commitment)); });
-  const top = Object.entries(byCo).sort((a, b) => b[1] - a[1]).slice(0, 10);
-  return { committed, nav, moic, distrib, nInv, nPos, top, cname };
+  let navFondos = 0;
+  active.forEach(r => {
+    const v = n(r.commitment_actual) || n(r.commitment);
+    byCo[r.company_id] = (byCo[r.company_id] || 0) + v;
+    if (r.company_id === 10) navFondos += v;   // "Diversified Fund" = posiciones en fondos
+  });
+  const top = Object.entries(byCo).sort((a, b) => b[1] - a[1]);
+  const top5pct = nav ? top.slice(0, 5).reduce((s, [, v]) => s + v, 0) / nav : 0;
+
+  // ── Calidad de la cartera: NAV por bucket de MOIC (por posición activa) ──
+  const buckets = [
+    { l: '<1x', min: -1, max: 1, v: 0, c: 0 },
+    { l: '1x', min: 1, max: 1.0001, v: 0, c: 0 },
+    { l: '1–1.5x', min: 1.0001, max: 1.5, v: 0, c: 0 },
+    { l: '1.5–2x', min: 1.5, max: 2, v: 0, c: 0 },
+    { l: '2–3x', min: 2, max: 3, v: 0, c: 0 },
+    { l: '>3x', min: 3, max: 1e9, v: 0, c: 0 },
+  ];
+  active.forEach(r => {
+    const commit = n(r.commitment);
+    if (!commit) return;
+    const v = n(r.commitment_actual) || commit;
+    const m = v / commit;
+    const b = buckets.find(b => m >= b.min && m < b.max);
+    if (b) { b.v += v; b.c += 1; }
+  });
+
+  return {
+    paidIn, nav, distrib, tvpi, dpi, rvpi,
+    committedAct, unrealMoic, nAct: active.length,
+    commitTerm, distTermNet, realizedMoic, nTerm: term.length, distFromActive,
+    nInv: new Set(inv.map(r => r.investor_id)).size,
+    nCo: Object.keys(byCo).length,
+    top, top5pct, navFondos, byYear, buckets, cname,
+    netted: netTot.totalReinvested,
+  };
 }
 
-function _mvpSnapshotInnerHtml(d, topN) {
+function _mvpSnapshotInnerHtml(d, topN, full) {
   const top = d.top.slice(0, topN || 5);
   const maxv = top.length ? top[0][1] : 1;
-  const kpi = (label, val, cls, info, right) => `<div class="home-kpi"><div class="home-kpi-l">${label}${info ? infoIc(info, right) : ''}</div><div class="home-kpi-v ${cls || ''}">${val}</div></div>`;
-  return `<div class="home-kpis-grid">` +
-      kpi('Capital comprometido', fmtUsdShort(d.committed), '', 'Suma del compromiso de las posiciones activas de todos los LP, neto de reinversiones SpaceX (la 22F vendida y reinvertida en la 26A QP se cuenta una sola vez).') +
-      kpi('Valor actual (NAV)', fmtUsdShort(d.nav), 'accent', 'Valor de mercado actual de todas las posiciones activas (mark-to-market, sincronizado con el último precio).', true) +
-      kpi('MOIC', d.moic.toFixed(2) + 'x', moicClass(d.moic), 'Múltiplo total (TVPI): (NAV + distribuido real) ÷ capital pagado real (incluye terminadas). Neto de reinversiones.') +
-      kpi('Distribuido a la fecha', fmtUsdShort(d.distrib), '', 'Efectivo y acciones devueltos a los LP, incluyendo distribuciones aplicadas a llamadas de capital. Excluye recompras/reinversiones SpaceX.', true) +
-      kpi('Inversionistas', d.nInv.toLocaleString('en-US'), '', 'Número de inversionistas (LP) distintos en la base.') +
-      kpi('Posiciones activas', d.nPos.toLocaleString('en-US'), '', 'Posiciones aún sin distribuir ni liquidar.', true) +
-    `</div>` +
-    `<div class="home-top">` +
-      `<div class="home-top-h">Top posiciones por valor (NAV activo)</div>` +
-      top.map(([cid, v]) => `<div class="home-top-row"><span class="home-top-name">${escapeHtml(d.cname[cid] || '—')}</span><div class="home-top-bar"><div class="home-top-fill" style="width:${(v / maxv * 100).toFixed(1)}%"></div></div><span class="home-top-val">${fmtUsdShort(v)}</span></div>`).join('') +
+  const pal = lpChartPalette();
+  const kpi = (label, val, cls, info, right, sub) => `<div class="home-kpi"><div class="home-kpi-l">${label}${info ? infoIc(info, right) : ''}</div><div class="home-kpi-v ${cls || ''}">${val}</div>${sub ? `<div class="snap-kpi-sub">${sub}</div>` : ''}</div>`;
+  const secH = (t, info) => `<div class="snap-sec-h">${t}${info ? infoIc(info) : ''}</div>`;
+
+  // ── Hero: el marco TVPI (todo el negocio, sin ambigüedad) ──
+  let html = secH('El negocio completo', 'Marco estándar de private equity: TODO el capital que ha pasado por MVP LATAM (posiciones activas + terminadas), neto de reinversiones SpaceX (el capital reciclado 22F→26A QP se cuenta una sola vez).') +
+    `<div class="home-kpis-grid">` +
+    kpi('Capital aportado', fmtUsdShort(d.paidIn), '', 'Paid-in: todo el capital invertido histórico (activo + ya terminado), neto de reinversiones.') +
+    kpi('Valor total creado', fmtUsdShort(d.nav + d.distrib), 'accent', 'NAV actual + todo lo distribuido. Es el numerador del TVPI.', true) +
+    kpi('TVPI', d.tvpi.toFixed(2) + 'x', moicClass(d.tvpi), 'Total Value / Paid-In: (NAV + distribuido) ÷ aportado. El múltiplo del negocio completo.') +
+    kpi('DPI', d.dpi.toFixed(2) + 'x', '', 'Distributions / Paid-In: cuánto ya regresó a los LP en efectivo o acciones, por dólar aportado. Lo REALIZADO.', true) +
+    kpi('RVPI', d.rvpi.toFixed(2) + 'x', '', 'Residual Value / Paid-In: cuánto queda vivo en cartera por dólar aportado. Lo NO realizado. TVPI = DPI + RVPI.') +
+    kpi('Inversionistas', d.nInv.toLocaleString('en-US'), '', 'LPs distintos con al menos una inversión registrada.', true) +
     `</div>`;
+
+  // ── Barra de composición del valor ──
+  const totVal = d.nav + d.distrib;
+  if (totVal > 0) {
+    const pNav = d.nav / totVal * 100, pDist = 100 - pNav;
+    html += `<div class="snap-mix"><div class="snap-mix-bar">` +
+      `<div class="snap-mix-seg snap-mix-nav" style="width:${pNav.toFixed(1)}%"></div>` +
+      `<div class="snap-mix-seg snap-mix-dist" style="width:${pDist.toFixed(1)}%"></div></div>` +
+      `<div class="snap-mix-leg"><span><i class="snap-dot snap-mix-nav"></i>En cartera (NAV) ${fmtUsdShort(d.nav)} · ${pNav.toFixed(0)}%</span>` +
+      `<span><i class="snap-dot snap-mix-dist"></i>Ya distribuido ${fmtUsdShort(d.distrib)} · ${pDist.toFixed(0)}%</span></div></div>`;
+  }
+
+  if (full) {
+    // ── Dos paneles: activo vs realizado ──
+    html += `<div class="snap-grid2">` +
+      `<div class="snap-panel"><div class="snap-panel-h">Cartera activa</div>` +
+        `<div class="snap-row"><span>Posiciones activas</span><b>${d.nAct.toLocaleString('en-US')}</b></div>` +
+        `<div class="snap-row"><span>Empresas / vehículos</span><b>${d.nCo}</b></div>` +
+        `<div class="snap-row"><span>Comprometido activo</span><b>${fmtUsdShort(d.committedAct)}</b></div>` +
+        `<div class="snap-row"><span>Valor actual (NAV)</span><b class="accent">${fmtUsdShort(d.nav)}</b></div>` +
+        `<div class="snap-row"><span>MOIC no realizado${infoIc('NAV ÷ comprometido activo. Solo posiciones vivas, marks al último precio.')}</span><b class="${moicClass(d.unrealMoic)}">${d.unrealMoic.toFixed(2)}x</b></div>` +
+      `</div>` +
+      `<div class="snap-panel"><div class="snap-panel-h">Realizado (terminadas)</div>` +
+        `<div class="snap-row"><span>Posiciones terminadas</span><b>${d.nTerm.toLocaleString('en-US')}</b></div>` +
+        `<div class="snap-row"><span>Capital de esas posiciones</span><b>${fmtUsdShort(d.commitTerm)}</b></div>` +
+        `<div class="snap-row"><span>Distribuido por ellas (neto)</span><b>${fmtUsdShort(d.distTermNet)}</b></div>` +
+        `<div class="snap-row"><span>MOIC realizado${infoIc('Distribuido neto de las posiciones terminadas ÷ su capital. Historia cerrada, sin marks.')}</span><b class="${moicClass(d.realizedMoic)}">${d.realizedMoic.toFixed(2)}x</b></div>` +
+        `<div class="snap-row"><span>Distros parciales de activas${infoIc('Distribuciones recibidas por posiciones que SIGUEN vivas (ventas parciales, dividendos). Ya incluidas en el DPI.')}</span><b>${fmtUsdShort(d.distFromActive)}</b></div>` +
+      `</div></div>`;
+  }
+
+  // ── NAV por empresa: donut + barras ──
+  const listN = full ? Math.min(topN || 10, d.top.length) : Math.min(5, d.top.length);
+  const items = d.top.slice(0, listN);
+  const others = d.nav - items.reduce((s, [, v]) => s + v, 0);
+  let donut = '';
+  if (full && d.nav > 0) {
+    const segsData = [...items.map(([cid, v], i) => [d.cname[cid] || '—', v, pal[i % pal.length]]), ...(others > 1 ? [['Otras', others, '#d9d2c9']] : [])];
+    const size = 150, stroke = 30, r = (size - stroke) / 2, c = size / 2, C = 2 * Math.PI * r;
+    let off = 0, segs = '';
+    segsData.forEach(([, v, col]) => {
+      const seg = v / d.nav * C;
+      segs += `<circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="${col}" stroke-width="${stroke}" stroke-dasharray="${seg.toFixed(2)} ${(C - seg).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}" transform="rotate(-90 ${c} ${c})"/>`;
+      off += seg;
+    });
+    donut = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${segs}<text x="${c}" y="${c - 4}" text-anchor="middle" class="snap-donut-big">${fmtUsdShort(d.nav)}</text><text x="${c}" y="${c + 14}" text-anchor="middle" class="snap-donut-cap">NAV</text></svg>`;
+  }
+  html += secH('Top posiciones por valor (NAV activo)', 'Suma del valor actual de las posiciones activas por empresa. "Diversified Fund" agrupa las posiciones en fondos (Fund IV, V, etc.).') +
+    `<div class="snap-donut-row">${donut ? `<div class="snap-donut">${donut}</div>` : ''}<div class="home-top" style="flex:1">` +
+    items.map(([cid, v], i) => `<div class="home-top-row"><span class="snap-sw" style="background:${full ? pal[i % pal.length] : 'var(--accent, #ED7824)'}"></span><span class="home-top-name">${escapeHtml(d.cname[cid] || '—')}</span><div class="home-top-bar"><div class="home-top-fill" style="width:${(v / maxv * 100).toFixed(1)}%"></div></div><span class="home-top-val">${fmtUsdShort(v)}<span class="snap-pct">${(v / d.nav * 100).toFixed(0)}%</span></span></div>`).join('') +
+    (full && others > 1 ? `<div class="home-top-row"><span class="snap-sw" style="background:#d9d2c9"></span><span class="home-top-name">Otras (${d.top.length - listN})</span><div class="home-top-bar"><div class="home-top-fill" style="width:${(others / maxv * 100).toFixed(1)}%;background:#d9d2c9"></div></div><span class="home-top-val">${fmtUsdShort(others)}<span class="snap-pct">${(others / d.nav * 100).toFixed(0)}%</span></span></div>` : '') +
+    `</div></div>`;
+
+  if (full) {
+    // ── Composición y concentración ──
+    const navDir = d.nav - d.navFondos;
+    html += `<div class="snap-grid2">` +
+      `<div class="snap-panel"><div class="snap-panel-h">Fondos vs. Directos${infoIc('Fondos = posiciones en vehículos diversificados (Fund IV, V…). Directos = exposición a una sola empresa.')}</div>` +
+        `<div class="snap-mix-bar snap-mix-slim"><div class="snap-mix-seg snap-mix-nav" style="width:${(d.navFondos / (d.nav || 1) * 100).toFixed(1)}%"></div><div class="snap-mix-seg snap-mix-dir" style="width:${(navDir / (d.nav || 1) * 100).toFixed(1)}%"></div></div>` +
+        `<div class="snap-mix-leg"><span><i class="snap-dot snap-mix-nav"></i>Fondos ${fmtUsdShort(d.navFondos)} · ${(d.navFondos / (d.nav || 1) * 100).toFixed(0)}%</span><span><i class="snap-dot snap-mix-dir"></i>Directos ${fmtUsdShort(navDir)} · ${(navDir / (d.nav || 1) * 100).toFixed(0)}%</span></div>` +
+        `<div class="snap-row" style="margin-top:10px"><span>Concentración top 5</span><b>${(d.top5pct * 100).toFixed(0)}% del NAV</b></div>` +
+      `</div>` +
+      `<div class="snap-panel"><div class="snap-panel-h">Calidad de la cartera${infoIc('NAV activo agrupado por el múltiplo actual de cada posición (valor ÷ comprometido). Las posiciones a 1x incluyen las aún marcadas a costo.')}</div>` +
+        d.buckets.map(b => {
+          const maxB = Math.max(...d.buckets.map(x => x.v), 1);
+          return `<div class="snap-bucket"><span class="snap-bucket-l">${b.l}</span><div class="snap-bucket-bar"><div class="snap-bucket-fill ${b.min >= 1.0001 ? 'pos' : (b.max <= 1 ? 'neg' : '')}" style="width:${(b.v / maxB * 100).toFixed(1)}%"></div></div><span class="snap-bucket-v">${fmtUsdShort(b.v)}<span class="snap-pct">${b.c} pos</span></span></div>`;
+        }).join('') +
+      `</div></div>`;
+
+    // ── Flujo de distribuciones por año ──
+    const years = Object.entries(d.byYear).sort((a, b) => a[0].localeCompare(b[0]));
+    if (years.length) {
+      const maxY = Math.max(...years.map(([, v]) => v), 1);
+      html += secH('Distribuciones por año', 'Efectivo y acciones entregados a los LP por año de la carta (excluye las distros marcadas como reinversión SpaceX; aproximación del flujo neto).') +
+        `<div class="snap-years">` +
+        years.map(([y, v]) => `<div class="snap-year"><div class="snap-year-col"><div class="snap-year-fill" style="height:${(v / maxY * 100).toFixed(1)}%"></div></div><div class="snap-year-v">${fmtUsdShort(v)}</div><div class="snap-year-l">${y}</div></div>`).join('') +
+        `</div>`;
+    }
+    html += `<div class="snap-foot">Neteo aplicado: ${fmtUsdShort(d.netted)} de reinversiones SpaceX (22F→26A QP) excluidos de aportado y distribuido. NAV a marks del último precio sincronizado. TVPI = DPI + RVPI.</div>`;
+  }
+  return html;
 }
 
 async function renderMvpKpis() {
@@ -2707,7 +2852,7 @@ async function openMvpSnapshot() {
   body.innerHTML = '<div class="home-kpis-load">Cargando snapshot…</div>';
   try {
     const d = await _computeMvpSnapshot();
-    body.innerHTML = _mvpSnapshotInnerHtml(d, 10);
+    body.innerHTML = _mvpSnapshotInnerHtml(d, 8, true);
   } catch (e) {
     body.innerHTML = `<div class="home-kpis-err">No se pudo cargar el snapshot: ${escapeHtml(e.message || 'error')}</div>`;
   }
