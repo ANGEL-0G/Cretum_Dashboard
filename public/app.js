@@ -7974,6 +7974,27 @@ function closeFundTracker() {
 let _doData = null;
 let _doQuery = '';
 
+// Dominio por empresa (nombres de la DB) — logo vía Google favicons con fallback al ícono.
+const DO_DOMAINS = {
+  'Space X': 'spacex.com', 'Anthropic': 'anthropic.com', 'Epic Games': 'epicgames.com',
+  'Groq': 'groq.com', 'Cohere': 'cohere.com', 'Revolut': 'revolut.com', 'Figure AI': 'figure.ai',
+  'Diamond Foundry': 'diamondfoundry.com', 'Base Power': 'basepowercompany.com', 'Rappi': 'rappi.com',
+  'Agility Robotics': 'agilityrobotics.com', 'Kraken': 'kraken.com', 'Lime': 'li.me',
+  'Automattic Inc.': 'automattic.com', 'Mach Industries': 'machindustries.com', 'Patreon': 'patreon.com',
+  'Trusted': 'trustedhealth.com', 'Cohesity': 'cohesity.com', 'Bolt': 'bolt.com', 'Aumni': 'aumni.fund',
+  'Airbnb': 'airbnb.com', 'Klarna': 'klarna.com', 'Spotify': 'spotify.com', 'Instacart': 'instacart.com',
+  'Coinbase': 'coinbase.com', 'DraftKings': 'draftkings.com', 'Lyft': 'lyft.com', 'Palantir': 'palantir.com',
+  'Pinterest': 'pinterest.com', 'Rent The Runway': 'renttherunway.com', 'SoFi': 'sofi.com',
+  'Asana': 'asana.com', 'Udemy': 'udemy.com',
+};
+
+function _doLogo(c, termCls) {
+  const dom = DO_DOMAINS[c.name];
+  const fallback = `<i class="fa-solid ${termCls ? 'fa-flag-checkered' : 'fa-building'}"></i>`;
+  if (!dom) return `<div class="ft-card-ico${termCls ? '' : ''}">${fallback}</div>`;
+  return `<div class="ft-card-ico do-logo"><img src="https://www.google.com/s2/favicons?sz=128&domain=${dom}" alt="" loading="lazy" onerror="this.parentNode.innerHTML='${termCls ? '<i class=\'fa-solid fa-flag-checkered\'></i>' : '<i class=\'fa-solid fa-building\'></i>'}'"></div>`;
+}
+
 async function loadDirectOppsData(force) {
   if (_doData && !force) return _doData;
   const [inv, dists, comps] = await Promise.all([
@@ -8075,7 +8096,7 @@ function renderDoHome() {
       const term = shown.filter(c => c.nAct === 0).sort((a, b) => b.dist - a.dist);
       const cardAct = c => `
       <div class="ft-card" onclick="openDirectOpp(${c.id})">
-        <div class="ft-card-ico"><i class="fa-solid fa-building"></i></div>
+        ${_doLogo(c, false)}
         <div class="ft-card-body">
           <div class="ft-card-title">${escapeHtml(c.name)} ${_doLiveBadge(c)}</div>
           <div class="ft-card-meta">
@@ -8090,7 +8111,7 @@ function renderDoHome() {
       </div>`;
       const cardTerm = c => `
       <div class="ft-card do-card-term" onclick="openDirectOpp(${c.id})">
-        <div class="ft-card-ico"><i class="fa-solid fa-flag-checkered"></i></div>
+        ${_doLogo(c, true)}
         <div class="ft-card-body">
           <div class="ft-card-title">${escapeHtml(c.name)}</div>
           <div class="ft-card-meta">
@@ -8154,7 +8175,7 @@ function openDirectOpp(cid) {
     <div class="ft-header">
       <div class="ft-header-top">
         <div>
-          <div class="ft-name">${escapeHtml(c.name)} ${_doLiveBadge(c)}</div>
+          <div class="ft-name do-name-row">${_doLogo(c, false)}${escapeHtml(c.name)} ${_doLiveBadge(c)}</div>
           <div class="ft-sub">Oportunidad en directo · ${c.nLps} inversionistas · ${c.nAct} posiciones activas${c.nTerm ? ` · ${c.nTerm} terminadas` : ''}${c.pps ? ` · PPS actual $${c.pps.toLocaleString('en-US', { maximumFractionDigits: 2 })}` : ''}</div>
         </div>
         <div class="ft-export-grp">
