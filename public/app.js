@@ -7937,7 +7937,16 @@ function renderFundTrackerHome() {
         </div>
         <div class="ft-card-chev"><i class="fa-solid fa-chevron-right"></i></div>
       </div>`;
-  }).join('');
+  }).join('') + `
+      <div class="ft-card" onclick="openDirectOpps()">
+        <div class="ft-card-ico"><i class="fa-solid fa-bullseye"></i></div>
+        <div class="ft-card-body">
+          <div class="ft-card-title">Direct Opportunities</div>
+          <div class="ft-card-sub">Tracker vivo por oportunidad en directo</div>
+          <div class="ft-card-meta"><span>Resumen + inversionistas de cada empresa · precios sincronizados</span></div>
+        </div>
+        <div class="ft-card-chev"><i class="fa-solid fa-chevron-right"></i></div>
+      </div>`;
 }
 
 function openFundTracker(fundId) {
@@ -7956,6 +7965,201 @@ function openFundTracker(fundId) {
 
 function closeFundTracker() {
   renderFundTrackerHome();
+}
+
+/* ═══ DIRECT OPPORTUNITIES — tracker vivo por oportunidad en directo ═══
+   Agrega por empresa (todo lo que NO es "Diversified Fund"): resumen + lista de
+   inversionistas. Los valores vienen de la DB, que los crons mantienen al minuto
+   (SpaceX/Lime al minuto; resto de públicas al cierre; MOIC de fondos aparte). */
+let _doData = null;
+let _doQuery = '';
+
+async function loadDirectOppsData(force) {
+  if (_doData && !force) return _doData;
+  const [inv, dists, comps] = await Promise.all([
+    sbFetchAll('investments', 'id,investor_id,company_id,commitment,commitment_actual,distributed_at,current_ev_pps,investors(name),series(name)'),
+    sbFetchAll('investment_distributions', 'investment_id,cash_proceeds,value_in_kind'),
+    sbFetchAll('companies', 'id,name,is_public'),
+  ]);
+  let net = { totalRecycled: 0, totalReinvested: 0 };
+  try { net = await loadReinvestNettingMap(); } catch (e) { console.warn('netting', e); }
+  const n = v => Number(v) || 0;
+  const distByInv = {};
+  dists.forEach(d => { distByInv[d.investment_id] = (distByInv[d.investment_id] || 0) + n(d.cash_proceeds) + n(d.value_in_kind); });
+  const cinfo = Object.fromEntries(comps.map(c => [c.id, c]));
+  const co = {};
+  inv.forEach(r => {
+    if (r.company_id == null || r.company_id === 10) return;   // fondos → fuera (viven en Fund Trackers)
+    const c = co[r.company_id] || (co[r.company_id] = {
+      id: r.company_id, name: (cinfo[r.company_id] || {}).name || '—', pub: !!(cinfo[r.company_id] || {}).is_public,
+      rows: [], committedAct: 0, nav: 0, paidIn: 0, dist: 0, lps: new Set(), nAct: 0, nTerm: 0, pps: null,
+    });
+    const d = distByInv[r.id] || 0;
+    c.rows.push(r);
+    c.paidIn += n(r.commitment);
+    c.dist += d;
+    c.lps.add(r.investor_id);
+    if (r.distributed_at) { c.nTerm++; }
+    else {
+      c.nAct++;
+      c.committedAct += n(r.commitment);
+      c.nav += n(r.commitment_actual) || n(r.commitment);
+      if (r.current_ev_pps != null) c.pps = n(r.current_ev_pps);
+    }
+  });
+  // Neteo SpaceX (las reinversiones 22F→26A QP viven todas en la co 27)
+  if (co[27]) { co[27].committedAct -= net.totalRecycled; co[27].paidIn -= net.totalRecycled; co[27].dist -= net.totalReinvested; co[27].netted = true; }
+  const list = Object.values(co).map(c => ({
+    ...c, nLps: c.lps.size,
+    moicU: c.committedAct ? c.nav / c.committedAct : 0,
+    moicT: c.paidIn ? (c.nav + c.dist) / c.paidIn : 0,
+  })).sort((a, b) => (b.nav + b.dist) - (a.nav + a.dist));
+  _doData = { list };
+  return _doData;
+}
+
+async function openDirectOpps(force) {
+  const sel = document.getElementById('ftSelector');
+  const det = document.getElementById('ftDetail');
+  sel.style.display = 'none';
+  det.style.display = 'block';
+  det.classList.add('show');
+  const host = document.getElementById('ftDetailContent');
+  host.innerHTML = '<div class="home-kpis-load">Cargando oportunidades en directo…</div>';
+  try {
+    await loadDirectOppsData(force);
+    renderDoHome();
+  } catch (e) {
+    host.innerHTML = `<div class="home-kpis-err">Error: ${escapeHtml(e.message || 'no se pudo cargar')}</div>`;
+  }
+}
+
+function _doLiveBadge(c) {
+  if (c.id === 27 || c.id === 18) return '<span class="do-live">@ mercado · al minuto</span>';
+  if (c.pub) return '<span class="do-live do-live-day">pública · cierre diario</span>';
+  return '';
+}
+
+function renderDoHome() {
+  const host = document.getElementById('ftDetailContent');
+  const { list } = _doData;
+  const q = _doQuery.trim().toLowerCase();
+  const shown = q ? list.filter(c => c.name.toLowerCase().includes(q)) : list;
+  const totNav = list.reduce((s, c) => s + c.nav, 0);
+  const totCom = list.reduce((s, c) => s + c.committedAct, 0);
+  const totDist = list.reduce((s, c) => s + c.dist, 0);
+  host.innerHTML = `
+    <div class="ft-header">
+      <div class="ft-header-top">
+        <div>
+          <div class="ft-name">Direct Opportunities</div>
+          <div class="ft-sub">Oportunidades en directo (una empresa por vehículo) · valores vivos de la DB · neto de reinversiones SpaceX</div>
+        </div>
+        <div class="ft-export-grp">
+          <button class="ft-export-btn ft-export-btn-alt" onclick="openDirectOpps(true)"><i class="fa-solid fa-rotate"></i> Actualizar</button>
+        </div>
+      </div>
+      <div class="ft-stats">
+        <div><div class="ft-stat-l">Comprometido activo</div><div class="ft-stat-v">${fmtUsdShort(totCom)}</div></div>
+        <div><div class="ft-stat-l">Valor hoy (NAV)</div><div class="ft-stat-v">${fmtUsdShort(totNav)}</div></div>
+        <div><div class="ft-stat-l">MOIC no realizado</div><div class="ft-stat-v ${moicClass(totCom ? totNav / totCom : 0)}">${(totCom ? totNav / totCom : 0).toFixed(2)}x</div></div>
+        <div><div class="ft-stat-l">Distribuido histórico</div><div class="ft-stat-v">${fmtUsdShort(totDist)}</div></div>
+      </div>
+    </div>
+    <input class="form-input do-search" placeholder="Buscar empresa…" value="${escapeHtml(_doQuery)}"
+      oninput="_doQuery=this.value;renderDoHome();const i=document.querySelector('.do-search');i.focus();i.setSelectionRange(i.value.length,i.value.length)">
+    <div class="ft-cards">` +
+    shown.map(c => `
+      <div class="ft-card" onclick="openDirectOpp(${c.id})">
+        <div class="ft-card-ico"><i class="fa-solid fa-building"></i></div>
+        <div class="ft-card-body">
+          <div class="ft-card-title">${escapeHtml(c.name)} ${_doLiveBadge(c)}</div>
+          <div class="ft-card-meta">
+            <span><strong>${fmtUsdShort(c.nav)}</strong> NAV</span>
+            <span class="${moicClass(c.moicU)}"><strong>${c.moicU.toFixed(2)}x</strong></span>
+            <span><strong>${c.nLps}</strong> LPs</span>
+            <span><strong>${c.nAct}</strong> activas${c.nTerm ? ` · ${c.nTerm} term.` : ''}</span>
+            ${c.dist > 1 ? `<span><strong>${fmtUsdShort(c.dist)}</strong> distribuido</span>` : ''}
+          </div>
+        </div>
+        <div class="ft-card-chev"><i class="fa-solid fa-chevron-right"></i></div>
+      </div>`).join('') +
+    `</div>
+    <div class="do-foot">Fondos diversificados (Fund IV/V…) viven en sus propios trackers. SpaceX neta las reinversiones 22F→26A QP en los totales (las filas individuales muestran su capital completo).</div>`;
+}
+
+function openDirectOpp(cid) {
+  const c = _doData.list.find(x => x.id === cid);
+  if (!c) return;
+  const host = document.getElementById('ftDetailContent');
+  const cleanSer = s => String(s || '').replace(/MVP Opportunity (Fund VI LLC, )?/i, '').replace(/MVP All-Star /i, '').replace(/Series /i, '');
+  const n = v => Number(v) || 0;
+
+  // desglose por serie (activas)
+  const bySer = {};
+  c.rows.forEach(r => {
+    const k = (r.series || {}).name || '—';
+    const s = bySer[k] || (bySer[k] = { com: 0, nav: 0, nA: 0, nT: 0, lps: new Set() });
+    s.lps.add(r.investor_id);
+    if (r.distributed_at) s.nT++;
+    else { s.nA++; s.com += n(r.commitment); s.nav += n(r.commitment_actual) || n(r.commitment); }
+  });
+  const serRows = Object.entries(bySer).sort((a, b) => b[1].nav - a[1].nav).map(([k, s]) => `
+    <tr><td>${escapeHtml(cleanSer(k))}</td><td class="ft-num">${s.lps.size}</td><td class="ft-num">${s.nA}${s.nT ? ` <span class="do-dim">+${s.nT} term.</span>` : ''}</td>
+    <td class="ft-num">${s.com ? fmtUsdShort(s.com) : '—'}</td><td class="ft-num">${s.nav ? fmtUsdShort(s.nav) : '—'}</td>
+    <td class="ft-num ${s.com ? moicClass(s.nav / s.com) : ''}">${s.com ? (s.nav / s.com).toFixed(2) + 'x' : '—'}</td></tr>`).join('');
+
+  // inversionistas: activas primero por valor
+  const rows = c.rows.slice().sort((a, b) => (!!a.distributed_at - !!b.distributed_at) || ((n(b.commitment_actual) || n(b.commitment)) - (n(a.commitment_actual) || n(a.commitment))));
+  const invRows = rows.map(r => {
+    const term = !!r.distributed_at;
+    const val = term ? null : (n(r.commitment_actual) || n(r.commitment));
+    const moic = term ? null : (n(r.commitment) ? val / n(r.commitment) : null);
+    return `<tr class="${term ? 'do-term' : ''}">
+      <td>${escapeHtml((r.investors || {}).name || '—')}</td>
+      <td class="do-dim">${escapeHtml(cleanSer((r.series || {}).name))}</td>
+      <td>${term ? '<span class="do-chip do-chip-t">Terminada</span>' : '<span class="do-chip do-chip-a">Activa</span>'}</td>
+      <td class="ft-num">${fmtUsdShort(n(r.commitment))}</td>
+      <td class="ft-num">${val != null ? fmtUsdShort(val) : '—'}</td>
+      <td class="ft-num ${moic != null ? moicClass(moic) : ''}">${moic != null ? moic.toFixed(2) + 'x' : '—'}</td>
+    </tr>`;
+  }).join('');
+
+  host.innerHTML = `
+    <button class="db-back do-back" onclick="renderDoHome()"><i class="fa-solid fa-arrow-left"></i> Direct Opportunities</button>
+    <div class="ft-header">
+      <div class="ft-header-top">
+        <div>
+          <div class="ft-name">${escapeHtml(c.name)} ${_doLiveBadge(c)}</div>
+          <div class="ft-sub">Oportunidad en directo · ${c.nLps} inversionistas · ${c.nAct} posiciones activas${c.nTerm ? ` · ${c.nTerm} terminadas` : ''}${c.pps ? ` · PPS actual $${c.pps.toLocaleString('en-US', { maximumFractionDigits: 2 })}` : ''}</div>
+        </div>
+        <div class="ft-export-grp">
+          <button class="ft-export-btn ft-export-btn-alt" onclick="openDirectOpps(true).then(() => openDirectOpp(${c.id}))"><i class="fa-solid fa-rotate"></i> Actualizar</button>
+        </div>
+      </div>
+      <div class="ft-stats">
+        <div><div class="ft-stat-l">Levantado (activo)</div><div class="ft-stat-v">${fmtUsdShort(c.committedAct)}</div></div>
+        <div><div class="ft-stat-l">Valor hoy (NAV)</div><div class="ft-stat-v">${fmtUsdShort(c.nav)}</div></div>
+        <div><div class="ft-stat-l">MOIC no realizado</div><div class="ft-stat-v ${moicClass(c.moicU)}">${c.moicU.toFixed(2)}x</div></div>
+        <div><div class="ft-stat-l">Distribuido</div><div class="ft-stat-v">${fmtUsdShort(c.dist)}</div></div>
+        <div><div class="ft-stat-l">MOIC total${c.netted ? ' (neto)' : ''}</div><div class="ft-stat-v ${moicClass(c.moicT)}">${c.moicT.toFixed(2)}x</div></div>
+      </div>
+    </div>
+    <div class="ft-section">
+      <div class="ft-section-title">Por serie</div>
+      <div class="ft-table-wrap"><table class="ft-table">
+        <thead><tr><th>Serie</th><th class="ft-num">LPs</th><th class="ft-num">Posiciones</th><th class="ft-num">Comprometido</th><th class="ft-num">Valor hoy</th><th class="ft-num">MOIC</th></tr></thead>
+        <tbody>${serRows}</tbody></table></div>
+    </div>
+    <div class="ft-section">
+      <div class="ft-section-title">Inversionistas (${c.rows.length} posiciones)</div>
+      <div class="ft-table-wrap"><table class="ft-table">
+        <thead><tr><th>Inversionista</th><th>Serie</th><th>Estado</th><th class="ft-num">Comprometido</th><th class="ft-num">Valor hoy</th><th class="ft-num">MOIC</th></tr></thead>
+        <tbody>${invRows}</tbody></table></div>
+    </div>
+    ${c.netted ? '<div class="do-foot">Totales netos de reinversiones 22F→26A QP (el capital reciclado se cuenta una vez); las filas muestran el capital completo de cada posición. Posiciones terminadas: su historia está en las cartas de distribución.</div>' : ''}
+    <div class="do-foot">Valores en vivo de la DB (marks por cron). MOIC no realizado = NAV ÷ comprometido activo. MOIC total = (NAV + distribuido) ÷ aportado histórico.</div>`;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function renderFundTrackerDetail(fundId) {
