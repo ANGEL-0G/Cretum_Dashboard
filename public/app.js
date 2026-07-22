@@ -16,7 +16,14 @@ let foldersData = [];            // carpetas de notas (note_folders)
 let currentFolder = null;        // null = General (notas sin carpeta)
 let notesLoaded = false;
 const noteSaveTimers = {};       // debounce de guardado por bloc/carpeta
-const NOTE_COLORS = ['#cbd5e1', '#f5b842', '#4ade80', '#5d8ff5', '#b98cff', '#f472b6', '#f2765d'];
+// Paleta amplia para carpetas y notas (se usa como halo/glow, no como relleno).
+const NOTE_COLORS = [
+  '#94a3b8', '#64748b',                                     // grises azulados
+  '#ef4444', '#f97316', '#f59e0b', '#eab308',               // rojo → ámbar
+  '#84cc16', '#22c55e', '#10b981', '#14b8a6',               // verdes
+  '#06b6d4', '#3b82f6', '#6366f1',                          // cian → índigo
+  '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#f43f5e'     // violeta → rosa
+];
 let saveTimer = null;
 
 /* ═══════════════════════════════════════════
@@ -1196,78 +1203,119 @@ async function loadNotes() {
   }
 }
 
-// Pinta el drawer completo: chips de carpetas + barra de carpeta activa + notas.
-function renderDrawer() { renderFolders(); renderFolderBar(); renderNotes(); }
+// Pinta el drawer completo: chips de carpetas + notas.
+function renderDrawer() { renderFolders(); renderNotes(); }
 
 function renderFolders() {
   const el = document.getElementById('notesFolders');
   if (!el) return;
-  const chip = (active, onclick, style, inner) =>
-    `<button class="nf-chip${active ? ' active' : ''}"${style ? ` style="${style}"` : ''} onclick="${onclick}">${inner}</button>`;
-  let html = chip(currentFolder === null, "selectFolder(null)", '', '<i class="fa-solid fa-note-sticky"></i> General');
-  html += foldersData.map(f =>
-    chip(currentFolder === f.id, `selectFolder('${f.id}')`, `--fc:${f.color || '#cbd5e1'}`, `<span class="nf-dot"></span>${escapeHtml(f.name || 'Carpeta')}`)
-  ).join('');
-  html += `<button class="nf-chip nf-add" onclick="addFolder()"><i class="fa-solid fa-folder-plus"></i> Carpeta</button>`;
+  // General: chip neutro (halo navy al estar activo).
+  let html = `<button class="nf-chip${currentFolder === null ? ' active' : ''}" style="--fc:var(--navy)" onclick="selectFolder(null)"><i class="fa-solid fa-note-sticky"></i> General</button>`;
+  // Carpetas: el color de cada una se muestra como halo/glow, no como relleno.
+  // La carpeta activa muestra además un lápiz para editar nombre + color.
+  html += foldersData.map(f => {
+    const active = currentFolder === f.id;
+    const fc = f.color || '#94a3b8';
+    const chip = `<button class="nf-chip${active ? ' active' : ''}" style="--fc:${fc}" onclick="selectFolder('${f.id}')"><span class="nf-dot"></span>${escapeHtml(f.name || 'Carpeta')}</button>`;
+    const edit = active
+      ? `<button class="nf-edit" title="Editar carpeta" aria-label="Editar carpeta" onclick="openFolderModal('${f.id}')"><i class="fa-solid fa-pen"></i></button>`
+      : '';
+    return chip + edit;
+  }).join('');
+  html += `<button class="nf-chip nf-add" onclick="openFolderModal(null)"><i class="fa-solid fa-folder-plus"></i> Carpeta</button>`;
   el.innerHTML = html;
-}
-
-function renderFolderBar() {
-  const bar = document.getElementById('notesFolderBar');
-  if (!bar) return;
-  const f = foldersData.find(x => x.id === currentFolder);
-  if (!f) { bar.style.display = 'none'; bar.innerHTML = ''; return; }
-  bar.style.display = 'flex';
-  bar.innerHTML = `
-    <input class="nf-name" value="${escapeHtml(f.name || '')}" placeholder="Nombre de la carpeta" maxlength="60" oninput="onFolderRename('${f.id}',this.value)">
-    <div class="nf-swatches">${NOTE_COLORS.map(c => `<button class="nf-sw${f.color === c ? ' on' : ''}" style="background:${c}" aria-label="Color" onclick="setFolderColor('${f.id}','${c}')"></button>`).join('')}</div>
-    <button class="nf-del" title="Borrar carpeta" aria-label="Borrar carpeta" onclick="deleteFolder('${f.id}')"><i class="fa-solid fa-trash"></i></button>`;
 }
 
 function selectFolder(id) { currentFolder = id; renderDrawer(); }
 
-async function addFolder() {
-  const name = (prompt('Nombre de la carpeta:') || '').trim();
-  if (!name) return;
+/* ── Modal de carpeta (crear / editar) ──
+   Reemplaza el prompt() nativo y la barra inline por una ventana propia con
+   nombre + selector de color (halo). Guarda al confirmar. */
+let editingFolderId = null;
+let folderModalColor = '';
+
+function openFolderModal(id) {
+  editingFolderId = id;
+  const f = id ? foldersData.find(x => x.id === id) : null;
+  folderModalColor = f ? (f.color || NOTE_COLORS[0]) : NOTE_COLORS[foldersData.length % NOTE_COLORS.length];
+  document.getElementById('folderModalTitle').textContent = id ? 'Editar carpeta' : 'Nueva carpeta';
+  const nameEl = document.getElementById('folderModalName');
+  nameEl.value = f ? (f.name || '') : '';
+  document.getElementById('folderModalDelete').style.display = id ? 'inline-flex' : 'none';
+  renderFolderSwatches();
+  document.getElementById('folderModal').classList.add('show');
+  setTimeout(() => nameEl.focus(), 80);
+}
+
+function renderFolderSwatches() {
+  const wrap = document.getElementById('folderModalColors');
+  if (!wrap) return;
+  // Si el color actual es antiguo y no está en la paleta, se muestra igual.
+  const palette = NOTE_COLORS.includes(folderModalColor) || !folderModalColor
+    ? NOTE_COLORS : [folderModalColor, ...NOTE_COLORS];
+  wrap.innerHTML = palette.map(c =>
+    `<button type="button" class="cm-sw${folderModalColor === c ? ' on' : ''}" style="--sw:${c}" aria-label="Color" onclick="folderModalPick('${c}')"></button>`
+  ).join('');
+}
+
+function folderModalPick(color) {
+  folderModalColor = color;
+  renderFolderSwatches();
+}
+
+function closeFolderModal() {
+  document.getElementById('folderModal')?.classList.remove('show');
+  editingFolderId = null;
+}
+
+async function saveFolderModal() {
+  const name = (document.getElementById('folderModalName').value || '').trim();
+  if (!name) { toast('Ponle un nombre a la carpeta'); return; }
+  const color = folderModalColor || NOTE_COLORS[0];
   try {
     const { data: { session } } = await sb.auth.getSession();
     const uid = session?.user?.id; if (!uid) return;
-    const color = NOTE_COLORS[(foldersData.length + 1) % NOTE_COLORS.length];
-    const { data, error } = await sb.from('note_folders')
-      .insert({ user_id: uid, name, color, position: foldersData.length })
-      .select('id,name,color,position').single();
-    if (error) throw error;
-    foldersData.push(data); currentFolder = data.id; renderDrawer();
+    if (editingFolderId) {
+      const f = foldersData.find(x => x.id === editingFolderId);
+      if (f) { f.name = name; f.color = color; }
+      const { error } = await sb.from('note_folders')
+        .update({ name, color, updated_at: new Date().toISOString() }).eq('id', editingFolderId);
+      if (error) throw error;
+      toast('Carpeta actualizada');
+    } else {
+      const { data, error } = await sb.from('note_folders')
+        .insert({ user_id: uid, name, color, position: foldersData.length })
+        .select('id,name,color,position').single();
+      if (error) throw error;
+      foldersData.push(data);
+      currentFolder = data.id;
+      toast('Carpeta creada');
+    }
+    closeFolderModal();
+    renderDrawer();
   } catch (err) {
     const falta = /relation|does not exist|schema cache|column/i.test(err.message || '');
-    toast('No se pudo crear la carpeta' + (falta ? ': falta la migración de BD' : ''));
+    toast('No se pudo guardar la carpeta' + (falta ? ': falta la migración de BD' : ''));
   }
 }
 
-function onFolderRename(id, val) {
-  const f = foldersData.find(x => x.id === id); if (f) f.name = val;
-  clearTimeout(noteSaveTimers['f' + id]);
-  noteSaveTimers['f' + id] = setTimeout(async () => {
-    try { await sb.from('note_folders').update({ name: val, updated_at: new Date().toISOString() }).eq('id', id); renderFolders(); } catch (e) {}
-  }, 600);
-}
-
-async function setFolderColor(id, color) {
-  const f = foldersData.find(x => x.id === id); if (f) f.color = color;
-  renderFolders(); renderFolderBar();
-  try { await sb.from('note_folders').update({ color, updated_at: new Date().toISOString() }).eq('id', id); } catch (e) {}
-}
-
-async function deleteFolder(id) {
+async function deleteFolderFromModal() {
+  if (!editingFolderId) return;
+  const id = editingFolderId;
   const f = foldersData.find(x => x.id === id);
   const n = notesData.filter(x => x.folder_id === id).length;
-  if (!confirm(`¿Borrar la carpeta "${f?.name || ''}"?` + (n ? ` Sus ${n} nota(s) pasarán a General.` : ''))) return;
+  const ok = await showConfirm(
+    `¿Borrar la carpeta "${f?.name || ''}"?`,
+    n ? `Sus ${n} nota(s) pasarán a General.` : 'Esta acción no se puede deshacer.'
+  );
+  if (!ok) return;
   try {
     const { error } = await sb.from('note_folders').delete().eq('id', id);
     if (error) throw error;
     foldersData = foldersData.filter(x => x.id !== id);
     notesData.forEach(x => { if (x.folder_id === id) x.folder_id = null; });  // on delete set null en BD
     currentFolder = null;
+    closeFolderModal();
     renderDrawer();
     toast('Carpeta borrada');
   } catch (err) { toast('No se pudo borrar la carpeta'); }
@@ -1288,8 +1336,8 @@ function renderNotes() {
   grid.innerHTML = addBtn + list.map(n => {
     const isCol = collapsed.has(String(n.id));
     const c = n.color || '';
-    const swatches = NOTE_COLORS.map(col => `<button class="nc-sw${n.color === col ? ' on' : ''}" style="background:${col}" aria-label="Color" onclick="setNoteColor('${n.id}','${col}')"></button>`).join('')
-      + `<button class="nc-sw nc-none${!n.color ? ' on' : ''}" title="Sin color" aria-label="Sin color" onclick="setNoteColor('${n.id}','')"><i class="fa-solid fa-xmark"></i></button>`;
+    const swatches = NOTE_COLORS.map(col => `<button class="cm-sw${n.color === col ? ' on' : ''}" style="--sw:${col}" aria-label="Color" onclick="setNoteColor('${n.id}','${col}')"></button>`).join('')
+      + `<button class="cm-sw cm-none${!n.color ? ' on' : ''}" title="Sin color" aria-label="Sin color" onclick="setNoteColor('${n.id}','')"><i class="fa-solid fa-xmark"></i></button>`;
     return `
     <div class="note-block${isCol ? ' collapsed' : ''}" data-id="${n.id}"${c ? ` style="border-top:3px solid ${c}"` : ''}>
       <div class="note-head">
