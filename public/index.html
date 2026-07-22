@@ -1886,6 +1886,22 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
 .dbx-row-meta{font-size:11px;color:var(--gray-400);flex-shrink:0}
 
+/* Acciones rápidas por archivo: copiar enlace / descargar a la PC */
+.dbx-acts{display:flex;gap:3px}
+.dbx-row .dbx-acts{flex-shrink:0;opacity:0;transition:opacity .15s}
+.dbx-row:hover .dbx-acts{opacity:1}
+.dbx-card .dbx-acts{position:absolute;top:7px;right:7px;z-index:2;opacity:0;transition:opacity .15s}
+.dbx-card:hover .dbx-acts{opacity:1}
+.dbx-act{background:var(--white);border:1px solid var(--gray-200);color:var(--gray-500);
+  width:29px;height:29px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:12px;box-shadow:var(--shadow-sm);
+  transition:color .15s,border-color .15s,background .15s,transform .12s}
+.dbx-act:hover{color:var(--navy);border-color:var(--navy-light);background:var(--navy-pale)}
+.dbx-act:active{transform:scale(.9)}
+@media (hover:none){.dbx-row .dbx-acts,.dbx-card .dbx-acts{opacity:1}}
+[data-theme="dark"] .dbx-act{background:#181818;border-color:#333;color:#bbb}
+[data-theme="dark"] .dbx-act:hover{background:#22314d;border-color:var(--navy-light);color:#fff}
+
 [data-theme="dark"] .dbx-search input{background:#0a0a0a;border-color:#2a2a2a;color:#fff}
 [data-theme="dark"] .dbx-card{background:#181818;border-color:#262626}
 [data-theme="dark"] .dbx-card-name{color:#eee}
@@ -3180,7 +3196,10 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
         <i class="fa-solid fa-arrow-left"></i>
       </button>
       <div class="dbx-preview-name" id="dbxPreviewName">—</div>
-      <button class="dbx-preview-btn" id="dbxPreviewDownload" title="Descargar">
+      <button class="dbx-preview-btn" id="dbxPreviewCopy" title="Copiar enlace (para pegar en Claude, correo, etc.)">
+        <i class="fa-solid fa-link"></i><span>Copiar enlace</span>
+      </button>
+      <button class="dbx-preview-btn" id="dbxPreviewDownload" title="Descargar a mi PC">
         <i class="fa-solid fa-download"></i><span>Descargar</span>
       </button>
       <button class="dbx-preview-btn icon-only" onclick="closeDbxPreview()" title="Cerrar">
@@ -4807,7 +4826,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   </div>
 </div>
 
-<script src="/i18n.js?v=20260722-umami-taskstatus"></script>
-<script src="/app.js?v=20260722-umami-taskstatus"></script>
+<script src="/i18n.js?v=20260722-dbxpull"></script>
+<script src="/app.js?v=20260722-dbxpull"></script>
 </body>
 </html>

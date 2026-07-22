@@ -12,6 +12,8 @@
  *   link      → link temporal directo (?path=/foo/bar.pdf)
  *   thumbnail → preview binario JPEG (?path=...&size=w256h256)
  *   preview   → preview binario PDF (?path=...) — Office/Word/Excel
+ *   download  → binario del archivo (inline por defecto; ?dl=1 fuerza guardado
+ *               a la PC con Content-Disposition: attachment y nombre)
  *
  * Auth: requiere Bearer JWT de Supabase en todas las acciones.
  */
@@ -257,7 +259,18 @@ export default async function handler(req, res) {
         || dbxRes.headers.get('content-type')
         || 'application/octet-stream';
       res.setHeader('Content-Type', ct);
-      res.setHeader('Content-Disposition', 'inline');
+      // ?dl=1 fuerza guardado a la PC (attachment con nombre); si no, inline
+      // (necesario para renderizar PDFs/vistas previas dentro de un iframe).
+      if (req.query.dl) {
+        const base = (path.split('/').pop() || 'archivo').replace(/[\r\n"]/g, '');
+        const asciiName = base.replace(/[^\x20-\x7E]/g, '_');   // fallback ASCII
+        res.setHeader(
+          'Content-Disposition',
+          `attachment; filename="${asciiName}"; filename*=UTF-8''${encodeURIComponent(base)}`
+        );
+      } else {
+        res.setHeader('Content-Disposition', 'inline');
+      }
       res.setHeader('Cache-Control', 'private, max-age=600');
       return res.status(200).send(buf);
     }

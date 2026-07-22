@@ -7412,6 +7412,7 @@ function renderDbxGrid(){
       const ico = iconForFile(e.name);
       return `
         <div class="dbx-card" data-idx="${i}" onclick="onDbxClick(${i})">
+          ${dbxActionsHtml(i)}
           <div class="dbx-card-thumb" ${isImg ? `data-thumb="${escapeAttr(e.path)}"` : ''}>
             ${isImg
               ? `<i class="fa-solid ${ico.icon}" style="color:${ico.color}"></i>`
@@ -7446,6 +7447,7 @@ function renderDbxListView(){
           </div>
           <div class="dbx-row-name">${escapeHtml(e.name)}</div>
           <div class="dbx-row-meta">${fmtSize(e.size)} · ${fmtDbxDate(e.modified)}</div>
+          ${dbxActionsHtml(i)}
         </div>`;
     }).join('')
   }</div>`;
@@ -7533,18 +7535,16 @@ async function openDbxPreview(entry){
 
   const ext = extOf(entry.name);
 
-  // Botón descargar — siempre carga el link temporal al hacer click
+  // Botón descargar — guarda el archivo en la PC (descarga real, cualquier tipo)
   const dlBtn = document.getElementById('dbxPreviewDownload');
   dlBtn.onclick = async () => {
     dlBtn.disabled = true;
-    try {
-      const r = await authedFetch('/api/dropbox?action=link&path=' + encodeURIComponent(entry.path));
-      const data = await r.json();
-      if (data.link) window.open(data.link, '_blank');
-    } finally {
-      dlBtn.disabled = false;
-    }
+    try { await dbxDownloadFile(entry.path, entry.name); }
+    finally { dlBtn.disabled = false; }
   };
+  // Botón copiar enlace — para pegar en Claude, correo, etc. (~4 h de vigencia)
+  const cpBtn = document.getElementById('dbxPreviewCopy');
+  if (cpBtn) cpBtn.onclick = () => dbxCopyLink(entry.path);
 
   try {
     if (IMAGE_EXTS.has(ext)) {
@@ -7610,6 +7610,72 @@ function closeDbxPreview(){
     document.getElementById('dbxPreviewBody').innerHTML = '';
     while (dbxPreviewUrls.length) URL.revokeObjectURL(dbxPreviewUrls.pop());
   }, 250);
+}
+
+// ── SACAR ARCHIVOS: descargar a la PC / copiar enlace para pegar en otro lado ──
+
+// Descarga real (fuerza guardado a la PC, cualquier tipo). El endpoint pide JWT,
+// así que traemos el binario y lo disparamos como blob con <a download>.
+async function dbxDownloadFile(path, name){
+  const fname = name || (path.split('/').pop() || 'archivo');
+  toast(`Descargando ${fname}…`);
+  try {
+    const r = await authedFetch('/api/dropbox?action=download&dl=1&path=' + encodeURIComponent(path));
+    if (!r.ok) throw new Error('descarga');
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fname;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    toast('Descargado ✓');
+  } catch (e) {
+    toast('No se pudo descargar el archivo');
+  }
+}
+
+// Copia al portapapeles un enlace temporal de Dropbox (para pegar en Claude,
+// correo, etc.). El enlace caduca en ~4 h — se avisa en el toast.
+async function dbxCopyLink(path){
+  try {
+    const r = await authedFetch('/api/dropbox?action=link&path=' + encodeURIComponent(path));
+    const data = await r.json();
+    if (!data.link) throw new Error('sin link');
+    try {
+      await navigator.clipboard.writeText(data.link);
+    } catch (clipErr) {
+      // Fallback para contextos sin Clipboard API
+      const ta = document.createElement('textarea');
+      ta.value = data.link; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); ta.remove();
+    }
+    toast('Enlace copiado — caduca en ~4 h');
+  } catch (e) {
+    toast('No se pudo copiar el enlace');
+  }
+}
+
+// Acciones rápidas por archivo (fila/tarjeta). Usa data-idx para no escapar
+// rutas en el onclick; resuelve la entrada desde dbxState.entries.
+function dbxAct(ev){
+  ev.stopPropagation();
+  const btn = ev.currentTarget;
+  const e = dbxState.entries[+btn.dataset.idx];
+  if (!e) return;
+  if (btn.dataset.act === 'link') dbxCopyLink(e.path);
+  else dbxDownloadFile(e.path, e.name);
+}
+
+// HTML de los dos botones de acción (copiar enlace / descargar) para un archivo.
+function dbxActionsHtml(i){
+  return `<div class="dbx-acts">
+    <button class="dbx-act" data-act="link" data-idx="${i}" title="Copiar enlace" aria-label="Copiar enlace" onclick="dbxAct(event)"><i class="fa-solid fa-link"></i></button>
+    <button class="dbx-act" data-act="dl" data-idx="${i}" title="Descargar a mi PC" aria-label="Descargar a mi PC" onclick="dbxAct(event)"><i class="fa-solid fa-download"></i></button>
+  </div>`;
 }
 
 // Cerrar preview con Escape (en orden de prioridad respeto al handler global)
