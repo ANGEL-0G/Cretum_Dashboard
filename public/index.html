@@ -4009,6 +4009,16 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   #gvvFsWrap:fullscreen #ventasGvvFrame{height:100vh !important;min-height:0 !important;border:none;border-radius:0}
   #gvvFsWrap:fullscreen #gvvFsBtn{position:fixed;right:24px;bottom:24px}
   #gvvFsWrap:-webkit-full-screen #ventasGvvFrame{height:100vh !important;min-height:0 !important;border:none;border-radius:0}
+  /* Pantalla completa del Umami embebido (mismas reglas que GVV) */
+  #umamiFsWrap{position:relative}
+  #umamiFsBtn{position:absolute;right:24px;bottom:24px;z-index:40;display:inline-flex;align-items:center;gap:9px;
+    background:var(--navy,#12386b);color:#fff;border:none;border-radius:999px;padding:12px 18px;
+    font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;box-shadow:0 6px 22px rgba(8,24,40,.32);transition:background .15s,transform .15s}
+  #umamiFsBtn:hover{background:#0e2c50;transform:translateY(-1px)}
+  #umamiFsWrap:fullscreen{background:#e9edf3;width:100vw;height:100vh}
+  #umamiFsWrap:fullscreen #ventasUmamiFrame{height:100vh !important;min-height:0 !important;border:none;border-radius:0}
+  #umamiFsWrap:fullscreen #umamiFsBtn{position:fixed;right:24px;bottom:24px}
+  #umamiFsWrap:-webkit-full-screen #ventasUmamiFrame{height:100vh !important;min-height:0 !important;border:none;border-radius:0}
   /* Transición galería ↔ detalle: se reproduce sola en cada display:none→block */
   @keyframes fmIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
   #formsDetail{animation:fmIn .24s cubic-bezier(.23,1,.32,1)}
@@ -4083,6 +4093,14 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
         </span>
         <i class="fa-solid fa-chevron-right fm-card-arrow"></i>
       </button>
+      <button class="fm-card" type="button" onclick="openUmamiDashboard()">
+        <span class="fm-card-ico"><i class="fa-solid fa-earth-americas"></i></span>
+        <span class="fm-card-text">
+          <span class="fm-card-title">Web Analytics — cretumpartners.com</span>
+          <span class="fm-card-desc">Visitantes, origen y contenido más visto del sitio institucional (en vivo, sin cookies).</span>
+        </span>
+        <i class="fa-solid fa-chevron-right fm-card-arrow"></i>
+      </button>
     </div>
   </div>
 
@@ -4098,6 +4116,20 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
     <div id="gvvFsWrap">
       <iframe id="ventasGvvFrame" title="GVV Dashboard" style="width:100%;height:calc(100vh - 150px);min-height:540px;border:1px solid var(--gray-200,#e0e3eb);border-radius:10px;background:#fff;display:block"></iframe>
       <button id="gvvFsBtn" type="button" onclick="toggleGvvFullscreen()" title="Pantalla completa"><i class="fa-solid fa-expand"></i> <span>Pantalla completa</span></button>
+    </div>
+  </div>
+
+  <!-- Dashboard Umami embebido (analytics de cretumpartners.com, servido por la Mac Mini vía Tailscale Funnel; carga lazy) -->
+  <div id="ventasUmami" style="display:none">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+      <button class="fm-back" type="button" onclick="ventasBackHome()" style="margin:0"><i class="fa-solid fa-arrow-left"></i> Ventas</button>
+      <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="cdd-btn" type="button" onclick="openUmamiNewTab()"><i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir en pestaña nueva</button>
+      </div>
+    </div>
+    <div id="umamiFsWrap">
+      <iframe id="ventasUmamiFrame" title="Web Analytics cretumpartners.com" style="width:100%;height:calc(100vh - 150px);min-height:540px;border:1px solid var(--gray-200,#e0e3eb);border-radius:10px;background:#fff;display:block"></iframe>
+      <button id="umamiFsBtn" type="button" onclick="toggleUmamiFullscreen()" title="Pantalla completa"><i class="fa-solid fa-expand"></i> <span>Pantalla completa</span></button>
     </div>
   </div>
 </div>
@@ -4718,7 +4750,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   </div>
 </div>
 
-<script src="/i18n.js?v=20260721-notestweaks"></script>
-<script src="/app.js?v=20260721-notestweaks"></script>
+<script src="/i18n.js?v=20260722-umami"></script>
+<script src="/app.js?v=20260722-umami"></script>
 </body>
 </html>

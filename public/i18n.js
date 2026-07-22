@@ -808,6 +808,8 @@ const EN = {
   "Etiqueta opcional (ej. Para Juan Pérez)": "Optional label (e.g. For Juan Pérez)",
   "Generar enlace": "Generate link",
   "Track record, asignación, composición y posiciones del fondo GVV.": "Track record, allocation, composition, and positions of the GVV fund.",
+  "Visitantes, origen y contenido más visto del sitio institucional (en vivo, sin cookies).": "Visitors, traffic sources, and most-viewed content of the institutional site (live, cookieless).",
+  "Abrir en pestaña nueva": "Open in new tab",
   "Copiar link cretumpartners": "Copy cretumpartners link",
   "Abrir portal": "Open portal",
   "Sube dashboards (HTML) y crea usuarios-cliente con acceso solo a los suyos. Comparte el enlace": "Upload dashboards (HTML) and create client users with access only to their own. Share the link",

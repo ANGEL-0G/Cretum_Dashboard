@@ -3006,9 +3006,11 @@ function switchView(view, isBack = false) {
 function ventasBackHome() {
   const menu = document.getElementById('ventasMenu');
   const dash = document.getElementById('ventasDash');
+  const umami = document.getElementById('ventasUmami');
   const page = document.getElementById('pageVentas');
   if (menu) menu.style.display = '';
   if (dash) dash.style.display = 'none';
+  if (umami) umami.style.display = 'none';
   if (page) page.classList.remove('gvv-full');
 }
 // Embebe el GVV Dashboard (archivo estático servido por cretumdesk).
@@ -3022,6 +3024,38 @@ function openGvvDashboard() {
   if (menu) menu.style.display = 'none';
   if (dash) dash.style.display = '';
   if (page) page.classList.add('gvv-full');
+}
+
+// ─── Web Analytics (Umami self-hosted en la Mac Mini, share link read-only) ──
+// El share page solo permite frame-ancestors cretumdesk.com (CSP del build de umami).
+const UMAMI_SHARE_URL = 'https://mac-mini-cretum-1.tail4eeacb.ts.net/share/6033032a12251bf1/cretumpartners.com';
+
+// Embebe el dashboard de Umami (carga lazy: el iframe no se baja hasta que le piquen).
+function openUmamiDashboard() {
+  const menu = document.getElementById('ventasMenu');
+  const umami = document.getElementById('ventasUmami');
+  const page = document.getElementById('pageVentas');
+  const frame = document.getElementById('ventasUmamiFrame');
+  if (frame && !frame.getAttribute('src')) frame.setAttribute('src', UMAMI_SHARE_URL);
+  if (menu) menu.style.display = 'none';
+  if (umami) umami.style.display = '';
+  if (page) page.classList.add('gvv-full');
+}
+
+function openUmamiNewTab() {
+  window.open(UMAMI_SHARE_URL, '_blank', 'noopener');
+}
+
+function toggleUmamiFullscreen() {
+  const w = document.getElementById('umamiFsWrap');
+  if (!w) return;
+  if (document.fullscreenElement) {
+    (document.exitFullscreen || document.webkitExitFullscreen || function(){}).call(document);
+  } else {
+    const req = w.requestFullscreen || w.webkitRequestFullscreen;
+    if (req) { const r = req.call(w); if (r && r.catch) r.catch(() => toast('No se pudo abrir pantalla completa')); }
+    else toast('Tu navegador no permite pantalla completa aquí');
+  }
 }
 
 // Descarga el HTML autocontenido del GVV Dashboard (archivo estático de cretumdesk).
@@ -3066,13 +3100,15 @@ function toggleGvvFullscreen() {
 }
 // Mantiene el botón sincronizado (icono/texto) al entrar/salir, incluido salir con Esc.
 function _gvvFsSync() {
-  const b = document.getElementById('gvvFsBtn');
-  if (!b) return;
   const on = !!(document.fullscreenElement || document.webkitFullscreenElement);
-  b.innerHTML = on
-    ? '<i class="fa-solid fa-compress"></i> <span>Salir</span>'
-    : '<i class="fa-solid fa-expand"></i> <span>Pantalla completa</span>';
-  b.title = on ? 'Salir de pantalla completa' : 'Pantalla completa';
+  ['gvvFsBtn', 'umamiFsBtn'].forEach(id => {
+    const b = document.getElementById(id);
+    if (!b) return;
+    b.innerHTML = on
+      ? '<i class="fa-solid fa-compress"></i> <span>Salir</span>'
+      : '<i class="fa-solid fa-expand"></i> <span>Pantalla completa</span>';
+    b.title = on ? 'Salir de pantalla completa' : 'Pantalla completa';
+  });
 }
 document.addEventListener('fullscreenchange', _gvvFsSync);
 document.addEventListener('webkitfullscreenchange', _gvvFsSync);
