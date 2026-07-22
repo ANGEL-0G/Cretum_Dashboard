@@ -6915,6 +6915,7 @@ function renderInvestorDetail(inv, contacts, positions) {
         </div>
         <div class="db-detail-export">
           ${positions.some(p => (p.companies?.name) === 'Space X' || (p.spacex_indirect && +p.spacex_indirect.shares > 0 && !p.distributed_at)) ? `<button class="dbx-btn spx" onclick="exportSpacexReport()" title="Reporte SpaceX — posición, calendario de liberación y cartas del IPO"><i class="fa-solid fa-rocket"></i> Reporte SpaceX</button>` : ''}
+          <button class="dbx-btn" onclick="openLettersModal()" title="Todas las cartas de Altareturn: estados de cuenta, capital calls, distribuciones, legales, fiscales y comunicados"><i class="fa-solid fa-envelope-open-text"></i> Cartas</button>
           <button class="dbx-btn" onclick="exportInvestorXlsx()" title="Exportar todo su detalle a Excel"><i class="fa-solid fa-file-excel"></i> Excel</button>
           <button class="dbx-btn pdf" onclick="exportInvestorPdf()" title="Exportar todo su detalle a PDF"><i class="fa-solid fa-file-pdf"></i> PDF</button>
           <button class="dbx-btn html" onclick="exportInvestorHtml()" title="Descargar el perfil como reporte HTML para compartir"><i class="fa-solid fa-file-code"></i> HTML</button>
@@ -11628,3 +11629,169 @@ function showInstallHelp() {
   wrap.querySelector('button').onclick = () => wrap.remove();
   document.body.appendChild(wrap);
 }
+
+// ══════════════════ CARTAS ALTARETURN (pop-up por inversionista) ══════════════════
+// Fuente: tabla investor_letters (espejo de Altareturn en Supabase Storage).
+// Reglas (auditoria 2026-07-22): CAS y "Estimated" fiscales = solo el ultimo a la vista
+// (historial colapsado); capital calls / distribuciones / legales / K-1 finales = todos;
+// boilerplate regulatorio y comunicados = seccion colapsada. Nada se oculta: todo queda a un clic.
+const LETTER_CATS = {
+  22: { label: 'Estados de cuenta (CAS)', icon: 'fa-file-invoice-dollar', mode: 'latest' },
+  23: { label: 'Capital calls', icon: 'fa-hand-holding-dollar', mode: 'all' },
+  24: { label: 'Distribuciones', icon: 'fa-money-bill-transfer', mode: 'all' },
+  25: { label: 'Legales (SubDocs, Welcome, side letters)', icon: 'fa-file-signature', mode: 'legal' },
+  26: { label: 'Fiscales (K-1, 1042-S)', icon: 'fa-landmark', mode: 'tax' },
+  28: { label: 'Updates y comunicados', icon: 'fa-bullhorn', mode: 'comms' },
+  34: { label: 'Updates y comunicados', icon: 'fa-bullhorn', mode: 'comms' },
+  36: { label: 'Updates y comunicados', icon: 'fa-bullhorn', mode: 'comms' },
+};
+
+function _letterRow(l) {
+  const d = l.reference_date ? fmtD(l.reference_date) : '—';
+  const title = escapeHtml(l.title || l.storage_path?.split('/').pop() || 'Documento');
+  const ver = l._versions > 1 ? ` <span class="ltr-ver">(${l._versions} versiones)</span>` : '';
+  const link = l.signed_url
+    ? `<a href="${l.signed_url}" target="_blank" rel="noopener" class="ltr-link">${title}</a>`
+    : `<span class="ltr-nolink" title="PDF pendiente de sincronizar">${title}</span>`;
+  return `<div class="ltr-row"><span class="ltr-date">${d}</span>${link}${ver}</div>`;
+}
+
+function _letterDedupe(rows) {
+  // re-subidas: misma fecha + mismo titulo -> conservar la mas reciente (item id mayor), contar versiones
+  const seen = new Map();
+  rows.forEach(l => {
+    const k = `${l.reference_date}|${(l.title || '').trim().toLowerCase()}`;
+    const prev = seen.get(k);
+    if (!prev || l.altareturn_item_id > prev.altareturn_item_id) {
+      if (prev) l._versions = (prev._versions || 1) + 1;
+      seen.set(k, Object.assign(l, { _versions: l._versions || (prev ? 2 : 1) }));
+    } else {
+      prev._versions = (prev._versions || 1) + 1;
+    }
+  });
+  return [...seen.values()];
+}
+
+function _letterSection(catId, rows) {
+  if (!rows.length) return '';
+  const cfg = LETTER_CATS[catId];
+  rows = _letterDedupe(rows).sort((a, b) => (b.reference_date || '').localeCompare(a.reference_date || ''));
+  const head = (n) => `<div class="ltr-sec-h"><i class="fa-solid ${cfg.icon}"></i> ${cfg.label} <span class="ltr-count">${n}</span></div>`;
+  if (cfg.mode === 'latest') {
+    const [latest, ...rest] = rows;
+    return `<div class="ltr-sec">${head(rows.length)}${_letterRow(latest)}
+      ${rest.length ? `<details class="ltr-more"><summary>Ver anteriores (${rest.length})</summary>${rest.map(_letterRow).join('')}</details>` : ''}</div>`;
+  }
+  if (cfg.mode === 'legal') {
+    const reg = rows.filter(l => /regulation best interest|form crs/i.test(l.title || ''));
+    const main = rows.filter(l => !reg.includes(l));
+    return `<div class="ltr-sec">${head(rows.length)}${main.map(_letterRow).join('')}
+      ${reg.length ? `<details class="ltr-more"><summary>Regulatorio (${reg.length})</summary>${reg.map(_letterRow).join('')}</details>` : ''}</div>`;
+  }
+  if (cfg.mode === 'tax') {
+    const est = rows.filter(l => /estimated/i.test(l.title || ''));
+    const fin = rows.filter(l => !est.includes(l));
+    return `<div class="ltr-sec">${head(rows.length)}${fin.map(_letterRow).join('')}
+      ${est.length ? `<details class="ltr-more"><summary>Estimados — reemplazados por el Final (${est.length})</summary>${est.map(_letterRow).join('')}</details>` : ''}</div>`;
+  }
+  return `<div class="ltr-sec">${head(rows.length)}${rows.map(_letterRow).join('')}</div>`;
+}
+
+async function openLettersModal() {
+  const det = lastInvestorDetail;
+  if (!det) return;
+  const inv = det.inv;
+  const ids = inv._combined ? (inv._accounts || []).map(a => a.id) : [inv.id];
+  let overlay = document.getElementById('lettersModal');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'lettersModal';
+    overlay.className = 'ltr-overlay';
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.style.display = 'none'; };
+    document.body.appendChild(overlay);
+  }
+  overlay.style.display = 'flex';
+  overlay.innerHTML = `<div class="ltr-panel"><div class="ltr-head"><div><div class="ltr-title">Cartas · ${escapeHtml(inv.name)}</div>
+    <div class="ltr-sub">Documentos de Altareturn por oportunidad</div></div>
+    <button class="ltr-close" onclick="document.getElementById('lettersModal').style.display='none'">&times;</button></div>
+    <div class="ltr-body"><div class="ltr-loading">Cargando cartas…</div></div></div>`;
+  const body = overlay.querySelector('.ltr-body');
+  try {
+    let all = [];
+    for (let off = 0; ; off += 1000) {
+      const { data, error } = await sb.from('investor_letters').select('*')
+        .in('investor_id', ids).order('reference_date', { ascending: false })
+        .range(off, off + 999);
+      if (error) throw error;
+      all = all.concat(data || []);
+      if (!data || data.length < 1000) break;
+    }
+    if (!all.length) {
+      body.innerHTML = '<div class="ltr-empty">Sin cartas sincronizadas todavía para este inversionista.</div>';
+      return;
+    }
+    // agrupar por oportunidad (vehiculo de Altareturn)
+    const groups = new Map();
+    all.forEach(l => {
+      const g = l.fund_label || '(Sin vehículo)';
+      if (!groups.has(g)) groups.set(g, []);
+      groups.get(g).push(l);
+    });
+    const ordered = [...groups.entries()].sort((a, b) => {
+      const last = (rows) => rows.reduce((m, l) => (l.reference_date || '') > m ? l.reference_date : m, '');
+      return last(b[1]).localeCompare(last(a[1]));
+    });
+    body.innerHTML = ordered.map(([g, rows]) => {
+      const byCat = {};
+      rows.forEach(l => {
+        const c = LETTER_CATS[l.category_id] ? (LETTER_CATS[l.category_id].mode === 'comms' ? 'comms' : l.category_id) : 'otros';
+        (byCat[c] = byCat[c] || []).push(l);
+      });
+      const comms = byCat['comms'] || [];
+      const commsHtml = comms.length
+        ? `<details class="ltr-more ltr-comms"><summary><i class="fa-solid fa-bullhorn"></i> Updates y comunicados (${_letterDedupe(comms).length})</summary>${_letterDedupe(comms).sort((a, b) => (b.reference_date || '').localeCompare(a.reference_date || '')).map(_letterRow).join('')}</details>`
+        : '';
+      const otros = byCat['otros'] || [];
+      return `<div class="ltr-group"><div class="ltr-group-h">${escapeHtml(g)} <span class="ltr-count">${rows.length} docs</span></div>
+        ${[22, 23, 24, 25, 26].map(c => _letterSection(c, byCat[c] || [])).join('')}
+        ${commsHtml}
+        ${otros.length ? `<div class="ltr-sec"><div class="ltr-sec-h">Otros</div>${otros.map(_letterRow).join('')}</div>` : ''}
+      </div>`;
+    }).join('');
+  } catch (err) {
+    body.innerHTML = `<div class="ltr-empty">Error cargando cartas: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+(function injectLettersCss() {
+  const css = `
+  .ltr-overlay{position:fixed;inset:0;background:rgba(10,20,35,.55);z-index:9000;display:flex;align-items:center;justify-content:center;padding:24px}
+  .ltr-panel{background:#fff;border-radius:14px;width:min(860px,96vw);max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,.35);overflow:hidden}
+  .ltr-head{display:flex;justify-content:space-between;align-items:flex-start;padding:18px 22px 14px;border-bottom:1px solid #e3e8f0}
+  .ltr-title{font-size:17px;font-weight:600;color:var(--navy,#0f2849)}
+  .ltr-sub{font-size:12px;color:#6b7a90;margin-top:2px}
+  .ltr-close{border:0;background:none;font-size:26px;line-height:1;cursor:pointer;color:#6b7a90;padding:0 4px}
+  .ltr-body{overflow-y:auto;padding:14px 22px 22px}
+  .ltr-loading,.ltr-empty{padding:32px;text-align:center;color:#6b7a90;font-size:13px}
+  .ltr-group{margin-bottom:18px}
+  .ltr-group-h{font-size:13px;font-weight:700;color:var(--navy,#0f2849);text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid var(--navy,#0f2849);padding-bottom:5px;margin-bottom:8px}
+  .ltr-count{font-weight:400;color:#8a97aa;font-size:11px;margin-left:6px}
+  .ltr-sec{margin:8px 0 12px}
+  .ltr-sec-h{font-size:12px;font-weight:600;color:#33455e;margin-bottom:4px}
+  .ltr-sec-h i{width:16px;color:#5b6c84}
+  .ltr-row{display:flex;gap:10px;align-items:baseline;padding:3px 0 3px 22px;font-size:12.5px}
+  .ltr-date{color:#8a97aa;font-variant-numeric:tabular-nums;min-width:78px;flex:none;font-size:11.5px}
+  .ltr-link{color:#1c4e80;text-decoration:none}
+  .ltr-link:hover{text-decoration:underline}
+  .ltr-nolink{color:#9aa7b8}
+  .ltr-ver{color:#8a97aa;font-size:11px}
+  .ltr-more{margin:2px 0 4px 22px}
+  .ltr-more summary{font-size:11.5px;color:#5b6c84;cursor:pointer;user-select:none}
+  .ltr-more .ltr-row{padding-left:12px}
+  .ltr-comms{margin-left:0}
+  .ltr-comms summary{font-size:12px;font-weight:600;color:#33455e}
+  `;
+  const st = document.createElement('style');
+  st.textContent = css;
+  document.head.appendChild(st);
+})();
