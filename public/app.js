@@ -2659,7 +2659,15 @@ async function _computeMvpSnapshot() {
 
   // ── Base común (todo el negocio, neto de reinversiones) ──
   const paidIn = inv.reduce((s, r) => s + n(r.commitment), 0) - netTot.totalRecycled;
-  const nav = active.reduce((s, r) => s + (n(r.commitment_actual) || n(r.commitment)), 0);
+  // FONDOS (co 10): commitment_actual = commitment x MOIC del tracker (TVPI), que YA incluye
+  // lo distribuido -> su NAV activo = actual - sus distros, para no doble-contar al sumar distrib.
+  const _distByInv = {};
+  dist.forEach(r => { _distByInv[r.investment_id] = (_distByInv[r.investment_id] || 0) + n(r.value_in_kind) + n(r.cash_proceeds); });
+  const _rowNav = r => {
+    const base = n(r.commitment_actual) || n(r.commitment);
+    return r.company_id === 10 ? Math.max(0, base - (_distByInv[r.id] || 0)) : base;
+  };
+  const nav = active.reduce((s, r) => s + _rowNav(r), 0);
   const distGross = dist.reduce((s, r) => s + n(r.value_in_kind) + n(r.cash_proceeds), 0);
   const distrib = distGross - netTot.totalReinvested;
   const tvpi = paidIn ? (nav + distrib) / paidIn : 0;
@@ -2694,7 +2702,7 @@ async function _computeMvpSnapshot() {
   const byCo = {};
   let navFondos = 0;
   active.forEach(r => {
-    const v = n(r.commitment_actual) || n(r.commitment);
+    const v = _rowNav(r);
     byCo[r.company_id] = (byCo[r.company_id] || 0) + v;
     if (r.company_id === 10) navFondos += v;   // "Diversified Fund" = posiciones en fondos
   });
@@ -2713,8 +2721,9 @@ async function _computeMvpSnapshot() {
   active.forEach(r => {
     const commit = n(r.commitment);
     if (!commit) return;
-    const v = n(r.commitment_actual) || commit;
-    const m = v / commit;
+    const v = r.company_id === 10 ? (n(r.commitment_actual) || commit) : (n(r.commitment_actual) || commit);
+    const m = v / commit;   // para fondos esto es TVPI del tracker (ya incluye distribuido) — correcto como calidad
+
     const b = buckets.find(b => m >= b.min && m < b.max);
     if (b) { b.v += v; b.c += 1; }
   });
@@ -4791,6 +4800,7 @@ function buildInvestorExport(posId) {
       dist_en: unders.join(', '),
       dist_tipo: distTipo,
       company: p.companies?.name || '—',
+      company_id: p.companies?.id ?? null,
       series: p.series?.name || '—',
       estado: p.distributed_at ? 'Terminada' : 'Activa',
       theme: companyTheme(p.companies?.name),
@@ -4858,10 +4868,13 @@ function buildInvestorExport(posId) {
 
   // Totales (vista de flujo real del LP)
   const active = pos.filter(p => p.estado === 'Activa');
+  // FONDOS (co 10): commitment_actual = commitment x MOIC del tracker (TVPI, YA incluye lo
+  // distribuido) -> su NAV activo = actual - distribuido, para no doble-contar en el MOIC.
+  const _fundNav = p => (p.company_id === 10 ? Math.max(0, (p.commitment_actual || 0) - (p.distribuido || 0)) : (p.commitment_actual || 0));
   const totCommit = pos.reduce((s, p) => s + p.commitment, 0) - net.recycledPaidIn;  // paid-in real (sin reciclado)
-  const totActual = active.reduce((s, p) => s + p.commitment_actual, 0);             // NAV: solo posiciones activas
+  const totActual = active.reduce((s, p) => s + _fundNav(p), 0);                     // NAV real: solo activas (fondos netos de distribuido)
   const totDist = pos.reduce((s, p) => s + p.distribuido, 0) - net.reinvestedDist;   // distribuido real (sin reinversiones)
-  const valorEstimado = active.reduce((s, p) => s + (p.valor_estimado || 0), 0);
+  const valorEstimado = active.reduce((s, p) => s + (p.company_id === 10 ? _fundNav(p) : (p.valor_estimado || 0)), 0);
   const portMoic = totCommit > 0 ? (totActual + totDist) / totCommit : 0;   // MOIC/TVPI: (valor activo + distribuido) / paid-in real
   const dpi = totCommit > 0 ? totDist / totCommit : 0;          // distribuido real / paid-in real
 
@@ -6723,7 +6736,16 @@ let _lp360 = null;
 function buildLp360(positions, investorIds) {
   const num = v => (Number(v) || 0);
   const active = positions.filter(p => !p.distributed_at);
-  const navActive = active.reduce((a, p) => a + (num(p.commitment_actual) || num(p.commitment)), 0);
+  // Posiciones de FONDO (co 10): commitment_actual = commitment x MOIC del tracker (TVPI),
+  // que YA incluye lo distribuido. Su NAV activo = commitment_actual - sus distribuciones,
+  // para que al sumarle abajo el distribuido no se cuente doble. SPVs: commitment_actual
+  // es solo valor activo (shares x pps) y sus distros si se suman aparte.
+  const _posDist = p => (p.investment_distributions || []).reduce((a, d) => a + num(d.value_in_kind) + num(d.cash_proceeds), 0);
+  const _posNav = p => {
+    const base = num(p.commitment_actual) || num(p.commitment);
+    return (p.companies?.id === 10) ? Math.max(0, base - _posDist(p)) : base;
+  };
+  const navActive = active.reduce((a, p) => a + _posNav(p), 0);
   // Neteo de reinversiones 22F→26A QP (paid-in y distribuido). Misma regla que el reporte.
   const net = computeReinvestNetting(positions.map(p => ({ seriesName: p.series?.name, commitment: num(p.commitment), dists: p.investment_distributions })), investorIds || []);
   const committedNet = positions.reduce((a, p) => a + num(p.commitment), 0) - net.recycledPaidIn;   // paid-in real
@@ -6737,7 +6759,7 @@ function buildLp360(positions, investorIds) {
   const byCo = {}, byTheme = {};
   active.forEach(p => {
     const isFund = p.companies?.id === 10;
-    const val = num(p.commitment_actual) || num(p.commitment);
+    const val = _posNav(p);
     const label = isFund ? (p.series?.name || 'Fondo').replace('MVP ', '') : (p.companies?.name || '—');
     byCo[label] = (byCo[label] || 0) + val;
     const theme = isFund ? 'Fondos All-Star' : companyTheme(p.companies?.name);
