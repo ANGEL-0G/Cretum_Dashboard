@@ -519,6 +519,35 @@ button,input,select{font-family:var(--font)}
 .li-edit{background:none;border:none;color:var(--gray-300);font-size:12px;cursor:pointer;transition:color .15s;flex-shrink:0;padding:0 2px}
 .li-edit:hover{color:var(--navy)}
 
+/* ── Estatus de 3 estados (Pendiente / En progreso / Completo) para tareas simples ── */
+.tk-status-seg{display:inline-flex;align-items:center;gap:1px;flex-shrink:0}
+.tk-seg{background:none;border:none;cursor:pointer;font-size:15px;line-height:1;padding:1px 3px;color:var(--gray-300);border-radius:6px;transition:color .15s,transform .12s,background .15s;font-family:inherit}
+.tk-seg:hover{background:var(--gray-100);color:var(--gray-500)}
+.tk-seg:active{transform:scale(.86)}
+.tk-seg.sg-pen.on{color:var(--gray-600)}
+.tk-seg.sg-prog.on{color:var(--amber)}
+.tk-seg.sg-done.on{color:var(--green)}
+/* Versión grande con etiqueta, dentro del modal de edición */
+.tk-status-seg.tk-seg-lg{display:flex;gap:6px;width:100%}
+.tk-seg-lg .tk-seg{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;font-weight:500;padding:8px 6px;border:1px solid var(--gray-200);color:var(--gray-500);background:var(--white)}
+.tk-seg-lg .tk-seg .tk-seg-dot{width:8px;height:8px;border-radius:50%;background:var(--gray-300);flex-shrink:0;transition:background .15s}
+.tk-seg-lg .tk-seg:hover{border-color:var(--gray-300);background:var(--gray-50)}
+.tk-seg-lg .tk-seg.on{border-color:var(--navy);color:var(--navy);background:var(--navy-pale)}
+.tk-seg-lg .tk-seg.sg-pen.on .tk-seg-dot{background:var(--gray-400)}
+.tk-seg-lg .tk-seg.sg-prog.on .tk-seg-dot{background:var(--amber)}
+.tk-seg-lg .tk-seg.sg-done.on .tk-seg-dot{background:var(--green)}
+/* Indicador de notas en la tarjeta (abre el editor) */
+.tk-note-ind{background:none;border:none;cursor:pointer;color:var(--gray-400);font-size:11px;padding:1px 4px;border-radius:5px;transition:color .15s,background .15s;flex-shrink:0}
+.tk-note-ind:hover{color:var(--navy);background:var(--navy-pale)}
+/* Acciones del modal en modo edición: convertir a progreso / asignar a compañero */
+.tk-edit-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.tk-ghost-btn{flex:1;min-width:130px;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 12px;font-size:12px;font-weight:500;color:var(--gray-600);background:var(--white);border:1px solid var(--gray-200);border-radius:var(--r-md);cursor:pointer;transition:border-color .15s,color .15s,background .15s;font-family:inherit}
+.tk-ghost-btn:hover{border-color:var(--navy-light);color:var(--navy);background:var(--navy-pale)}
+/* Notas del receptor, visibles para quien asignó la tarea (vista Equipo) */
+.team-note{margin-top:6px;font-size:11.5px;color:var(--gray-600);background:var(--gray-50);border:1px solid var(--gray-100);border-radius:var(--r-sm);padding:6px 9px;display:flex;gap:6px;line-height:1.45}
+.team-note i{color:var(--amber);margin-top:2px;flex-shrink:0}
+.team-note span{white-space:pre-wrap;overflow-wrap:anywhere}
+
 /* Completar / reabrir: la fila sale desvaneciéndose y entra en su nuevo lugar
    con un breve destello del acento. Solo transform/opacity (GPU). */
 @keyframes tkLeave{to{opacity:0;transform:translateX(10px) scale(.98)}}
@@ -545,11 +574,16 @@ button,input,select{font-family:var(--font)}
 .kb-col-title{font-size:12px;font-weight:500;color:var(--gray-700);flex:1}
 .kb-col-count{font-size:10px;font-family:var(--mono);color:var(--gray-400);background:var(--gray-100);padding:1px 7px;border-radius:10px}
 .kb-cards{padding:10px;display:flex;flex-direction:column;gap:7px;min-height:60px}
-.kb-card{position:relative;background:var(--white);border:1px solid var(--gray-100);border-radius:var(--r-md);padding:11px 12px;padding-right:26px;transition:border-color .15s,box-shadow .15s}
+.kb-card{position:relative;background:var(--white);border:1px solid var(--gray-100);border-radius:var(--r-md);padding:11px 12px;padding-right:46px;transition:border-color .15s,box-shadow .15s}
 .kb-card:hover{border-color:var(--navy-light);box-shadow:var(--shadow-sm)}
-.kb-del{position:absolute;top:6px;right:6px;background:none;border:none;color:var(--gray-300);font-size:11px;cursor:pointer;padding:3px 6px;border-radius:3px;transition:color .15s,background .15s;opacity:0}
+.kb-card-actions{position:absolute;top:6px;right:6px;display:flex;gap:1px}
+.kb-edit{background:none;border:none;color:var(--gray-300);font-size:11px;cursor:pointer;padding:3px 6px;border-radius:3px;transition:color .15s,background .15s;opacity:0}
+.kb-card:hover .kb-edit{opacity:1}
+.kb-edit:hover{color:var(--navy);background:var(--navy-pale)}
+.kb-del{position:static;background:none;border:none;color:var(--gray-300);font-size:11px;cursor:pointer;padding:3px 6px;border-radius:3px;transition:color .15s,background .15s;opacity:0}
 .kb-card:hover .kb-del{opacity:1}
 .kb-del:hover{color:var(--red);background:var(--red-bg)}
+@media (hover:none){.kb-card .kb-edit,.kb-card .kb-del{opacity:1}}
 .kb-card.done-card{opacity:.5}
 .kb-card-name{font-size:12px;color:var(--gray-700);line-height:1.5;margin-bottom:8px}
 .kb-card-name.struck{text-decoration:line-through;color:var(--gray-400)}
@@ -4375,9 +4409,25 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
           <input type="checkbox" id="fCollab" style="width:auto;margin:0;cursor:pointer">
           <span style="font-size:13px;color:var(--gray-700)">Colaborativa <span class="form-label-opt">(compartida con el equipo)</span></span>
         </label>
+        <div class="form-field" id="fStatusField" style="display:none">
+          <label class="form-label">Estatus</label>
+          <div class="tk-status-seg tk-seg-lg" id="fStatusSeg" role="group" aria-label="Estatus de la tarea">
+            <button type="button" class="tk-seg sg-pen"  data-st="pending"  onclick="pickModalStatus('pending')"><span class="tk-seg-dot"></span> Pendiente</button>
+            <button type="button" class="tk-seg sg-prog" data-st="progress" onclick="pickModalStatus('progress')"><span class="tk-seg-dot"></span> En progreso</button>
+            <button type="button" class="tk-seg sg-done" data-st="done"     onclick="pickModalStatus('done')"><span class="tk-seg-dot"></span> Completo</button>
+          </div>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Notas <span class="form-label-opt">comentarios de la tarea</span></label>
+          <textarea class="form-input" id="fNotes" rows="3" placeholder="Comentarios, avances, bloqueos…" style="resize:vertical;min-height:62px;line-height:1.5"></textarea>
+        </div>
         <button class="btn-primary" id="btnAddSimple" onclick="addSimple()">
           <i class="fa-solid fa-plus"></i> Agregar tarea
         </button>
+        <div class="tk-edit-actions" id="fEditActions" style="display:none">
+          <button type="button" class="tk-ghost-btn" onclick="convertToProgress(editingTaskId)"><i class="fa-solid fa-chart-line"></i> Convertir a progreso</button>
+          <button type="button" class="tk-ghost-btn" onclick="assignFromTask()"><i class="fa-solid fa-user-plus"></i> Asignar a compañero</button>
+        </div>
       </div>
       <div id="formProgress" style="display:none">
         <div class="form-field">
@@ -4419,9 +4469,16 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
           <label class="form-label">Proyecto <span class="form-label-opt">opcional</span></label>
           <input class="form-input" id="pProject" list="projectList" placeholder="Ej: Fondo VI, Marketing, Onboarding…" autocomplete="off">
         </div>
+        <div class="form-field">
+          <label class="form-label">Notas <span class="form-label-opt">comentarios de la tarea</span></label>
+          <textarea class="form-input" id="pNotes" rows="3" placeholder="Comentarios, avances, bloqueos…" style="resize:vertical;min-height:62px;line-height:1.5"></textarea>
+        </div>
         <button class="btn-primary" id="btnAddProgress" onclick="addProgress()">
           <i class="fa-solid fa-chart-line"></i> Crear tarea con progreso
         </button>
+        <div class="tk-edit-actions" id="pEditActions" style="display:none">
+          <button type="button" class="tk-ghost-btn" onclick="assignFromTask()"><i class="fa-solid fa-user-plus"></i> Asignar a compañero</button>
+        </div>
       </div>
     </div>
     <datalist id="projectList"></datalist>
@@ -4750,7 +4807,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   </div>
 </div>
 
-<script src="/i18n.js?v=20260722-umami"></script>
-<script src="/app.js?v=20260722-umami"></script>
+<script src="/i18n.js?v=20260722-umami-taskstatus"></script>
+<script src="/app.js?v=20260722-umami-taskstatus"></script>
 </body>
 </html>

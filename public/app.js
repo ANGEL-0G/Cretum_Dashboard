@@ -534,6 +534,10 @@ function isOD(d) { return d && new Date(d + 'T12:00:00') < new Date(); }
 function prioC(p) { return p === 'Alta' ? 'lp-a' : p === 'Media' ? 'lp-m' : 'lp-b'; }
 function pct(t) { return Math.min(100, Math.round((t.done / t.total) * 100)); }
 function isDone(t) { return t.kind === 'simple' ? t.done : t.done >= t.total; }
+// Estatus de una tarea simple: 'pending' | 'progress' | 'done'.
+// done (bool) se mantiene sincronizado con status para no romper isDone/lo existente.
+function simpleStatus(t) { return t.status || (t.done ? 'done' : 'pending'); }
+const TK_STATUS = { pending: 'Pendiente', progress: 'En progreso', done: 'Completo' };
 function allTasks() {
   return [
     ...state.simple.map(t => ({ ...t, kind: 'simple' })),
@@ -633,16 +637,16 @@ function tkRow(t, i) {
   if (t.kind === 'simple') return `
     <div class="li-wrap">
     <div class="list-item ${done ? 'done-item' : ''}${enter}" data-tid="${t.id}" data-kind="simple" ${delay}>
-      <div class="li-chk ${done ? 'on' : ''}" onclick="toggle('${t.id}','simple')">✓</div>
+      ${simpleStatusControl(t.id)}
       <div class="li-name">${escapeHtml(t.name)}</div>
       <div class="li-meta">
         ${t.createdAt ? `<span class="li-created" title="${createdTitle(t.createdAt)}"><i class="fa-regular fa-clock"></i> ${fmtCreated(t.createdAt)}</span>` : ''}
         ${t.due ? `<span class="li-due ${od ? 'od' : ''}">${fmtD(t.due)}</span>` : ''}
         <span class="li-prio ${prioC(t.prio)}">${t.prio}</span>
         ${t.collab ? '<span class="li-tag">Colaborativa</span>' : ''}
-        ${done ? `<button class="sm-btn sm-red" onclick="toggle('${t.id}','simple')">Reabrir</button>` : ''}
+        ${taskNoteIndicator(t)}
       </div>
-      ${!done ? `<button class="li-edit" onclick="openEditTask('${t.id}','simple')" title="Editar tarea"><i class="fa-solid fa-pen"></i></button>` : ''}
+      <button class="li-edit" onclick="openEditTask('${t.id}','simple')" title="Editar tarea"><i class="fa-solid fa-pen"></i></button>
       <button class="li-del" onclick="del('${t.id}','simple')"><i class="fa-solid fa-xmark"></i></button>
     </div></div>`;
   const p = pct(t);
@@ -662,6 +666,7 @@ function tkRow(t, i) {
         ${t.due ? `<span class="li-due ${od ? 'od' : ''}">${fmtD(t.due)}</span>` : ''}
         <span class="li-prio ${prioC(t.prio)}">${t.prio}</span>
         ${t.collab ? '<span class="li-tag">Colaborativa</span>' : ''}
+        ${taskNoteIndicator(t)}
         ${done
           ? `<button class="sm-btn sm-red" onclick="toggle('${t.id}','progress')">Reabrir</button>`
           : `<span class="li-inc" style="display:flex;align-items:center;gap:4px">
@@ -673,7 +678,7 @@ function tkRow(t, i) {
               ${t.log.length ? `<button class="sm-btn sm-red" onclick="undoLog('${t.id}')" title="Deshacer última entrada">↩</button>` : ''}
             </span>`}
       </div>
-      ${!done ? `<button class="li-edit" onclick="openEditTask('${t.id}','progress')" title="Editar tarea"><i class="fa-solid fa-pen"></i></button>` : ''}
+      <button class="li-edit" onclick="openEditTask('${t.id}','progress')" title="Editar tarea"><i class="fa-solid fa-pen"></i></button>
       <button class="li-del" onclick="del('${t.id}','progress')"><i class="fa-solid fa-xmark"></i></button>
     </div></div>`;
 }
@@ -826,9 +831,16 @@ function buildKanban() {
     { key: 'done',     label: 'Completado',   dot: 'var(--green)',    tasks: [] },
   ];
   tasks.forEach(t => {
-    if (isDone(t)) cols[2].tasks.push(t);
-    else if (t.kind === 'progress' && t.done > 0) cols[1].tasks.push(t);
-    else cols[0].tasks.push(t);
+    if (t.kind === 'simple') {
+      const st = simpleStatus(t);
+      cols[st === 'done' ? 2 : st === 'progress' ? 1 : 0].tasks.push(t);
+    } else if (isDone(t)) {
+      cols[2].tasks.push(t);
+    } else if (t.done > 0) {
+      cols[1].tasks.push(t);
+    } else {
+      cols[0].tasks.push(t);
+    }
   });
   return `<div class="kanban-view">${cols.map(col => `
     <div class="kb-col">
@@ -844,7 +856,10 @@ function buildKanban() {
           const p = t.kind === 'progress' ? pct(t) : null;
           const delay = `style="animation-delay:${Math.min(i, 12) * 35}ms"`;
           return `<div class="kb-card ${done ? 'done-card' : ''}" ${delay}>
-            <button class="kb-del" onclick="del('${t.id}','${t.kind}')" title="Eliminar"><i class="fa-solid fa-xmark"></i></button>
+            <div class="kb-card-actions">
+              <button class="kb-edit" onclick="openEditTask('${t.id}','${t.kind}')" title="Editar tarea"><i class="fa-solid fa-pen"></i></button>
+              <button class="kb-del" onclick="del('${t.id}','${t.kind}')" title="Eliminar"><i class="fa-solid fa-xmark"></i></button>
+            </div>
             ${p !== null ? `
               <div class="kb-prog-label">${t.done}/${t.total} ${escapeHtml(t.unit)}</div>
               <div class="kb-prog"><div class="kb-prog-fill ${done ? 'complete' : ''}" style="width:${p}%"></div></div>` : ''}
@@ -853,11 +868,9 @@ function buildKanban() {
               ${t.createdAt ? `<span class="li-created" title="${createdTitle(t.createdAt)}"><i class="fa-regular fa-clock"></i> ${fmtCreated(t.createdAt)}</span>` : ''}
               ${t.due ? `<span class="kb-due ${od ? 'od' : ''}"><i class="fa-regular fa-calendar" style="font-size:10px"></i> ${fmtD(t.due)}</span>` : ''}
               <span class="kb-prio ${prioC(t.prio)}">${t.prio}</span>
-              ${t.kind === 'simple' && !done
-                ? `<button class="sm-btn sm-navy" style="margin-left:auto" onclick="toggle('${t.id}','simple')">Marcar lista</button>`
-                : ''}
-              ${t.kind === 'simple' && done
-                ? `<button class="sm-btn sm-red" style="margin-left:auto" onclick="toggle('${t.id}','simple')">Reabrir</button>`
+              ${taskNoteIndicator(t)}
+              ${t.kind === 'simple'
+                ? `<span style="margin-left:auto">${simpleStatusControl(t.id)}</span>`
                 : ''}
               ${t.kind === 'progress' && !done
                 ? `<span style="display:flex;align-items:center;gap:4px;margin-left:auto">
@@ -985,8 +998,16 @@ function renderEquipo() {
           <span class="team-prog-lbl">${task.done}/${task.total} ${escapeHtml(task.unit || '')}</span>
         </div>`;
     } else {
-      badge = '<span class="team-status ts-ok"><i class="fa-solid fa-circle-play"></i> En progreso</span>';
+      // Tarea simple aceptada, aún no completada: refleja el estatus que puso quien la recibió.
+      badge = simpleStatus(task) === 'progress'
+        ? '<span class="team-status ts-ok"><i class="fa-solid fa-circle-play"></i> En progreso</span>'
+        : '<span class="team-status ts-pen"><i class="fa-regular fa-clock"></i> Pendiente</span>';
     }
+
+    // Notas que escribió quien recibió la tarea (retroalimentación visible para el asignador).
+    const noteBlock = (task && task.notes && task.notes.trim())
+      ? `<div class="team-note"><i class="fa-regular fa-note-sticky"></i> <span>${escapeHtml(task.notes.trim())}</span></div>`
+      : '';
 
     return `
       <div class="team-item">
@@ -995,6 +1016,7 @@ function renderEquipo() {
           <div class="team-name">${escapeHtml(a.name)}</div>
           <div class="team-sub">→ ${USERS[a.to]?.name || a.to} · ${a.due ? fmtD(a.due) : 'Sin fecha'} · ${a.prio}${a.createdAt ? ` · <span class="li-created" title="${createdTitle(a.createdAt)}"><i class="fa-regular fa-clock"></i> creada ${fmtCreated(a.createdAt)}</span>` : ''}</div>
           ${progressBar}
+          ${noteBlock}
         </div>
         ${badge}
         ${!a.accepted ? `<button class="team-edit" onclick="openEditAssigned('${a.id}')" title="Editar tarea"><i class="fa-solid fa-pen"></i></button>` : ''}
@@ -1504,6 +1526,73 @@ function toggle(id, kind) {
   }
 }
 
+// Control compacto de 3 estatus para tareas simples (Lista/Kanban). Los puntos
+// ○ ◐ ● comunican el avance; el activo se colorea. onclick cambia al instante.
+function simpleStatusControl(id) {
+  const t = state.simple.find(x => x.id === id);
+  const st = t ? simpleStatus(t) : 'pending';
+  const seg = (val, glyph, cls) =>
+    `<button type="button" class="tk-seg ${cls}${st === val ? ' on' : ''}" title="${TK_STATUS[val]}" aria-label="${TK_STATUS[val]}" onclick="event.stopPropagation();setSimpleStatus('${id}','${val}')">${glyph}</button>`;
+  return `<div class="tk-status-seg" role="group" aria-label="Estatus">
+    ${seg('pending', '○', 'sg-pen')}${seg('progress', '◐', 'sg-prog')}${seg('done', '●', 'sg-done')}
+  </div>`;
+}
+
+// Indicador de notas en una tarjeta (abre el editor donde se leen/editan).
+function taskNoteIndicator(t) {
+  if (!t.notes || !t.notes.trim()) return '';
+  const preview = escapeHtml(t.notes.trim().slice(0, 140));
+  return `<button class="tk-note-ind" title="${preview}" aria-label="Ver notas" onclick="event.stopPropagation();openEditTask('${t.id}','${t.kind}')"><i class="fa-regular fa-note-sticky"></i></button>`;
+}
+
+// Cambia el estatus de una tarea simple. done (bool) se mantiene sincronizado.
+function setSimpleStatus(id, status) {
+  const t = state.simple.find(x => x.id === id);
+  if (!t) return;
+  const prev = simpleStatus(t);
+  if (prev === status) return;
+  t.status = status;
+  t.done = status === 'done';
+  const msg = { pending: 'Marcada como pendiente', progress: 'En progreso', done: 'Tarea completada ✓' }[status];
+  if (msg) toast(msg);
+  tkToggleAnim = { id, becameDone: status === 'done' };
+  scheduleSave();
+  render();
+}
+
+// Convierte una tarea simple en una con progreso (conserva notas/colaboración/asignación).
+function convertToProgress(id) {
+  const t = state.simple.find(x => x.id === id);
+  if (!t) { toast('No encontré la tarea'); return; }
+  const wasDone = simpleStatus(t) === 'done';
+  const p = {
+    id: 'P' + (++tkId),
+    name: t.name, unit: 'unidades', total: 1,
+    done: wasDone ? 1 : 0, log: [],
+    due: t.due || '', prio: t.prio || 'Media', project: t.project || null,
+    collab: !!t.collab, owner: t.owner, createdAt: t.createdAt,
+    notes: t.notes || ''
+  };
+  // Reapunta la asignación (si es colaborativa) al nuevo id para que el asignador la siga viendo.
+  state.assigned.forEach(a => { if (a.taskId === t.id) a.taskId = p.id; });
+  state.simple = state.simple.filter(x => x.id !== t.id);
+  state.progress.unshift(p);
+  scheduleSave();
+  render();
+  toast('Convertida a tarea con progreso — ajusta la cantidad total');
+  // Reabre en modo edición para fijar unidad/total reales.
+  openEditTask(p.id, 'progress');
+}
+
+// "Hacer en equipo": abre el asignador precargado con el nombre de la tarea abierta.
+function assignFromTask() {
+  const id = editingTaskId, kind = editingTaskKind;
+  const t = id ? (kind === 'progress' ? state.progress : state.simple).find(x => x.id === id) : null;
+  const name = t ? t.name : '';
+  closeTaskModal();
+  openAssignModal(name);
+}
+
 async function deleteAssigned(id) {
   const a = state.assigned.find(x => x.id === id);
   if (!a) return;
@@ -1714,11 +1803,21 @@ function tkAllProjects() {
 // en vez de crear una nueva. El mismo modal sirve para crear y editar (reutilizado).
 let editingTaskId = null;
 let editingTaskKind = null;
+let taskModalStatus = 'pending';   // estatus elegido en el control del modal (tareas simples)
+
+// Refleja el estatus elegido en el control segmentado del modal.
+function pickModalStatus(status) {
+  taskModalStatus = status;
+  document.querySelectorAll('#fStatusSeg .tk-seg').forEach(b => {
+    b.classList.toggle('on', b.dataset.st === status);
+  });
+}
 
 // Devuelve el taskModal a modo "crear" (título, tabs visibles, labels de botón, sin edición).
 function taskModalResetCreate() {
   editingTaskId = null;
   editingTaskKind = null;
+  taskModalStatus = 'pending';
   const title = document.getElementById('taskModalTitle');
   if (title) title.textContent = 'Nueva tarea';
   const tabs = document.querySelector('#taskModal .task-modal-tabs');
@@ -1727,6 +1826,10 @@ function taskModalResetCreate() {
   if (bS) bS.innerHTML = '<i class="fa-solid fa-plus"></i> Agregar tarea';
   const bP = document.getElementById('btnAddProgress');
   if (bP) bP.innerHTML = '<i class="fa-solid fa-chart-line"></i> Crear tarea con progreso';
+  // El estatus solo aplica al editar; las acciones de edición se ocultan al crear.
+  const sf = document.getElementById('fStatusField'); if (sf) sf.style.display = 'none';
+  const fa = document.getElementById('fEditActions'); if (fa) fa.style.display = 'none';
+  const pa = document.getElementById('pEditActions'); if (pa) pa.style.display = 'none';
 }
 
 function openTaskModal() {
@@ -1737,7 +1840,7 @@ function openTaskModal() {
   // Autocompletado de proyectos existentes + limpia los campos de proyecto
   const dl = document.getElementById('projectList');
   if (dl) dl.innerHTML = tkAllProjects().map(p => `<option value="${escapeHtml(p)}"></option>`).join('');
-  ['fName', 'fDue', 'fProject', 'pName', 'pUnit', 'pTotal', 'pDue', 'pProject'].forEach(id => {
+  ['fName', 'fDue', 'fProject', 'fNotes', 'pName', 'pUnit', 'pTotal', 'pDue', 'pProject', 'pNotes'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
   resetPrio('fPrio'); resetPrio('pPrio');
@@ -1771,6 +1874,11 @@ function openEditTask(id, kind) {
     document.getElementById('fProject').value = t.project || '';
     setPrioActive('fPrio', t.prio || 'Media');
     const fc = document.getElementById('fCollab'); if (fc) fc.checked = !!t.collab;
+    const fn = document.getElementById('fNotes'); if (fn) fn.value = t.notes || '';
+    // Estatus (3 estados) — solo visible al editar tareas simples.
+    const sf = document.getElementById('fStatusField'); if (sf) sf.style.display = '';
+    pickModalStatus(simpleStatus(t));
+    const fa = document.getElementById('fEditActions'); if (fa) fa.style.display = 'flex';
   } else {
     document.getElementById('pName').value = t.name || '';
     document.getElementById('pUnit').value = t.unit || '';
@@ -1778,6 +1886,8 @@ function openEditTask(id, kind) {
     document.getElementById('pDue').value = t.due || '';
     document.getElementById('pProject').value = t.project || '';
     setPrioActive('pPrio', t.prio || 'Media');
+    const pn = document.getElementById('pNotes'); if (pn) pn.value = t.notes || '';
+    const pa = document.getElementById('pEditActions'); if (pa) pa.style.display = 'flex';
   }
   m.classList.add('show');
   setTimeout(() => document.getElementById(kind === 'simple' ? 'fName' : 'pName')?.focus(), 80);
@@ -1788,7 +1898,7 @@ function closeTaskModal() {
   editingTaskId = null;
   editingTaskKind = null;
 }
-function openAssignModal() {
+function openAssignModal(prefillName) {
   const m = document.getElementById('assignModal');
   if (!m) return;
   setAssignType('simple');
@@ -1798,6 +1908,10 @@ function openAssignModal() {
   });
   resetPrio('aPrio');
   resetPrio('apPrio');
+  // Precarga el nombre cuando se asigna desde una tarea propia ("hacer en equipo").
+  if (typeof prefillName === 'string' && prefillName) {
+    const aN = document.getElementById('aName'); if (aN) aN.value = prefillName;
+  }
   m.classList.add('show');
   setTimeout(() => document.getElementById('aName')?.focus(), 80);
 }
@@ -1925,6 +2039,7 @@ function addSimple() {
   if (!n) { toast('Escribe una descripción'); return; }
   // Modo edición: actualiza la tarea existente (conserva done/collab/owner/createdAt).
   const collab = !!document.getElementById('fCollab')?.checked;
+  const notes = (document.getElementById('fNotes')?.value || '').trim();
   if (editingTaskId && editingTaskKind === 'simple') {
     const t = state.simple.find(x => x.id === editingTaskId);
     if (t) {
@@ -1933,6 +2048,9 @@ function addSimple() {
       t.prio = document.getElementById('fPrio').value;
       t.project = document.getElementById('fProject').value.trim() || null;
       t.collab = collab;
+      t.notes = notes;
+      t.status = taskModalStatus;
+      t.done = taskModalStatus === 'done';
     }
     scheduleSave(); render(); toast('Tarea actualizada');
     closeTaskModal();
@@ -1945,6 +2063,8 @@ function addSimple() {
     prio: document.getElementById('fPrio').value,
     project: document.getElementById('fProject').value.trim() || null,
     done: false,
+    status: 'pending',
+    notes: notes,
     collab: collab,
     owner: currentUser,
     createdAt: new Date().toISOString()
@@ -1952,6 +2072,7 @@ function addSimple() {
   document.getElementById('fName').value = '';
   document.getElementById('fDue').value = '';
   document.getElementById('fProject').value = '';
+  const fnEl = document.getElementById('fNotes'); if (fnEl) fnEl.value = '';
   resetPrio('fPrio');
   scheduleSave(); render(); toast('Tarea agregada');
   closeTaskModal();
@@ -1963,6 +2084,7 @@ function addProgress() {
   const unit = document.getElementById('pUnit').value.trim() || 'unidades';
   if (!n || !total || total < 1) { toast('Completa nombre y total'); return; }
   // Modo edición: actualiza la tarea existente (conserva done/log/owner/createdAt).
+  const pNotes = (document.getElementById('pNotes')?.value || '').trim();
   if (editingTaskId && editingTaskKind === 'progress') {
     const t = state.progress.find(x => x.id === editingTaskId);
     if (t) {
@@ -1972,6 +2094,7 @@ function addProgress() {
       t.due = document.getElementById('pDue').value;
       t.prio = document.getElementById('pPrio').value;
       t.project = document.getElementById('pProject').value.trim() || null;
+      t.notes = pNotes;
     }
     scheduleSave(); render(); toast('Tarea actualizada');
     closeTaskModal();
@@ -1980,6 +2103,7 @@ function addProgress() {
   state.progress.unshift({
     id: 'P' + (++tkId),
     name: n, unit, total, done: 0, log: [],
+    notes: pNotes,
     due: document.getElementById('pDue').value,
     prio: document.getElementById('pPrio').value,
     project: document.getElementById('pProject').value.trim() || null,
@@ -1991,6 +2115,7 @@ function addProgress() {
   document.getElementById('pUnit').value = '';
   document.getElementById('pDue').value = '';
   document.getElementById('pProject').value = '';
+  const pnEl = document.getElementById('pNotes'); if (pnEl) pnEl.value = '';
   resetPrio('pPrio');
   scheduleSave(); render(); toast('Tarea con progreso creada');
   closeTaskModal();
