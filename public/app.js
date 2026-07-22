@@ -1255,12 +1255,15 @@ function renderNotes() {
   const grid = document.getElementById('notesGrid');
   if (!grid) return;
   const list = notesData.filter(n => (n.folder_id || null) === (currentFolder || null));
+  const addBtn = `<button class="notes-add" onclick="addNoteBlock()"><i class="fa-solid fa-plus"></i> Nueva nota</button>`;
   if (!list.length) {
-    grid.innerHTML = `<div class="notes-empty">${currentFolder ? 'Esta carpeta está vacía.' : 'Sin notas generales.'} Crea una con “Nueva nota”.</div>`;
+    // Vacío: mensaje + botón ABAJO
+    grid.innerHTML = `<div class="notes-empty">${currentFolder ? 'Esta carpeta está vacía.' : 'Aún no tienes notas generales.'}</div>` + addBtn;
     return;
   }
   const collapsed = getCollapsedNotes();
-  grid.innerHTML = list.map(n => {
+  // Con notas: botón ARRIBA
+  grid.innerHTML = addBtn + list.map(n => {
     const isCol = collapsed.has(String(n.id));
     const c = n.color || '';
     const swatches = NOTE_COLORS.map(col => `<button class="nc-sw${n.color === col ? ' on' : ''}" style="background:${col}" aria-label="Color" onclick="setNoteColor('${n.id}','${col}')"></button>`).join('')
