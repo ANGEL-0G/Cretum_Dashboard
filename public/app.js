@@ -4143,6 +4143,7 @@ function repBuildDoc(inv, investments, dists) {
     <strong>Notas:</strong> "En especie" = distribución de acciones de la empresa subyacente; "Efectivo" = proceeds en USD. El valor en especie se toma de la carta de Altareturn cuando está disponible; algunas cartas tempranas solo reportan acciones sin valuación, por lo que el total distribuido puede subestimar ligeramente.
     MOIC consolidado = promedio ponderado por compromiso; por posición, según el último dato de la base.
     <br>Documento interno de Cretum Partners generado desde Cretum Desk — cifras sujetas a verificación. ${hoy}.
+    <br><span style="color:#9aa3b5;font-size:9.5px">Cifras y valuaciones estimadas a la fecha de generación; documento informativo — no constituye estado de cuenta oficial ni asesoría de inversión.</span>
   </div>
 </div></body></html>`;
 }
@@ -4704,6 +4705,8 @@ async function exportPDF(cols, rows) {
     headStyles: { fillColor: [26, 58, 107], textColor: 255 },
     alternateRowStyles: { fillColor: [244, 247, 252] },
   });
+  { const _ph = doc.internal.pageSize.getHeight(); doc.setFontSize(7); doc.setTextColor(160);
+    doc.text('Cifras y valuaciones estimadas a la fecha de generación; documento informativo — no constituye estado de cuenta oficial ni asesoría de inversión.', 14, _ph - 8, { maxWidth: doc.internal.pageSize.getWidth() - 28 }); }
   doc.save(exportFilename() + '.pdf');
   toast(`Exportadas ${rows.length} filas a PDF`);
 }
@@ -5296,6 +5299,10 @@ async function exportInvestorXlsx(posId) {
       [32, 36].forEach((w, i) => CT.getColumn(i + 1).width = w);
     }
 
+    { const _R = wb.getWorksheet(T('Resumen', 'Summary')); if (_R) {
+        const _r = _R.getRow(_R.rowCount + 2); const _c = _r.getCell(1);
+        _c.value = T('Cifras y valuaciones estimadas a la fecha de generación; documento informativo — no constituye estado de cuenta oficial ni asesoría de inversión.','Figures and valuations are estimates as of the generation date; for information only — not an official statement or investment advice.');
+        _c.font = { size: 8, italic: true, color: { argb: 'FF9AA3B5' } }; } }
     const buf = await wb.xlsx.writeBuffer();
     const out = await injectNativeCharts(buf, 'Resumen', specs);
     downloadBlob(new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), invExportFilename(data.inv, extra) + '.xlsx');
@@ -5424,7 +5431,7 @@ td.co{font-weight:700;color:#241f1b}td.acct{color:#9a8f84;font-size:8.5px;max-wi
 <table><thead><tr>${acctHead}<th>${T('Empresa','Company')}</th><th>${T('Serie','Series')}</th><th>${T('Estado','Status')}</th><th class="n">${T('Acciones','Shares')}</th><th class="n">${T('PPS Entrada','Entry PPS')}</th><th class="n">${T('PPS Actual','Current PPS')}</th><th class="n">${T('Compromiso','Commitment')}</th><th class="n">Account Balance</th><th class="n">${T('Distribuido','Distributed')}</th><th class="n">MOIC</th></tr></thead><tbody>${posrows}</tbody></table>
 ${distSection}
 </div>
-<div class="foot">MVP MANAGER · ${T('DOCUMENTO INTERNO','INTERNAL DOCUMENT')} · ${E(meta.dateStr)}</div>
+<div class="foot">MVP MANAGER · ${T('DOCUMENTO INTERNO','INTERNAL DOCUMENT')} · ${E(meta.dateStr)}<br><span style="font-size:8.5px;color:#9aa3b5;font-weight:400">${T('Cifras y valuaciones estimadas a la fecha de generación; documento informativo — no constituye estado de cuenta oficial ni asesoría de inversión.','Figures and valuations are estimates as of the generation date; for information only — not an official statement or investment advice.')}</span></div>
 </div></body></html>`;
 }
 
@@ -6236,6 +6243,8 @@ async function exportInvestorPdfJsPDF(posId) {
       doc.setFontSize(7.5); doc.setTextColor(160);
       doc.text(`MVP Manager · documento interno · ${new Date().toLocaleDateString('es-MX')} · pág. ${i}/${pages}`, M, PH - 16);
     }
+    doc.setPage(pages); doc.setFontSize(7); doc.setTextColor(170);
+    doc.text('Cifras y valuaciones estimadas a la fecha de generación; documento informativo — no constituye estado de cuenta oficial ni asesoría de inversión.', M, PH - 28, { maxWidth: doc.internal.pageSize.getWidth() - M * 2 });
 
     doc.save(invExportFilename(data.inv, extra) + '.pdf');
     toast(single ? `PDF: ${extra}` : 'PDF generado');
@@ -8545,7 +8554,8 @@ body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;backgro
     `<body><div class="doc"><div class="doc-head"><div class="doc-title">${escapeHtml(f.name)} — ${EN ? 'Companies' : 'Empresas'}</div>` +
     `<div class="doc-sub">${escapeHtml(f.status)} · ${escapeHtml(f.confidentiality)} · Cutoff ${escapeHtml(cutoffPretty)}</div>` +
     `<div class="doc-note">${EN ? 'Corporate valuation. Entry is derived from PPS appreciation (current valuation ÷ MOIC).' : 'Valuación corporativa. La de entrada se deriva de la apreciación del PPS (valuación actual ÷ MOIC).'}</div></div>` +
-    `<div class="ft-co-grid">${ftCompanyCards(f, { lang, embeddedLogos: logos || {} })}</div></div></body></html>`;
+    `<div class="ft-co-grid">${ftCompanyCards(f, { lang, embeddedLogos: logos || {} })}</div>` +
+    `<div style="margin-top:14px;font-size:9px;color:#9aa3b5">${EN ? 'Figures and valuations are estimates as of the generation date; for information only — not an official statement or investment advice.' : 'Cifras y valuaciones estimadas a la fecha de generación; documento informativo — no constituye estado de cuenta oficial ni asesoría de inversión.'}</div></div></body></html>`;
 }
 
 // ── Export HTML del tracker (Valuation Overview) — auto-contenido, logos embebidos ──
@@ -8699,6 +8709,7 @@ body.anim .xr.xin{opacity:1;transform:none}
   document.querySelectorAll('.kpi .v').forEach(cnt);
 })();
 </script>
+<div style="max-width:1080px;margin:10px auto 18px;padding:0 16px;font-size:9px;color:#9aa3b5">${T('Cifras y valuaciones estimadas a la fecha de generación; documento informativo — no constituye estado de cuenta oficial ni asesoría de inversión.','Figures and valuations are estimates as of the generation date; for information only — not an official statement or investment advice.')}</div>
 </body></html>`;
 }
 
@@ -8953,6 +8964,8 @@ async function exportCompaniesPDF(fundId, btn) {
       card(r, y, true);
       y += h + 6;
     }
+    { const _ph = doc.internal.pageSize.getHeight(); doc.setFontSize(7); doc.setTextColor(160);
+      doc.text(EN ? 'Figures and valuations are estimates as of the generation date; for information only — not an official statement or investment advice.' : 'Cifras y valuaciones estimadas a la fecha de generación; documento informativo — no constituye estado de cuenta oficial ni asesoría de inversión.', 40, _ph - 14, { maxWidth: doc.internal.pageSize.getWidth() - 80 }); }
     doc.save(f.name.replace(/[^a-z0-9]+/gi, '_') + (EN ? '_Companies' : '_Empresas') + ' · ' + dlStamp() + '.pdf');
   } catch (e) {
     alert('No se pudo generar el PDF: ' + e.message);
@@ -9112,6 +9125,10 @@ async function exportFundTrackerExcel(fundId, btn) {
     totalRow((f.overallLabel || 'Total - Overall').replace(/—/g, '-'), f.overallTotal);
     if (f.overallTotal2) totalRow(f.overallTotal2.label.replace(/—/g, '-'), f.overallTotal2);
 
+    { const _ws = wb.getWorksheet('Valuation Overview'); if (_ws) {
+      const _r = _ws.getRow(_ws.rowCount + 2); const _c = _r.getCell(1);
+      _c.value = (typeof EN !== 'undefined' && EN) ? 'Figures and valuations are estimates as of the generation date; for information only — not an official statement or investment advice.' : 'Cifras y valuaciones estimadas a la fecha de generación; documento informativo — no constituye estado de cuenta oficial ni asesoría de inversión.';
+      _c.font = { size: 8, italic: true, color: { argb: 'FF9AA3B5' } }; } }
     const buf = await wb.xlsx.writeBuffer();
     const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const a = document.createElement('a');
@@ -11572,6 +11589,8 @@ async function frExportXlsx() {
     r++;  // renglón de aire entre etapas
   }
   WIDTHS.forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+  { const _c = ws.getCell(r + 1, 1); _c.value = 'Cifras y valuaciones estimadas a la fecha de generación; documento informativo — no constituye estado de cuenta oficial ni asesoría de inversión.';
+    _c.font = { size: 8, italic: true, color: { argb: 'FF9AA3B5' } }; }
 
   const buf = await wb.xlsx.writeBuffer();
   const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
