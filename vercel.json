@@ -118,6 +118,10 @@
       "use": "@vercel/static"
     },
     {
+      "src": "public/vendor/*.js",
+      "use": "@vercel/static"
+    },
+    {
       "src": "public/gvv-detalle.html",
       "use": "@vercel/static"
     },
@@ -197,6 +201,10 @@
     {
       "src": "/fonts/(.+\\.ttf)",
       "dest": "/public/fonts/$1"
+    },
+    {
+      "src": "/vendor/(.+)",
+      "dest": "/public/vendor/$1"
     },
     {
       "src": "/portal-mvp",

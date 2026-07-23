@@ -30,6 +30,9 @@ npm-debug.log*
 *.tmp
 *.bak
 
+# Graphify: grafo de conocimiento local (regenerable, no versionar)
+graphify-out/
+
 # Datos sensibles de LPs (PII) — no versionar
 _seed_*.sql
 _seed_gen.mjs
