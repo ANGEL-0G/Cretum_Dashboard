@@ -551,9 +551,17 @@ button,input,select{font-family:var(--font)}
 /* ═══ Plantillas de correos (Ventas) ═══ */
 :root{--et-ease:cubic-bezier(.23,1,.32,1)}
 /* Biblioteca */
+#ventasPlantillas{position:relative;min-height:66vh}
 .et-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
 .et-top-r{display:flex;align-items:center;gap:12px;margin-left:auto}
 .et-count{font-size:12px;color:var(--gray-400)}
+/* Overlay al arrastrar un .html sobre la biblioteca */
+.et-dropzone{position:absolute;inset:0;z-index:6;display:none;align-items:center;justify-content:center;border:2.5px dashed var(--navy);border-radius:var(--r-lg);background:var(--navy-pale);pointer-events:none}
+#ventasPlantillas.et-dragging .et-dropzone{display:flex;animation:etPopIn .14s var(--et-ease)}
+.et-dropzone-in{text-align:center;color:var(--navy);font-weight:600;font-size:15px;padding:0 20px}
+.et-dropzone-in i{font-size:36px;display:block;margin-bottom:12px}
+[data-theme="dark"] .et-dropzone{background:rgba(93,143,245,.14);border-color:var(--navy-light)}
+[data-theme="dark"] .et-dropzone-in{color:var(--navy-light)}
 .et-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
 .et-card{border:1px solid var(--gray-200);border-radius:var(--r-lg);background:var(--white);overflow:hidden;display:flex;flex-direction:column;transition:border-color .18s,box-shadow .18s,transform .18s var(--et-ease);animation:etCardIn .34s var(--et-ease) both}
 .et-card:hover{border-color:var(--navy-light);box-shadow:0 8px 24px rgba(26,58,107,.10);transform:translateY(-2px)}
@@ -4316,6 +4324,12 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
       </div>
     </div>
     <div id="etGrid" class="et-grid"></div>
+    <div class="et-dropzone" id="etDropzone" aria-hidden="true">
+      <div class="et-dropzone-in">
+        <i class="fa-solid fa-file-arrow-up"></i>
+        <div>Suelta tu archivo <b>.html</b> para crear una plantilla</div>
+      </div>
+    </div>
   </div>
 
   <!-- Dashboard GVV embebido (archivo estático servido por cretumdesk, carga lazy) -->
@@ -5078,7 +5092,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   </div>
 </div>
 
-<script src="/i18n.js?v=20260723-mailtpl3"></script>
-<script src="/app.js?v=20260723-mailtpl3"></script>
+<script src="/i18n.js?v=20260723-mailtpl4"></script>
+<script src="/app.js?v=20260723-mailtpl4"></script>
 </body>
 </html>

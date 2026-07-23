@@ -3239,6 +3239,7 @@ const ET_TEXT_COLORS = ['#111827','#1a3a6b','#2a4f8f','#ed7824','#e11d48','#0478
 function openEmailTemplates() {
   document.getElementById('ventasMenu').style.display = 'none';
   document.getElementById('ventasPlantillas').style.display = '';
+  etWireDrop();
   loadEmailTemplates();
 }
 
@@ -3489,6 +3490,51 @@ function etLoadFile(f) {
     toast('Archivo cargado');
   };
   rd.readAsText(f);
+}
+
+/* ── Arrastrar un .html a la biblioteca = crearlo como plantilla ── */
+function etIsHtmlFile(f) { return /\.html?$/i.test(f.name) || f.type === 'text/html'; }
+function etReadFile(f) {
+  return new Promise((res, rej) => {
+    const rd = new FileReader();
+    rd.onload = () => res(rd.result || '');
+    rd.onerror = rej;
+    rd.readAsText(f);
+  });
+}
+async function etImportFiles(fileList) {
+  const files = [...(fileList || [])].filter(etIsHtmlFile);
+  if (!files.length) { toast('Arrastra un archivo .html'); return; }
+  let ok = 0;
+  for (const f of files) {
+    try {
+      const html = await etReadFile(f);
+      const { error } = await sb.from('email_templates')
+        .insert({ title: f.name.replace(/\.html?$/i, ''), html, created_by: currentUser, updated_by: currentUser });
+      if (!error) ok++;
+    } catch (e) { /* sigue con los demás */ }
+  }
+  if (ok) { toast(ok === 1 ? 'Plantilla creada' : `${ok} plantillas creadas`); loadEmailTemplates(); }
+  else toast('No se pudo importar el archivo');
+}
+// Conecta el arrastrar-y-soltar una sola vez (los elementos ya existen en el DOM).
+let etDropWired = false;
+function etWireDrop() {
+  if (etDropWired) return;
+  const view = document.getElementById('ventasPlantillas');
+  if (!view) return;
+  etDropWired = true;
+  const active = () => view.style.display !== 'none' && view.offsetParent !== null;
+  const hasFiles = e => e.dataTransfer && [...(e.dataTransfer.types || [])].includes('Files');
+  let depth = 0;
+  view.addEventListener('dragenter', e => { if (!hasFiles(e)) return; e.preventDefault(); depth++; view.classList.add('et-dragging'); });
+  view.addEventListener('dragover', e => { if (!hasFiles(e)) return; e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
+  view.addEventListener('dragleave', e => { if (!hasFiles(e)) return; depth = Math.max(0, depth - 1); if (!depth) view.classList.remove('et-dragging'); });
+  view.addEventListener('drop', e => { if (!hasFiles(e)) return; e.preventDefault(); depth = 0; view.classList.remove('et-dragging'); etImportFiles(e.dataTransfer.files); });
+  // Red de seguridad: si sueltan el archivo fuera del recuadro (pero en la vista),
+  // evita que el navegador abra el archivo en su lugar.
+  window.addEventListener('dragover', e => { if (active() && hasFiles(e)) e.preventDefault(); });
+  window.addEventListener('drop', e => { if (active() && hasFiles(e)) e.preventDefault(); });
 }
 
 /* ── Guardar / eliminar / duplicar ── */
