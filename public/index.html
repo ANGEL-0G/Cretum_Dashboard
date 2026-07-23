@@ -581,6 +581,7 @@ button,input,select{font-family:var(--font)}
 
 /* Popover genérico (menús / color / enlace) — fixed para no recortarse */
 .et-pop{position:fixed;z-index:1500;background:var(--white);border:1px solid var(--gray-200);border-radius:var(--r-md);box-shadow:0 14px 40px -8px rgba(15,23,42,.28),0 4px 10px -6px rgba(15,23,42,.2);padding:5px;min-width:190px;transform-origin:top right;animation:etPopIn .15s var(--et-ease)}
+.et-pop[hidden]{display:none}   /* gana al display:grid de .et-colorpop, etc. */
 @keyframes etPopIn{from{opacity:0;transform:scale(.95) translateY(-4px)}to{opacity:1;transform:scale(1) translateY(0)}}
 .et-pop button.et-mi{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:0;border-radius:var(--r-sm);padding:9px 11px;font-family:var(--font);font-size:13px;color:var(--gray-700);cursor:pointer;transition:background .12s}
 .et-pop button.et-mi i{width:15px;text-align:center;color:var(--gray-400)}
@@ -598,6 +599,7 @@ button,input,select{font-family:var(--font)}
 
 /* Editor a pantalla completa */
 .et-editor{position:fixed;inset:0;z-index:1250;background:var(--gray-50);display:flex;flex-direction:column;animation:etEditorIn .3s var(--et-ease)}
+.et-editor[hidden]{display:none}   /* el atributo hidden debe ganarle al display:flex */
 @keyframes etEditorIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 .et-ebar{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--white);border-bottom:1px solid var(--gray-200);flex-shrink:0}
 .et-etitle{flex:1;min-width:0;border:1px solid transparent;border-radius:var(--r-md);padding:8px 11px;font-family:var(--font);font-size:15px;font-weight:600;color:var(--gray-900);background:transparent;outline:none;transition:background .15s,border-color .15s}
@@ -5076,7 +5078,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   </div>
 </div>
 
-<script src="/i18n.js?v=20260723-mailtpl2"></script>
-<script src="/app.js?v=20260723-mailtpl2"></script>
+<script src="/i18n.js?v=20260723-mailtpl3"></script>
+<script src="/app.js?v=20260723-mailtpl3"></script>
 </body>
 </html>
