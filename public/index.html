@@ -548,59 +548,116 @@ button,input,select{font-family:var(--font)}
 .team-note i{color:var(--amber);margin-top:2px;flex-shrink:0}
 .team-note span{white-space:pre-wrap;overflow-wrap:anywhere}
 
-/* ── Plantillas de correos (Ventas) ── */
-.et-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
-.et-note{font-size:12.5px;color:var(--gray-500);background:var(--gray-50);border:1px solid var(--gray-100);border-radius:var(--r-md);padding:10px 13px;line-height:1.5;margin-bottom:16px;display:flex;gap:8px;align-items:baseline}
-.et-note i{color:var(--navy);flex-shrink:0}
-.et-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(258px,1fr));gap:14px}
-.et-card{border:1px solid var(--gray-200);border-radius:var(--r-lg);background:var(--white);overflow:hidden;display:flex;flex-direction:column;transition:border-color .15s,box-shadow .15s}
-.et-card:hover{border-color:var(--navy-light);box-shadow:var(--shadow-sm)}
-.et-card-prev{height:148px;background:#fff;position:relative;overflow:hidden;border-bottom:1px solid var(--gray-100);cursor:pointer}
-.et-card-prev iframe{position:absolute;top:0;left:0;width:250%;height:370px;border:0;transform:scale(.4);transform-origin:top left;pointer-events:none;background:#fff}
-.et-card-body{padding:11px 13px}
-.et-card-title{font-size:14px;font-weight:600;color:var(--gray-900);margin:0 0 3px;line-height:1.3;word-break:break-word}
-.et-card-meta{font-size:11px;color:var(--gray-400)}
-.et-card-acts{display:flex;gap:5px;padding:8px 10px;border-top:1px solid var(--gray-100)}
-.et-abtn{flex:1;min-width:0;display:inline-flex;align-items:center;justify-content:center;gap:5px;font-size:12px;font-weight:500;padding:7px 8px;border-radius:var(--r-sm);border:1px solid var(--gray-200);background:var(--white);color:var(--gray-600);cursor:pointer;font-family:var(--font);transition:all .15s;white-space:nowrap}
-.et-abtn:hover{border-color:var(--navy-light);color:var(--navy);background:var(--navy-pale)}
-.et-abtn.primary{background:var(--navy);color:#fff;border-color:var(--navy);flex:1.5}
-.et-abtn.primary:hover{filter:brightness(1.1);color:#fff}
-.et-abtn.icon{flex:0 0 auto;width:34px;padding:7px 0}
-.et-empty{grid-column:1/-1;text-align:center;color:var(--gray-400);padding:40px 20px;font-size:14px;line-height:1.6}
-/* Editor / historial (usa .notes-modal para z-index sobre el resto) */
-.et-modal{background:var(--white);border-radius:var(--r-lg);width:min(1040px,96vw);max-height:92vh;display:flex;flex-direction:column;box-shadow:0 18px 52px rgba(0,0,0,.3);transform:scale(.96) translateY(12px);transition:transform .3s cubic-bezier(.34,1.4,.64,1);overflow:hidden}
-.notes-modal.show .et-modal{transform:none}
-.et-modal-sm{width:min(520px,94vw)}
-.et-modal-head{display:flex;align-items:center;gap:10px;padding:15px 18px;border-bottom:1px solid var(--gray-100)}
-.et-title-input{flex:1;border:1px solid var(--gray-200);border-radius:var(--r-md);padding:9px 12px;font-family:var(--font);font-size:15px;font-weight:600;color:var(--gray-900);background:var(--gray-50);outline:none}
-.et-title-input:focus{border-color:var(--navy);box-shadow:0 0 0 3px var(--navy-ghost)}
-.et-tabs{display:flex;gap:6px;padding:12px 18px 0}
-.et-tab{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:500;padding:8px 14px;border-radius:var(--r-md) var(--r-md) 0 0;border:0;background:none;color:var(--gray-500);cursor:pointer;font-family:var(--font)}
-.et-tab.on{color:var(--navy);background:var(--navy-pale)}
-.et-body{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:14px 18px;flex:1 1 auto;min-height:0;overflow:hidden}
-.et-col{display:flex;flex-direction:column;min-height:0}
-.et-drop{border:1.5px dashed var(--gray-300);border-radius:var(--r-md);padding:14px;text-align:center;color:var(--gray-500);font-size:12.5px;margin-bottom:10px;display:flex;flex-direction:column;align-items:center;gap:6px;transition:border-color .15s,background .15s}
-.et-drop.drag{border-color:var(--navy);background:var(--navy-pale)}
-.et-drop i{font-size:22px;color:var(--navy)}
-.et-drop-btn{display:inline-block;margin-top:4px;font-weight:600;color:var(--navy);cursor:pointer;border:1px solid var(--gray-200);border-radius:var(--r-sm);padding:6px 12px;background:var(--white)}
-.et-drop-btn:hover{background:var(--navy-pale)}
-.et-code{flex:1 1 auto;min-height:230px;resize:none;border:1px solid var(--gray-200);border-radius:var(--r-md);padding:11px 12px;font-family:var(--mono,monospace);font-size:12px;line-height:1.5;color:var(--gray-800);background:var(--gray-50);outline:none;white-space:pre;overflow:auto}
-.et-code:focus{border-color:var(--navy)}
-.et-prev-lbl{font-size:10.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--gray-400);margin-bottom:7px}
-.et-prev{flex:1 1 auto;min-height:230px;width:100%;border:1px solid var(--gray-200);border-radius:var(--r-md);background:#fff}
-.et-foot{display:flex;align-items:center;gap:8px;padding:13px 18px;border-top:1px solid var(--gray-100)}
+/* ═══ Plantillas de correos (Ventas) ═══ */
+:root{--et-ease:cubic-bezier(.23,1,.32,1)}
+/* Biblioteca */
+.et-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.et-top-r{display:flex;align-items:center;gap:12px;margin-left:auto}
+.et-count{font-size:12px;color:var(--gray-400)}
+.et-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+.et-card{border:1px solid var(--gray-200);border-radius:var(--r-lg);background:var(--white);overflow:hidden;display:flex;flex-direction:column;transition:border-color .18s,box-shadow .18s,transform .18s var(--et-ease);animation:etCardIn .34s var(--et-ease) both}
+.et-card:hover{border-color:var(--navy-light);box-shadow:0 8px 24px rgba(26,58,107,.10);transform:translateY(-2px)}
+@keyframes etCardIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.et-card:nth-child(1){animation-delay:0ms}.et-card:nth-child(2){animation-delay:45ms}.et-card:nth-child(3){animation-delay:90ms}.et-card:nth-child(4){animation-delay:135ms}.et-card:nth-child(5){animation-delay:180ms}.et-card:nth-child(6){animation-delay:225ms}.et-card:nth-child(n+7){animation-delay:260ms}
+.et-card-prev{height:154px;background:#fff;position:relative;overflow:hidden;border-bottom:1px solid var(--gray-100);cursor:pointer}
+.et-card-prev iframe{position:absolute;top:0;left:0;width:250%;height:385px;border:0;transform:scale(.4);transform-origin:top left;pointer-events:none;background:#fff}
+.et-card-prev::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 60%,rgba(255,255,255,.06));pointer-events:none}
+.et-card-prev .et-openpill{position:absolute;right:9px;bottom:9px;display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:#fff;background:rgba(17,26,45,.72);padding:4px 9px;border-radius:999px;opacity:0;transform:translateY(4px);transition:opacity .18s,transform .18s var(--et-ease);backdrop-filter:blur(4px)}
+.et-card:hover .et-openpill{opacity:1;transform:translateY(0)}
+.et-card-body{padding:12px 14px 4px}
+.et-card-title{font-size:14.5px;font-weight:600;color:var(--gray-900);margin:0 0 3px;line-height:1.3;word-break:break-word}
+.et-card-meta{font-size:11.5px;color:var(--gray-400)}
+.et-card-foot{display:flex;gap:8px;padding:12px 14px;align-items:center}
+.et-copy{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:7px;font-size:13px;font-weight:600;padding:9px 12px;border-radius:var(--r-md);border:0;background:var(--navy);color:#fff;cursor:pointer;font-family:var(--font);transition:filter .15s,transform .12s var(--et-ease)}
+.et-copy:hover{filter:brightness(1.08)}
+.et-copy:active{transform:scale(.97)}
+.et-kebab{flex:0 0 auto;width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;border-radius:var(--r-md);border:1px solid var(--gray-200);background:var(--white);color:var(--gray-500);cursor:pointer;font-size:15px;transition:color .15s,border-color .15s,background .15s,transform .12s var(--et-ease)}
+.et-kebab:hover{color:var(--navy);border-color:var(--navy-light);background:var(--navy-pale)}
+.et-kebab:active{transform:scale(.95)}
+.et-empty{grid-column:1/-1;text-align:center;color:var(--gray-500);padding:56px 20px;line-height:1.6}
+.et-empty .et-empty-ico{font-size:34px;color:var(--navy-light);margin-bottom:12px;opacity:.85}
+.et-empty h3{font-size:16px;font-weight:600;color:var(--gray-800);margin:0 0 4px}
+.et-empty p{font-size:13.5px;color:var(--gray-400);margin:0 auto 16px;max-width:44ch}
+
+/* Popover genérico (menús / color / enlace) — fixed para no recortarse */
+.et-pop{position:fixed;z-index:1500;background:var(--white);border:1px solid var(--gray-200);border-radius:var(--r-md);box-shadow:0 14px 40px -8px rgba(15,23,42,.28),0 4px 10px -6px rgba(15,23,42,.2);padding:5px;min-width:190px;transform-origin:top right;animation:etPopIn .15s var(--et-ease)}
+@keyframes etPopIn{from{opacity:0;transform:scale(.95) translateY(-4px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.et-pop button.et-mi{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:0;border-radius:var(--r-sm);padding:9px 11px;font-family:var(--font);font-size:13px;color:var(--gray-700);cursor:pointer;transition:background .12s}
+.et-pop button.et-mi i{width:15px;text-align:center;color:var(--gray-400)}
+.et-pop button.et-mi:hover{background:var(--gray-100)}
+.et-pop button.et-mi.danger{color:var(--red)}
+.et-pop button.et-mi.danger i{color:var(--red)}
+.et-pop button.et-mi.danger:hover{background:var(--red-bg)}
+.et-colorpop{min-width:0;display:grid;grid-template-columns:repeat(6,1fr);gap:7px;padding:10px}
+.et-colorpop button{width:24px;height:24px;border-radius:50%;border:2px solid rgba(0,0,0,.06);cursor:pointer;padding:0;transition:transform .12s var(--et-ease)}
+.et-colorpop button:hover{transform:scale(1.15)}
+.et-linkpop{min-width:280px;padding:10px}
+.et-linkpop-row{display:flex;gap:8px}
+.et-linkpop-row input{flex:1;border:1px solid var(--gray-200);border-radius:var(--r-sm);padding:8px 10px;font-family:var(--font);font-size:13px;color:var(--gray-900);background:var(--gray-50);outline:none}
+.et-linkpop-row input:focus{border-color:var(--navy)}
+
+/* Editor a pantalla completa */
+.et-editor{position:fixed;inset:0;z-index:1250;background:var(--gray-50);display:flex;flex-direction:column;animation:etEditorIn .3s var(--et-ease)}
+@keyframes etEditorIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.et-ebar{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--white);border-bottom:1px solid var(--gray-200);flex-shrink:0}
+.et-etitle{flex:1;min-width:0;border:1px solid transparent;border-radius:var(--r-md);padding:8px 11px;font-family:var(--font);font-size:15px;font-weight:600;color:var(--gray-900);background:transparent;outline:none;transition:background .15s,border-color .15s}
+.et-etitle:hover{background:var(--gray-50)}
+.et-etitle:focus{background:var(--gray-50);border-color:var(--navy)}
+.et-ebar-r{display:flex;align-items:center;gap:7px;flex-shrink:0}
+.et-ebtn{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;padding:8px 13px;border-radius:var(--r-md);border:1px solid var(--gray-200);background:var(--white);color:var(--gray-700);cursor:pointer;font-family:var(--font);transition:color .15s,border-color .15s,background .15s,transform .12s var(--et-ease)}
+.et-ebtn:hover{border-color:var(--navy-light);color:var(--navy);background:var(--navy-pale)}
+.et-ebtn:active{transform:scale(.97)}
+.et-ebtn.primary{background:var(--navy);color:#fff;border-color:var(--navy)}
+.et-ebtn.primary:hover{filter:brightness(1.08);color:#fff}
+.et-ebtn.ghost{border-color:transparent;background:none;color:var(--gray-500);width:38px;height:38px;justify-content:center;padding:0}
+.et-ebtn.ghost:hover{background:var(--gray-100);color:var(--gray-800)}
+.et-tools{display:flex;align-items:center;gap:3px;padding:8px 14px;background:var(--white);border-bottom:1px solid var(--gray-200);flex-shrink:0;overflow-x:auto;scrollbar-width:thin}
+.et-tool{flex:0 0 auto;width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;border-radius:var(--r-sm);border:0;background:none;color:var(--gray-600);cursor:pointer;font-size:13px;transition:background .12s,color .12s,transform .12s var(--et-ease)}
+.et-tool:hover{background:var(--gray-100);color:var(--navy)}
+.et-tool:active{transform:scale(.9)}
+.et-tsep{flex:0 0 auto;width:1px;height:20px;background:var(--gray-200);margin:0 4px}
+.et-size select{border:0;background:none;font-family:var(--font);font-size:12.5px;color:var(--gray-600);cursor:pointer;padding:6px 4px;border-radius:var(--r-sm);outline:none}
+.et-size select:hover{background:var(--gray-100)}
+.et-import{cursor:pointer}
+.et-stage{flex:1 1 auto;min-height:0;position:relative;padding:16px;display:flex;justify-content:center;overflow:auto}
+.et-canvas{width:100%;max-width:840px;height:100%;border:1px solid var(--gray-200);border-radius:var(--r-md);background:#fff;box-shadow:0 6px 24px -12px rgba(15,23,42,.25)}
+.et-codearea{width:100%;max-width:840px;height:100%;resize:none;border:1px solid var(--gray-200);border-radius:var(--r-md);padding:14px 16px;font-family:var(--mono,monospace);font-size:12.5px;line-height:1.55;color:var(--gray-800);background:var(--white);outline:none;white-space:pre;overflow:auto}
+.et-codearea:focus{border-color:var(--navy)}
+.et-hint{position:absolute;left:50%;top:34px;transform:translateX(-50%);max-width:min(520px,86vw);text-align:center;font-size:13px;color:var(--gray-400);line-height:1.6;pointer-events:none}
+.et-hint i{color:var(--navy-light)}
+
+/* Historial */
+.et-vmodal{background:var(--white);border-radius:var(--r-lg);width:min(540px,94vw);max-height:88vh;display:flex;flex-direction:column;box-shadow:0 18px 52px rgba(0,0,0,.28);transform:scale(.96) translateY(12px);transition:transform .3s cubic-bezier(.34,1.4,.64,1);overflow:hidden}
+.notes-modal.show .et-vmodal{transform:none}
+.et-vmodal-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:15px 18px;border-bottom:1px solid var(--gray-100)}
 .et-vnote{font-size:12px;color:var(--gray-500);padding:12px 18px 4px;line-height:1.5}
-.et-vlist{padding:8px 14px 16px;overflow-y:auto;max-height:60vh}
+.et-vlist{padding:8px 14px 16px;overflow-y:auto}
 .et-vrow{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--gray-100);border-radius:var(--r-md);margin-bottom:8px}
 .et-vrow-info{flex:1;min-width:0}
 .et-vrow-when{font-size:13px;color:var(--gray-800);font-weight:500}
 .et-vrow-who{font-size:11.5px;color:var(--gray-400)}
-.et-vempty{color:var(--gray-400);font-size:13px;text-align:center;padding:24px}
-@media (max-width:760px){.et-body{grid-template-columns:1fr}.et-col-prev{display:none}}
-[data-theme="dark"] .et-card,[data-theme="dark"] .et-modal{background:#181818}
-[data-theme="dark"] .et-title-input,[data-theme="dark"] .et-code{background:#0f0f0f;border-color:#2a2a2a;color:#eee}
-[data-theme="dark"] .et-card-prev,[data-theme="dark"] .et-prev{background:#fff}
-[data-theme="dark"] .et-abtn{background:#181818;border-color:#333;color:#ccc}
+.et-vempty{color:var(--gray-400);font-size:13px;text-align:center;padding:24px;line-height:1.6}
+
+@media (max-width:640px){
+  .et-grid{grid-template-columns:1fr;gap:13px}
+  .et-ebtn .et-ebtn-tx{display:none}
+  .et-ebtn{padding:8px 11px}
+  .et-stage{padding:10px}
+  .et-etitle{font-size:14px}
+}
+@media (prefers-reduced-motion:reduce){
+  .et-card,.et-editor,.et-pop{animation:none}
+  .et-copy:active,.et-ebtn:active,.et-tool:active,.et-kebab:active{transform:none}
+}
+[data-theme="dark"] .et-card,[data-theme="dark"] .et-vmodal,[data-theme="dark"] .et-pop{background:#181818;border-color:#2a2a2a}
+[data-theme="dark"] .et-editor{background:#0d0d0d}
+[data-theme="dark"] .et-ebar,[data-theme="dark"] .et-tools{background:#161616;border-color:#262626}
+[data-theme="dark"] .et-card-prev,[data-theme="dark"] .et-canvas{background:#fff}
+[data-theme="dark"] .et-kebab,[data-theme="dark"] .et-ebtn{background:#181818;border-color:#333;color:#ccc}
+[data-theme="dark"] .et-codearea{background:#0f0f0f;border-color:#2a2a2a;color:#eee}
+[data-theme="dark"] .et-pop button.et-mi{color:#ddd}
+[data-theme="dark"] .et-pop button.et-mi:hover{background:#242424}
+[data-theme="dark"] .et-linkpop-row input{background:#0f0f0f;border-color:#2a2a2a;color:#eee}
 
 /* Completar / reabrir: la fila sale desvaneciéndose y entra en su nuevo lugar
    con un breve destello del acento. Solo transform/opacity (GPU). */
@@ -4249,11 +4306,13 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 
   <!-- Plantillas de correos (biblioteca compartida) -->
   <div id="ventasPlantillas" style="display:none">
-    <div class="et-head">
+    <div class="et-top">
       <button class="fm-back" type="button" onclick="ventasBackHome()" style="margin:0"><i class="fa-solid fa-arrow-left"></i> Ventas</button>
-      <button class="btn-primary" type="button" onclick="etNew()" style="margin-left:auto"><i class="fa-solid fa-plus"></i> Nueva plantilla</button>
+      <div class="et-top-r">
+        <span class="et-count" id="etCount"></span>
+        <button class="btn-primary" type="button" onclick="etNew()"><i class="fa-solid fa-plus"></i> Nueva plantilla</button>
+      </div>
     </div>
-    <div class="et-note"><i class="fa-solid fa-circle-info"></i> Biblioteca compartida del equipo. Sube un archivo <b>.html</b> o pega el código; luego <b>Copiar</b> lo deja listo para pegar en Outlook o Gmail con su formato. Cada cambio guarda una versión que puedes restaurar hasta <b>14 días</b>.</div>
     <div id="etGrid" class="et-grid"></div>
   </div>
 
@@ -4489,49 +4548,73 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   </div>
 </div>
 
-<!-- Editor de plantilla de correo (crear / editar) -->
-<div class="modal-backdrop notes-modal" id="etEditor" onclick="if(event.target===this)etCloseEditor()">
-  <div class="et-modal">
-    <div class="et-modal-head">
-      <input id="etTitle" class="et-title-input" maxlength="120" autocomplete="off" placeholder="Nombre de la plantilla (ej. Seguimiento LP)">
-      <button class="fm-x" onclick="etCloseEditor()" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+<!-- Editor de plantilla a pantalla completa (edición WYSIWYG directa) -->
+<div class="et-editor" id="etEditor" hidden>
+  <div class="et-ebar">
+    <button class="et-ebtn ghost" onclick="etCloseEditor()" title="Volver a la biblioteca" aria-label="Volver"><i class="fa-solid fa-arrow-left"></i></button>
+    <input id="etTitle" class="et-etitle" maxlength="120" autocomplete="off" placeholder="Nombre de la plantilla">
+    <div class="et-ebar-r">
+      <button class="et-ebtn" id="etModeBtn" onclick="etToggleMode()" title="Alternar vista de código"><i class="fa-solid fa-code"></i><span class="et-ebtn-tx">Código</span></button>
+      <button class="et-ebtn" onclick="etCopyCurrent()" title="Copiar para Outlook/Gmail"><i class="fa-solid fa-copy"></i><span class="et-ebtn-tx">Copiar</span></button>
+      <button class="et-ebtn primary" onclick="etSave()"><i class="fa-solid fa-check"></i><span class="et-ebtn-tx">Guardar</span></button>
+      <button class="et-ebtn ghost" id="etMoreBtn" onclick="etEditorMenu(event)" title="Más opciones" aria-label="Más opciones"><i class="fa-solid fa-ellipsis-vertical"></i></button>
     </div>
-    <div class="et-tabs">
-      <button type="button" class="et-tab on" id="etTabUpload" onclick="etSetMode('upload')"><i class="fa-solid fa-arrow-up-from-bracket"></i> Subir archivo</button>
-      <button type="button" class="et-tab" id="etTabPaste" onclick="etSetMode('paste')"><i class="fa-solid fa-code"></i> Pegar código</button>
-    </div>
-    <div class="et-body">
-      <div class="et-col">
-        <div id="etDrop" class="et-drop">
-          <i class="fa-solid fa-file-arrow-up"></i>
-          <div>Arrastra un archivo <b>.html</b> aquí o</div>
-          <label class="et-drop-btn">Elegir archivo<input type="file" id="etFile" accept=".html,.htm,text/html" hidden onchange="etOnFile(event)"></label>
-        </div>
-        <textarea id="etCode" class="et-code" spellcheck="false" placeholder="Pega aquí el HTML del correo…" oninput="etPreview()"></textarea>
-      </div>
-      <div class="et-col et-col-prev">
-        <div class="et-prev-lbl">Vista previa</div>
-        <iframe id="etPrev" class="et-prev" title="Vista previa"></iframe>
-      </div>
-    </div>
-    <div class="et-foot">
-      <button class="fm-del" id="etDelBtn" onclick="etDeleteCurrent()" style="display:none"><i class="fa-solid fa-trash"></i> Eliminar</button>
-      <div style="margin-left:auto;display:flex;gap:8px">
-        <button class="fm-btn fm-cancel" onclick="etCloseEditor()">Cancelar</button>
-        <button class="fm-btn fm-save" onclick="etSave()"><i class="fa-solid fa-check"></i> Guardar</button>
-      </div>
-    </div>
+  </div>
+  <div class="et-tools" id="etTools" role="toolbar" aria-label="Formato">
+    <button class="et-tool" onclick="etExec('bold')" title="Negrita (Ctrl+B)" aria-label="Negrita"><i class="fa-solid fa-bold"></i></button>
+    <button class="et-tool" onclick="etExec('italic')" title="Cursiva (Ctrl+I)" aria-label="Cursiva"><i class="fa-solid fa-italic"></i></button>
+    <button class="et-tool" onclick="etExec('underline')" title="Subrayado" aria-label="Subrayado"><i class="fa-solid fa-underline"></i></button>
+    <span class="et-tsep"></span>
+    <button class="et-tool" id="etColorBtn" onclick="etColorMenu(event)" title="Color de texto" aria-label="Color de texto"><i class="fa-solid fa-palette"></i></button>
+    <label class="et-size" title="Tamaño de texto">
+      <select id="etSize" onchange="etExec('fontSize', this.value); this.selectedIndex=0">
+        <option value="">Tamaño</option>
+        <option value="2">Pequeño</option>
+        <option value="3">Normal</option>
+        <option value="5">Grande</option>
+        <option value="6">Título</option>
+      </select>
+    </label>
+    <span class="et-tsep"></span>
+    <button class="et-tool" onclick="etExec('justifyLeft')" title="Alinear a la izquierda" aria-label="Izquierda"><i class="fa-solid fa-align-left"></i></button>
+    <button class="et-tool" onclick="etExec('justifyCenter')" title="Centrar" aria-label="Centrar"><i class="fa-solid fa-align-center"></i></button>
+    <button class="et-tool" onclick="etExec('justifyRight')" title="Alinear a la derecha" aria-label="Derecha"><i class="fa-solid fa-align-right"></i></button>
+    <span class="et-tsep"></span>
+    <button class="et-tool" onclick="etExec('insertUnorderedList')" title="Lista con viñetas" aria-label="Lista"><i class="fa-solid fa-list-ul"></i></button>
+    <button class="et-tool" id="etLinkBtn" onclick="etLinkMenu(event)" title="Insertar enlace" aria-label="Enlace"><i class="fa-solid fa-link"></i></button>
+    <button class="et-tool" onclick="etExec('removeFormat')" title="Quitar formato" aria-label="Quitar formato"><i class="fa-solid fa-text-slash"></i></button>
+    <span class="et-tsep"></span>
+    <label class="et-tool et-import" title="Subir un archivo .html"><i class="fa-solid fa-arrow-up-from-bracket"></i><input type="file" id="etFile" accept=".html,.htm,text/html" hidden onchange="etOnFile(event)"></label>
+  </div>
+  <div class="et-stage">
+    <iframe id="etCanvas" class="et-canvas" title="Editor de la plantilla"></iframe>
+    <textarea id="etCode" class="et-codearea" spellcheck="false" hidden placeholder="Pega o edita aquí el HTML del correo…"></textarea>
+    <div class="et-hint" id="etHint" hidden>Escribe directamente sobre el correo. Selecciona texto para darle formato, o usa <i class="fa-solid fa-arrow-up-from-bracket"></i> para subir un <b>.html</b>.</div>
+  </div>
+</div>
+
+<!-- Popover genérico (menús ⋯) -->
+<div class="et-pop" id="etPop" hidden></div>
+
+<!-- Popover de color -->
+<div class="et-pop et-colorpop" id="etColorPop" hidden></div>
+
+<!-- Popover de enlace -->
+<div class="et-pop et-linkpop" id="etLinkPop" hidden>
+  <div class="et-linkpop-row">
+    <input type="url" id="etLinkUrl" placeholder="https://…" autocomplete="off" onkeydown="if(event.key==='Enter')etApplyLink()">
+    <button class="fm-btn fm-save" onclick="etApplyLink()">Enlazar</button>
   </div>
 </div>
 
 <!-- Historial de versiones (14 días) -->
 <div class="modal-backdrop notes-modal" id="etVersions" onclick="if(event.target===this)etCloseVersions()">
-  <div class="et-modal et-modal-sm">
-    <div class="et-modal-head">
-      <div class="fm-title" id="etVersionsTitle">Historial de versiones</div>
+  <div class="et-vmodal">
+    <div class="et-vmodal-head">
+      <div class="fm-title" id="etVersionsTitle">Historial</div>
       <button class="fm-x" onclick="etCloseVersions()" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
     </div>
-    <div class="et-vnote">Se conservan los cambios de los últimos <b>14 días</b>. Restaurar guarda antes la versión actual, por si acaso.</div>
+    <div class="et-vnote">Cambios de los últimos <b>14 días</b>. Restaurar guarda antes la versión actual.</div>
     <div id="etVersionsList" class="et-vlist"></div>
   </div>
 </div>
@@ -4993,7 +5076,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   </div>
 </div>
 
-<script src="/i18n.js?v=20260723-mailtpl"></script>
-<script src="/app.js?v=20260723-mailtpl"></script>
+<script src="/i18n.js?v=20260723-mailtpl2"></script>
+<script src="/app.js?v=20260723-mailtpl2"></script>
 </body>
 </html>

@@ -3223,28 +3223,29 @@ function openUmamiNewTab() {
 
 /* ═══════════════════════════════════════════════════════════════════════════
    PLANTILLAS DE CORREOS (Ventas) — biblioteca compartida del equipo
-   Cada quien sube/pega el HTML de un correo; todos lo ven, copian y editan.
-   Copiar deja el HTML en el portapapeles (text/html) para pegar con formato
-   en Outlook/Gmail. Cada guardado snapshotea una versión (historial 14 días).
-   Datos en Supabase (email_templates / email_template_versions) vía cliente sb.
+   Edición WYSIWYG: se escribe directamente sobre el correo renderizado (iframe
+   con designMode; sandbox="allow-same-origin" para que los scripts de la
+   plantilla no corran). "Copiar" deja el HTML en el portapapeles (text/html)
+   para pegar con formato en Outlook/Gmail. Cada guardado snapshotea una versión
+   (historial 14 días). Datos en Supabase vía cliente sb.
 ═══════════════════════════════════════════════════════════════════════════ */
-let etData = [];              // plantillas cargadas
+let etData = [];
 let etEditingId = null;       // id en edición (null = nueva)
-let etMode = 'upload';        // 'upload' | 'paste'
+let etCodeMode = false;       // true = editando HTML crudo; false = WYSIWYG
+let etSavedRange = null;      // selección preservada al abrir popover de color/enlace
 const ET_VERSION_DAYS = 14;
+const ET_TEXT_COLORS = ['#111827','#1a3a6b','#2a4f8f','#ed7824','#e11d48','#047857','#7c3aed','#0891b2','#be185d','#374151','#9aa3b5','#ffffff'];
 
 function openEmailTemplates() {
-  const menu = document.getElementById('ventasMenu');
-  const plant = document.getElementById('ventasPlantillas');
-  if (menu) menu.style.display = 'none';
-  if (plant) plant.style.display = '';
+  document.getElementById('ventasMenu').style.display = 'none';
+  document.getElementById('ventasPlantillas').style.display = '';
   loadEmailTemplates();
 }
 
 async function loadEmailTemplates() {
   const grid = document.getElementById('etGrid');
   if (!grid) return;
-  grid.innerHTML = `<div class="et-empty"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando plantillas…</div>`;
+  grid.innerHTML = `<div class="et-empty"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando…</div>`;
   try {
     const { data, error } = await sb.from('email_templates')
       .select('id,title,html,created_by,updated_by,created_at,updated_at')
@@ -3254,14 +3255,21 @@ async function loadEmailTemplates() {
     etRenderGrid();
   } catch (err) {
     const falta = /relation|does not exist|schema cache|not find the table|column/i.test(err.message || '');
-    grid.innerHTML = `<div class="et-empty">No se pudieron cargar las plantillas.${falta ? '<br>Falta correr la migración de BD (db/10_email_templates.sql).' : ''}</div>`;
+    grid.innerHTML = `<div class="et-empty"><div class="et-empty-ico"><i class="fa-solid fa-triangle-exclamation"></i></div><h3>No se pudieron cargar</h3><p>${falta ? 'Falta correr la migración de BD (db/10_email_templates.sql).' : 'Inténtalo de nuevo en un momento.'}</p></div>`;
   }
 }
 
 function etRenderGrid() {
   const grid = document.getElementById('etGrid');
+  const count = document.getElementById('etCount');
+  if (count) count.textContent = etData.length ? (etData.length + (etData.length === 1 ? ' plantilla' : ' plantillas')) : '';
   if (!etData.length) {
-    grid.innerHTML = `<div class="et-empty">Aún no hay plantillas.<br>Usa <b>Nueva plantilla</b> para subir un archivo .html o pegar el código.</div>`;
+    grid.innerHTML = `<div class="et-empty">
+      <div class="et-empty-ico"><i class="fa-solid fa-envelope-open-text"></i></div>
+      <h3>Aún no hay plantillas</h3>
+      <p>Crea la primera: escribe directamente sobre el correo, o sube/pega un HTML. Luego cópiala y pégala en Outlook o Gmail.</p>
+      <button class="btn-primary" onclick="etNew()"><i class="fa-solid fa-plus"></i> Nueva plantilla</button>
+    </div>`;
     return;
   }
   grid.innerHTML = etData.map(t => {
@@ -3269,118 +3277,229 @@ function etRenderGrid() {
     const when = t.updated_at ? fmtCreated(t.updated_at) : '';
     return `
     <div class="et-card">
-      <div class="et-card-prev" onclick="etEdit('${t.id}')" title="Editar">
+      <div class="et-card-prev" onclick="etEdit('${t.id}')" title="Abrir para editar">
         <iframe id="etprev-${t.id}" sandbox="" scrolling="no" tabindex="-1" aria-hidden="true"></iframe>
+        <span class="et-openpill"><i class="fa-solid fa-pen"></i> Editar</span>
       </div>
       <div class="et-card-body">
         <div class="et-card-title">${escapeHtml(t.title || 'Plantilla')}</div>
         <div class="et-card-meta">Actualizada ${when}${who ? ' · ' + escapeHtml(who) : ''}</div>
       </div>
-      <div class="et-card-acts">
-        <button class="et-abtn primary" onclick="etCopy('${t.id}')" title="Copiar para pegar en Outlook/Gmail"><i class="fa-solid fa-copy"></i> Copiar</button>
-        <button class="et-abtn" onclick="etEdit('${t.id}')"><i class="fa-solid fa-pen"></i> Editar</button>
-        <button class="et-abtn icon" onclick="etVersionsOpen('${t.id}')" title="Historial de versiones"><i class="fa-solid fa-clock-rotate-left"></i></button>
+      <div class="et-card-foot">
+        <button class="et-copy" onclick="etCopy('${t.id}')"><i class="fa-solid fa-copy"></i> Copiar</button>
+        <button class="et-kebab" onclick="etMenu('${t.id}', this)" aria-label="Más opciones"><i class="fa-solid fa-ellipsis"></i></button>
       </div>
     </div>`;
   }).join('');
-  // Inyecta el HTML de cada plantilla en su iframe de vista previa (sandbox, sin scripts)
   etData.forEach(t => {
     const fr = document.getElementById('etprev-' + t.id);
     if (fr) fr.srcdoc = t.html || '<div style="font-family:sans-serif;color:#9aa;padding:16px">(vacía)</div>';
   });
 }
 
-/* ── Copiar al portapapeles como HTML enriquecido (pega con formato) ── */
-async function etCopy(id) {
-  const t = etData.find(x => x.id === id);
-  if (!t) return;
-  const html = t.html || '';
+/* ── Copiar como HTML enriquecido (pega con formato en Outlook/Gmail) ── */
+async function etCopyHtml(html) {
+  html = html || '';
   try {
     if (navigator.clipboard && window.ClipboardItem) {
       await navigator.clipboard.write([new ClipboardItem({
         'text/html': new Blob([html], { type: 'text/html' }),
         'text/plain': new Blob([html], { type: 'text/plain' }),
       })]);
-      toast('Plantilla copiada — pégala en Outlook o Gmail');
+      toast('Copiada — pégala en Outlook o Gmail');
       return;
     }
     throw new Error('no-clipboarditem');
   } catch (e) {
-    try { await navigator.clipboard.writeText(html); toast('Copiada como código (pégala en el editor HTML)'); }
+    try { await navigator.clipboard.writeText(html); toast('Copiada como código'); }
     catch (_) { toast('No se pudo copiar'); }
   }
 }
+function etCopy(id) { const t = etData.find(x => x.id === id); if (t) etCopyHtml(t.html || ''); }
+function etCopyCurrent() { etCopyHtml(etGetHtml()); }
 
-/* ── Editor (crear / editar) ── */
-function etNew() {
+/* ── Popovers (menú ⋯ / color / enlace), fixed para no recortarse ── */
+function etClosePops() {
+  document.querySelectorAll('.et-pop').forEach(el => { el.hidden = true; });
+  document.removeEventListener('click', etOutside, true);
+}
+function etOutside(e) {
+  if (e.target.closest && e.target.closest('.et-pop')) return;   // clics dentro del popover no lo cierran
+  etClosePops();
+}
+function etPositionPop(pop, anchor) {
+  pop.hidden = false;
+  const r = anchor.getBoundingClientRect();
+  const w = pop.offsetWidth, h = pop.offsetHeight;
+  let left = r.right - w; if (left < 8) left = 8; if (left + w > innerWidth - 8) left = innerWidth - 8 - w;
+  let top = r.bottom + 6; if (top + h > innerHeight - 8) top = Math.max(8, r.top - h - 6);
+  pop.style.left = left + 'px';
+  pop.style.top = top + 'px';
+  setTimeout(() => document.addEventListener('click', etOutside, true), 0);
+}
+
+function etMenu(id, btn) {
+  etClosePops();
+  const pop = document.getElementById('etPop');
+  pop.innerHTML = `
+    <button class="et-mi" onclick="etClosePops();etEdit('${id}')"><i class="fa-solid fa-pen"></i> Editar</button>
+    <button class="et-mi" onclick="etClosePops();etCopy('${id}')"><i class="fa-solid fa-copy"></i> Copiar</button>
+    <button class="et-mi" onclick="etClosePops();etDuplicate('${id}')"><i class="fa-solid fa-clone"></i> Duplicar</button>
+    <button class="et-mi" onclick="etClosePops();etVersionsOpen('${id}')"><i class="fa-solid fa-clock-rotate-left"></i> Historial</button>
+    <button class="et-mi danger" onclick="etClosePops();etDeleteById('${id}')"><i class="fa-solid fa-trash"></i> Eliminar</button>`;
+  etPositionPop(pop, btn);
+}
+function etEditorMenu(ev) {
+  etClosePops();
+  const pop = document.getElementById('etPop');
+  pop.innerHTML = `
+    <button class="et-mi" onclick="etClosePops();etToggleMode()"><i class="fa-solid fa-code"></i> ${etCodeMode ? 'Vista normal' : 'Ver / pegar código'}</button>
+    ${etEditingId ? `<button class="et-mi" onclick="etClosePops();etVersionsOpen('${etEditingId}')"><i class="fa-solid fa-clock-rotate-left"></i> Historial de versiones</button>` : ''}
+    ${etEditingId ? `<button class="et-mi danger" onclick="etClosePops();etDeleteCurrent()"><i class="fa-solid fa-trash"></i> Eliminar plantilla</button>` : ''}`;
+  etPositionPop(pop, ev.currentTarget);
+}
+
+/* ── Editor a pantalla completa (WYSIWYG) ── */
+function etBlankTemplate() {
+  return '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#1a1f2e;line-height:1.6;padding:12px;max-width:640px;margin:0 auto"><p>Hola,</p><p>Escribe aquí tu mensaje…</p><p>Saludos,<br>Cretum Partners</p></div>';
+}
+function etNew() { etOpenEditor(null); }
+function etEdit(id) { const t = etData.find(x => x.id === id); if (t) etOpenEditor(t); }
+function etOpenEditor(t) {
+  etEditingId = t ? t.id : null;
+  etCodeMode = false;
+  const html = t ? (t.html || '') : etBlankTemplate();
+  document.getElementById('etTitle').value = t ? (t.title || '') : '';
+  document.getElementById('etCode').value = html;
+  etApplyModeUI();   // deriva la visibilidad del hint desde el estado
+  etSetCanvasHtml(html);
+  document.getElementById('etEditor').hidden = false;
+  setTimeout(() => document.getElementById(t ? 'etCanvas' : 'etTitle').focus(), 140);
+}
+function etCloseEditor() {
+  etClosePops();
+  document.getElementById('etEditor').hidden = true;
   etEditingId = null;
-  document.getElementById('etTitle').value = '';
-  document.getElementById('etCode').value = '';
-  document.getElementById('etDelBtn').style.display = 'none';
-  etSetMode('upload');
-  etPreview();
-  document.getElementById('etEditor').classList.add('show');
-  setTimeout(() => document.getElementById('etTitle').focus(), 80);
+}
+function etCanvasEl() { return document.getElementById('etCanvas'); }
+// El canvas editable NO va en sandbox (designMode/execCommand deben funcionar),
+// así que quitamos scripts y handlers en línea antes de inyectar el HTML.
+function etSanitize(html) {
+  return (html || '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<script[^>]*>/gi, '')
+    .replace(/\son[a-z]+\s*=\s*"[^"]*"/gi, '')
+    .replace(/\son[a-z]+\s*=\s*'[^']*'/gi, '')
+    .replace(/\son[a-z]+\s*=\s*[^\s>]+/gi, '')
+    .replace(/javascript:/gi, '');
+}
+function etSetCanvasHtml(html) {
+  const fr = etCanvasEl();
+  fr.onload = () => { try { fr.contentDocument.designMode = 'on'; } catch (e) {} };
+  fr.srcdoc = etSanitize(html) || '<p></p>';
+}
+function etGetHtml() {
+  if (etCodeMode) return document.getElementById('etCode').value || '';
+  try { return etCanvasEl().contentDocument.documentElement.outerHTML; }
+  catch (e) { return document.getElementById('etCode').value || ''; }
+}
+function etApplyModeUI() {
+  document.getElementById('etCanvas').hidden = etCodeMode;
+  document.getElementById('etCode').hidden = !etCodeMode;
+  document.getElementById('etTools').style.display = etCodeMode ? 'none' : '';
+  document.getElementById('etHint').hidden = etCodeMode || !!document.getElementById('etCode').value.trim();
+  const b = document.getElementById('etModeBtn');
+  b.querySelector('.et-ebtn-tx').textContent = etCodeMode ? 'Vista normal' : 'Código';
+  b.querySelector('i').className = etCodeMode ? 'fa-solid fa-eye' : 'fa-solid fa-code';
+}
+function etToggleMode() {
+  if (!etCodeMode) {
+    document.getElementById('etCode').value = etGetHtml();   // WYSIWYG → código
+    etCodeMode = true; etApplyModeUI();
+    setTimeout(() => document.getElementById('etCode').focus(), 30);
+  } else {
+    etCodeMode = false; etApplyModeUI();
+    etSetCanvasHtml(document.getElementById('etCode').value);   // código → WYSIWYG
+  }
 }
 
-function etEdit(id) {
-  const t = etData.find(x => x.id === id);
-  if (!t) return;
-  etEditingId = id;
-  document.getElementById('etTitle').value = t.title || '';
-  document.getElementById('etCode').value = t.html || '';
-  document.getElementById('etDelBtn').style.display = 'inline-flex';
-  etSetMode('paste');
-  etPreview();
-  document.getElementById('etEditor').classList.add('show');
+/* ── Formato (execCommand sobre el documento del iframe) ── */
+function etExec(cmd, val) {
+  if (etCodeMode) { toast('Cambia a vista normal para dar formato'); return; }
+  const fr = etCanvasEl();
+  try {
+    fr.contentWindow.focus();
+    fr.contentDocument.execCommand(cmd, false, val);
+  } catch (e) { /* sin permiso: la edición de texto sigue funcionando */ }
+  document.getElementById('etHint').hidden = true;
+}
+function etColorMenu(ev) {
+  if (etCodeMode) return;
+  etClosePops();
+  const fr = etCanvasEl(); const sel = fr.contentDocument.getSelection();
+  etSavedRange = (sel && sel.rangeCount) ? sel.getRangeAt(0).cloneRange() : null;
+  const pop = document.getElementById('etColorPop');
+  pop.innerHTML = ET_TEXT_COLORS.map(c => `<button style="background:${c}" title="${c}" onclick="etApplyColor('${c}')"></button>`).join('');
+  etPositionPop(pop, ev.currentTarget);
+}
+// Restaura la selección guardada y ejecuta un comando de formato (color/enlace).
+function etExecOnSaved(cmd, val) {
+  const fr = etCanvasEl(); fr.contentWindow.focus();
+  const sel = fr.contentDocument.getSelection();
+  if (etSavedRange) { sel.removeAllRanges(); sel.addRange(etSavedRange); }
+  try { fr.contentDocument.execCommand(cmd, false, val); } catch (e) {}
+  etClosePops();
+}
+function etApplyColor(c) { etExecOnSaved('foreColor', c); }
+function etLinkMenu(ev) {
+  if (etCodeMode) return;
+  const fr = etCanvasEl(); const sel = fr.contentDocument.getSelection();
+  if (!sel || !sel.rangeCount || sel.isCollapsed) { toast('Selecciona primero el texto del enlace'); return; }
+  etClosePops();
+  etSavedRange = sel.getRangeAt(0).cloneRange();
+  document.getElementById('etLinkUrl').value = '';
+  etPositionPop(document.getElementById('etLinkPop'), ev.currentTarget);
+  setTimeout(() => document.getElementById('etLinkUrl').focus(), 60);
+}
+function etApplyLink() {
+  let url = (document.getElementById('etLinkUrl').value || '').trim();
+  if (!url) { etClosePops(); return; }
+  if (!/^(https?:|mailto:)/i.test(url)) url = 'https://' + url;
+  etExecOnSaved('createLink', url);
 }
 
-function etSetMode(mode) {
-  etMode = mode;
-  document.getElementById('etTabUpload').classList.toggle('on', mode === 'upload');
-  document.getElementById('etTabPaste').classList.toggle('on', mode === 'paste');
-  document.getElementById('etDrop').style.display = mode === 'upload' ? '' : 'none';
-}
-
+/* ── Importar archivo ── */
 function etOnFile(ev) {
   const f = ev.target.files && ev.target.files[0];
-  if (!f) return;
-  etLoadFile(f);
+  if (f) etLoadFile(f);
   ev.target.value = '';
 }
 function etLoadFile(f) {
   if (!/\.html?$/i.test(f.name) && f.type !== 'text/html') { toast('Sube un archivo .html'); return; }
   const rd = new FileReader();
   rd.onload = () => {
-    document.getElementById('etCode').value = rd.result || '';
+    const html = rd.result || '';
+    document.getElementById('etCode').value = html;
     if (!document.getElementById('etTitle').value.trim()) {
       document.getElementById('etTitle').value = f.name.replace(/\.html?$/i, '');
     }
-    etPreview();
-    toast('Archivo cargado — revisa la vista previa y guarda');
+    if (etCodeMode) { etCodeMode = false; etApplyModeUI(); }
+    etSetCanvasHtml(html);
+    document.getElementById('etHint').hidden = true;
+    toast('Archivo cargado');
   };
   rd.readAsText(f);
 }
 
-function etPreview() {
-  const fr = document.getElementById('etPrev');
-  if (fr) { fr.setAttribute('sandbox', ''); fr.srcdoc = document.getElementById('etCode').value || ''; }
-}
-
-function etCloseEditor() {
-  document.getElementById('etEditor').classList.remove('show');
-  etEditingId = null;
-}
-
+/* ── Guardar / eliminar / duplicar ── */
 async function etSave() {
   const title = (document.getElementById('etTitle').value || '').trim();
-  const html = document.getElementById('etCode').value || '';
-  if (!title) { toast('Ponle un nombre a la plantilla'); return; }
+  const html = etGetHtml();
+  if (!title) { toast('Ponle un nombre a la plantilla'); document.getElementById('etTitle').focus(); return; }
   if (!html.trim()) { toast('La plantilla está vacía'); return; }
   try {
     if (etEditingId) {
       const prev = etData.find(x => x.id === etEditingId);
-      // Snapshot de la versión anterior antes de sobreescribir
       if (prev) {
         await sb.from('email_template_versions').insert({
           template_id: etEditingId, title: prev.title || '', html: prev.html || '', edited_by: currentUser,
@@ -3391,7 +3510,7 @@ async function etSave() {
         .eq('id', etEditingId);
       if (error) throw error;
       await etPruneVersions(etEditingId);
-      toast('Plantilla actualizada');
+      toast('Plantilla guardada');
     } else {
       const { error } = await sb.from('email_templates')
         .insert({ title, html, created_by: currentUser, updated_by: currentUser });
@@ -3405,28 +3524,36 @@ async function etSave() {
     toast('No se pudo guardar' + (falta ? ': falta la migración de BD' : ''));
   }
 }
-
-// Poda las versiones de más de 14 días (historial acotado).
 async function etPruneVersions(id) {
   try {
     const cutoff = new Date(Date.now() - ET_VERSION_DAYS * 864e5).toISOString();
     await sb.from('email_template_versions').delete().eq('template_id', id).lt('created_at', cutoff);
   } catch (e) { /* no bloquea */ }
 }
-
-async function etDeleteCurrent() {
-  if (!etEditingId) return;
-  const t = etData.find(x => x.id === etEditingId);
-  const ok = await showConfirm('¿Eliminar plantilla?', `"${t?.title || ''}" se borrará para todo el equipo. Esta acción no se puede deshacer.`);
+async function etDuplicate(id) {
+  const t = etData.find(x => x.id === id);
+  if (!t) return;
+  try {
+    const { error } = await sb.from('email_templates')
+      .insert({ title: (t.title || 'Plantilla') + ' (copia)', html: t.html || '', created_by: currentUser, updated_by: currentUser });
+    if (error) throw error;
+    toast('Plantilla duplicada');
+    loadEmailTemplates();
+  } catch (err) { toast('No se pudo duplicar'); }
+}
+async function etDeleteById(id) {
+  const t = etData.find(x => x.id === id);
+  const ok = await showConfirm('¿Eliminar plantilla?', `"${t?.title || ''}" se borrará para todo el equipo. No se puede deshacer.`);
   if (!ok) return;
   try {
-    const { error } = await sb.from('email_templates').delete().eq('id', etEditingId);
+    const { error } = await sb.from('email_templates').delete().eq('id', id);
     if (error) throw error;
-    etCloseEditor();
+    if (etEditingId === id) etCloseEditor();
     loadEmailTemplates();
     toast('Plantilla eliminada');
   } catch (err) { toast('No se pudo eliminar'); }
 }
+function etDeleteCurrent() { if (etEditingId) etDeleteById(etEditingId); }
 
 /* ── Historial de versiones (14 días) ── */
 let etVersionsFor = null;
@@ -3455,19 +3582,17 @@ async function etVersionsOpen(id) {
           <div class="et-vrow-when">${etFmtDateTime(v.created_at)}</div>
           <div class="et-vrow-who">antes editada por ${escapeHtml(who)}</div>
         </div>
-        <button class="et-abtn" onclick="etRestore('${v.id}')"><i class="fa-solid fa-rotate-left"></i> Restaurar</button>
+        <button class="et-ebtn" onclick="etRestore('${v.id}')"><i class="fa-solid fa-rotate-left"></i> <span class="et-ebtn-tx">Restaurar</span></button>
       </div>`;
     }).join('');
   } catch (err) {
     list.innerHTML = `<div class="et-vempty">No se pudo cargar el historial.</div>`;
   }
 }
-
 function etCloseVersions() {
   document.getElementById('etVersions').classList.remove('show');
   etVersionsFor = null;
 }
-
 async function etRestore(versionId) {
   const id = etVersionsFor;
   if (!id) return;
@@ -3489,28 +3614,29 @@ async function etRestore(versionId) {
     if (error) throw error;
     await etPruneVersions(id);
     etCloseVersions();
+    // Si el editor está abierto en esta plantilla, refréscalo
+    if (etEditingId === id) {
+      document.getElementById('etTitle').value = v.title || '';
+      document.getElementById('etCode').value = v.html || '';
+      if (!etCodeMode) etSetCanvasHtml(v.html || '');
+    }
     loadEmailTemplates();
     toast('Versión restaurada');
   } catch (err) { toast('No se pudo restaurar'); }
 }
-
 function etFmtDateTime(iso) {
   try {
-    const d = new Date(iso);
-    return d.toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+    return new Date(iso).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
   } catch (e) { return iso; }
 }
 
-// Drag & drop de archivo sobre la zona de subida
-document.addEventListener('DOMContentLoaded', () => {
-  const drop = document.getElementById('etDrop');
-  if (!drop) return;
-  ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('drag'); }));
-  ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); if (ev === 'dragleave' && e.target !== drop) return; drop.classList.remove('drag'); }));
-  drop.addEventListener('drop', e => {
-    const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
-    if (f) etLoadFile(f);
-  });
+// Escape: cierra popovers, luego el editor
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  const pops = [...document.querySelectorAll('.et-pop')].some(el => !el.hidden);
+  if (pops) { etClosePops(); return; }
+  const ed = document.getElementById('etEditor');
+  if (ed && !ed.hidden && !document.getElementById('etVersions')?.classList.contains('show')) etCloseEditor();
 });
 
 function toggleUmamiFullscreen() {
