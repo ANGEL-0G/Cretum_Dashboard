@@ -7020,17 +7020,20 @@ async function contactSave(id, field, el) {
   const v = (el.value || '').trim();
   const c = lastInvestorDetail?.contacts?.find(x => x.id === id);
   if (c && (c[field] || '') === v) return;   // sin cambios
-  const { error } = await sb.from('contacts').update({ [field]: v || null }).eq('id', id);
+  // name es NOT NULL: guardar '' en vez de null; email sí admite null.
+  const val = field === 'name' ? v : (v || null);
+  const { error } = await sb.from('contacts').update({ [field]: val }).eq('id', id);
   if (error) { toast('Error al guardar contacto: ' + error.message); return; }
-  if (c) c[field] = v || null;
+  if (c) c[field] = val;
   // refresca las iniciales del avatar si cambió el nombre
   if (field === 'name') { const row = document.querySelector(`.db-contact[data-cid="${id}"] .db-contact-av`); if (row) row.textContent = (v || '?').slice(0, 2).toUpperCase(); }
   toast('Contacto actualizado');
 }
 async function contactAdd(investorId) {
-  const { data, error } = await sb.from('contacts').insert({ investor_id: investorId, name: null, email: null }).select('id').single();
+  // name es NOT NULL en la BD: insertar '' (no null) para no violar la restricción.
+  const { data, error } = await sb.from('contacts').insert({ investor_id: investorId, name: '', email: null }).select('id').single();
   if (error) { toast('Error al añadir: ' + error.message); return; }
-  if (lastInvestorDetail?.contacts) lastInvestorDetail.contacts.push({ id: data.id, name: null, email: null });
+  if (lastInvestorDetail?.contacts) lastInvestorDetail.contacts.push({ id: data.id, name: '', email: null });
   openInvestor(investorId);   // re-render para mostrar la fila editable nueva
 }
 async function contactDelete(id) {
