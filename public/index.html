@@ -628,7 +628,10 @@ button,input,select{font-family:var(--font)}
 .et-tsep{flex:0 0 auto;width:1px;height:20px;background:var(--gray-200);margin:0 4px}
 .et-size select{border:0;background:none;font-family:var(--font);font-size:12.5px;color:var(--gray-600);cursor:pointer;padding:6px 4px;border-radius:var(--r-sm);outline:none}
 .et-size select:hover{background:var(--gray-100)}
-.et-import{cursor:pointer}
+.et-import{flex:0 0 auto;display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 16px;border-radius:999px;background:var(--navy);color:#fff;font-family:var(--font);font-size:12.5px;font-weight:600;white-space:nowrap;cursor:pointer;transition:filter .15s,transform .12s var(--et-ease)}
+.et-import:hover{filter:brightness(1.1)}
+.et-import:active{transform:scale(.97)}
+.et-import i{font-size:12px}
 .et-stage{flex:1 1 auto;min-height:0;position:relative;padding:16px;display:flex;justify-content:center;overflow:auto}
 .et-canvas{width:100%;max-width:840px;height:100%;border:1px solid var(--gray-200);border-radius:var(--r-md);background:#fff;box-shadow:0 6px 24px -12px rgba(15,23,42,.25)}
 .et-codearea{width:100%;max-width:840px;height:100%;resize:none;border:1px solid var(--gray-200);border-radius:var(--r-md);padding:14px 16px;font-family:var(--mono,monospace);font-size:12.5px;line-height:1.55;color:var(--gray-800);background:var(--white);outline:none;white-space:pre;overflow:auto}
@@ -4600,7 +4603,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
     <button class="et-tool" id="etLinkBtn" onclick="etLinkMenu(event)" title="Insertar enlace" aria-label="Enlace"><i class="fa-solid fa-link"></i></button>
     <button class="et-tool" onclick="etExec('removeFormat')" title="Quitar formato" aria-label="Quitar formato"><i class="fa-solid fa-text-slash"></i></button>
     <span class="et-tsep"></span>
-    <label class="et-tool et-import" title="Subir un archivo .html"><i class="fa-solid fa-arrow-up-from-bracket"></i><input type="file" id="etFile" accept=".html,.htm,text/html" hidden onchange="etOnFile(event)"></label>
+    <label class="et-import" title="Subir un archivo .html"><i class="fa-solid fa-arrow-up-from-bracket"></i> Subir archivo<input type="file" id="etFile" accept=".html,.htm,text/html" hidden onchange="etOnFile(event)"></label>
   </div>
   <div class="et-stage">
     <iframe id="etCanvas" class="et-canvas" title="Editor de la plantilla"></iframe>
@@ -5092,7 +5095,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   </div>
 </div>
 
-<script src="/i18n.js?v=20260723-mailtpl4"></script>
-<script src="/app.js?v=20260723-mailtpl4"></script>
+<script src="/i18n.js?v=20260723-mailtpl5"></script>
+<script src="/app.js?v=20260723-mailtpl5"></script>
 </body>
 </html>
