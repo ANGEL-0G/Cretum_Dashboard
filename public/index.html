@@ -548,6 +548,60 @@ button,input,select{font-family:var(--font)}
 .team-note i{color:var(--amber);margin-top:2px;flex-shrink:0}
 .team-note span{white-space:pre-wrap;overflow-wrap:anywhere}
 
+/* ── Plantillas de correos (Ventas) ── */
+.et-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.et-note{font-size:12.5px;color:var(--gray-500);background:var(--gray-50);border:1px solid var(--gray-100);border-radius:var(--r-md);padding:10px 13px;line-height:1.5;margin-bottom:16px;display:flex;gap:8px;align-items:baseline}
+.et-note i{color:var(--navy);flex-shrink:0}
+.et-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(258px,1fr));gap:14px}
+.et-card{border:1px solid var(--gray-200);border-radius:var(--r-lg);background:var(--white);overflow:hidden;display:flex;flex-direction:column;transition:border-color .15s,box-shadow .15s}
+.et-card:hover{border-color:var(--navy-light);box-shadow:var(--shadow-sm)}
+.et-card-prev{height:148px;background:#fff;position:relative;overflow:hidden;border-bottom:1px solid var(--gray-100);cursor:pointer}
+.et-card-prev iframe{position:absolute;top:0;left:0;width:250%;height:370px;border:0;transform:scale(.4);transform-origin:top left;pointer-events:none;background:#fff}
+.et-card-body{padding:11px 13px}
+.et-card-title{font-size:14px;font-weight:600;color:var(--gray-900);margin:0 0 3px;line-height:1.3;word-break:break-word}
+.et-card-meta{font-size:11px;color:var(--gray-400)}
+.et-card-acts{display:flex;gap:5px;padding:8px 10px;border-top:1px solid var(--gray-100)}
+.et-abtn{flex:1;min-width:0;display:inline-flex;align-items:center;justify-content:center;gap:5px;font-size:12px;font-weight:500;padding:7px 8px;border-radius:var(--r-sm);border:1px solid var(--gray-200);background:var(--white);color:var(--gray-600);cursor:pointer;font-family:var(--font);transition:all .15s;white-space:nowrap}
+.et-abtn:hover{border-color:var(--navy-light);color:var(--navy);background:var(--navy-pale)}
+.et-abtn.primary{background:var(--navy);color:#fff;border-color:var(--navy);flex:1.5}
+.et-abtn.primary:hover{filter:brightness(1.1);color:#fff}
+.et-abtn.icon{flex:0 0 auto;width:34px;padding:7px 0}
+.et-empty{grid-column:1/-1;text-align:center;color:var(--gray-400);padding:40px 20px;font-size:14px;line-height:1.6}
+/* Editor / historial (usa .notes-modal para z-index sobre el resto) */
+.et-modal{background:var(--white);border-radius:var(--r-lg);width:min(1040px,96vw);max-height:92vh;display:flex;flex-direction:column;box-shadow:0 18px 52px rgba(0,0,0,.3);transform:scale(.96) translateY(12px);transition:transform .3s cubic-bezier(.34,1.4,.64,1);overflow:hidden}
+.notes-modal.show .et-modal{transform:none}
+.et-modal-sm{width:min(520px,94vw)}
+.et-modal-head{display:flex;align-items:center;gap:10px;padding:15px 18px;border-bottom:1px solid var(--gray-100)}
+.et-title-input{flex:1;border:1px solid var(--gray-200);border-radius:var(--r-md);padding:9px 12px;font-family:var(--font);font-size:15px;font-weight:600;color:var(--gray-900);background:var(--gray-50);outline:none}
+.et-title-input:focus{border-color:var(--navy);box-shadow:0 0 0 3px var(--navy-ghost)}
+.et-tabs{display:flex;gap:6px;padding:12px 18px 0}
+.et-tab{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:500;padding:8px 14px;border-radius:var(--r-md) var(--r-md) 0 0;border:0;background:none;color:var(--gray-500);cursor:pointer;font-family:var(--font)}
+.et-tab.on{color:var(--navy);background:var(--navy-pale)}
+.et-body{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:14px 18px;flex:1 1 auto;min-height:0;overflow:hidden}
+.et-col{display:flex;flex-direction:column;min-height:0}
+.et-drop{border:1.5px dashed var(--gray-300);border-radius:var(--r-md);padding:14px;text-align:center;color:var(--gray-500);font-size:12.5px;margin-bottom:10px;display:flex;flex-direction:column;align-items:center;gap:6px;transition:border-color .15s,background .15s}
+.et-drop.drag{border-color:var(--navy);background:var(--navy-pale)}
+.et-drop i{font-size:22px;color:var(--navy)}
+.et-drop-btn{display:inline-block;margin-top:4px;font-weight:600;color:var(--navy);cursor:pointer;border:1px solid var(--gray-200);border-radius:var(--r-sm);padding:6px 12px;background:var(--white)}
+.et-drop-btn:hover{background:var(--navy-pale)}
+.et-code{flex:1 1 auto;min-height:230px;resize:none;border:1px solid var(--gray-200);border-radius:var(--r-md);padding:11px 12px;font-family:var(--mono,monospace);font-size:12px;line-height:1.5;color:var(--gray-800);background:var(--gray-50);outline:none;white-space:pre;overflow:auto}
+.et-code:focus{border-color:var(--navy)}
+.et-prev-lbl{font-size:10.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--gray-400);margin-bottom:7px}
+.et-prev{flex:1 1 auto;min-height:230px;width:100%;border:1px solid var(--gray-200);border-radius:var(--r-md);background:#fff}
+.et-foot{display:flex;align-items:center;gap:8px;padding:13px 18px;border-top:1px solid var(--gray-100)}
+.et-vnote{font-size:12px;color:var(--gray-500);padding:12px 18px 4px;line-height:1.5}
+.et-vlist{padding:8px 14px 16px;overflow-y:auto;max-height:60vh}
+.et-vrow{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--gray-100);border-radius:var(--r-md);margin-bottom:8px}
+.et-vrow-info{flex:1;min-width:0}
+.et-vrow-when{font-size:13px;color:var(--gray-800);font-weight:500}
+.et-vrow-who{font-size:11.5px;color:var(--gray-400)}
+.et-vempty{color:var(--gray-400);font-size:13px;text-align:center;padding:24px}
+@media (max-width:760px){.et-body{grid-template-columns:1fr}.et-col-prev{display:none}}
+[data-theme="dark"] .et-card,[data-theme="dark"] .et-modal{background:#181818}
+[data-theme="dark"] .et-title-input,[data-theme="dark"] .et-code{background:#0f0f0f;border-color:#2a2a2a;color:#eee}
+[data-theme="dark"] .et-card-prev,[data-theme="dark"] .et-prev{background:#fff}
+[data-theme="dark"] .et-abtn{background:#181818;border-color:#333;color:#ccc}
+
 /* Completar / reabrir: la fila sale desvaneciéndose y entra en su nuevo lugar
    con un breve destello del acento. Solo transform/opacity (GPU). */
 @keyframes tkLeave{to{opacity:0;transform:translateX(10px) scale(.98)}}
@@ -4182,7 +4236,25 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
         </span>
         <i class="fa-solid fa-chevron-right fm-card-arrow"></i>
       </button>
+      <button class="fm-card" type="button" onclick="openEmailTemplates()">
+        <span class="fm-card-ico"><i class="fa-solid fa-envelope-open-text"></i></span>
+        <span class="fm-card-text">
+          <span class="fm-card-title">Plantillas de correos</span>
+          <span class="fm-card-desc">Biblioteca del equipo: sube o pega el HTML de un correo, edítalo y cópialo listo para pegar en Outlook o Gmail. Con historial de 14 días.</span>
+        </span>
+        <i class="fa-solid fa-chevron-right fm-card-arrow"></i>
+      </button>
     </div>
+  </div>
+
+  <!-- Plantillas de correos (biblioteca compartida) -->
+  <div id="ventasPlantillas" style="display:none">
+    <div class="et-head">
+      <button class="fm-back" type="button" onclick="ventasBackHome()" style="margin:0"><i class="fa-solid fa-arrow-left"></i> Ventas</button>
+      <button class="btn-primary" type="button" onclick="etNew()" style="margin-left:auto"><i class="fa-solid fa-plus"></i> Nueva plantilla</button>
+    </div>
+    <div class="et-note"><i class="fa-solid fa-circle-info"></i> Biblioteca compartida del equipo. Sube un archivo <b>.html</b> o pega el código; luego <b>Copiar</b> lo deja listo para pegar en Outlook o Gmail con su formato. Cada cambio guarda una versión que puedes restaurar hasta <b>14 días</b>.</div>
+    <div id="etGrid" class="et-grid"></div>
   </div>
 
   <!-- Dashboard GVV embebido (archivo estático servido por cretumdesk, carga lazy) -->
@@ -4414,6 +4486,53 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
         <button class="fm-btn fm-save" onclick="saveFolderModal()">Guardar</button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- Editor de plantilla de correo (crear / editar) -->
+<div class="modal-backdrop notes-modal" id="etEditor" onclick="if(event.target===this)etCloseEditor()">
+  <div class="et-modal">
+    <div class="et-modal-head">
+      <input id="etTitle" class="et-title-input" maxlength="120" autocomplete="off" placeholder="Nombre de la plantilla (ej. Seguimiento LP)">
+      <button class="fm-x" onclick="etCloseEditor()" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="et-tabs">
+      <button type="button" class="et-tab on" id="etTabUpload" onclick="etSetMode('upload')"><i class="fa-solid fa-arrow-up-from-bracket"></i> Subir archivo</button>
+      <button type="button" class="et-tab" id="etTabPaste" onclick="etSetMode('paste')"><i class="fa-solid fa-code"></i> Pegar código</button>
+    </div>
+    <div class="et-body">
+      <div class="et-col">
+        <div id="etDrop" class="et-drop">
+          <i class="fa-solid fa-file-arrow-up"></i>
+          <div>Arrastra un archivo <b>.html</b> aquí o</div>
+          <label class="et-drop-btn">Elegir archivo<input type="file" id="etFile" accept=".html,.htm,text/html" hidden onchange="etOnFile(event)"></label>
+        </div>
+        <textarea id="etCode" class="et-code" spellcheck="false" placeholder="Pega aquí el HTML del correo…" oninput="etPreview()"></textarea>
+      </div>
+      <div class="et-col et-col-prev">
+        <div class="et-prev-lbl">Vista previa</div>
+        <iframe id="etPrev" class="et-prev" title="Vista previa"></iframe>
+      </div>
+    </div>
+    <div class="et-foot">
+      <button class="fm-del" id="etDelBtn" onclick="etDeleteCurrent()" style="display:none"><i class="fa-solid fa-trash"></i> Eliminar</button>
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <button class="fm-btn fm-cancel" onclick="etCloseEditor()">Cancelar</button>
+        <button class="fm-btn fm-save" onclick="etSave()"><i class="fa-solid fa-check"></i> Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Historial de versiones (14 días) -->
+<div class="modal-backdrop notes-modal" id="etVersions" onclick="if(event.target===this)etCloseVersions()">
+  <div class="et-modal et-modal-sm">
+    <div class="et-modal-head">
+      <div class="fm-title" id="etVersionsTitle">Historial de versiones</div>
+      <button class="fm-x" onclick="etCloseVersions()" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="et-vnote">Se conservan los cambios de los últimos <b>14 días</b>. Restaurar guarda antes la versión actual, por si acaso.</div>
+    <div id="etVersionsList" class="et-vlist"></div>
   </div>
 </div>
 
@@ -4874,7 +4993,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   </div>
 </div>
 
-<script src="/i18n.js?v=20260722-notesfolders"></script>
-<script src="/app.js?v=20260722-notesfolders"></script>
+<script src="/i18n.js?v=20260723-mailtpl"></script>
+<script src="/app.js?v=20260723-mailtpl"></script>
 </body>
 </html>

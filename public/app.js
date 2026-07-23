@@ -3180,10 +3180,12 @@ function ventasBackHome() {
   const menu = document.getElementById('ventasMenu');
   const dash = document.getElementById('ventasDash');
   const umami = document.getElementById('ventasUmami');
+  const plant = document.getElementById('ventasPlantillas');
   const page = document.getElementById('pageVentas');
   if (menu) menu.style.display = '';
   if (dash) dash.style.display = 'none';
   if (umami) umami.style.display = 'none';
+  if (plant) plant.style.display = 'none';
   if (page) page.classList.remove('gvv-full');
 }
 // Embebe el GVV Dashboard (archivo estático servido por cretumdesk).
@@ -3218,6 +3220,298 @@ function openUmamiDashboard() {
 function openUmamiNewTab() {
   window.open(UMAMI_SHARE_URL, '_blank', 'noopener');
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PLANTILLAS DE CORREOS (Ventas) — biblioteca compartida del equipo
+   Cada quien sube/pega el HTML de un correo; todos lo ven, copian y editan.
+   Copiar deja el HTML en el portapapeles (text/html) para pegar con formato
+   en Outlook/Gmail. Cada guardado snapshotea una versión (historial 14 días).
+   Datos en Supabase (email_templates / email_template_versions) vía cliente sb.
+═══════════════════════════════════════════════════════════════════════════ */
+let etData = [];              // plantillas cargadas
+let etEditingId = null;       // id en edición (null = nueva)
+let etMode = 'upload';        // 'upload' | 'paste'
+const ET_VERSION_DAYS = 14;
+
+function openEmailTemplates() {
+  const menu = document.getElementById('ventasMenu');
+  const plant = document.getElementById('ventasPlantillas');
+  if (menu) menu.style.display = 'none';
+  if (plant) plant.style.display = '';
+  loadEmailTemplates();
+}
+
+async function loadEmailTemplates() {
+  const grid = document.getElementById('etGrid');
+  if (!grid) return;
+  grid.innerHTML = `<div class="et-empty"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando plantillas…</div>`;
+  try {
+    const { data, error } = await sb.from('email_templates')
+      .select('id,title,html,created_by,updated_by,created_at,updated_at')
+      .order('updated_at', { ascending: false });
+    if (error) throw error;
+    etData = data || [];
+    etRenderGrid();
+  } catch (err) {
+    const falta = /relation|does not exist|schema cache|not find the table|column/i.test(err.message || '');
+    grid.innerHTML = `<div class="et-empty">No se pudieron cargar las plantillas.${falta ? '<br>Falta correr la migración de BD (db/10_email_templates.sql).' : ''}</div>`;
+  }
+}
+
+function etRenderGrid() {
+  const grid = document.getElementById('etGrid');
+  if (!etData.length) {
+    grid.innerHTML = `<div class="et-empty">Aún no hay plantillas.<br>Usa <b>Nueva plantilla</b> para subir un archivo .html o pegar el código.</div>`;
+    return;
+  }
+  grid.innerHTML = etData.map(t => {
+    const who = USERS[t.updated_by]?.name || USERS[t.created_by]?.name || '';
+    const when = t.updated_at ? fmtCreated(t.updated_at) : '';
+    return `
+    <div class="et-card">
+      <div class="et-card-prev" onclick="etEdit('${t.id}')" title="Editar">
+        <iframe id="etprev-${t.id}" sandbox="" scrolling="no" tabindex="-1" aria-hidden="true"></iframe>
+      </div>
+      <div class="et-card-body">
+        <div class="et-card-title">${escapeHtml(t.title || 'Plantilla')}</div>
+        <div class="et-card-meta">Actualizada ${when}${who ? ' · ' + escapeHtml(who) : ''}</div>
+      </div>
+      <div class="et-card-acts">
+        <button class="et-abtn primary" onclick="etCopy('${t.id}')" title="Copiar para pegar en Outlook/Gmail"><i class="fa-solid fa-copy"></i> Copiar</button>
+        <button class="et-abtn" onclick="etEdit('${t.id}')"><i class="fa-solid fa-pen"></i> Editar</button>
+        <button class="et-abtn icon" onclick="etVersionsOpen('${t.id}')" title="Historial de versiones"><i class="fa-solid fa-clock-rotate-left"></i></button>
+      </div>
+    </div>`;
+  }).join('');
+  // Inyecta el HTML de cada plantilla en su iframe de vista previa (sandbox, sin scripts)
+  etData.forEach(t => {
+    const fr = document.getElementById('etprev-' + t.id);
+    if (fr) fr.srcdoc = t.html || '<div style="font-family:sans-serif;color:#9aa;padding:16px">(vacía)</div>';
+  });
+}
+
+/* ── Copiar al portapapeles como HTML enriquecido (pega con formato) ── */
+async function etCopy(id) {
+  const t = etData.find(x => x.id === id);
+  if (!t) return;
+  const html = t.html || '';
+  try {
+    if (navigator.clipboard && window.ClipboardItem) {
+      await navigator.clipboard.write([new ClipboardItem({
+        'text/html': new Blob([html], { type: 'text/html' }),
+        'text/plain': new Blob([html], { type: 'text/plain' }),
+      })]);
+      toast('Plantilla copiada — pégala en Outlook o Gmail');
+      return;
+    }
+    throw new Error('no-clipboarditem');
+  } catch (e) {
+    try { await navigator.clipboard.writeText(html); toast('Copiada como código (pégala en el editor HTML)'); }
+    catch (_) { toast('No se pudo copiar'); }
+  }
+}
+
+/* ── Editor (crear / editar) ── */
+function etNew() {
+  etEditingId = null;
+  document.getElementById('etTitle').value = '';
+  document.getElementById('etCode').value = '';
+  document.getElementById('etDelBtn').style.display = 'none';
+  etSetMode('upload');
+  etPreview();
+  document.getElementById('etEditor').classList.add('show');
+  setTimeout(() => document.getElementById('etTitle').focus(), 80);
+}
+
+function etEdit(id) {
+  const t = etData.find(x => x.id === id);
+  if (!t) return;
+  etEditingId = id;
+  document.getElementById('etTitle').value = t.title || '';
+  document.getElementById('etCode').value = t.html || '';
+  document.getElementById('etDelBtn').style.display = 'inline-flex';
+  etSetMode('paste');
+  etPreview();
+  document.getElementById('etEditor').classList.add('show');
+}
+
+function etSetMode(mode) {
+  etMode = mode;
+  document.getElementById('etTabUpload').classList.toggle('on', mode === 'upload');
+  document.getElementById('etTabPaste').classList.toggle('on', mode === 'paste');
+  document.getElementById('etDrop').style.display = mode === 'upload' ? '' : 'none';
+}
+
+function etOnFile(ev) {
+  const f = ev.target.files && ev.target.files[0];
+  if (!f) return;
+  etLoadFile(f);
+  ev.target.value = '';
+}
+function etLoadFile(f) {
+  if (!/\.html?$/i.test(f.name) && f.type !== 'text/html') { toast('Sube un archivo .html'); return; }
+  const rd = new FileReader();
+  rd.onload = () => {
+    document.getElementById('etCode').value = rd.result || '';
+    if (!document.getElementById('etTitle').value.trim()) {
+      document.getElementById('etTitle').value = f.name.replace(/\.html?$/i, '');
+    }
+    etPreview();
+    toast('Archivo cargado — revisa la vista previa y guarda');
+  };
+  rd.readAsText(f);
+}
+
+function etPreview() {
+  const fr = document.getElementById('etPrev');
+  if (fr) { fr.setAttribute('sandbox', ''); fr.srcdoc = document.getElementById('etCode').value || ''; }
+}
+
+function etCloseEditor() {
+  document.getElementById('etEditor').classList.remove('show');
+  etEditingId = null;
+}
+
+async function etSave() {
+  const title = (document.getElementById('etTitle').value || '').trim();
+  const html = document.getElementById('etCode').value || '';
+  if (!title) { toast('Ponle un nombre a la plantilla'); return; }
+  if (!html.trim()) { toast('La plantilla está vacía'); return; }
+  try {
+    if (etEditingId) {
+      const prev = etData.find(x => x.id === etEditingId);
+      // Snapshot de la versión anterior antes de sobreescribir
+      if (prev) {
+        await sb.from('email_template_versions').insert({
+          template_id: etEditingId, title: prev.title || '', html: prev.html || '', edited_by: currentUser,
+        });
+      }
+      const { error } = await sb.from('email_templates')
+        .update({ title, html, updated_by: currentUser, updated_at: new Date().toISOString() })
+        .eq('id', etEditingId);
+      if (error) throw error;
+      await etPruneVersions(etEditingId);
+      toast('Plantilla actualizada');
+    } else {
+      const { error } = await sb.from('email_templates')
+        .insert({ title, html, created_by: currentUser, updated_by: currentUser });
+      if (error) throw error;
+      toast('Plantilla creada');
+    }
+    etCloseEditor();
+    loadEmailTemplates();
+  } catch (err) {
+    const falta = /relation|does not exist|schema cache|column/i.test(err.message || '');
+    toast('No se pudo guardar' + (falta ? ': falta la migración de BD' : ''));
+  }
+}
+
+// Poda las versiones de más de 14 días (historial acotado).
+async function etPruneVersions(id) {
+  try {
+    const cutoff = new Date(Date.now() - ET_VERSION_DAYS * 864e5).toISOString();
+    await sb.from('email_template_versions').delete().eq('template_id', id).lt('created_at', cutoff);
+  } catch (e) { /* no bloquea */ }
+}
+
+async function etDeleteCurrent() {
+  if (!etEditingId) return;
+  const t = etData.find(x => x.id === etEditingId);
+  const ok = await showConfirm('¿Eliminar plantilla?', `"${t?.title || ''}" se borrará para todo el equipo. Esta acción no se puede deshacer.`);
+  if (!ok) return;
+  try {
+    const { error } = await sb.from('email_templates').delete().eq('id', etEditingId);
+    if (error) throw error;
+    etCloseEditor();
+    loadEmailTemplates();
+    toast('Plantilla eliminada');
+  } catch (err) { toast('No se pudo eliminar'); }
+}
+
+/* ── Historial de versiones (14 días) ── */
+let etVersionsFor = null;
+async function etVersionsOpen(id) {
+  etVersionsFor = id;
+  const t = etData.find(x => x.id === id);
+  document.getElementById('etVersionsTitle').textContent = 'Historial · ' + (t?.title || 'Plantilla');
+  const list = document.getElementById('etVersionsList');
+  list.innerHTML = `<div class="et-vempty"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando…</div>`;
+  document.getElementById('etVersions').classList.add('show');
+  try {
+    const { data, error } = await sb.from('email_template_versions')
+      .select('id,title,edited_by,created_at')
+      .eq('template_id', id)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    if (!data || !data.length) {
+      list.innerHTML = `<div class="et-vempty">Sin cambios guardados todavía.<br>Cada vez que edites y guardes, aquí quedará una versión (14 días).</div>`;
+      return;
+    }
+    list.innerHTML = data.map(v => {
+      const who = USERS[v.edited_by]?.name || 'alguien';
+      return `
+      <div class="et-vrow">
+        <div class="et-vrow-info">
+          <div class="et-vrow-when">${etFmtDateTime(v.created_at)}</div>
+          <div class="et-vrow-who">antes editada por ${escapeHtml(who)}</div>
+        </div>
+        <button class="et-abtn" onclick="etRestore('${v.id}')"><i class="fa-solid fa-rotate-left"></i> Restaurar</button>
+      </div>`;
+    }).join('');
+  } catch (err) {
+    list.innerHTML = `<div class="et-vempty">No se pudo cargar el historial.</div>`;
+  }
+}
+
+function etCloseVersions() {
+  document.getElementById('etVersions').classList.remove('show');
+  etVersionsFor = null;
+}
+
+async function etRestore(versionId) {
+  const id = etVersionsFor;
+  if (!id) return;
+  const ok = await showConfirm('¿Restaurar esta versión?', 'La versión actual se guardará en el historial antes de restaurar, por si acaso.');
+  if (!ok) return;
+  try {
+    const { data: v, error: ve } = await sb.from('email_template_versions')
+      .select('title,html').eq('id', versionId).single();
+    if (ve || !v) throw ve || new Error('no version');
+    const cur = etData.find(x => x.id === id);
+    if (cur) {
+      await sb.from('email_template_versions').insert({
+        template_id: id, title: cur.title || '', html: cur.html || '', edited_by: currentUser,
+      });
+    }
+    const { error } = await sb.from('email_templates')
+      .update({ title: v.title, html: v.html, updated_by: currentUser, updated_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) throw error;
+    await etPruneVersions(id);
+    etCloseVersions();
+    loadEmailTemplates();
+    toast('Versión restaurada');
+  } catch (err) { toast('No se pudo restaurar'); }
+}
+
+function etFmtDateTime(iso) {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+  } catch (e) { return iso; }
+}
+
+// Drag & drop de archivo sobre la zona de subida
+document.addEventListener('DOMContentLoaded', () => {
+  const drop = document.getElementById('etDrop');
+  if (!drop) return;
+  ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('drag'); }));
+  ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); if (ev === 'dragleave' && e.target !== drop) return; drop.classList.remove('drag'); }));
+  drop.addEventListener('drop', e => {
+    const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) etLoadFile(f);
+  });
+});
 
 function toggleUmamiFullscreen() {
   const w = document.getElementById('umamiFsWrap');
