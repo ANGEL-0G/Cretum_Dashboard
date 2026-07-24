@@ -779,6 +779,8 @@ button,input,select{font-family:var(--font)}
 .note-del{background:none;border:0;color:var(--gray-400);cursor:pointer;padding:5px 7px;border-radius:7px;font-size:12px;transition:color .15s,background .15s}
 .note-del:hover{color:var(--red);background:var(--red-bg)}
 .note-body{border:0;background:none;resize:vertical;min-height:150px;padding:12px;font-family:var(--font);font-size:13.5px;color:var(--gray-700);line-height:1.55;outline:none}
+.note-body[contenteditable]{overflow-wrap:anywhere}
+.note-body[contenteditable]:empty::before{content:attr(data-ph);color:var(--gray-300)}
 .note-body::placeholder{color:var(--gray-400)}
 .note-foot{padding:5px 12px 9px;min-height:20px;display:flex;justify-content:flex-end}
 .note-saved{font-size:11px;color:var(--gray-400)}
@@ -827,6 +829,85 @@ button,input,select{font-family:var(--font)}
 .notes-drawer-x:hover{color:var(--navy);background:var(--gray-100)}
 .notes-grid-drawer{grid-template-columns:1fr;padding:16px;overflow-y:auto;flex:1;align-content:start}
 @media (prefers-reduced-motion:reduce){.notes-fab,.notes-drawer-backdrop,.notes-drawer{transition:none}}
+
+/* ═══ Módulo de Notas — página a 3 paneles (carpetas · lista · editor) ═══ */
+#pageNotes{max-width:none;padding:0;display:none}
+#pageNotes.active{display:flex;flex-direction:column}
+.nt-shell{display:flex;height:calc(100vh - 64px);min-height:480px;background:var(--white)}
+.nt-col{display:flex;flex-direction:column;min-height:0}
+.nt-col-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:14px 16px 10px}
+.nt-col-title{font-size:13px;font-weight:700;letter-spacing:.3px;color:var(--gray-700);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nt-ico{width:30px;height:30px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--gray-200);background:var(--white);color:var(--gray-500);border-radius:8px;cursor:pointer;font-size:12px;transition:color .15s,border-color .15s,background .15s}
+.nt-ico:hover{color:var(--navy);border-color:var(--navy-light);background:var(--navy-pale)}
+.nt-ico.danger:hover{color:var(--red);border-color:var(--red);background:var(--red-bg)}
+.nt-folders{flex:0 0 210px;border-right:1px solid var(--gray-100);background:var(--gray-50);overflow-y:auto}
+.nt-folder-list{padding:4px 8px 16px;display:flex;flex-direction:column;gap:2px}
+.nt-folder{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;cursor:pointer;border:1px solid transparent;transition:background .12s;font-family:var(--font);text-align:left;background:none;width:100%}
+.nt-folder:hover{background:var(--gray-100)}
+.nt-folder.on{background:var(--white);border-color:var(--gray-200);box-shadow:var(--shadow-sm)}
+.nt-folder-dot{width:9px;height:9px;border-radius:50%;flex:0 0 9px;background:var(--gray-300)}
+.nt-folder-nm{flex:1;min-width:0;font-size:13px;color:var(--gray-800);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nt-folder-ct{font-size:11px;color:var(--gray-400)}
+.nt-list{flex:0 0 290px;border-right:1px solid var(--gray-100);overflow:hidden}
+.nt-search{margin:0 16px 8px;display:flex;align-items:center;gap:8px;border:1px solid var(--gray-200);border-radius:var(--r-md);padding:7px 11px;background:var(--gray-50)}
+.nt-search i{color:var(--gray-400);font-size:12px}
+.nt-search input{flex:1;border:0;background:none;outline:none;font-family:var(--font);font-size:13px;color:var(--gray-900)}
+.nt-newnote{margin:0 16px 8px;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:9px;border:0;border-radius:var(--r-md);background:var(--navy);color:#fff;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:filter .15s,transform .12s cubic-bezier(.23,1,.32,1)}
+.nt-newnote:hover{filter:brightness(1.08)}
+.nt-newnote:active{transform:scale(.98)}
+.nt-notes{flex:1;overflow-y:auto;padding:0 12px 16px;display:flex;flex-direction:column;gap:6px}
+.nt-note{text-align:left;border:1px solid var(--gray-100);border-radius:var(--r-md);background:var(--white);padding:10px 12px 10px 14px;cursor:pointer;position:relative;transition:border-color .15s,box-shadow .15s;overflow:hidden;font-family:var(--font);width:100%}
+.nt-note:hover{border-color:var(--navy-light);box-shadow:var(--shadow-sm)}
+.nt-note.on{border-color:var(--navy);box-shadow:0 0 0 1px var(--navy)}
+.nt-note-bar{position:absolute;left:0;top:0;bottom:0;width:4px}
+.nt-note-t{font-size:13.5px;font-weight:600;color:var(--gray-900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0 0 2px}
+.nt-note-x{font-size:11.5px;color:var(--gray-500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nt-note-d{font-size:10.5px;color:var(--gray-400);margin-top:3px}
+.nt-list-empty{color:var(--gray-400);font-size:12.5px;text-align:center;padding:24px 10px;line-height:1.6}
+.nt-editor{flex:1;min-width:0;overflow:hidden}
+.nt-empty{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:var(--gray-400);gap:10px;padding:24px}
+.nt-empty i{font-size:38px;color:var(--navy-light);opacity:.85}
+.nt-empty h3{font-size:17px;font-weight:600;color:var(--gray-700);margin:0}
+.nt-empty p{font-size:13.5px;max-width:38ch;margin:0 0 8px}
+.nt-doc{height:100%;display:flex;flex-direction:column;min-height:0}
+.nt-doc-head{display:flex;align-items:center;gap:8px;padding:16px 22px 8px}
+.nt-title{flex:1;min-width:0;border:0;outline:none;background:none;font-family:var(--font);font-size:22px;font-weight:600;color:var(--gray-900)}
+.nt-title::placeholder{color:var(--gray-300)}
+.nt-color-inp{width:28px;height:28px;padding:0;border:1px solid var(--gray-200);border-radius:8px;background:none;cursor:pointer;flex:0 0 auto}
+.nt-toolbar{display:flex;align-items:center;gap:3px;flex-wrap:wrap;padding:8px 22px;border-bottom:1px solid var(--gray-100)}
+.nt-sel{border:1px solid var(--gray-200);background:var(--white);border-radius:8px;font-family:var(--font);font-size:12.5px;color:var(--gray-700);padding:6px 8px;cursor:pointer;outline:none}
+.nt-sel-sm{max-width:100px}
+.nt-tool{width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border:0;background:none;color:var(--gray-600);border-radius:7px;cursor:pointer;font-size:13px;transition:background .12s,color .12s;position:relative;overflow:hidden}
+.nt-tool:hover{background:var(--gray-100);color:var(--navy)}
+.nt-color input[type=color]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;border:0}
+.nt-tsep{width:1px;height:20px;background:var(--gray-200);margin:0 4px;flex:0 0 auto}
+.nt-body-wrap{flex:1;min-height:0;overflow-y:auto;padding:18px 22px 40px}
+.nt-body{max-width:760px;margin:0 auto;min-height:100%;outline:none;font-family:'DM Sans',var(--font);font-size:15px;line-height:1.7;color:var(--gray-900);word-wrap:break-word}
+.nt-body:empty::before{content:'Escribe aquí…';color:var(--gray-300)}
+.nt-body h1{font-size:26px;font-weight:600;margin:.6em 0 .3em;line-height:1.25}
+.nt-body h2{font-size:21px;font-weight:600;margin:.6em 0 .3em;line-height:1.3}
+.nt-body h3{font-size:17px;font-weight:600;margin:.6em 0 .3em}
+.nt-body blockquote{border-left:3px solid var(--gray-200);margin:.5em 0;padding:.2em 0 .2em 14px;color:var(--gray-500)}
+.nt-body ul,.nt-body ol{padding-left:1.4em;margin:.4em 0}
+.nt-body a{color:var(--navy);text-decoration:underline}
+.nt-doc-foot{padding:6px 22px 12px;min-height:22px}
+.nt-saved{font-size:11.5px;color:var(--gray-400)}
+.nt-linkpop{width:280px}
+@media (max-width:860px){
+  .nt-shell{flex-direction:column;height:auto}
+  .nt-folders{flex:none;max-height:160px;border-right:0;border-bottom:1px solid var(--gray-100)}
+  .nt-folders .nt-folder-list{flex-direction:row;flex-wrap:wrap}
+  .nt-folders .nt-folder{width:auto}
+  .nt-list{flex:none;max-height:40vh;border-right:0;border-bottom:1px solid var(--gray-100)}
+  .nt-editor{min-height:62vh}
+  .nt-body{font-size:16px}
+}
+[data-theme="dark"] .nt-shell,[data-theme="dark"] .nt-note{background:#161616}
+[data-theme="dark"] .nt-folders{background:#121212;border-color:#262626}
+[data-theme="dark"] .nt-folder.on,[data-theme="dark"] .nt-note{background:#1c1c1c;border-color:#2a2a2a}
+[data-theme="dark"] .nt-ico,[data-theme="dark"] .nt-sel,[data-theme="dark"] .nt-color-inp{background:#1c1c1c;border-color:#333;color:#ccc}
+[data-theme="dark"] .nt-search{background:#0f0f0f;border-color:#2a2a2a}
+[data-theme="dark"] .nt-title,[data-theme="dark"] .nt-body,[data-theme="dark"] .nt-note-t{color:#eee}
 /* Carpetas: chips + barra de carpeta activa */
 .notes-folders{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px 16px 0;background:var(--white);flex-shrink:0}
 .nf-chip{display:inline-flex;align-items:center;gap:7px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:999px;padding:6px 12px;font-family:var(--font);font-size:12.5px;font-weight:500;color:var(--gray-700);cursor:pointer;white-space:nowrap;transition:background .15s,border-color .15s,color .15s}
@@ -1745,6 +1826,8 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 }
 .home-module:hover .home-module-ico{transform:scale(1.1) rotate(-5deg)}
 .home-ico-tasks{background:var(--navy-pale);color:var(--navy)}
+.home-ico-notes{background:rgba(139,92,246,.13);color:#8b5cf6}
+[data-theme="dark"] .home-ico-notes{background:rgba(139,92,246,.24);color:#b98cff}
 .home-ico-db{background:var(--amber-bg);color:var(--amber)}
 .home-ico-mvp{background:rgba(237,120,36,.12);color:#ED7824}
 .home-ico-dropbox{background:rgba(0,97,255,.12);color:#0061FF}
@@ -4321,6 +4404,100 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   </div>
 </div>
 
+<!-- MÓDULO: NOTAS (3 paneles — carpetas · lista · editor) -->
+<div class="page" id="pageNotes">
+  <div class="nt-shell">
+    <!-- Panel 1: carpetas -->
+    <aside class="nt-col nt-folders">
+      <div class="nt-col-head">
+        <span class="nt-col-title">Carpetas</span>
+        <button class="nt-ico" title="Nueva carpeta" aria-label="Nueva carpeta" onclick="openFolderModal(null)"><i class="fa-solid fa-plus"></i></button>
+      </div>
+      <div class="nt-folder-list" id="ntFolders"></div>
+    </aside>
+    <!-- Panel 2: lista de notas -->
+    <section class="nt-col nt-list">
+      <div class="nt-col-head">
+        <span class="nt-col-title" id="ntListTitle">General</span>
+        <button class="nt-ico" title="Editar carpeta" aria-label="Editar carpeta" id="ntFolderEdit" style="display:none" onclick="openFolderModal(currentFolder)"><i class="fa-solid fa-pen"></i></button>
+      </div>
+      <div class="nt-search">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input id="ntSearch" placeholder="Buscar en esta carpeta…" autocomplete="off" oninput="ntRenderList()">
+      </div>
+      <button class="nt-newnote" onclick="ntNewNote()"><i class="fa-solid fa-plus"></i> Nueva nota</button>
+      <div class="nt-notes" id="ntNotes"></div>
+    </section>
+    <!-- Panel 3: editor -->
+    <section class="nt-col nt-editor">
+      <div class="nt-empty" id="ntEmpty">
+        <i class="fa-solid fa-book-open"></i>
+        <h3>Tu espacio de notas</h3>
+        <p>Elige una nota de la lista o crea una nueva para empezar a escribir.</p>
+        <button class="btn-primary" onclick="ntNewNote()"><i class="fa-solid fa-plus"></i> Nueva nota</button>
+      </div>
+      <div class="nt-doc" id="ntDoc" style="display:none">
+        <div class="nt-doc-head">
+          <input id="ntTitle" class="nt-title" placeholder="Título de la nota" maxlength="140" oninput="ntOnTitle(this.value)">
+          <input type="color" id="ntColor" class="nt-color-inp" title="Color de la nota" onchange="ntSetColor(this.value)">
+          <button class="nt-ico" title="Compartir con el equipo" aria-label="Compartir" onclick="if(ntCurrentId)shareNote(ntCurrentId)"><i class="fa-solid fa-share-nodes"></i></button>
+          <button class="nt-ico danger" title="Eliminar nota" aria-label="Eliminar nota" onclick="if(ntCurrentId)deleteNote(ntCurrentId)"><i class="fa-solid fa-trash"></i></button>
+        </div>
+        <div class="nt-toolbar" id="ntToolbar" role="toolbar" aria-label="Formato">
+          <select class="nt-sel" title="Tipografía" onchange="ntExec('fontName', this.value)">
+            <option value="">Tipografía</option>
+            <option value="'DM Sans',sans-serif">Sans (DM Sans)</option>
+            <option value="Georgia,serif">Serif (Georgia)</option>
+            <option value="'DM Mono',monospace">Mono (DM Mono)</option>
+            <option value="Arial,Helvetica,sans-serif">Arial</option>
+            <option value="'Times New Roman',serif">Times</option>
+            <option value="'Courier New',monospace">Courier</option>
+          </select>
+          <select class="nt-sel" title="Estilo de texto" onchange="ntFormatBlock(this.value)">
+            <option value="P">Texto</option>
+            <option value="H1">Título</option>
+            <option value="H2">Subtítulo</option>
+            <option value="H3">Encabezado</option>
+            <option value="BLOCKQUOTE">Cita</option>
+          </select>
+          <select class="nt-sel nt-sel-sm" title="Tamaño" onchange="ntExec('fontSize', this.value); this.selectedIndex=0">
+            <option value="">Tamaño</option>
+            <option value="2">Pequeño</option>
+            <option value="3">Normal</option>
+            <option value="5">Grande</option>
+            <option value="6">Enorme</option>
+          </select>
+          <span class="nt-tsep"></span>
+          <button class="nt-tool" title="Negrita" aria-label="Negrita" onclick="ntExec('bold')"><i class="fa-solid fa-bold"></i></button>
+          <button class="nt-tool" title="Cursiva" aria-label="Cursiva" onclick="ntExec('italic')"><i class="fa-solid fa-italic"></i></button>
+          <button class="nt-tool" title="Subrayado" aria-label="Subrayado" onclick="ntExec('underline')"><i class="fa-solid fa-underline"></i></button>
+          <button class="nt-tool" title="Tachado" aria-label="Tachado" onclick="ntExec('strikeThrough')"><i class="fa-solid fa-strikethrough"></i></button>
+          <span class="nt-tsep"></span>
+          <label class="nt-tool nt-color" title="Color de texto"><i class="fa-solid fa-a"></i><input type="color" onchange="ntExec('foreColor', this.value)"></label>
+          <label class="nt-tool nt-color" title="Resaltado"><i class="fa-solid fa-highlighter"></i><input type="color" value="#fff3a3" onchange="ntExec('hiliteColor', this.value)"></label>
+          <span class="nt-tsep"></span>
+          <button class="nt-tool" title="Lista con viñetas" aria-label="Viñetas" onclick="ntExec('insertUnorderedList')"><i class="fa-solid fa-list-ul"></i></button>
+          <button class="nt-tool" title="Lista numerada" aria-label="Numerada" onclick="ntExec('insertOrderedList')"><i class="fa-solid fa-list-ol"></i></button>
+          <button class="nt-tool" id="ntLinkBtn" title="Insertar enlace" aria-label="Enlace" onclick="ntLinkMenu(event)"><i class="fa-solid fa-link"></i></button>
+          <button class="nt-tool" title="Quitar formato" aria-label="Quitar formato" onclick="ntExec('removeFormat')"><i class="fa-solid fa-text-slash"></i></button>
+        </div>
+        <div class="nt-body-wrap">
+          <div id="ntBody" class="nt-body" contenteditable="true" spellcheck="true" oninput="ntOnBody()"></div>
+        </div>
+        <div class="nt-doc-foot"><span id="ntSaved" class="nt-saved"></span></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- Popover de enlace (notas) -->
+<div class="tk-pop nt-linkpop" id="ntLinkPop" hidden>
+  <div class="et-linkpop-row">
+    <input type="url" id="ntLinkUrl" placeholder="https://…" autocomplete="off" onkeydown="if(event.key==='Enter')ntApplyLink()">
+    <button class="fm-btn fm-save" onclick="ntApplyLink()">Enlazar</button>
+  </div>
+</div>
+
 <div class="page page-db" id="pageVentas">
   <div class="db-toolbar">
     <div class="db-title-block"><i class="fa-solid fa-chart-line"></i> Ventas</div>
@@ -5158,7 +5335,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   </div>
 </div>
 
-<script src="/i18n.js?v=20260723-todoedit"></script>
-<script src="/app.js?v=20260723-todoedit"></script>
+<script src="/i18n.js?v=20260724-notes1"></script>
+<script src="/app.js?v=20260724-notes1"></script>
 </body>
 </html>

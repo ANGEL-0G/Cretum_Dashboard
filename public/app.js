@@ -1205,7 +1205,7 @@ async function loadNotes() {
 }
 
 // Pinta el drawer completo: chips de carpetas + notas.
-function renderDrawer() { renderFolders(); renderNotes(); }
+function renderDrawer() { renderFolders(); renderNotes(); try { ntRenderAll(); } catch (e) {} }
 
 function renderFolders() {
   const el = document.getElementById('notesFolders');
@@ -1350,7 +1350,7 @@ function renderNotes() {
         <button class="note-del" title="Eliminar nota" aria-label="Eliminar nota" onclick="deleteNote('${n.id}')"><i class="fa-solid fa-trash"></i></button>
       </div>
       <div class="note-colors" id="ncolors-${n.id}" style="display:none">${swatches}</div>
-      <textarea class="note-body" placeholder="Escribe aquí tus notas…" oninput="onNoteInput('${n.id}','content',this.value)">${escapeHtml(n.content || '')}</textarea>
+      <div class="note-body" contenteditable="true" data-ph="Escribe aquí tus notas…" oninput="onNoteInput('${n.id}','content',this.innerHTML)">${notesToHtml(n.content)}</div>
       <div class="note-foot"><span class="note-saved" data-id="${n.id}"></span></div>
     </div>`;
   }).join('');
@@ -1441,16 +1441,22 @@ function onNoteInput(id, field, value) {
 async function saveNote(id) {
   const n = notesData.find(x => String(x.id) === String(id));
   if (!n) return;
-  const saved = document.querySelector('.note-saved[data-id="' + id + '"]');
-  if (saved) saved.textContent = 'Guardando…';
+  // Indicador de guardado: en el drawer (por bloc) y en la página (si es la nota abierta).
+  const marks = [document.querySelector('.note-saved[data-id="' + id + '"]')];
+  if (String(ntCurrentId) === String(id)) marks.push(document.getElementById('ntSaved'));
+  const setMark = txt => marks.forEach(m => { if (m) m.textContent = txt; });
+  setMark('Guardando…');
   try {
+    const nowIso = new Date().toISOString();
     const { error } = await sb.from('user_notes')
-      .update({ title: n.title, content: n.content, updated_at: new Date().toISOString() })
+      .update({ title: n.title, content: n.content, updated_at: nowIso })
       .eq('id', id);
     if (error) throw error;
-    if (saved) { saved.textContent = 'Guardado'; setTimeout(() => { if (saved.textContent === 'Guardado') saved.textContent = ''; }, 1500); }
+    n.updated_at = nowIso;
+    setMark('Guardado');
+    setTimeout(() => setMark(''), 1500);
   } catch (err) {
-    if (saved) saved.textContent = 'Error al guardar';
+    setMark('Error al guardar');
   }
 }
 
@@ -1482,15 +1488,209 @@ async function addNoteBlock() {
 }
 
 async function deleteNote(id) {
-  if (!confirm('¿Borrar este bloc de notas? No se puede deshacer.')) return;
+  const nt = notesData.find(x => String(x.id) === String(id));
+  const ok = await showConfirm('¿Eliminar esta nota?', `"${(nt?.title || 'Sin título')}" se borrará. No se puede deshacer.`);
+  if (!ok) return;
   try {
     const { error } = await sb.from('user_notes').delete().eq('id', id);
     if (error) throw error;
     notesData = notesData.filter(x => String(x.id) !== String(id));
+    if (String(ntCurrentId) === String(id)) { ntCurrentId = null; ntShowEmpty(); }
     renderNotes();
-    toast('Bloc borrado');
+    ntRenderAll();
+    toast('Nota borrada');
   } catch (err) { toast('No se pudo borrar'); }
 }
+/* ═══════════════════════════════════════════════════════════════════════════
+   NOTAS — página a 3 paneles (carpetas · lista · editor rico)
+   Reusa los mismos datos que el drawer (foldersData/notesData/currentFolder) y
+   sus funciones de guardado (onNoteInput/saveNote/setNoteColor/openFolderModal).
+   El contenido se guarda como HTML; las notas viejas (texto plano) se muestran
+   igual vía notesToHtml. El editor rico usa contentEditable + execCommand.
+═══════════════════════════════════════════════════════════════════════════ */
+let ntCurrentId = null;
+let ntSavedRange = null;
+
+function notesToHtml(content) {
+  const s = content || '';
+  if (/<[a-z][\s\S]*>/i.test(s)) return s;            // ya es HTML (edición rica)
+  return escapeHtml(s).replace(/\n/g, '<br>');         // texto plano → HTML
+}
+function ntPlainPreview(content) {
+  const d = document.createElement('div');
+  d.innerHTML = notesToHtml(content);
+  return (d.textContent || '').replace(/\s+/g, ' ').trim();
+}
+
+function openNotesPage() {
+  if (!document.getElementById('ntFolders')) return;
+  if (!notesLoaded) loadNotes();     // al terminar hace renderDrawer → ntRenderAll
+  else ntRenderAll();
+  if (!ntCurrentId || !notesData.some(n => String(n.id) === String(ntCurrentId))) ntShowEmpty();
+}
+
+// Solo carpetas + lista (nunca re-pinta el editor abierto → no pierde el cursor).
+function ntRenderAll() {
+  if (!document.getElementById('ntFolders')) return;
+  ntRenderFolders();
+  ntRenderList();
+}
+
+function ntRenderFolders() {
+  const el = document.getElementById('ntFolders');
+  if (!el) return;
+  const countIn = fid => notesData.filter(n => (n.folder_id || null) === (fid || null)).length;
+  const row = (id, name, color, active) => `
+    <button class="nt-folder${active ? ' on' : ''}" onclick="ntSelectFolder(${id === null ? 'null' : `'${id}'`})">
+      <span class="nt-folder-dot" style="background:${color || 'var(--gray-300)'}"></span>
+      <span class="nt-folder-nm">${escapeHtml(name)}</span>
+      <span class="nt-folder-ct">${countIn(id)}</span>
+    </button>`;
+  let html = row(null, 'General', 'var(--navy)', currentFolder == null);
+  html += foldersData.map(f => row(f.id, f.name || 'Carpeta', f.color, currentFolder === f.id)).join('');
+  el.innerHTML = html;
+  const f = foldersData.find(x => x.id === currentFolder);
+  const t = document.getElementById('ntListTitle'); if (t) t.textContent = f ? (f.name || 'Carpeta') : 'General';
+  const eb = document.getElementById('ntFolderEdit'); if (eb) eb.style.display = f ? '' : 'none';
+}
+
+function ntSelectFolder(id) {
+  currentFolder = id;
+  const s = document.getElementById('ntSearch'); if (s) s.value = '';
+  ntRenderFolders();
+  ntRenderList();
+}
+
+function ntRenderList() {
+  const el = document.getElementById('ntNotes');
+  if (!el) return;
+  const q = (document.getElementById('ntSearch')?.value || '').trim().toLowerCase();
+  let list = notesData.filter(n => (n.folder_id || null) === (currentFolder || null));
+  if (q) list = list.filter(n => (n.title || '').toLowerCase().includes(q) || ntPlainPreview(n.content).toLowerCase().includes(q));
+  if (!list.length) {
+    el.innerHTML = `<div class="nt-list-empty">${q ? 'Sin coincidencias.' : 'Esta carpeta no tiene notas.<br>Crea una con “Nueva nota”.'}</div>`;
+    return;
+  }
+  el.innerHTML = list.map(n => {
+    const active = String(n.id) === String(ntCurrentId);
+    const prev = ntPlainPreview(n.content).slice(0, 90);
+    const when = n.updated_at ? fmtCreated(n.updated_at) : '';
+    return `
+      <button class="nt-note${active ? ' on' : ''}" data-id="${n.id}" onclick="ntSelectNote('${n.id}')">
+        ${n.color ? `<span class="nt-note-bar" style="background:${n.color}"></span>` : ''}
+        <div class="nt-note-t">${escapeHtml(n.title || 'Sin título')}</div>
+        <div class="nt-note-x">${prev ? escapeHtml(prev) : '<span style="opacity:.6">Vacía</span>'}</div>
+        ${when ? `<div class="nt-note-d">${when}</div>` : ''}
+      </button>`;
+  }).join('');
+}
+
+function ntShowEmpty() {
+  const d = document.getElementById('ntDoc'), e = document.getElementById('ntEmpty');
+  if (d) d.style.display = 'none';
+  if (e) e.style.display = '';
+}
+
+function ntSelectNote(id) {
+  const n = notesData.find(x => String(x.id) === String(id));
+  if (!n) return;
+  ntCurrentId = n.id;
+  document.getElementById('ntEmpty').style.display = 'none';
+  document.getElementById('ntDoc').style.display = 'flex';
+  document.getElementById('ntTitle').value = n.title || '';
+  document.getElementById('ntColor').value = n.color || '#8b5cf6';
+  document.getElementById('ntBody').innerHTML = notesToHtml(n.content);
+  const saved = document.getElementById('ntSaved'); if (saved) saved.textContent = '';
+  ntRenderList();   // resalta la nota activa
+  setTimeout(() => document.getElementById('ntBody')?.focus(), 30);
+}
+
+async function ntNewNote() {
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) { toast('Sesión no válida'); return; }
+    const { data, error } = await sb.from('user_notes')
+      .insert({ user_id: uid, title: notesTodayLabel(), content: '', position: notesData.length, folder_id: currentFolder })
+      .select('id,title,content,color,folder_id,position,updated_at').single();
+    if (error) throw error;
+    notesData.unshift(data);
+    notesLoaded = true;
+    ntSelectNote(data.id);
+    setTimeout(() => document.getElementById('ntTitle')?.select(), 60);
+  } catch (err) {
+    const falta = /relation|does not exist|schema cache|not find the table/i.test(err.message || '');
+    toast('No se pudo crear la nota' + (falta ? ': falta la migración de BD' : ''));
+  }
+}
+
+function ntOnTitle(v) {
+  if (!ntCurrentId) return;
+  onNoteInput(ntCurrentId, 'title', v);
+  const card = document.querySelector(`.nt-note[data-id="${ntCurrentId}"] .nt-note-t`);
+  if (card) card.textContent = v || 'Sin título';
+}
+function ntOnBody() {
+  if (!ntCurrentId) return;
+  const body = document.getElementById('ntBody');
+  onNoteInput(ntCurrentId, 'content', body.innerHTML);
+  const card = document.querySelector(`.nt-note[data-id="${ntCurrentId}"] .nt-note-x`);
+  if (card) card.textContent = (body.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 90) || 'Vacía';
+}
+async function ntSetColor(v) {
+  if (!ntCurrentId) return;
+  await setNoteColor(ntCurrentId, v);
+  ntRenderList();
+}
+
+/* Editor rico — contentEditable en el documento principal */
+function ntExec(cmd, val) {
+  const body = document.getElementById('ntBody');
+  body.focus();
+  try { document.execCommand('styleWithCSS', false, true); } catch (e) {}
+  try { document.execCommand(cmd, false, val); } catch (e) {}
+  ntOnBody();
+}
+function ntFormatBlock(tag) {
+  const body = document.getElementById('ntBody');
+  body.focus();
+  try { document.execCommand('formatBlock', false, tag); } catch (e) {}
+  ntOnBody();
+}
+function ntLinkMenu(ev) {
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount || sel.isCollapsed) { toast('Selecciona primero el texto del enlace'); return; }
+  ntSavedRange = sel.getRangeAt(0).cloneRange();
+  const pop = document.getElementById('ntLinkPop');
+  document.getElementById('ntLinkUrl').value = '';
+  pop.hidden = false;
+  const r = ev.currentTarget.getBoundingClientRect();
+  const w = pop.offsetWidth, h = pop.offsetHeight;
+  let left = r.right - w; if (left < 8) left = 8; if (left + w > innerWidth - 8) left = innerWidth - 8 - w;
+  let top = r.bottom + 6; if (top + h > innerHeight - 8) top = Math.max(8, r.top - h - 6);
+  pop.style.left = left + 'px'; pop.style.top = top + 'px';
+  setTimeout(() => { document.getElementById('ntLinkUrl').focus(); document.addEventListener('click', ntLinkOutside, true); }, 0);
+}
+function ntLinkOutside(e) {
+  if (e.target.closest && (e.target.closest('#ntLinkPop') || e.target.closest('#ntLinkBtn'))) return;
+  ntLinkClose();
+}
+function ntLinkClose() {
+  const pop = document.getElementById('ntLinkPop'); if (pop) pop.hidden = true;
+  document.removeEventListener('click', ntLinkOutside, true);
+}
+function ntApplyLink() {
+  let url = (document.getElementById('ntLinkUrl').value || '').trim();
+  if (!url) { ntLinkClose(); return; }
+  if (!/^(https?:|mailto:)/i.test(url)) url = 'https://' + url;
+  document.getElementById('ntBody').focus();
+  const sel = window.getSelection();
+  if (ntSavedRange) { sel.removeAllRanges(); sel.addRange(ntSavedRange); }
+  try { document.execCommand('createLink', false, url); } catch (e) {}
+  ntLinkClose();
+  ntOnBody();
+}
+
 function setScope(s) {
   tkScope = s;
   document.getElementById('togPersonal')?.classList.toggle('on', s === 'personal');
@@ -2742,6 +2942,9 @@ const ORG_MODULES = {
     { view: 'tasks', icon: 'fa-list-check', title: 'To Do Dashboard',
       desc: 'Crea, organiza y da seguimiento a tareas tuyas y del equipo',
       iconClass: 'home-ico-tasks' },
+    { view: 'notes', icon: 'fa-book', title: 'Notas',
+      desc: 'Tu espacio de notas por carpetas y colores, con editor de texto',
+      iconClass: 'home-ico-notes' },
     { view: 'db', icon: 'fa-database', title: 'Base de Datos',
       desc: 'Consulta inversionistas, empresas y posiciones del portafolio',
       iconClass: 'home-ico-db' },
@@ -2762,6 +2965,9 @@ const ORG_MODULES = {
       iconClass: 'home-ico-ventas' },
   ],
   mvp: [
+    { view: 'notes', icon: 'fa-book', title: 'Notas',
+      desc: 'Tu espacio de notas por carpetas y colores, con editor de texto',
+      iconClass: 'home-ico-notes' },
     { view: 'db', icon: 'fa-database', title: 'Base de Datos',
       desc: 'Datos del proyecto MVP',
       iconClass: 'home-ico-mvp' },
@@ -2784,6 +2990,7 @@ const ORG_NAV = {
   cretum: [
     { view: 'home',    icon: 'fa-house',       label: 'Inicio' },
     { view: 'tasks',   icon: 'fa-list-check',  label: 'To Do Dashboard' },
+    { view: 'notes',   icon: 'fa-book',        label: 'Notas' },
     { view: 'db',      icon: 'fa-database',    label: 'Base de Datos' },
     { view: 'dropbox', icon: 'fa-dropbox',     label: 'Dropbox', brand: true },
     { view: 'campaigns', icon: 'fa-bolt',      label: 'Campañas' },
@@ -2793,6 +3000,7 @@ const ORG_NAV = {
   ],
   mvp: [
     { view: 'home',         icon: 'fa-house',         label: 'Inicio' },
+    { view: 'notes',        icon: 'fa-book',          label: 'Notas' },
     { view: 'db',           icon: 'fa-database',      label: 'Base de Datos' },
     { view: 'fundTrackers', icon: 'fa-chart-column',  label: 'Fund Trackers' },
     { view: 'fundraising',  icon: 'fa-hand-holding-dollar', label: 'Fund Rising Tracker' },
@@ -3262,6 +3470,8 @@ function switchView(view, isBack = false) {
   if (pageForms) pageForms.classList.toggle('active', view === 'forms');
   const pageVentas = document.getElementById('pageVentas');
   if (pageVentas) pageVentas.classList.toggle('active', view === 'ventas');
+  const pageNotes = document.getElementById('pageNotes');
+  if (pageNotes) pageNotes.classList.toggle('active', view === 'notes');
 
   highlightActiveNav();
 
@@ -3279,6 +3489,7 @@ function switchView(view, isBack = false) {
     'forms':        'Formularios',
     'portal':       'Portal de clientes',
     'ventas':       'Ventas',
+    'notes':        'Notas',
   }[view] || '';
   document.getElementById('headerBrandText').textContent =
     view === 'selector' ? 'Cretum · Selector' : (orgPrefix + viewLabel);
@@ -3303,6 +3514,7 @@ function switchView(view, isBack = false) {
   if (view === 'portal') { portalOrg = currentOrg || 'cretum'; loadPortalAdmin(); }
   if (view === 'forms') formsBackHome();
   if (view === 'ventas') ventasBackHome();
+  if (view === 'notes') openNotesPage();
   if (view === 'tasks') requestAnimationFrame(tkMoveSliders);   // coloca las pills una vez visible
 
   syncHash();
