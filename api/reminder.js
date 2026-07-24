@@ -31,6 +31,59 @@ async function getTasks() {
   return raw ? JSON.parse(raw) : SEED;
 }
 
+// ── Recordatorios por tarea (remindAt) ──
+// Se procesan dentro del cron horario existente (GitHub Actions → /api/reminder),
+// así no agregamos una 13.ª función serverless (tope de 12 en Vercel Hobby).
+function esc(s) {
+  return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function taskDone(t) { return typeof t.done === 'number' ? t.done >= t.total : t.done === true; }
+function taskReminderHtml(name, t) {
+  const first = String(name || '').split(' ')[0] || 'Hola';
+  const due = t.due ? `<div style="font-size:13px;color:#6b7280;margin:0 0 4px">Vence: <b style="color:#1a3a6b">${esc(fmtDate(t.due))}</b></div>` : '';
+  const desc = t.desc ? `<p style="color:#3d4559;line-height:1.6;margin:0 0 16px;font-size:14px">${esc(t.desc)}</p>` : '';
+  return `<!doctype html>
+<html><body style="font-family:-apple-system,'Segoe UI',Arial,sans-serif;background:#f8f9fc;margin:0;padding:24px;color:#1a1f2e">
+  <div style="max-width:560px;margin:0 auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(26,58,107,.1)">
+    <div style="background:white;padding:22px 26px 0;text-align:center"><img src="${APP_URL}/logo.png" alt="CRETUM Partners" width="150" style="display:inline-block;max-width:100%"></div>
+    <div style="background:linear-gradient(135deg,#1a3a6b,#2a4f8f);color:white;padding:18px 26px">
+      <div style="font-size:11px;letter-spacing:1.6px;opacity:.75">RECORDATORIO</div>
+      <div style="font-size:21px;font-weight:500;margin-top:4px">${esc(t.name || 'tu tarea')}</div>
+    </div>
+    <div style="padding:24px 26px">
+      <p style="color:#3d4559;line-height:1.6;margin:0 0 12px;font-size:14px">${esc(first)}, este es el recordatorio que pusiste para esta tarea.</p>
+      ${due}${desc}
+      <a href="${APP_URL}/" style="display:inline-block;background:#1a3a6b;color:white;text-decoration:none;padding:11px 22px;border-radius:6px;font-size:13px;font-weight:500;margin-top:6px">Abrir Cretum Desk →</a>
+    </div>
+    <div style="padding:14px 26px;border-top:1px solid #eef0f5;color:#9aa3b5;font-size:11px">Recordatorio automático · Cretum Partners</div>
+  </div>
+</body></html>`;
+}
+// Escanea las tareas con recordatorio vencido, envía correo al dueño y marca
+// remindSent (idempotente). Persiste el blob solo si hubo cambios.
+async function processTaskReminders(tasks, emailById, profileById) {
+  const now = Date.now();
+  const dueList = [...(tasks.simple || []), ...(tasks.progress || [])].filter(t =>
+    t.remindAt && !t.remindSent && !taskDone(t) && new Date(t.remindAt).getTime() <= now
+  );
+  let sent = 0;
+  for (const t of dueList) {
+    const email = emailById[t.owner];
+    if (email) {
+      try {
+        await sendEmail(email, `Recordatorio: ${t.name || 'tarea'}`, taskReminderHtml(profileById[t.owner]?.full_name, t));
+        sent++;
+      } catch (e) { /* best-effort; se marca igual para no reintentar en bucle */ }
+    }
+    t.remindSent = true;
+  }
+  if (dueList.length) {
+    const r = getRedis();
+    if (r) await r.set('tasks', JSON.stringify(tasks));
+  }
+  return { taskRemindersSent: sent, taskRemindersDue: dueList.length };
+}
+
 function fmtDate(d) {
   if (!d) return '';
   return new Date(d + 'T12:00:00').toLocaleDateString('es-MX', {
@@ -225,6 +278,13 @@ export default async function handler(req, res) {
       const honorHour = !/[?&]anyhour=1/.test(req.url || '');
 
       const tasks = await getTasks();
+
+      // Recordatorios por tarea: se procesan una vez por corrida, sin depender
+      // del día/hora que cada quien eligió para el resumen semanal.
+      const emailById = {};
+      (users || []).forEach(u => { if (u.email) emailById[u.id] = u.email; });
+      const taskRem = await processTaskReminders(tasks, emailById, profileById);
+
       const results = [];
       for (const u of users || []) {
         if (!u.email) continue;
@@ -259,7 +319,7 @@ export default async function handler(req, res) {
           results.push({ user: u.email, ok: false, error: err.message });
         }
       }
-      return res.status(200).json({ ok: true, mode: 'cron', sentAt: new Date().toISOString(), todayDow, nowHour, honorHour, results });
+      return res.status(200).json({ ok: true, mode: 'cron', sentAt: new Date().toISOString(), todayDow, nowHour, honorHour, ...taskRem, results });
     } catch (err) {
       console.error('[reminder cron]', err);
       return res.status(500).json({ error: 'No se pudo enviar el resumen (cron)' });
