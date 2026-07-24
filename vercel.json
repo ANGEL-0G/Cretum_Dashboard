@@ -1,8 +1,5 @@
 {
   "version": 2,
-  "crons": [
-    { "path": "/api/task-reminders", "schedule": "*/15 * * * *" }
-  ],
   "builds": [
     {
       "src": "public/index.html",
