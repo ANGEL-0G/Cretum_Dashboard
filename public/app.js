@@ -1893,7 +1893,7 @@ function openTaskModal() {
   // Autocompletado de proyectos existentes + limpia los campos de proyecto
   const dl = document.getElementById('projectList');
   if (dl) dl.innerHTML = tkAllProjects().map(p => `<option value="${escapeHtml(p)}"></option>`).join('');
-  ['fName', 'fDesc', 'fDue', 'fProject', 'fNotes', 'pName', 'pUnit', 'pTotal', 'pDue', 'pProject', 'pNotes'].forEach(id => {
+  ['fName', 'fDesc', 'fDue', 'fProject', 'fNotes', 'fRemindCustom', 'pName', 'pUnit', 'pTotal', 'pDue', 'pProject', 'pNotes'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
   resetPrio('fPrio'); resetPrio('pPrio');
@@ -2150,17 +2150,33 @@ function addSimple() {
 /* ── Recordatorio + "Asignar a" (con buscador) del formulario de crear ── */
 let tkAssignSel = new Set();   // uids seleccionados para asignar (incluye "yo" opcional)
 
+// Formatea una fecha a valor de <input type="datetime-local"> en hora LOCAL.
+function tkLocalDT(d) {
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
 function pickRemind(v) {
   const inp = document.getElementById('fRemind'); if (inp) inp.value = v;
   document.querySelectorAll('#fRemindSeg .tk-rem').forEach(b => b.classList.toggle('on', b.dataset.rem === v));
+  const custom = document.getElementById('fRemindCustom');
+  const hint = document.getElementById('fRemindHint');
+  const isCustom = v === 'custom';
+  if (custom) {
+    custom.style.display = isCustom ? '' : 'none';
+    if (isCustom) {
+      if (!custom.value) custom.value = tkLocalDT(new Date(Date.now() + 3600e3));   // sugiere +1 h
+      setTimeout(() => custom.focus(), 0);
+    }
+  }
+  if (hint) hint.style.display = isCustom ? '' : 'none';
 }
-// Convierte la opción a un instante ISO (UTC). "mañana" = mañana 9:00 local.
+// Convierte la opción a un instante ISO (UTC). "mañana" = mañana 9:00 local;
+// "custom" = la fecha/hora exacta que eligió el usuario.
 function tkRemindAt(choice) {
   const now = Date.now();
   if (choice === '1h') return new Date(now + 3600e3).toISOString();
-  if (choice === '4h') return new Date(now + 4 * 3600e3).toISOString();
-  if (choice === 'week') return new Date(now + 7 * 86400e3).toISOString();
   if (choice === 'tomorrow') { const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0); return d.toISOString(); }
+  if (choice === 'custom') { const v = document.getElementById('fRemindCustom')?.value; return v ? new Date(v).toISOString() : null; }
   return null;
 }
 

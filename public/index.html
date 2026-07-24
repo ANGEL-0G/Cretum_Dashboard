@@ -549,6 +549,7 @@ button,input,select{font-family:var(--font)}
 .tk-rem:hover{border-color:var(--navy-light);color:var(--navy)}
 .tk-rem:active{transform:scale(.97)}
 .tk-rem.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.tk-rem-hint{display:block;font-size:11.5px;color:var(--gray-400);margin-top:6px}
 .tk-assign{display:flex;flex-direction:column;gap:8px}
 .tk-assign-chips{display:flex;flex-wrap:wrap;gap:6px}
 .tk-assign-chips:empty{display:none}
@@ -4738,10 +4739,11 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
           <div class="tk-remind-seg" id="fRemindSeg" role="group" aria-label="Recordatorio">
             <button type="button" class="tk-rem on" data-rem="none"     onclick="pickRemind('none')">Ninguno</button>
             <button type="button" class="tk-rem"    data-rem="1h"       onclick="pickRemind('1h')">En 1 h</button>
-            <button type="button" class="tk-rem"    data-rem="4h"       onclick="pickRemind('4h')">En 4 h</button>
             <button type="button" class="tk-rem"    data-rem="tomorrow" onclick="pickRemind('tomorrow')">Mañana</button>
-            <button type="button" class="tk-rem"    data-rem="week"     onclick="pickRemind('week')">En 1 semana</button>
+            <button type="button" class="tk-rem"    data-rem="custom"   onclick="pickRemind('custom')">Personalizar</button>
           </div>
+          <input type="datetime-local" id="fRemindCustom" class="form-input" style="display:none;margin-top:8px">
+          <span class="tk-rem-hint" id="fRemindHint" style="display:none">Elige fecha y hora exactas; te llega el correo a esa hora.</span>
         </div>
         <div class="form-field" id="fAssignField">
           <label class="form-label">Asignar a <span class="form-label-opt">opcional</span></label>
@@ -5152,7 +5154,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   </div>
 </div>
 
-<script src="/i18n.js?v=20260723-todoform"></script>
-<script src="/app.js?v=20260723-todoform"></script>
+<script src="/i18n.js?v=20260723-todoform2"></script>
+<script src="/app.js?v=20260723-todoform2"></script>
 </body>
 </html>
