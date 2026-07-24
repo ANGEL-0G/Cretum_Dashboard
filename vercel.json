@@ -78,10 +78,6 @@
       "use": "@vercel/node"
     },
     {
-      "src": "api/task-reminders.js",
-      "use": "@vercel/node"
-    },
-    {
       "src": "api/config.js",
       "use": "@vercel/node"
     },
@@ -161,10 +157,6 @@
     {
       "src": "/api/reminder",
       "dest": "/api/reminder.js"
-    },
-    {
-      "src": "/api/task-reminders",
-      "dest": "/api/task-reminders.js"
     },
     {
       "src": "/api/prices",
