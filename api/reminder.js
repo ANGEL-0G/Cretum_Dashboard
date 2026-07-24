@@ -285,6 +285,12 @@ export default async function handler(req, res) {
       (users || []).forEach(u => { if (u.email) emailById[u.id] = u.email; });
       const taskRem = await processTaskReminders(tasks, emailById, profileById);
 
+      // Cron frecuente (?tasksonly=1): solo recordatorios de tarea, sin resumen
+      // semanal. Así un workflow cada 5 min avisa a la hora sin spamear el resumen.
+      if (/[?&]tasksonly=1/.test(req.url || '')) {
+        return res.status(200).json({ ok: true, mode: 'cron-tasksonly', ...taskRem });
+      }
+
       const results = [];
       for (const u of users || []) {
         if (!u.email) continue;

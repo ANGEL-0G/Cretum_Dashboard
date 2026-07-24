@@ -1,0 +1,29 @@
+name: Recordatorios de tareas (cada 5 min)
+
+# Dispara SOLO los recordatorios por tarea (remindAt) llamando al endpoint con
+# ?tasksonly=1, para que lleguen a la hora y no ~1 h tarde. El resumen semanal
+# sigue en reminder-hourly.yml (una vez a la semana según cada usuario).
+# GitHub Actions puede retrasar los cron unos minutos bajo carga; el mínimo es 5.
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'      # cada 5 minutos
+  workflow_dispatch: {}         # permite dispararlo a mano desde Actions
+
+# Evita solapamientos si una corrida se retrasa.
+concurrency:
+  group: task-reminders
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Procesar recordatorios de tareas
+        run: |
+          code=$(curl -sS -o /tmp/out.txt -w "%{http_code}" \
+            "https://cretumdesk.com/api/reminder?tasksonly=1" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+          echo "HTTP $code"
+          cat /tmp/out.txt
+          test "$code" = "200"
