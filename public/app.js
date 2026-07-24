@@ -1874,10 +1874,15 @@ function taskModalResetCreate() {
   if (bS) bS.innerHTML = '<i class="fa-solid fa-plus"></i> Agregar tarea';
   const bP = document.getElementById('btnAddProgress');
   if (bP) bP.innerHTML = '<i class="fa-solid fa-chart-line"></i> Crear tarea con progreso';
-  // El estatus solo aplica al editar; las acciones de edición se ocultan al crear.
-  const sf = document.getElementById('fStatusField'); if (sf) sf.style.display = 'none';
-  const fa = document.getElementById('fEditActions'); if (fa) fa.style.display = 'none';
-  const pa = document.getElementById('pEditActions'); if (pa) pa.style.display = 'none';
+  // Crear: recordatorio + asignar visibles; estatus/notas/acciones (solo editar) ocultos.
+  const show = (id, on) => { const el = document.getElementById(id); if (el) el.style.display = on ? '' : 'none'; };
+  show('fRemindField', true); show('fAssignField', true);
+  show('fStatusField', false); show('fNotesField', false);
+  show('fEditActions', false); show('pEditActions', false);
+  // Reset de los campos nuevos
+  tkAssignSel = new Set();
+  tkRenderAssignChips();
+  pickRemind('none');
 }
 
 function openTaskModal() {
@@ -1888,11 +1893,10 @@ function openTaskModal() {
   // Autocompletado de proyectos existentes + limpia los campos de proyecto
   const dl = document.getElementById('projectList');
   if (dl) dl.innerHTML = tkAllProjects().map(p => `<option value="${escapeHtml(p)}"></option>`).join('');
-  ['fName', 'fDue', 'fProject', 'fNotes', 'pName', 'pUnit', 'pTotal', 'pDue', 'pProject', 'pNotes'].forEach(id => {
+  ['fName', 'fDesc', 'fDue', 'fProject', 'fNotes', 'pName', 'pUnit', 'pTotal', 'pDue', 'pProject', 'pNotes'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
   resetPrio('fPrio'); resetPrio('pPrio');
-  const fc = document.getElementById('fCollab'); if (fc) fc.checked = false;
   m.classList.add('show');
   setTimeout(() => document.getElementById('fName')?.focus(), 80);
 }
@@ -1918,13 +1922,15 @@ function openEditTask(id, kind) {
   const bP = document.getElementById('btnAddProgress'); if (bP) bP.innerHTML = saveLabel;
   if (kind === 'simple') {
     document.getElementById('fName').value = t.name || '';
+    document.getElementById('fDesc').value = t.desc || '';
     document.getElementById('fDue').value = t.due || '';
     document.getElementById('fProject').value = t.project || '';
     setPrioActive('fPrio', t.prio || 'Media');
-    const fc = document.getElementById('fCollab'); if (fc) fc.checked = !!t.collab;
     const fn = document.getElementById('fNotes'); if (fn) fn.value = t.notes || '';
-    // Estatus (3 estados) — solo visible al editar tareas simples.
-    const sf = document.getElementById('fStatusField'); if (sf) sf.style.display = '';
+    // Recordatorio y "asignar a" son solo de creación; estatus y notas, de edición.
+    const show = (id, on) => { const el = document.getElementById(id); if (el) el.style.display = on ? '' : 'none'; };
+    show('fRemindField', false); show('fAssignField', false);
+    show('fStatusField', true); show('fNotesField', true);
     pickModalStatus(simpleStatus(t));
     const fa = document.getElementById('fEditActions'); if (fa) fa.style.display = 'flex';
   } else {
@@ -1943,6 +1949,7 @@ function openEditTask(id, kind) {
 
 function closeTaskModal() {
   document.getElementById('taskModal')?.classList.remove('show');
+  if (typeof tkAssignClose === 'function') tkAssignClose();
   editingTaskId = null;
   editingTaskKind = null;
 }
@@ -2084,19 +2091,19 @@ function setPrioActive(hiddenId, prio) {
 
 function addSimple() {
   const n = document.getElementById('fName').value.trim();
-  if (!n) { toast('Escribe una descripción'); return; }
-  // Modo edición: actualiza la tarea existente (conserva done/collab/owner/createdAt).
-  const collab = !!document.getElementById('fCollab')?.checked;
-  const notes = (document.getElementById('fNotes')?.value || '').trim();
+  if (!n) { toast('Escribe un nombre'); document.getElementById('fName').focus(); return; }
+  const desc = (document.getElementById('fDesc')?.value || '').trim();
+
+  // Modo edición: actualiza la tarea (conserva collab/owner/asignación/createdAt).
   if (editingTaskId && editingTaskKind === 'simple') {
     const t = state.simple.find(x => x.id === editingTaskId);
     if (t) {
       t.name = n;
+      t.desc = desc;
       t.due = document.getElementById('fDue').value;
       t.prio = document.getElementById('fPrio').value;
       t.project = document.getElementById('fProject').value.trim() || null;
-      t.collab = collab;
-      t.notes = notes;
+      t.notes = (document.getElementById('fNotes')?.value || '').trim();
       t.status = taskModalStatus;
       t.done = taskModalStatus === 'done';
     }
@@ -2104,26 +2111,114 @@ function addSimple() {
     closeTaskModal();
     return;
   }
-  state.simple.unshift({
-    id: 'S' + (++tkId),
-    name: n,
-    due: document.getElementById('fDue').value,
-    prio: document.getElementById('fPrio').value,
-    project: document.getElementById('fProject').value.trim() || null,
-    done: false,
-    status: 'pending',
-    notes: notes,
-    collab: collab,
-    owner: currentUser,
-    createdAt: new Date().toISOString()
+
+  // Crear
+  const due = document.getElementById('fDue').value;
+  const prio = document.getElementById('fPrio').value;
+  const project = document.getElementById('fProject').value.trim() || null;
+  const remind = document.getElementById('fRemind')?.value || 'none';
+  const remindAt = tkRemindAt(remind);
+  const assignees = [...tkAssignSel];
+  const others = assignees.filter(a => a !== currentUser);
+
+  // Copia personal (si no asigné a nadie, o me incluí): va a MI lista.
+  if (!assignees.length || assignees.includes(currentUser)) {
+    state.simple.unshift({
+      id: 'S' + (++tkId), name: n, desc,
+      due, prio, project, done: false, status: 'pending',
+      collab: others.length > 0,
+      remind: remind === 'none' ? null : remind, remindAt, remindSent: false,
+      owner: currentUser, createdAt: new Date().toISOString()
+    });
+  }
+  // Asignada a otros: invitación aceptar/rechazar (flujo existente).
+  others.forEach(to => {
+    const already = state.invites.some(iv => iv.from === currentUser && iv.to === to && iv.name === n);
+    const base = { id: 'I' + (++tkId), name: n, desc, due, prio, note: desc, createdAt: new Date().toISOString() };
+    state.invites.push({ ...base, from: currentUser, to });
+    state.assigned.push({ ...base, assignedBy: currentUser, to, accepted: false });
+    if (!already) notifyAssignment({ type: 'new_assignment', recipientUserId: to, taskName: n, due });
   });
-  document.getElementById('fName').value = '';
-  document.getElementById('fDue').value = '';
-  document.getElementById('fProject').value = '';
-  const fnEl = document.getElementById('fNotes'); if (fnEl) fnEl.value = '';
-  resetPrio('fPrio');
-  scheduleSave(); render(); toast('Tarea agregada');
+
+  scheduleSave(); render();
+  toast(others.length
+    ? (others.length === 1 ? `Asignada a ${USERS[others[0]]?.name || 'tu compañero'}` : `Asignada a ${others.length} personas`)
+    : 'Tarea agregada');
   closeTaskModal();
+}
+
+/* ── Recordatorio + "Asignar a" (con buscador) del formulario de crear ── */
+let tkAssignSel = new Set();   // uids seleccionados para asignar (incluye "yo" opcional)
+
+function pickRemind(v) {
+  const inp = document.getElementById('fRemind'); if (inp) inp.value = v;
+  document.querySelectorAll('#fRemindSeg .tk-rem').forEach(b => b.classList.toggle('on', b.dataset.rem === v));
+}
+// Convierte la opción a un instante ISO (UTC). "mañana" = mañana 9:00 local.
+function tkRemindAt(choice) {
+  const now = Date.now();
+  if (choice === '1h') return new Date(now + 3600e3).toISOString();
+  if (choice === '4h') return new Date(now + 4 * 3600e3).toISOString();
+  if (choice === 'week') return new Date(now + 7 * 86400e3).toISOString();
+  if (choice === 'tomorrow') { const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0); return d.toISOString(); }
+  return null;
+}
+
+function tkAssignCandidates() {
+  return Object.entries(USERS)
+    .filter(([, u]) => !u.hidden)
+    .map(([uid, u]) => ({
+      uid,
+      name: uid === currentUser ? `${u.name} (yo)` : u.name,
+      initials: u.initials || (u.name || '?').slice(0, 2).toUpperCase(),
+    }));
+}
+function tkAssignOpen(ev) {
+  const pop = document.getElementById('tkAssignPop');
+  document.getElementById('tkAssignSearch').value = '';
+  tkAssignRenderList('');
+  pop.hidden = false;
+  const r = ev.currentTarget.getBoundingClientRect();
+  const w = pop.offsetWidth, h = pop.offsetHeight;
+  let left = r.left; if (left + w > innerWidth - 8) left = innerWidth - 8 - w; if (left < 8) left = 8;
+  let top = r.bottom + 6; if (top + h > innerHeight - 8) top = Math.max(8, r.top - h - 6);
+  pop.style.left = left + 'px'; pop.style.top = top + 'px';
+  setTimeout(() => { document.getElementById('tkAssignSearch').focus(); document.addEventListener('click', tkAssignOutside, true); }, 0);
+}
+function tkAssignOutside(e) {
+  if (e.target.closest && (e.target.closest('#tkAssignPop') || e.target.closest('#fAssignBtn'))) return;
+  tkAssignClose();
+}
+function tkAssignClose() {
+  document.getElementById('tkAssignPop').hidden = true;
+  document.removeEventListener('click', tkAssignOutside, true);
+}
+function tkAssignFilter(q) { tkAssignRenderList(q); }
+function tkAssignRenderList(q) {
+  const list = document.getElementById('tkAssignList');
+  const ql = (q || '').trim().toLowerCase();
+  const cands = tkAssignCandidates().filter(c => !ql || c.name.toLowerCase().includes(ql));
+  if (!cands.length) { list.innerHTML = `<div class="tk-pop-empty">Sin coincidencias</div>`; return; }
+  list.innerHTML = cands.map(c => `
+    <button type="button" class="tk-pop-item${tkAssignSel.has(c.uid) ? ' on' : ''}" onclick="tkAssignToggle('${c.uid}')">
+      <span class="tk-pop-av">${escapeHtml(c.initials)}</span>
+      <span class="tk-pop-nm">${escapeHtml(c.name)}</span>
+      <span class="tk-pop-ck"><i class="fa-solid fa-check"></i></span>
+    </button>`).join('');
+}
+function tkAssignToggle(uid) {
+  if (tkAssignSel.has(uid)) tkAssignSel.delete(uid); else tkAssignSel.add(uid);
+  tkAssignRenderList(document.getElementById('tkAssignSearch')?.value || '');
+  tkRenderAssignChips();
+}
+function tkRenderAssignChips() {
+  const wrap = document.getElementById('fAssignChips'); if (!wrap) return;
+  wrap.innerHTML = [...tkAssignSel].map(uid => {
+    const u = USERS[uid];
+    const nm = u ? (uid === currentUser ? `${u.name} (yo)` : u.name) : uid;
+    const ini = (u?.initials) || (nm || '?').slice(0, 2).toUpperCase();
+    return `<span class="tk-chip"><span class="tk-chip-av">${escapeHtml(ini)}</span>${escapeHtml(nm)}<button type="button" class="tk-chip-x" onclick="tkAssignToggle('${uid}')" aria-label="Quitar">✕</button></span>`;
+  }).join('');
 }
 
 function addProgress() {
