@@ -199,6 +199,10 @@
       "dest": "/api/logo.js"
     },
     {
+      "src": "/api/track",
+      "dest": "/api/logo.js"
+    },
+    {
       "src": "/fonts/(.+\\.ttf)",
       "dest": "/public/fonts/$1"
     },
