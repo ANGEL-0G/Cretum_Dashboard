@@ -954,6 +954,7 @@ function buildTimeline() {
                 </span>` : ''}
             ${t.kind === 'progress' && done
               ? `<button class="sm-btn sm-red" onclick="toggle('${t.id}','progress')">Reabrir</button>` : ''}
+            <button class="li-edit" onclick="openEditTask('${t.id}','${t.kind}')" title="Editar tarea"><i class="fa-solid fa-pen"></i></button>
             <button class="li-del" onclick="del('${t.id}','${t.kind}')"><i class="fa-solid fa-xmark"></i></button>
           </div>
         </div>`;
@@ -1927,10 +1928,19 @@ function openEditTask(id, kind) {
     document.getElementById('fProject').value = t.project || '';
     setPrioActive('fPrio', t.prio || 'Media');
     const fn = document.getElementById('fNotes'); if (fn) fn.value = t.notes || '';
-    // Recordatorio y "asignar a" son solo de creación; estatus y notas, de edición.
+    // Al editar mostramos TODO (mismos módulos que al crear) + estatus y notas.
     const show = (id, on) => { const el = document.getElementById(id); if (el) el.style.display = on ? '' : 'none'; };
-    show('fRemindField', false); show('fAssignField', false);
+    show('fRemindField', true); show('fAssignField', true);
     show('fStatusField', true); show('fNotesField', true);
+    // Recordatorio: precargar el actual (para custom, rellenar la fecha/hora local).
+    editingRemindOrig = t.remind || 'none';
+    pickRemind(editingRemindOrig);
+    if (editingRemindOrig === 'custom' && t.remindAt) {
+      const c = document.getElementById('fRemindCustom'); if (c) c.value = tkLocalDT(new Date(t.remindAt));
+    }
+    // "Asignar a" arranca vacío: sirve para asignar a personas ADICIONALES.
+    tkAssignSel = new Set();
+    tkRenderAssignChips();
     pickModalStatus(simpleStatus(t));
     const fa = document.getElementById('fEditActions'); if (fa) fa.style.display = 'flex';
   } else {
@@ -2094,33 +2104,41 @@ function addSimple() {
   if (!n) { toast('Escribe un nombre'); document.getElementById('fName').focus(); return; }
   const desc = (document.getElementById('fDesc')?.value || '').trim();
 
-  // Modo edición: actualiza la tarea (conserva collab/owner/asignación/createdAt).
+  const due = document.getElementById('fDue').value;
+  const prio = document.getElementById('fPrio').value;
+  const project = document.getElementById('fProject').value.trim() || null;
+  const remind = document.getElementById('fRemind')?.value || 'none';
+  const others = [...tkAssignSel].filter(a => a !== currentUser);
+
+  // Modo edición: actualiza la tarea; recordatorio y asignados también editables.
   if (editingTaskId && editingTaskKind === 'simple') {
     const t = state.simple.find(x => x.id === editingTaskId);
     if (t) {
       t.name = n;
       t.desc = desc;
-      t.due = document.getElementById('fDue').value;
-      t.prio = document.getElementById('fPrio').value;
-      t.project = document.getElementById('fProject').value.trim() || null;
+      t.due = due;
+      t.prio = prio;
+      t.project = project;
       t.notes = (document.getElementById('fNotes')?.value || '').trim();
       t.status = taskModalStatus;
       t.done = taskModalStatus === 'done';
+      // Recordatorio: solo re-agenda (y re-arma el envío) si de verdad cambió.
+      const custom = document.getElementById('fRemindCustom')?.value || '';
+      let changed = remind !== editingRemindOrig;
+      if (!changed && remind === 'custom') changed = (custom ? new Date(custom).toISOString() : null) !== t.remindAt;
+      if (changed) { t.remind = remind === 'none' ? null : remind; t.remindAt = tkRemindAt(remind); t.remindSent = false; }
+      if (others.length) t.collab = true;
     }
-    scheduleSave(); render(); toast('Tarea actualizada');
+    if (others.length) tkDispatchInvites({ name: n, desc, due, prio }, others);
+    scheduleSave(); render();
+    toast(others.length ? 'Tarea actualizada y asignada' : 'Tarea actualizada');
     closeTaskModal();
     return;
   }
 
   // Crear
-  const due = document.getElementById('fDue').value;
-  const prio = document.getElementById('fPrio').value;
-  const project = document.getElementById('fProject').value.trim() || null;
-  const remind = document.getElementById('fRemind')?.value || 'none';
   const remindAt = tkRemindAt(remind);
   const assignees = [...tkAssignSel];
-  const others = assignees.filter(a => a !== currentUser);
-
   // Copia personal (si no asigné a nadie, o me incluí): va a MI lista.
   if (!assignees.length || assignees.includes(currentUser)) {
     state.simple.unshift({
@@ -2131,14 +2149,7 @@ function addSimple() {
       owner: currentUser, createdAt: new Date().toISOString()
     });
   }
-  // Asignada a otros: invitación aceptar/rechazar (flujo existente).
-  others.forEach(to => {
-    const already = state.invites.some(iv => iv.from === currentUser && iv.to === to && iv.name === n);
-    const base = { id: 'I' + (++tkId), name: n, desc, due, prio, note: desc, createdAt: new Date().toISOString() };
-    state.invites.push({ ...base, from: currentUser, to });
-    state.assigned.push({ ...base, assignedBy: currentUser, to, accepted: false });
-    if (!already) notifyAssignment({ type: 'new_assignment', recipientUserId: to, taskName: n, due });
-  });
+  if (others.length) tkDispatchInvites({ name: n, desc, due, prio }, others);
 
   scheduleSave(); render();
   toast(others.length
@@ -2147,8 +2158,20 @@ function addSimple() {
   closeTaskModal();
 }
 
+// Crea invitación (aceptar/rechazar) + registro asignado para cada compañero.
+function tkDispatchInvites({ name, desc, due, prio }, others) {
+  others.forEach(to => {
+    const already = state.invites.some(iv => iv.from === currentUser && iv.to === to && iv.name === name);
+    const base = { id: 'I' + (++tkId), name, desc, due, prio, note: desc || '', createdAt: new Date().toISOString() };
+    state.invites.push({ ...base, from: currentUser, to });
+    state.assigned.push({ ...base, assignedBy: currentUser, to, accepted: false });
+    if (!already) notifyAssignment({ type: 'new_assignment', recipientUserId: to, taskName: name, due });
+  });
+}
+
 /* ── Recordatorio + "Asignar a" (con buscador) del formulario de crear ── */
 let tkAssignSel = new Set();   // uids seleccionados para asignar (incluye "yo" opcional)
+let editingRemindOrig = 'none';  // recordatorio original al abrir el editor (para no re-agendar sin querer)
 
 // Formatea una fecha a valor de <input type="datetime-local"> en hora LOCAL.
 function tkLocalDT(d) {
