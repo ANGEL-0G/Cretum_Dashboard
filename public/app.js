@@ -12887,8 +12887,9 @@ async function openLettersModal() {
         : '';
       const otros = byCat['otros'] || [];
       return `<div class="ltr-group"><div class="ltr-group-h">${escapeHtml(g)} <span class="ltr-count">${rows.length} docs</span></div>
-        ${[22, 23, 24, 25, 26].map(c => _letterSection(c, byCat[c] || [])).join('')}
+        ${_letterSection(22, byCat[22] || [])}
         ${commsHtml}
+        ${[23, 24, 25, 26].map(c => _letterSection(c, byCat[c] || [])).join('')}
         ${otros.length ? `<div class="ltr-sec"><div class="ltr-sec-h">Otros</div>${otros.map(_letterRow).join('')}</div>` : ''}
       </div>`;
     }).join('');
