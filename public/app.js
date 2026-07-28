@@ -9204,6 +9204,8 @@ function renderDoHome() {
           <div class="ft-sub">Oportunidades en directo (una empresa por vehículo) · valores vivos de la DB · neto de reinversiones SpaceX</div>
         </div>
         <div class="ft-export-grp">
+          <button class="ft-export-btn" onclick="doExportExcel(null)"><i class="fa-solid fa-file-excel"></i> Excel</button>
+          <button class="ft-export-btn" onclick="doExportHtml(null)"><i class="fa-solid fa-file-code"></i> HTML</button>
           <button class="ft-export-btn ft-export-btn-alt" onclick="openDirectOpps(true)"><i class="fa-solid fa-rotate"></i> Actualizar</button>
         </div>
       </div>
@@ -9304,6 +9306,8 @@ function openDirectOpp(cid) {
           <div class="ft-sub">Oportunidad en directo · ${c.nLps} inversionistas · ${c.nAct} posiciones activas${c.nTerm ? ` · ${c.nTerm} terminadas` : ''}${c.pps ? ` · PPS actual $${c.pps.toLocaleString('en-US', { maximumFractionDigits: 2 })}` : ''}</div>
         </div>
         <div class="ft-export-grp">
+          <button class="ft-export-btn" onclick="doExportExcel(${c.id})"><i class="fa-solid fa-file-excel"></i> Excel</button>
+          <button class="ft-export-btn" onclick="doExportHtml(${c.id})"><i class="fa-solid fa-file-code"></i> HTML</button>
           <button class="ft-export-btn ft-export-btn-alt" onclick="openDirectOpps(true).then(() => openDirectOpp(${c.id}))"><i class="fa-solid fa-rotate"></i> Actualizar</button>
         </div>
       </div>
@@ -9332,6 +9336,259 @@ function openDirectOpp(cid) {
     ${c.netted ? '<div class="do-foot">Totales netos de reinversiones 22F→26A QP (el capital reciclado se cuenta una vez); las filas muestran el capital completo de cada posición. Posiciones terminadas: su historia está en las cartas de distribución.</div>' : ''}
     <div class="do-foot">Valores en vivo de la DB (marks por cron). MOIC no realizado = NAV ÷ comprometido activo. MOIC total = (NAV + distribuido) ÷ aportado histórico.</div>`;
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+
+// ── Direct Opportunities: descargas (Excel + HTML) ──────────────────────────
+function _doExpFilename(c) {
+  const d = new Date().toISOString().slice(0, 10);
+  return c ? `Direct_Opportunity_${c.name.replace(/[^\w]+/g, '_')}_${d}` : `Direct_Opportunities_${d}`;
+}
+
+// Prepara los datos que exportan ambos formatos (mismos calculos que la UI).
+function _doExpData(cid) {
+  const { list } = _doData;
+  if (cid == null) {
+    return {
+      tot: {
+        com: list.reduce((s, c) => s + c.committedAct, 0),
+        nav: list.reduce((s, c) => s + c.nav, 0),
+        dist: list.reduce((s, c) => s + c.dist, 0),
+      },
+      act: list.filter(c => c.nAct > 0),
+      term: list.filter(c => c.nAct === 0).slice().sort((a, b) => b.dist - a.dist),
+    };
+  }
+  const c = list.find(x => x.id === cid);
+  const cleanSer = s2 => String(s2 || '').replace(/MVP Opportunity (Fund VI LLC, )?/i, '').replace(/MVP All-Star /i, '').replace(/Series /i, '');
+  const n = v => Number(v) || 0;
+  const bySer = {};
+  c.rows.forEach(r => {
+    const k = (r.series || {}).name || '—';
+    const g = bySer[k] || (bySer[k] = { com: 0, nav: 0, nA: 0, nT: 0, lps: new Set() });
+    g.lps.add(r.investor_id);
+    if (r.distributed_at) g.nT++;
+    else { g.nA++; g.com += n(r.commitment); g.nav += n(r.commitment_actual) || n(r.commitment); }
+  });
+  const ser = Object.entries(bySer).sort((a, b) => b[1].nav - a[1].nav)
+    .map(([k, g]) => ({ name: cleanSer(k), lps: g.lps.size, nA: g.nA, nT: g.nT, com: g.com, nav: g.nav }));
+  const rows = c.rows.slice().sort((a, b) => (!!a.distributed_at - !!b.distributed_at)
+    || (a.distributed_at ? (n(b.__d) - n(a.__d)) : ((n(b.commitment_actual) || n(b.commitment)) - (n(a.commitment_actual) || n(a.commitment)))))
+    .map(r => {
+      const term = !!r.distributed_at;
+      const val = term ? null : (n(r.commitment_actual) || n(r.commitment));
+      const d = n(r.__d);
+      return { inv: (r.investors || {}).name || '—', ser: cleanSer((r.series || {}).name), term,
+        com: n(r.commitment), val, d,
+        mult: n(r.commitment) ? (term ? d / n(r.commitment) : (val + d) / n(r.commitment)) : null };
+    });
+  return { c, ser, rows };
+}
+
+async function doExportExcel(cid) {
+  const lang = await pickExportLang(); if (!lang) return;
+  const EN = lang === 'en';
+  const T = (es, en) => (EN ? en : es);
+  toast('Generando Excel…');
+  try { await loadExcelJS(); } catch (e) { toast(e.message); return; }
+  const ORANGE = 'FFE8650D', INK = 'FF1A1F2E', GRAY = 'FF8A93A6', CARD = 'FFF7F9FC', BORDER = 'FFDDE3EC', WHITE = 'FFFFFFFF';
+  const thin = { style: 'thin', color: { argb: BORDER } };
+  const border = { top: thin, left: thin, bottom: thin, right: thin };
+  const FMT$ = '"$"#,##0', FMTX = '0.00"x"';
+  const d = _doExpData(cid);
+  const wb = new ExcelJS.Workbook(); wb.creator = 'MVP Manager';
+  const ws = wb.addWorksheet('Direct Opportunities', { views: [{ showGridLines: false }] });
+
+  const title = cid == null ? 'Direct Opportunities' : d.c.name;
+  const sub = [T('Oportunidades en directo · valores vivos de la DB', 'Direct opportunities · live values from the DB'),
+    T('generado ', 'generated ') + new Date().toLocaleDateString(EN ? 'en-US' : 'es-MX')].join('   ·   ');
+  let r = 1;
+  const setTitle = (lastCol) => {
+    ws.mergeCells(1, 1, 1, lastCol); ws.getCell(1, 1).value = title;
+    ws.getCell(1, 1).font = { size: 20, bold: true, color: { argb: ORANGE } };
+    ws.getRow(1).height = 28;
+    ws.mergeCells(2, 1, 2, lastCol); ws.getCell(2, 1).value = sub;
+    ws.getCell(2, 1).font = { size: 10, color: { argb: GRAY } };
+    r = 4;
+  };
+  const kpiRow = (kpis) => {
+    kpis.forEach((k, i) => {
+      const col = 1 + i * 2;
+      ws.mergeCells(r, col, r, col + 1); ws.mergeCells(r + 1, col, r + 1, col + 1);
+      const lc = ws.getCell(r, col); lc.value = k[0];
+      lc.font = { size: 7.5, bold: true, color: { argb: GRAY } };
+      lc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: CARD } };
+      const vc = ws.getCell(r + 1, col); vc.value = k[1];
+      if (typeof k[1] === 'number') vc.numFmt = k[2];
+      vc.font = { size: 13, bold: true, color: { argb: i === 0 ? ORANGE : INK } };
+      vc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: CARD } };
+    });
+    r += 3;
+  };
+  const secTitle = (t, lastCol) => {
+    ws.mergeCells(r, 1, r, lastCol);
+    const c2 = ws.getCell(r, 1); c2.value = t.toUpperCase();
+    c2.font = { size: 10, bold: true, color: { argb: ORANGE } };
+    r += 1;
+  };
+  const tableHead = (labels) => {
+    labels.forEach((l, i) => {
+      const c2 = ws.getCell(r, i + 1); c2.value = l;
+      c2.font = { size: 9, bold: true, color: { argb: WHITE } };
+      c2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: INK } };
+      c2.border = border;
+      c2.alignment = { horizontal: i === 0 ? 'left' : 'right' };
+    });
+    r += 1;
+  };
+  const tableRow = (vals, fmts, dim) => {
+    vals.forEach((v, i) => {
+      const c2 = ws.getCell(r, i + 1); c2.value = v;
+      if (fmts[i] && typeof v === 'number') c2.numFmt = fmts[i];
+      c2.font = { size: 9.5, color: { argb: dim ? GRAY : INK } };
+      c2.border = border;
+      c2.alignment = { horizontal: i === 0 ? 'left' : (typeof v === 'number' ? 'right' : 'left') };
+    });
+    r += 1;
+  };
+
+  if (cid == null) {
+    setTitle(9);
+    kpiRow([[T('COMPROMETIDO ACTIVO', 'ACTIVE COMMITMENT'), d.tot.com, FMT$],
+      [T('VALOR HOY (NAV)', 'CURRENT VALUE (NAV)'), d.tot.nav, FMT$],
+      [T('MOIC NO REALIZADO', 'UNREALIZED MOIC'), d.tot.com ? d.tot.nav / d.tot.com : 0, FMTX],
+      [T('DISTRIBUIDO HISTÓRICO', 'DISTRIBUTIONS TO DATE'), d.tot.dist, FMT$]]);
+    ws.columns = [{ width: 30 }, { width: 8 }, { width: 11 }, { width: 11 }, { width: 17 }, { width: 17 }, { width: 9 }, { width: 16 }, { width: 9 }];
+    secTitle(T('En cartera', 'Active portfolio'), 9);
+    tableHead([T('Empresa', 'Company'), 'LPs', T('Activas', 'Active'), T('Term.', 'Term.'),
+      T('Comprometido', 'Committed'), T('Valor hoy (NAV)', 'Current value (NAV)'), 'MOIC',
+      T('Distribuido', 'Distributed'), 'DPI']);
+    d.act.forEach(c2 => tableRow([c2.name, c2.nLps, c2.nAct, c2.nTerm || 0, c2.committedAct, c2.nav, c2.moicU, c2.dist, c2.dpi],
+      [null, '#,##0', '#,##0', '#,##0', FMT$, FMT$, FMTX, FMT$, FMTX]));
+    r += 1;
+    if (d.term.length) {
+      secTitle(T('Terminadas (100% distribuidas)', 'Terminated (fully distributed)'), 9);
+      tableHead([T('Empresa', 'Company'), 'LPs', T('Posiciones', 'Positions'), T('Aportado', 'Paid-in'),
+        T('Distribuido', 'Distributed'), 'DPI']);
+      d.term.forEach(c2 => tableRow([c2.name, c2.nLps, c2.nTerm, c2.paidIn, c2.dist, c2.dpi],
+        [null, '#,##0', '#,##0', FMT$, FMT$, FMTX]));
+    }
+    r += 1;
+    ws.mergeCells(r, 1, r, 9);
+    ws.getCell(r, 1).value = T('SpaceX neta las reinversiones 22F→26A QP en los totales. DPI = distribuido ÷ aportado.',
+      'SpaceX totals are net of 22F→26A QP reinvestments. DPI = distributed ÷ paid-in.');
+    ws.getCell(r, 1).font = { size: 8, italic: true, color: { argb: GRAY } };
+  } else {
+    setTitle(7);
+    const c2 = d.c;
+    const kpis = [[T('APORTADO HISTÓRICO', 'PAID-IN TO DATE'), c2.paidIn, FMT$]];
+    if (c2.nAct) kpis.push([T('VALOR HOY (NAV)', 'CURRENT VALUE (NAV)'), c2.nav, FMT$],
+      [T('MOIC NO REALIZADO', 'UNREALIZED MOIC'), c2.moicU, FMTX]);
+    kpis.push([T('DISTRIBUIDO', 'DISTRIBUTED'), c2.dist, FMT$]);
+    kpiRow(kpis.slice(0, 4));
+    ws.columns = [{ width: 34 }, { width: 22 }, { width: 12 }, { width: 16 }, { width: 16 }, { width: 16 }, { width: 11 }];
+    secTitle(T('Por serie (activas)', 'By series (active)'), 7);
+    tableHead([T('Serie', 'Series'), 'LPs', T('Posiciones', 'Positions'), T('Comprometido', 'Committed'),
+      T('Valor hoy', 'Current value'), 'MOIC']);
+    d.ser.forEach(g => tableRow([g.name, g.lps, g.nA + (g.nT ? ` (+${g.nT} term.)` : ''), g.com || null, g.nav || null,
+      g.com ? g.nav / g.com : null], [null, '#,##0', null, FMT$, FMT$, FMTX]));
+    r += 1;
+    secTitle(T('Inversionistas', 'Investors') + ` (${d.rows.length})`, 7);
+    tableHead([T('Inversionista', 'Investor'), T('Serie', 'Series'), T('Estado', 'Status'),
+      T('Comprometido', 'Committed'), T('Valor hoy', 'Current value'), T('Distribuido', 'Distributed'), 'MOIC / DPI']);
+    d.rows.forEach(x => tableRow([x.inv, x.ser, x.term ? T('Terminada', 'Terminated') : T('Activa', 'Active'),
+      x.com, x.val, x.d > 0.5 ? x.d : null, x.mult],
+      [null, null, null, FMT$, FMT$, FMT$, FMTX], x.term));
+    r += 1;
+    if (c2.netted) {
+      ws.mergeCells(r, 1, r, 7);
+      ws.getCell(r, 1).value = T('Totales netos de reinversiones 22F→26A QP; las filas muestran el capital completo de cada posición.',
+        'Totals are net of 22F→26A QP reinvestments; individual rows show full capital per position.');
+      ws.getCell(r, 1).font = { size: 8, italic: true, color: { argb: GRAY } };
+    }
+  }
+  const buf = await wb.xlsx.writeBuffer();
+  downloadBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+    _doExpFilename(cid == null ? null : d.c) + '.xlsx');
+  toast('Excel descargado');
+}
+
+async function doExportHtml(cid) {
+  const lang = await pickExportLang(); if (!lang) return;
+  const EN = lang === 'en';
+  const T = (es, en) => (EN ? en : es);
+  const d = _doExpData(cid);
+  const usd = v => '$' + Math.round(v).toLocaleString('en-US');
+  const mx = (v, dash) => (v == null ? (dash || '—') : v.toFixed(2) + 'x');
+  const mcls = v => (v == null ? '' : (v >= 1.05 ? 'pos' : (v <= 0.95 ? 'neg' : '')));
+  const kpi = (l, v, acc) => `<div class="card"><div class="label">${l}</div><div class="value${acc ? ' acc' : ''}">${v}</div></div>`;
+  let body;
+  const title = cid == null ? 'Direct Opportunities' : escapeHtml(d.c.name);
+  if (cid == null) {
+    const actRows = d.act.map(c => `<tr><td>${escapeHtml(c.name)}</td><td class="n">${c.nLps}</td><td class="n">${c.nAct}</td><td class="n">${c.nTerm || '—'}</td><td class="n">${usd(c.committedAct)}</td><td class="n">${usd(c.nav)}</td><td class="n ${mcls(c.moicU)}">${mx(c.moicU)}</td><td class="n">${c.dist > 1 ? usd(c.dist) : '—'}</td><td class="n ${mcls(c.dpi)}">${c.dpi > 0.005 ? mx(c.dpi) : '—'}</td></tr>`).join('');
+    const termRows = d.term.map(c => `<tr class="dim"><td>${escapeHtml(c.name)}</td><td class="n">${c.nLps}</td><td class="n">${c.nTerm}</td><td class="n">${usd(c.paidIn)}</td><td class="n">${usd(c.dist)}</td><td class="n ${mcls(c.dpi)}">${mx(c.dpi)}</td></tr>`).join('');
+    body = `
+  <h2>${T('Resumen', 'Summary')}</h2>
+  <div class="grid">
+    ${kpi(T('Comprometido activo', 'Active commitment'), usd(d.tot.com))}
+    ${kpi(T('Valor hoy (NAV)', 'Current value (NAV)'), usd(d.tot.nav), true)}
+    ${kpi(T('MOIC no realizado', 'Unrealized MOIC'), mx(d.tot.com ? d.tot.nav / d.tot.com : null), true)}
+    ${kpi(T('Distribuido histórico', 'Distributions to date'), usd(d.tot.dist))}
+  </div>
+  <h2>${T('En cartera', 'Active portfolio')} · ${d.act.length}</h2>
+  <div class="twrap"><table><thead><tr><th>${T('Empresa', 'Company')}</th><th class="n">LPs</th><th class="n">${T('Activas', 'Active')}</th><th class="n">Term.</th><th class="n">${T('Comprometido', 'Committed')}</th><th class="n">${T('Valor hoy (NAV)', 'Current value (NAV)')}</th><th class="n">MOIC</th><th class="n">${T('Distribuido', 'Distributed')}</th><th class="n">DPI</th></tr></thead><tbody>${actRows}</tbody></table></div>
+  ${d.term.length ? `<h2>${T('Terminadas (100% distribuidas)', 'Terminated (fully distributed)')} · ${d.term.length}</h2>
+  <div class="twrap"><table><thead><tr><th>${T('Empresa', 'Company')}</th><th class="n">LPs</th><th class="n">${T('Posiciones', 'Positions')}</th><th class="n">${T('Aportado', 'Paid-in')}</th><th class="n">${T('Distribuido', 'Distributed')}</th><th class="n">DPI</th></tr></thead><tbody>${termRows}</tbody></table></div>` : ''}
+  <div class="band">${T('SpaceX neta las reinversiones 22F→26A QP en los totales. DPI = distribuido ÷ aportado. Fondos diversificados (Fund IV/V…) viven en sus propios trackers.',
+    'SpaceX totals are net of 22F→26A QP reinvestments. DPI = distributed ÷ paid-in. Diversified funds (Fund IV/V…) live in their own trackers.')}</div>`;
+  } else {
+    const c = d.c;
+    const serRows = d.ser.map(g => `<tr><td>${escapeHtml(g.name)}</td><td class="n">${g.lps}</td><td class="n">${g.nA}${g.nT ? ` <span class="sdim">+${g.nT} term.</span>` : ''}</td><td class="n">${g.com ? usd(g.com) : '—'}</td><td class="n">${g.nav ? usd(g.nav) : '—'}</td><td class="n ${g.com ? mcls(g.nav / g.com) : ''}">${g.com ? mx(g.nav / g.com) : '—'}</td></tr>`).join('');
+    const invRows = d.rows.map(x => `<tr class="${x.term ? 'dim' : ''}"><td>${escapeHtml(x.inv)}</td><td class="sdim">${escapeHtml(x.ser)}</td><td>${x.term ? T('Terminada', 'Terminated') : T('Activa', 'Active')}</td><td class="n">${usd(x.com)}</td><td class="n">${x.val != null ? usd(x.val) : '—'}</td><td class="n">${x.d > 0.5 ? usd(x.d) : '—'}</td><td class="n ${mcls(x.mult)}">${mx(x.mult)}</td></tr>`).join('');
+    body = `
+  <h2>${T('Resumen', 'Summary')}</h2>
+  <div class="grid">
+    ${kpi(T('Aportado histórico', 'Paid-in to date'), usd(c.paidIn))}
+    ${c.nAct ? kpi(T('Valor hoy (NAV)', 'Current value (NAV)'), usd(c.nav), true) : kpi(T('Distribuido', 'Distributed'), usd(c.dist), true)}
+    ${c.nAct ? kpi(T('MOIC no realizado', 'Unrealized MOIC'), mx(c.moicU), true) : kpi('DPI', mx(c.dpi), true)}
+    ${c.nAct ? kpi(T('Distribuido', 'Distributed'), usd(c.dist)) : kpi(T('MOIC total', 'Total MOIC') + (c.netted ? T(' (neto)', ' (net)') : ''), mx(c.moicT))}
+  </div>
+  <h2>${T('Por serie (activas)', 'By series (active)')}</h2>
+  <div class="twrap"><table><thead><tr><th>${T('Serie', 'Series')}</th><th class="n">LPs</th><th class="n">${T('Posiciones', 'Positions')}</th><th class="n">${T('Comprometido', 'Committed')}</th><th class="n">${T('Valor hoy', 'Current value')}</th><th class="n">MOIC</th></tr></thead><tbody>${serRows}</tbody></table></div>
+  <h2>${T('Inversionistas', 'Investors')} · ${d.rows.length} ${T('posiciones', 'positions')}</h2>
+  <div class="twrap"><table><thead><tr><th>${T('Inversionista', 'Investor')}</th><th>${T('Serie', 'Series')}</th><th>${T('Estado', 'Status')}</th><th class="n">${T('Comprometido', 'Committed')}</th><th class="n">${T('Valor hoy', 'Current value')}</th><th class="n">${T('Distribuido', 'Distributed')}</th><th class="n">MOIC / DPI</th></tr></thead><tbody>${invRows}</tbody></table></div>
+  <div class="band">${c.netted ? T('Totales netos de reinversiones 22F→26A QP; las filas muestran el capital completo de cada posición. ', 'Totals net of 22F→26A QP reinvestments; rows show full capital per position. ') : ''}${T('MOIC no realizado = NAV ÷ comprometido activo. MOIC total = (NAV + distribuido) ÷ aportado histórico.', 'Unrealized MOIC = NAV ÷ active commitment. Total MOIC = (NAV + distributed) ÷ paid-in to date.')}</div>`;
+  }
+  const doc = `<!doctype html><html lang="${EN ? 'en' : 'es'}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${title}</title><style>
+  :root{--acc:#E8650D;--ink:#1a1f2e;--muted:#6b7280;--line:#e5e7eb;--card:#fafafa}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);line-height:1.5;padding:40px 24px 60px}
+  .wrap{max-width:1040px;margin:0 auto}
+  header{border-bottom:3px solid var(--acc);padding-bottom:16px;margin-bottom:28px}
+  h1{font-size:25px;font-weight:700;letter-spacing:-.02em}h1 span{color:var(--acc)}
+  .sub{color:var(--muted);font-size:12.5px;margin-top:5px}
+  h2{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--acc);font-weight:700;margin:30px 0 12px}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  @media(max-width:720px){.grid{grid-template-columns:repeat(2,1fr)}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 14px 15px}
+  .card .label{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+  .card .value{font-size:21px;font-weight:700;margin-top:6px;letter-spacing:-.02em}.card .value.acc{color:var(--acc)}
+  .twrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:640px}
+  th{background:#1a1f2e;color:#fff;text-align:left;padding:8px 10px;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em}
+  td{padding:7px 10px;border-top:1px solid var(--line)}
+  tbody tr:nth-child(even){background:#fafbfc}
+  .n{text-align:right;font-variant-numeric:tabular-nums}th.n{text-align:right}
+  .pos{color:#1f8a5b;font-weight:600}.neg{color:#c0504a;font-weight:600}
+  .dim td{color:#8a93a6}.sdim{color:#8a93a6}
+  .band{background:#fff7f1;border:1px solid #f5d3ba;border-radius:10px;padding:12px 16px;font-size:12px;color:#7a3d13;margin-top:22px}
+  </style></head><body><div class="wrap">
+  <header><h1>${cid == null ? 'Direct <span>Opportunities</span>' : title}</h1>
+  <div class="sub">${cid != null ? T('Oportunidad en directo', 'Direct opportunity') + ' · ' : ''}${T('Valores vivos de la DB al ', 'Live DB values as of ')}${new Date().toLocaleString(EN ? 'en-US' : 'es-MX')}</div></header>
+  ${body}
+  </div></body></html>`;
+  downloadBlob(new Blob([doc], { type: 'text/html;charset=utf-8' }), _doExpFilename(cid == null ? null : d.c) + '.html');
+  toast('HTML descargado');
 }
 
 function renderFundTrackerDetail(fundId) {
