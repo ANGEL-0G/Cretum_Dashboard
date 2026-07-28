@@ -9123,7 +9123,7 @@ function _doLogo(c, termCls) {
 async function loadDirectOppsData(force) {
   if (_doData && !force) return _doData;
   const [inv, dists, comps] = await Promise.all([
-    sbFetchAll('investments', 'id,investor_id,company_id,commitment,commitment_actual,distributed_at,current_ev_pps,investors(name),series(name)'),
+    sbFetchAll('investments', 'id,investor_id,company_id,commitment,commitment_actual,distributed_at,current_ev_pps,carry_pct,investors(name),series(name)'),
     sbFetchAll('investment_distributions', 'investment_id,cash_proceeds,value_in_kind'),
     sbFetchAll('companies', 'id,name,is_public'),
   ]);
@@ -9290,6 +9290,7 @@ function openDirectOpp(cid) {
       <td>${escapeHtml((r.investors || {}).name || '—')}</td>
       <td class="do-dim">${escapeHtml(cleanSer((r.series || {}).name))}</td>
       <td>${term ? '<span class="do-chip do-chip-t">Terminada</span>' : '<span class="do-chip do-chip-a">Activa</span>'}</td>
+      <td class="ft-num ${r.carry_pct == null ? 'do-dim' : ''}">${_doCarry(r.carry_pct)}</td>
       <td class="ft-num">${fmtUsdShort(n(r.commitment))}</td>
       <td class="ft-num">${val != null ? fmtUsdShort(val) : '—'}</td>
       <td class="ft-num">${d > 0.5 ? fmtUsdShort(d) : '—'}</td>
@@ -9330,7 +9331,7 @@ function openDirectOpp(cid) {
     <div class="ft-section">
       <div class="ft-section-title">Inversionistas (${c.rows.length} posiciones)</div>
       <div class="ft-table-wrap"><table class="ft-table">
-        <thead><tr><th>Inversionista</th><th>Serie</th><th>Estado</th><th class="ft-num">Comprometido</th><th class="ft-num">Valor hoy</th><th class="ft-num">Distribuido</th><th class="ft-num">MOIC / DPI</th></tr></thead>
+        <thead><tr><th>Inversionista</th><th>Serie</th><th>Estado</th><th class="ft-num">Carry</th><th class="ft-num">Comprometido</th><th class="ft-num">Valor hoy</th><th class="ft-num">Distribuido</th><th class="ft-num">MOIC / DPI</th></tr></thead>
         <tbody>${invRows}</tbody></table></div>
     </div>
     ${c.netted ? '<div class="do-foot">Totales netos de reinversiones 22F→26A QP (el capital reciclado se cuenta una vez); las filas muestran el capital completo de cada posición. Posiciones terminadas: su historia está en las cartas de distribución.</div>' : ''}
@@ -9340,6 +9341,12 @@ function openDirectOpp(cid) {
 
 
 // ── Direct Opportunities: descargas (Excel + HTML) ──────────────────────────
+function _doCarry(v) {
+  if (v == null || v === '') return '—';
+  const p = Number(v) * 100;
+  return (p % 1 ? p.toFixed(1) : p.toFixed(0)) + '%';
+}
+
 function _doExpFilename(c) {
   const d = new Date().toISOString().slice(0, 10);
   return c ? `Direct_Opportunity_${c.name.replace(/[^\w]+/g, '_')}_${d}` : `Direct_Opportunities_${d}`;
@@ -9379,7 +9386,7 @@ function _doExpData(cid) {
       const val = term ? null : (n(r.commitment_actual) || n(r.commitment));
       const d = n(r.__d);
       return { inv: (r.investors || {}).name || '—', ser: cleanSer((r.series || {}).name), term,
-        com: n(r.commitment), val, d,
+        carry: r.carry_pct, com: n(r.commitment), val, d,
         mult: n(r.commitment) ? (term ? d / n(r.commitment) : (val + d) / n(r.commitment)) : null };
     });
   return { c, ser, rows };
@@ -9486,7 +9493,7 @@ async function doExportExcel(cid) {
       [T('MOIC NO REALIZADO', 'UNREALIZED MOIC'), c2.moicU, FMTX]);
     kpis.push([T('DISTRIBUIDO', 'DISTRIBUTED'), c2.dist, FMT$]);
     kpiRow(kpis.slice(0, 4));
-    ws.columns = [{ width: 34 }, { width: 22 }, { width: 12 }, { width: 16 }, { width: 16 }, { width: 16 }, { width: 11 }];
+    ws.columns = [{ width: 34 }, { width: 22 }, { width: 12 }, { width: 9 }, { width: 16 }, { width: 16 }, { width: 16 }, { width: 11 }];
     secTitle(T('Por serie (activas)', 'By series (active)'), 7);
     tableHead([T('Serie', 'Series'), 'LPs', T('Posiciones', 'Positions'), T('Comprometido', 'Committed'),
       T('Valor hoy', 'Current value'), 'MOIC']);
@@ -9494,11 +9501,11 @@ async function doExportExcel(cid) {
       g.com ? g.nav / g.com : null], [null, '#,##0', null, FMT$, FMT$, FMTX]));
     r += 1;
     secTitle(T('Inversionistas', 'Investors') + ` (${d.rows.length})`, 7);
-    tableHead([T('Inversionista', 'Investor'), T('Serie', 'Series'), T('Estado', 'Status'),
+    tableHead([T('Inversionista', 'Investor'), T('Serie', 'Series'), T('Estado', 'Status'), 'Carry',
       T('Comprometido', 'Committed'), T('Valor hoy', 'Current value'), T('Distribuido', 'Distributed'), 'MOIC / DPI']);
     d.rows.forEach(x => tableRow([x.inv, x.ser, x.term ? T('Terminada', 'Terminated') : T('Activa', 'Active'),
-      x.com, x.val, x.d > 0.5 ? x.d : null, x.mult],
-      [null, null, null, FMT$, FMT$, FMT$, FMTX], x.term));
+      x.carry != null ? Number(x.carry) : null, x.com, x.val, x.d > 0.5 ? x.d : null, x.mult],
+      [null, null, null, '0.0%', FMT$, FMT$, FMT$, FMTX], x.term));
     r += 1;
     if (c2.netted) {
       ws.mergeCells(r, 1, r, 7);
@@ -9544,7 +9551,7 @@ async function doExportHtml(cid) {
   } else {
     const c = d.c;
     const serRows = d.ser.map(g => `<tr><td>${escapeHtml(g.name)}</td><td class="n">${g.lps}</td><td class="n">${g.nA}${g.nT ? ` <span class="sdim">+${g.nT} term.</span>` : ''}</td><td class="n">${g.com ? usd(g.com) : '—'}</td><td class="n">${g.nav ? usd(g.nav) : '—'}</td><td class="n ${g.com ? mcls(g.nav / g.com) : ''}">${g.com ? mx(g.nav / g.com) : '—'}</td></tr>`).join('');
-    const invRows = d.rows.map(x => `<tr class="${x.term ? 'dim' : ''}"><td>${escapeHtml(x.inv)}</td><td class="sdim">${escapeHtml(x.ser)}</td><td>${x.term ? T('Terminada', 'Terminated') : T('Activa', 'Active')}</td><td class="n">${usd(x.com)}</td><td class="n">${x.val != null ? usd(x.val) : '—'}</td><td class="n">${x.d > 0.5 ? usd(x.d) : '—'}</td><td class="n ${mcls(x.mult)}">${mx(x.mult)}</td></tr>`).join('');
+    const invRows = d.rows.map(x => `<tr class="${x.term ? 'dim' : ''}"><td>${escapeHtml(x.inv)}</td><td class="sdim">${escapeHtml(x.ser)}</td><td>${x.term ? T('Terminada', 'Terminated') : T('Activa', 'Active')}</td><td class="n">${_doCarry(x.carry)}</td><td class="n">${usd(x.com)}</td><td class="n">${x.val != null ? usd(x.val) : '—'}</td><td class="n">${x.d > 0.5 ? usd(x.d) : '—'}</td><td class="n ${mcls(x.mult)}">${mx(x.mult)}</td></tr>`).join('');
     body = `
   <h2>${T('Resumen', 'Summary')}</h2>
   <div class="grid">
@@ -9556,7 +9563,7 @@ async function doExportHtml(cid) {
   <h2>${T('Por serie (activas)', 'By series (active)')}</h2>
   <div class="twrap"><table><thead><tr><th>${T('Serie', 'Series')}</th><th class="n">LPs</th><th class="n">${T('Posiciones', 'Positions')}</th><th class="n">${T('Comprometido', 'Committed')}</th><th class="n">${T('Valor hoy', 'Current value')}</th><th class="n">MOIC</th></tr></thead><tbody>${serRows}</tbody></table></div>
   <h2>${T('Inversionistas', 'Investors')} · ${d.rows.length} ${T('posiciones', 'positions')}</h2>
-  <div class="twrap"><table><thead><tr><th>${T('Inversionista', 'Investor')}</th><th>${T('Serie', 'Series')}</th><th>${T('Estado', 'Status')}</th><th class="n">${T('Comprometido', 'Committed')}</th><th class="n">${T('Valor hoy', 'Current value')}</th><th class="n">${T('Distribuido', 'Distributed')}</th><th class="n">MOIC / DPI</th></tr></thead><tbody>${invRows}</tbody></table></div>
+  <div class="twrap"><table><thead><tr><th>${T('Inversionista', 'Investor')}</th><th>${T('Serie', 'Series')}</th><th>${T('Estado', 'Status')}</th><th class="n">Carry</th><th class="n">${T('Comprometido', 'Committed')}</th><th class="n">${T('Valor hoy', 'Current value')}</th><th class="n">${T('Distribuido', 'Distributed')}</th><th class="n">MOIC / DPI</th></tr></thead><tbody>${invRows}</tbody></table></div>
   <div class="band">${c.netted ? T('Totales netos de reinversiones 22F→26A QP; las filas muestran el capital completo de cada posición. ', 'Totals net of 22F→26A QP reinvestments; rows show full capital per position. ') : ''}${T('MOIC no realizado = NAV ÷ comprometido activo. MOIC total = (NAV + distribuido) ÷ aportado histórico.', 'Unrealized MOIC = NAV ÷ active commitment. Total MOIC = (NAV + distributed) ÷ paid-in to date.')}</div>`;
   }
   const doc = `<!doctype html><html lang="${EN ? 'en' : 'es'}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${title}</title><style>
