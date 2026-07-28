@@ -12883,7 +12883,7 @@ async function openLettersModal() {
       });
       const comms = byCat['comms'] || [];
       const commsHtml = comms.length
-        ? `<details class="ltr-more ltr-comms"><summary><i class="fa-solid fa-bullhorn"></i> Updates y comunicados (${_letterDedupe(comms).length})</summary>${_letterDedupe(comms).sort((a, b) => (b.reference_date || '').localeCompare(a.reference_date || '')).map(_letterRow).join('')}</details>`
+        ? `<details class="ltr-more ltr-comms" open><summary><i class="fa-solid fa-bullhorn"></i> Updates y comunicados (${_letterDedupe(comms).length})</summary>${_letterDedupe(comms).sort((a, b) => (b.reference_date || '').localeCompare(a.reference_date || '')).map(_letterRow).join('')}</details>`
         : '';
       const otros = byCat['otros'] || [];
       return `<div class="ltr-group"><div class="ltr-group-h">${escapeHtml(g)} <span class="ltr-count">${rows.length} docs</span></div>
