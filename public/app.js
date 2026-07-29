@@ -5175,7 +5175,7 @@ async function loadDb() {
   try {
     // Inversionistas + agregados (todas paginadas: ver sbFetchAll)
     const [investors, investments, companies, series] = await Promise.all([
-      sbFetchAll('investors', 'id, name, titular'),
+      sbFetchAll('investors', 'id, name, titular, profile_note'),
       sbFetchAll('investments', 'investor_id, company_id, series_id, commitment, commitment_actual'),
       sbFetchAll('companies', 'id, name, is_public'),
       sbFetchAll('series', 'id, name'),
@@ -7965,6 +7965,7 @@ function renderInvestorDetail(inv, contacts, positions) {
     ${_lp.lockup.detail ? `<details class="lp-distdetail"><summary><i class="fa-solid fa-circle-info"></i> Información detallada de distribución</summary><div class="lp-dd-body">${_lp.lockup.detail}</div></details>` : ''}
   </div>` : '';
   const html = `
+    ${inv.profile_note ? `<div class="db-profile-note"><i class="fa-solid fa-circle-info"></i> ${escapeHtml(inv.profile_note)}</div>` : ''}
     <div class="db-detail-head">
       <div class="db-detail-topbar">
         <div>
@@ -13189,6 +13190,8 @@ async function openLettersModal() {
   .ltr-more .ltr-row{padding-left:12px}
   .ltr-comms{margin-left:0}
   .ltr-comms summary{font-size:12px;font-weight:600;color:#33455e}
+  .db-profile-note{margin:0 0 10px;padding:8px 12px;border-left:3px solid #c9d4e3;background:#f6f8fb;border-radius:6px;font-size:11.5px;color:#5b6c84;line-height:1.45}
+  .db-profile-note i{margin-right:6px;color:#8a97aa}
   `;
   const st = document.createElement('style');
   st.textContent = css;
