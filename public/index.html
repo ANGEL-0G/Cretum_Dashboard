@@ -3842,6 +3842,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
     .lst-col-sub{font-size:12px;color:var(--ink-soft,#98a2b3);margin-top:4px}
     .lst-add{display:flex;gap:8px;padding:0 18px 14px}
     .lst-add-2{flex-wrap:wrap}
+    .lst-ro .lst-add{display:none}          /* editores: modo solo-lectura, sin añadir */
     .lst-add-inp{flex:1;min-width:130px;box-sizing:border-box;padding:9px 12px;border:1px solid var(--line,#dde3ec);border-radius:8px;font-size:13.5px;font-family:inherit;background:var(--white,#fff);color:inherit}
     .lst-add-inp:focus{border-color:var(--navy);outline:none;box-shadow:0 0 0 3px var(--navy-pale,#eaf0fb)}
     .lst-add-btn{flex:none;display:inline-flex;align-items:center;gap:6px;padding:9px 15px;border:none;border-radius:8px;background:var(--navy);color:#fff;font-size:13.5px;font-weight:600;font-family:inherit;cursor:pointer;transition:filter .15s,transform .08s}
@@ -4000,7 +4001,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
         <button class="camp-tab seg-btn on" data-ctab="ranking" onclick="campSetTab('ranking')"><i class="fa-solid fa-ranking-star"></i> Ranking</button>
         <button class="camp-tab seg-btn" data-ctab="actual" onclick="campSetTab('actual')"><i class="fa-solid fa-envelope-open-text"></i> Campaña Actual</button>
         <button class="camp-tab seg-btn camp-tab-admin" data-ctab="gestion" onclick="campSetTab('gestion')" style="display:none"><i class="fa-solid fa-sliders"></i> Gestión</button>
-        <button class="camp-tab seg-btn camp-tab-admin" data-ctab="listas" onclick="campSetTab('listas')" style="display:none"><i class="fa-solid fa-code-compare"></i> Listas</button>
+        <button class="camp-tab seg-btn camp-tab-editor" data-ctab="listas" onclick="campSetTab('listas')" style="display:none"><i class="fa-solid fa-code-compare"></i> Listas</button>
         <button class="camp-tab seg-btn camp-tab-user" data-ctab="tabla" onclick="campSetTab('tabla')" style="display:none"><i class="fa-solid fa-address-book"></i> Tabla de Contactos</button>
       </div>
     </div>
@@ -5467,6 +5468,6 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 </div>
 
 <script src="/i18n.js?v=20260724-notes2"></script>
-<script src="/app.js?v=20260730-slider"></script>
+<script src="/app.js?v=20260730-listaseditores"></script>
 </body>
 </html>

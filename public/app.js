@@ -10697,13 +10697,16 @@ function campToggleMatrix() {
 
 async function loadCampaigns() {
   const isAdmin = currentProfile?.role === 'admin';
-  // Las pestañas Gestión y Listas son solo para admin; la Tabla de Contactos para el resto.
+  const isEditorOrAdmin = isAdmin || currentProfile?.role === 'editor';
+  // Gestión: solo admin. Listas: editores y admin (lectura). Tabla de Contactos: el resto.
   document.querySelectorAll('#pageCampaigns .camp-tab-admin').forEach(t => { t.style.display = isAdmin ? '' : 'none'; });
+  document.querySelectorAll('#pageCampaigns .camp-tab-editor').forEach(t => { t.style.display = isEditorOrAdmin ? '' : 'none'; });
   const uTab = document.querySelector('#pageCampaigns .camp-tab-user');
   if (uTab) uTab.style.display = isAdmin ? 'none' : '';
   // Pestaña por defecto la primera vez
   if (!campTab) campSetTab('ranking');
-  else if ((campTab === 'gestion' || campTab === 'listas') && !isAdmin) campSetTab('ranking');
+  else if (campTab === 'gestion' && !isAdmin) campSetTab('ranking');
+  else if (campTab === 'listas' && !isEditorOrAdmin) campSetTab('ranking');
   else if (campTab === 'tabla' && isAdmin) campSetTab('ranking');
   // Reposiciona el indicador ahora que ya se sabe qué pestañas son visibles.
   segMove('campTabsTrack', false);
@@ -11387,8 +11390,12 @@ let lstEditing = null;         // { list, email } del contacto en edición
 
 const lstNorm  = (s) => String(s || '').trim().toLowerCase();
 const lstFirst = (s) => String(s || '').trim().split(/\s+/)[0] || '';   // "Ana María Ruiz" → "Ana"
+// Escribir (añadir/editar/borrar) es solo-admin; los editores solo VEN.
+const lstCanWrite = () => currentProfile?.role === 'admin';
 
 async function loadListas() {
+  // Editores en modo solo-lectura: oculta los "añadir" y (en render) las acciones de fila.
+  document.getElementById('campPaneListas')?.classList.toggle('lst-ro', !lstCanWrite());
   if (listasLoaded) { renderListas(); return; }
   const apList = document.getElementById('lstApList');
   const gvvList = document.getElementById('lstGvvList');
@@ -11475,10 +11482,11 @@ function renderListaCol(elId, rows, col, otherSet, emptyMsg) {
     const bajaTag = cancel ? `<span class="lst-baja" title="Dada de baja">baja</span>` : '';
     // Editar en ambas listas. Quitar solo en Apertura: borrar un LP arrastra su
     // histórico de campañas, así que eso se hace en Gestión (no por accidente aquí).
-    const acts = `<div class="lst-row-acts">
+    // Solo-admin: los editores ven la lista pero no las acciones de fila.
+    const acts = lstCanWrite() ? `<div class="lst-row-acts">
       <button class="lst-row-act" title="Editar" onclick="lstEditOpen('${col}','${jsArg(email)}')"><i class="fa-solid fa-pen"></i></button>
       ${col === 'apertura' ? `<button class="lst-row-act del" title="Quitar de Apertura" onclick="listasRemoveApertura('${jsArg(email)}')"><i class="fa-solid fa-xmark"></i></button>` : ''}
-    </div>`;
+    </div>` : '';
     return `<div class="lst-row${both ? ' both' : ''}${cancel ? ' lst-row-cancel' : ''}">
       <div class="lst-row-main">
         ${showName ? `<div class="lst-row-name">${escapeHtml(name)}${bajaTag}</div>` : ''}
