@@ -10656,9 +10656,12 @@ function campSetTab(tab) {
   document.getElementById('campPaneRanking').style.display = tab === 'ranking' ? '' : 'none';
   document.getElementById('campPaneActual').style.display  = tab === 'actual'  ? '' : 'none';
   document.getElementById('campPaneGestion').style.display = tab === 'gestion' ? '' : 'none';
+  const listasPane = document.getElementById('campPaneListas');
+  if (listasPane) listasPane.style.display = tab === 'listas' ? '' : 'none';
   const tablaPane = document.getElementById('campPaneTabla');
   if (tablaPane) tablaPane.style.display = tab === 'tabla' ? '' : 'none';
   if (tab === 'tabla') loadContactsTabla();
+  if (tab === 'listas') loadListas();
 }
 
 // En móvil la matriz está oculta hasta pulsar el botón (es muy ancha).
@@ -10675,14 +10678,13 @@ function campToggleMatrix() {
 
 async function loadCampaigns() {
   const isAdmin = currentProfile?.role === 'admin';
-  // La pestaña Gestión solo es para admin; la Tabla de Contactos para el resto.
-  const gTab = document.querySelector('#pageCampaigns .camp-tab-admin');
-  if (gTab) gTab.style.display = isAdmin ? '' : 'none';
+  // Las pestañas Gestión y Listas son solo para admin; la Tabla de Contactos para el resto.
+  document.querySelectorAll('#pageCampaigns .camp-tab-admin').forEach(t => { t.style.display = isAdmin ? '' : 'none'; });
   const uTab = document.querySelector('#pageCampaigns .camp-tab-user');
   if (uTab) uTab.style.display = isAdmin ? 'none' : '';
   // Pestaña por defecto la primera vez
   if (!campTab) campSetTab('ranking');
-  else if (campTab === 'gestion' && !isAdmin) campSetTab('ranking');
+  else if ((campTab === 'gestion' || campTab === 'listas') && !isAdmin) campSetTab('ranking');
   else if (campTab === 'tabla' && isAdmin) campSetTab('ranking');
 
   // Ranking y Campaña Actual: para TODOS (ranking primero para saber el último mes)
@@ -11349,6 +11351,147 @@ async function campAddContactSave() {
   campAddContactClose();
   campaignsLoaded = false;
   await loadCampaigns();
+}
+
+/* ═══════════════════════════════════════════
+   LISTAS — Apertura Cretum vs Cartas GVV (solo admin)
+   Vista de dos columnas para ver de un vistazo quién recibe cada campaña y
+   quién coincide en ambas. Lee apertura_contacts (email+nombre) y lp_contacts
+   (los destinatarios de las cartas). Ambas tablas son RLS solo-admin, así que
+   se leen/escriben directo con el cliente sb del navegador.
+═══════════════════════════════════════════ */
+let listasApertura = null, listasCartas = null, listasOnlyBoth = false, listasLoaded = false;
+
+const lstNorm  = (s) => String(s || '').trim().toLowerCase();
+const lstFirst = (s) => String(s || '').trim().split(/\s+/)[0] || '';   // "Ana María Ruiz" → "Ana"
+
+async function loadListas() {
+  if (listasLoaded) { renderListas(); return; }
+  const apList = document.getElementById('lstApList');
+  const gvvList = document.getElementById('lstGvvList');
+  if (apList) apList.innerHTML = '<div class="db-loading"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
+  if (gvvList) gvvList.innerHTML = '';
+  try {
+    const [{ data: ap, error: e1 }, { data: gvv, error: e2 }] = await Promise.all([
+      sb.from('apertura_contacts').select('email, nombre').order('email'),
+      sb.from('lp_contacts').select('email, nombre, nombre_completo, responsable, cancelado').order('nombre_completo', { nullsFirst: false }),
+    ]);
+    if (e1) throw e1; if (e2) throw e2;
+    listasApertura = ap || [];
+    listasCartas = gvv || [];
+    listasLoaded = true;
+    renderListas();
+  } catch (err) {
+    console.error('[listas]', err);
+    if (apList) apList.innerHTML = `<div class="lst-empty">No se pudieron cargar las listas: ${escapeHtml(err.message || '')}</div>`;
+  }
+}
+
+function lstToggleBoth() {
+  listasOnlyBoth = !listasOnlyBoth;
+  document.getElementById('lstBothChip')?.classList.toggle('on', listasOnlyBoth);
+  renderListas();
+}
+
+function renderListas() {
+  if (!listasLoaded) return;
+  const q = lstNorm(document.getElementById('lstSearch')?.value);
+  const apSet  = new Set(listasApertura.map(c => lstNorm(c.email)));
+  const gvvSet = new Set(listasCartas.map(c => lstNorm(c.email)));
+  const bothCount = [...apSet].filter(e => gvvSet.has(e)).length;
+
+  const sum = document.getElementById('lstSummary');
+  if (sum) sum.innerHTML =
+    `<span class="lst-sum-ap"><b>${listasApertura.length}</b>en Apertura Cretum</span>` +
+    `<span class="lst-sum-gvv"><b>${listasCartas.length}</b>en Cartas GVV</span>` +
+    `<span class="lst-sum-both"><b>${bothCount}</b>en ambas</span>`;
+
+  const match = (c) => !q || lstNorm(c.email).includes(q) || lstNorm(c.nombre).includes(q) || lstNorm(c.nombre_completo).includes(q);
+
+  const apRows = listasApertura.filter(c => match(c) && (!listasOnlyBoth || gvvSet.has(lstNorm(c.email))));
+  renderListaCol('lstApList', apRows, 'apertura', gvvSet);
+  const apCount = document.getElementById('lstApCount'); if (apCount) apCount.textContent = listasApertura.length;
+
+  const gvvRows = listasCartas.filter(c => match(c) && (!listasOnlyBoth || apSet.has(lstNorm(c.email))));
+  renderListaCol('lstGvvList', gvvRows, 'cartas', apSet);
+  const gvvCount = document.getElementById('lstGvvCount'); if (gvvCount) gvvCount.textContent = listasCartas.length;
+}
+
+function renderListaCol(elId, rows, col, otherSet) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  if (!rows.length) {
+    el.innerHTML = `<div class="lst-empty"><i class="fa-solid fa-inbox"></i>${listasOnlyBoth ? 'Nadie coincide en ambas.' : 'Sin contactos todavía.'}</div>`;
+    return;
+  }
+  el.innerHTML = rows.map(c => {
+    const email = c.email || '';
+    const name = (c.nombre_completo || c.nombre || '').trim();
+    const showName = name && name !== email;
+    const both = otherSet.has(lstNorm(email));
+    const cancel = col === 'cartas' && c.cancelado;
+    const bothPill = both ? `<span class="lst-both-pill" title="También está en la otra lista"><i class="fa-solid fa-code-compare"></i> En ambas</span>` : '';
+    const bajaTag = cancel ? `<span class="lst-baja" title="Dada de baja">baja</span>` : '';
+    // Solo Apertura permite quitar desde aquí; borrar un LP arrastra su histórico de campañas, eso se hace en Gestión.
+    const del = col === 'apertura'
+      ? `<button class="lst-row-del" title="Quitar de Apertura" onclick="listasRemoveApertura('${jsArg(email)}')"><i class="fa-solid fa-xmark"></i></button>`
+      : '';
+    return `<div class="lst-row${both ? ' both' : ''}${cancel ? ' lst-row-cancel' : ''}">
+      <div class="lst-row-main">
+        ${showName ? `<div class="lst-row-name">${escapeHtml(name)}${bajaTag}</div>` : ''}
+        <div class="lst-row-mail">${escapeHtml(email)}${!showName ? bajaTag : ''}</div>
+      </div>
+      ${bothPill}${del}
+    </div>`;
+  }).join('');
+}
+
+async function listasAddApertura() {
+  const inp = document.getElementById('lstApEmail');
+  const email = lstNorm(inp?.value);
+  if (!email || !email.includes('@') || !email.includes('.')) { toast('Escribe un correo válido'); return; }
+  if (listasApertura.some(c => lstNorm(c.email) === email)) { toast('Ese correo ya está en Apertura'); return; }
+  const { error } = await sb.from('apertura_contacts').upsert({ email }, { onConflict: 'email' });
+  if (error) { toast('Error al guardar: ' + error.message); return; }
+  inp.value = '';
+  listasApertura.push({ email, nombre: null });
+  listasApertura.sort((a, b) => (a.email || '').localeCompare(b.email || ''));
+  aperturaContacts = null;   // que el modal viejo de Apertura recargue la próxima vez
+  renderListas();
+  toast('Añadido a Apertura Cretum');
+  inp.focus();
+}
+
+async function listasAddCartas() {
+  const nameInp = document.getElementById('lstGvvName');
+  const emailInp = document.getElementById('lstGvvEmail');
+  const full = (nameInp?.value || '').trim();
+  const email = lstNorm(emailInp?.value);
+  if (!full) { toast('Escribe el nombre completo'); return; }
+  if (!email || !email.includes('@') || !email.includes('.')) { toast('Escribe un correo válido'); return; }
+  if (listasCartas.some(c => lstNorm(c.email) === email)) { toast('Ese correo ya está en Cartas GVV'); return; }
+  // Nombre completo → se separa: nombre_completo = todo, nombre = primera palabra (el que ve Yesware).
+  const row = { email, nombre: lstFirst(full), nombre_completo: full, responsable: null, cancelado: false };
+  const { error } = await sb.from('lp_contacts').insert(row);
+  if (error) { toast('Error al guardar: ' + error.message); return; }
+  nameInp.value = ''; emailInp.value = '';
+  listasCartas.push(row);
+  listasCartas.sort((a, b) => (a.nombre_completo || '').localeCompare(b.nombre_completo || ''));
+  campaignsLoaded = false;   // la matriz de Gestión recargará con el contacto nuevo
+  renderListas();
+  toast('Añadido a Cartas GVV');
+  nameInp.focus();
+}
+
+async function listasRemoveApertura(email) {
+  const ok = await showConfirm('Quitar de Apertura', `¿Quitar ${email} de la lista de Apertura Cretum?`);
+  if (!ok) return;
+  const { error } = await sb.from('apertura_contacts').delete().eq('email', email);
+  if (error) { toast('Error al borrar: ' + error.message); return; }
+  listasApertura = listasApertura.filter(c => lstNorm(c.email) !== lstNorm(email));
+  aperturaContacts = null;
+  renderListas();
+  toast('Quitado de Apertura');
 }
 
 /* ═══════════════════════════════════════════
