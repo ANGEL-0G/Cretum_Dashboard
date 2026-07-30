@@ -4111,6 +4111,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
           <input id="lstSearch" class="db-search-inp" placeholder="Buscar por nombre o correo…" oninput="renderListas()" autocomplete="off">
         </div>
         <button class="camp-fchip" id="lstBothChip" onclick="lstToggleBoth()"><i class="fa-solid fa-code-compare"></i> Solo en ambas</button>
+        <button class="cdd-btn lst-export" type="button" onclick="listasExportExcel(this)" title="Descargar las dos listas en Excel, con formato para editar y presentar"><i class="fa-solid fa-file-excel"></i> Exportar Excel</button>
       </div>
       <div class="lst-summary" id="lstSummary"></div>
       <div class="lst-cols" id="lstCols" data-view="both">
@@ -5474,6 +5475,6 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 </div>
 
 <script src="/i18n.js?v=20260724-notes2"></script>
-<script src="/app.js?v=20260730-campwide"></script>
+<script src="/app.js?v=20260730-listasxlsx"></script>
 </body>
 </html>

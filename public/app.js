@@ -11616,6 +11616,89 @@ async function lstEditSave() {
   toast('Contacto actualizado');
 }
 
+/* ── Exportar las dos listas a Excel (ExcelJS, con formato para presentar) ── */
+async function listasExportExcel(btn) {
+  if (!listasLoaded) { toast('Abre Listas primero'); return; }
+  if (!listasApertura.length && !listasCartas.length) { toast('No hay contactos para exportar'); return; }
+  const orig = btn ? btn.innerHTML : null;
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Exportando…'; }
+  try {
+    await loadExcelJS();
+    const NAVY = 'FF1A3A6B', WHITE = 'FFFFFFFF', STRIPE = 'FFEFF3FA', BOTH_BG = 'FFFFF3E0', BOTH_TX = 'FFB26A00', MUTE = 'FF8893A5';
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'Cretum Partners';
+    const hoy = new Date().toISOString().slice(0, 10);
+    const apSet  = new Set(listasApertura.map(c => lstNorm(c.email)));
+    const gvvSet = new Set(listasCartas.map(c => lstNorm(c.email)));
+
+    // Construye una hoja con título + subtítulo + encabezado (fila 3, congelada) + datos.
+    // bothCol = índice (0-based) de la columna "¿en la otra lista?" para resaltar los "Sí".
+    const buildSheet = (name, subtitle, headers, widths, rows, bothCol) => {
+      const ws = wb.addWorksheet(name, { views: [{ showGridLines: false, state: 'frozen', ySplit: 3 }] });
+      ws.columns = widths.map(w => ({ width: w }));
+      ws.mergeCells(1, 1, 1, headers.length);
+      Object.assign(ws.getCell(1, 1), { value: name, font: { bold: true, size: 15, color: { argb: NAVY } } });
+      ws.getRow(1).height = 22;
+      ws.mergeCells(2, 1, 2, headers.length);
+      Object.assign(ws.getCell(2, 1), { value: `${subtitle}  ·  ${rows.length} contacto${rows.length === 1 ? '' : 's'}  ·  ${hoy}`, font: { size: 10, italic: true, color: { argb: MUTE } } });
+      headers.forEach((h, i) => {
+        const c = ws.getCell(3, i + 1);
+        c.value = h;
+        c.font = { bold: true, size: 10, color: { argb: WHITE } };
+        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } };
+        c.alignment = { horizontal: 'left', vertical: 'middle' };
+      });
+      ws.getRow(3).height = 20;
+      ws.autoFilter = { from: { row: 3, column: 1 }, to: { row: 3, column: headers.length } };
+      let r = 4;
+      rows.forEach((row, idx) => {
+        row.forEach((val, i) => {
+          const c = ws.getCell(r, i + 1);
+          c.value = val;
+          c.alignment = { horizontal: 'left', vertical: 'middle' };
+          if (bothCol != null && i === bothCol && val === 'Sí') {
+            c.font = { size: 10, bold: true, color: { argb: BOTH_TX } };
+            c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BOTH_BG } };
+          } else {
+            c.font = { size: 10 };
+            if (idx % 2 === 1) c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: STRIPE } };
+          }
+        });
+        r++;
+      });
+      return ws;
+    };
+
+    // Apertura Cretum: nombre, correo, ¿en Cartas GVV?
+    const apRows = listasApertura.slice()
+      .sort((a, b) => (a.email || '').localeCompare(b.email || '', 'es'))
+      .map(c => [(c.nombre || '').trim(), c.email || '', gvvSet.has(lstNorm(c.email)) ? 'Sí' : '']);
+    buildSheet('Apertura Cretum', 'Correo diario de apertura de mercados',
+      ['Nombre', 'Correo', '¿En Cartas GVV?'], [26, 34, 16], apRows, 2);
+
+    // Cartas GVV: nombre completo, nombre, correo, responsable, estado, ¿en Apertura?
+    const gvvRows = listasCartas.slice()
+      .sort((a, b) => (a.nombre_completo || a.email).localeCompare(b.nombre_completo || b.email, 'es'))
+      .map(c => [(c.nombre_completo || c.nombre || '').trim(), (c.nombre || '').trim(), c.email || '',
+        (c.responsable || '').trim(), c.cancelado ? 'Baja' : 'Activo', apSet.has(lstNorm(c.email)) ? 'Sí' : '']);
+    buildSheet('Cartas GVV', 'Destinatarios de la carta mensual del fondo',
+      ['Nombre completo', 'Nombre', 'Correo', 'Responsable', 'Estado', '¿En Apertura?'], [30, 16, 34, 24, 10, 15], gvvRows, 5);
+
+    const buf = await wb.xlsx.writeBuffer();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+    a.download = `cretum_listas_${hoy}.xlsx`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    toast('Exportado a Excel');
+  } catch (e) {
+    console.error('[listas export]', e);
+    toast('No se pudo exportar: ' + (e.message || ''));
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = orig; }
+  }
+}
+
 /* ═══════════════════════════════════════════
    TABLA DE CONTACTOS (no-admin) — vía /api/contacts (service role server-side)
    Ven todos; añaden con responsable = ellos mismos; editan/borran solo los suyos.
