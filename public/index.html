@@ -3832,6 +3832,12 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
     .lst-cols[data-view="apertura"],.lst-cols[data-view="cartas"]{grid-template-columns:1fr}   /* una sola lista: ancho completo */
     .lst-cols[data-view="apertura"] .lst-col[data-col="cartas"],
     .lst-cols[data-view="cartas"] .lst-col[data-col="apertura"]{display:none}
+    /* Una sola lista: las filas fluyen en varias columnas para llenar el ancho
+       (con las dos listas cada columna es angosta y se quedan de una en una). */
+    .lst-cols[data-view="apertura"] .lst-list,
+    .lst-cols[data-view="cartas"] .lst-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:2px 12px;align-content:start}
+    .lst-cols[data-view="apertura"] .lst-list .lst-empty,
+    .lst-cols[data-view="cartas"] .lst-list .lst-empty{grid-column:1/-1}
     .lst-col{border:1px solid var(--line,#e3e8f0);border-radius:12px;background:var(--white,#fff);display:flex;flex-direction:column;overflow:hidden}
     .lst-col-head{padding:15px 18px 13px}
     .lst-col-title{display:flex;align-items:center;gap:9px;font-size:15.5px;font-weight:600;color:var(--ink,#223)}
@@ -5467,6 +5473,6 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 </div>
 
 <script src="/i18n.js?v=20260724-notes2"></script>
-<script src="/app.js?v=20260730-listasfull"></script>
+<script src="/app.js?v=20260730-listascols"></script>
 </body>
 </html>
