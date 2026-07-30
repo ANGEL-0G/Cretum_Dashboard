@@ -13302,8 +13302,18 @@ const LETTER_CATS = {
   36: { label: 'Updates y comunicados', icon: 'fa-bullhorn', mode: 'comms' },
 };
 
+function _letterDate(iso) {
+  // fecha corta con año explicito cuando el doc no es del año en curso
+  // (en una misma seccion conviven docs de varios años y sin año parece desorden)
+  if (!iso) return '—';
+  const dt = new Date(iso.slice(0, 10) + 'T12:00:00');
+  const opts = { day: 'numeric', month: 'short' };
+  if (dt.getFullYear() !== new Date().getFullYear()) opts.year = 'numeric';
+  return dt.toLocaleDateString('es-MX', opts);
+}
+
 function _letterRow(l) {
-  const d = l.reference_date ? fmtD(l.reference_date) : '—';
+  const d = _letterDate(l.reference_date);
   const title = escapeHtml(l.title || l.storage_path?.split('/').pop() || 'Documento');
   const ver = l._versions > 1 ? ` <span class="ltr-ver">(${l._versions} versiones)</span>` : '';
   const link = l.signed_url
