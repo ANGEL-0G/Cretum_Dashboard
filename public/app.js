@@ -11361,6 +11361,8 @@ async function campAddContactSave() {
    se leen/escriben directo con el cliente sb del navegador.
 ═══════════════════════════════════════════ */
 let listasApertura = null, listasCartas = null, listasOnlyBoth = false, listasLoaded = false;
+let listasView = 'both';       // 'both' | 'apertura' | 'cartas' (control segmentado)
+let lstEditing = null;         // { list, email } del contacto en edición
 
 const lstNorm  = (s) => String(s || '').trim().toLowerCase();
 const lstFirst = (s) => String(s || '').trim().split(/\s+/)[0] || '';   // "Ana María Ruiz" → "Ana"
@@ -11393,6 +11395,14 @@ function lstToggleBoth() {
   renderListas();
 }
 
+// Mostrar solo una lista o las dos (CSS controla la visibilidad de columnas).
+function lstSetView(v) {
+  listasView = v;
+  document.querySelectorAll('#campPaneListas .lst-seg').forEach(b => b.classList.toggle('on', b.dataset.seg === v));
+  const cols = document.getElementById('lstCols');
+  if (cols) cols.dataset.view = v;
+}
+
 function renderListas() {
   if (!listasLoaded) return;
   const q = lstNorm(document.getElementById('lstSearch')?.value);
@@ -11408,20 +11418,23 @@ function renderListas() {
 
   const match = (c) => !q || lstNorm(c.email).includes(q) || lstNorm(c.nombre).includes(q) || lstNorm(c.nombre_completo).includes(q);
 
+  // Mensaje de columna vacía según el filtro activo (búsqueda / solo-ambas / nada).
+  const emptyMsg = q ? 'Nada coincide con tu búsqueda.' : listasOnlyBoth ? 'Nadie coincide en ambas.' : 'Sin contactos todavía.';
+
   const apRows = listasApertura.filter(c => match(c) && (!listasOnlyBoth || gvvSet.has(lstNorm(c.email))));
-  renderListaCol('lstApList', apRows, 'apertura', gvvSet);
+  renderListaCol('lstApList', apRows, 'apertura', gvvSet, emptyMsg);
   const apCount = document.getElementById('lstApCount'); if (apCount) apCount.textContent = listasApertura.length;
 
   const gvvRows = listasCartas.filter(c => match(c) && (!listasOnlyBoth || apSet.has(lstNorm(c.email))));
-  renderListaCol('lstGvvList', gvvRows, 'cartas', apSet);
+  renderListaCol('lstGvvList', gvvRows, 'cartas', apSet, emptyMsg);
   const gvvCount = document.getElementById('lstGvvCount'); if (gvvCount) gvvCount.textContent = listasCartas.length;
 }
 
-function renderListaCol(elId, rows, col, otherSet) {
+function renderListaCol(elId, rows, col, otherSet, emptyMsg) {
   const el = document.getElementById(elId);
   if (!el) return;
   if (!rows.length) {
-    el.innerHTML = `<div class="lst-empty"><i class="fa-solid fa-inbox"></i>${listasOnlyBoth ? 'Nadie coincide en ambas.' : 'Sin contactos todavía.'}</div>`;
+    el.innerHTML = `<div class="lst-empty"><i class="fa-solid fa-inbox"></i>${emptyMsg || 'Sin contactos todavía.'}</div>`;
     return;
   }
   el.innerHTML = rows.map(c => {
@@ -11432,16 +11445,18 @@ function renderListaCol(elId, rows, col, otherSet) {
     const cancel = col === 'cartas' && c.cancelado;
     const bothPill = both ? `<span class="lst-both-pill" title="También está en la otra lista"><i class="fa-solid fa-code-compare"></i> En ambas</span>` : '';
     const bajaTag = cancel ? `<span class="lst-baja" title="Dada de baja">baja</span>` : '';
-    // Solo Apertura permite quitar desde aquí; borrar un LP arrastra su histórico de campañas, eso se hace en Gestión.
-    const del = col === 'apertura'
-      ? `<button class="lst-row-del" title="Quitar de Apertura" onclick="listasRemoveApertura('${jsArg(email)}')"><i class="fa-solid fa-xmark"></i></button>`
-      : '';
+    // Editar en ambas listas. Quitar solo en Apertura: borrar un LP arrastra su
+    // histórico de campañas, así que eso se hace en Gestión (no por accidente aquí).
+    const acts = `<div class="lst-row-acts">
+      <button class="lst-row-act" title="Editar" onclick="lstEditOpen('${col}','${jsArg(email)}')"><i class="fa-solid fa-pen"></i></button>
+      ${col === 'apertura' ? `<button class="lst-row-act del" title="Quitar de Apertura" onclick="listasRemoveApertura('${jsArg(email)}')"><i class="fa-solid fa-xmark"></i></button>` : ''}
+    </div>`;
     return `<div class="lst-row${both ? ' both' : ''}${cancel ? ' lst-row-cancel' : ''}">
       <div class="lst-row-main">
         ${showName ? `<div class="lst-row-name">${escapeHtml(name)}${bajaTag}</div>` : ''}
         <div class="lst-row-mail">${escapeHtml(email)}${!showName ? bajaTag : ''}</div>
       </div>
-      ${bothPill}${del}
+      ${bothPill}${acts}
     </div>`;
   }).join('');
 }
@@ -11492,6 +11507,77 @@ async function listasRemoveApertura(email) {
   aperturaContacts = null;
   renderListas();
   toast('Quitado de Apertura');
+}
+
+/* ── Editar contacto (modal compartido para ambas listas) ── */
+function lstEditOpen(list, email) {
+  const arr = list === 'apertura' ? listasApertura : listasCartas;
+  const c = (arr || []).find(x => lstNorm(x.email) === lstNorm(email));
+  if (!c) return;
+  lstEditing = { list, email: c.email };
+  const title   = document.getElementById('lstETitle');
+  const nameLbl = document.getElementById('lstENameLbl');
+  const nameInp = document.getElementById('lstEName');
+  const emailInp= document.getElementById('lstEEmail');
+  const hint    = document.getElementById('lstEHint');
+  const msg     = document.getElementById('lstEMsg'); msg.textContent = ''; msg.className = 'camp-modal-msg';
+
+  if (list === 'apertura') {
+    title.innerHTML = '<i class="fa-solid fa-user-pen"></i> Editar · Apertura Cretum';
+    nameLbl.innerHTML = 'Nombre <span class="camp-opt">opcional</span>';
+    nameInp.value = c.nombre || ''; nameInp.placeholder = 'Nombre (opcional)';
+    emailInp.value = c.email; emailInp.disabled = false;
+    hint.textContent = 'Puedes corregir el correo; es el identificador de esta lista.';
+  } else {
+    title.innerHTML = '<i class="fa-solid fa-user-pen"></i> Editar · Cartas GVV';
+    nameLbl.innerHTML = 'Nombre completo <span class="camp-req">*</span>';
+    nameInp.value = c.nombre_completo || c.nombre || ''; nameInp.placeholder = 'Nombre y apellidos';
+    emailInp.value = c.email; emailInp.disabled = true;
+    hint.textContent = 'El correo es la llave del histórico de campañas — no se edita aquí. Para cambiarlo, quítalo en Gestión y créalo de nuevo.';
+  }
+  document.getElementById('lstEditModal').classList.add('show');
+  setTimeout(() => nameInp.focus(), 60);
+}
+
+function lstEditClose() { document.getElementById('lstEditModal').classList.remove('show'); lstEditing = null; }
+
+async function lstEditSave() {
+  if (!lstEditing) return;
+  const msg = document.getElementById('lstEMsg');
+  const fail = (t) => { msg.textContent = t; msg.className = 'camp-modal-msg err'; };
+  const name = document.getElementById('lstEName').value.trim();
+
+  if (lstEditing.list === 'apertura') {
+    const newEmail = lstNorm(document.getElementById('lstEEmail').value);
+    if (!newEmail || !newEmail.includes('@') || !newEmail.includes('.')) return fail('El correo no parece válido.');
+    const changed = newEmail !== lstNorm(lstEditing.email);
+    if (changed && listasApertura.some(c => lstNorm(c.email) === newEmail)) return fail('Ya existe ese correo en Apertura.');
+    if (changed) {
+      // email es la llave: se borra el viejo y se crea el nuevo.
+      const { error: eDel } = await sb.from('apertura_contacts').delete().eq('email', lstEditing.email);
+      if (eDel) return fail('Error al guardar: ' + eDel.message);
+      const { error: eIns } = await sb.from('apertura_contacts').upsert({ email: newEmail, nombre: name || null }, { onConflict: 'email' });
+      if (eIns) return fail('Error al guardar: ' + eIns.message);
+    } else {
+      const { error } = await sb.from('apertura_contacts').update({ nombre: name || null }).eq('email', lstEditing.email);
+      if (error) return fail('Error al guardar: ' + error.message);
+    }
+    const rec = listasApertura.find(c => lstNorm(c.email) === lstNorm(lstEditing.email));
+    if (rec) { rec.email = newEmail; rec.nombre = name || null; }
+    listasApertura.sort((a, b) => (a.email || '').localeCompare(b.email || ''));
+    aperturaContacts = null;
+  } else {
+    if (!name) return fail('El nombre completo es obligatorio.');
+    const { error } = await sb.from('lp_contacts').update({ nombre: lstFirst(name), nombre_completo: name }).eq('email', lstEditing.email);
+    if (error) return fail('Error al guardar: ' + error.message);
+    const rec = listasCartas.find(c => lstNorm(c.email) === lstNorm(lstEditing.email));
+    if (rec) { rec.nombre = lstFirst(name); rec.nombre_completo = name; }
+    listasCartas.sort((a, b) => (a.nombre_completo || '').localeCompare(b.nombre_completo || ''));
+    campaignsLoaded = false;   // que Gestión recargue con el cambio
+  }
+  lstEditClose();
+  renderListas();
+  toast('Contacto actualizado');
 }
 
 /* ═══════════════════════════════════════════
