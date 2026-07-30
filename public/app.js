@@ -10649,10 +10649,29 @@ let campLatestPeriodo = null;   // último mes con datos (para "Último visto")
 let campRankRows = [];          // filas del ranking (con historial) para el detalle por LP
 let campCurrentParams = null;   // valores del generador de la última campaña publicada
 
+// Mueve el indicador deslizante de un slider segmentado bajo su botón activo.
+// Usa offsetLeft/Top/Width/Height (a prueba de padding y scroll). Si el track
+// está oculto (offsetWidth 0) no hace nada: se reposiciona al hacerse visible.
+function segMove(track, animate) {
+  if (typeof track === 'string') track = document.getElementById(track);
+  if (!track) return;
+  const ind = track.querySelector('.seg-ind');
+  const on = track.querySelector('.seg-btn.on');
+  if (!ind || !on || !on.offsetWidth) return;
+  const instant = animate === false || !ind.style.width;   // primera vez o resize → sin animar
+  if (instant) ind.style.transition = 'none';
+  ind.style.left = on.offsetLeft + 'px';
+  ind.style.top = on.offsetTop + 'px';
+  ind.style.width = on.offsetWidth + 'px';
+  ind.style.height = on.offsetHeight + 'px';
+  if (instant) { void ind.offsetWidth; ind.style.transition = ''; }   // reflow para fijar sin animación
+}
+
 function campSetTab(tab) {
   campTab = tab;
   document.querySelectorAll('#pageCampaigns .camp-tab').forEach(b =>
     b.classList.toggle('on', b.dataset.ctab === tab));
+  segMove('campTabsTrack');
   document.getElementById('campPaneRanking').style.display = tab === 'ranking' ? '' : 'none';
   document.getElementById('campPaneActual').style.display  = tab === 'actual'  ? '' : 'none';
   document.getElementById('campPaneGestion').style.display = tab === 'gestion' ? '' : 'none';
@@ -10661,7 +10680,7 @@ function campSetTab(tab) {
   const tablaPane = document.getElementById('campPaneTabla');
   if (tablaPane) tablaPane.style.display = tab === 'tabla' ? '' : 'none';
   if (tab === 'tabla') loadContactsTabla();
-  if (tab === 'listas') loadListas();
+  if (tab === 'listas') { loadListas(); segMove('lstViewTrack'); }
 }
 
 // En móvil la matriz está oculta hasta pulsar el botón (es muy ancha).
@@ -10686,6 +10705,8 @@ async function loadCampaigns() {
   if (!campTab) campSetTab('ranking');
   else if ((campTab === 'gestion' || campTab === 'listas') && !isAdmin) campSetTab('ranking');
   else if (campTab === 'tabla' && isAdmin) campSetTab('ranking');
+  // Reposiciona el indicador ahora que ya se sabe qué pestañas son visibles.
+  segMove('campTabsTrack', false);
 
   // Ranking y Campaña Actual: para TODOS (ranking primero para saber el último mes)
   await loadCampRanking();
@@ -11398,10 +11419,17 @@ function lstToggleBoth() {
 // Mostrar solo una lista o las dos (CSS controla la visibilidad de columnas).
 function lstSetView(v) {
   listasView = v;
-  document.querySelectorAll('#campPaneListas .lst-seg').forEach(b => b.classList.toggle('on', b.dataset.seg === v));
+  document.querySelectorAll('#lstViewTrack .seg-btn').forEach(b => b.classList.toggle('on', b.dataset.seg === v));
+  segMove('lstViewTrack');
   const cols = document.getElementById('lstCols');
   if (cols) cols.dataset.view = v;
 }
+
+// Reposiciona los indicadores de los sliders al cambiar el tamaño de ventana.
+window.addEventListener('resize', () => requestAnimationFrame(() => {
+  segMove('campTabsTrack', false);
+  segMove('lstViewTrack', false);
+}));
 
 function renderListas() {
   if (!listasLoaded) return;
