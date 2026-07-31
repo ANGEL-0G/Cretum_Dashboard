@@ -2945,11 +2945,11 @@ const ORG_MODULES = {
     { view: 'notes', icon: 'fa-book', title: 'Notas',
       desc: 'Tu espacio de notas por carpetas y colores, con editor de texto',
       iconClass: 'home-ico-notes' },
-    { view: 'db', icon: 'fa-database', title: 'Base de Datos',
-      desc: 'Consulta inversionistas, empresas y posiciones del portafolio',
+    { view: 'db', icon: 'fa-database', title: 'Base de Datos MVP',
+      desc: 'Inversionistas, empresas y posiciones del portafolio (base de MVP)',
       iconClass: 'home-ico-db' },
-    { view: 'contactos', icon: 'fa-address-book', title: 'Contactos',
-      desc: 'Agenda de contactos de Cretum: busca, filtra, depura y exporta',
+    { view: 'contactos', icon: 'fa-database', title: 'Base de Datos Cretum',
+      desc: 'Base de datos de contactos propia de Cretum (separada de MVP)',
       iconClass: 'home-ico-db' },
     { view: 'dropbox', icon: 'fa-dropbox', iconBrand: true, title: 'Dropbox',
       desc: 'Archivos compartidos del equipo desde Dropbox',
@@ -2971,7 +2971,7 @@ const ORG_MODULES = {
     { view: 'notes', icon: 'fa-book', title: 'Notas',
       desc: 'Tu espacio de notas por carpetas y colores, con editor de texto',
       iconClass: 'home-ico-notes' },
-    { view: 'db', icon: 'fa-database', title: 'Base de Datos',
+    { view: 'db', icon: 'fa-database', title: 'Base de Datos MVP',
       desc: 'Datos del proyecto MVP',
       iconClass: 'home-ico-mvp' },
     { view: 'fundTrackers', icon: 'fa-chart-column', title: 'MVP Fund Trackers',
@@ -2994,8 +2994,8 @@ const ORG_NAV = {
     { view: 'home',    icon: 'fa-house',       label: 'Inicio' },
     { view: 'tasks',   icon: 'fa-list-check',  label: 'To Do Dashboard' },
     { view: 'notes',   icon: 'fa-book',        label: 'Notas' },
-    { view: 'db',      icon: 'fa-database',    label: 'Base de Datos' },
-    { view: 'contactos', icon: 'fa-address-book', label: 'Contactos' },
+    { view: 'db',      icon: 'fa-database',    label: 'Base de Datos MVP' },
+    { view: 'contactos', icon: 'fa-database',  label: 'Base de Datos Cretum' },
     { view: 'dropbox', icon: 'fa-dropbox',     label: 'Dropbox', brand: true },
     { view: 'campaigns', icon: 'fa-bolt',      label: 'Campañas' },
     { view: 'forms',     icon: 'fa-clipboard-list', label: 'Formularios' },
@@ -3005,7 +3005,7 @@ const ORG_NAV = {
   mvp: [
     { view: 'home',         icon: 'fa-house',         label: 'Inicio' },
     { view: 'notes',        icon: 'fa-book',          label: 'Notas' },
-    { view: 'db',           icon: 'fa-database',      label: 'Base de Datos' },
+    { view: 'db',           icon: 'fa-database',      label: 'Base de Datos MVP' },
     { view: 'fundTrackers', icon: 'fa-chart-column',  label: 'Fund Trackers' },
     { view: 'fundraising',  icon: 'fa-hand-holding-dollar', label: 'Fund Rising Tracker' },
     { view: 'reports',      icon: 'fa-chart-pie',     label: 'Reportes' },
@@ -3486,7 +3486,7 @@ function switchView(view, isBack = false) {
     'selector':     'Empresas',
     'home':         'Inicio',
     'tasks':        'To Do',
-    'db':           'Base de Datos',
+    'db':           'Base de Datos MVP',
     'dropbox':      'Dropbox',
     'fundTrackers': 'Fund Trackers',
     'fundraising':  'Fund Rising Tracker',
@@ -3496,7 +3496,7 @@ function switchView(view, isBack = false) {
     'portal':       'Portal de clientes',
     'ventas':       'Ventas',
     'notes':        'Notas',
-    'contactos':    'Contactos',
+    'contactos':    'Base de Datos Cretum',
   }[view] || '';
   document.getElementById('headerBrandText').textContent =
     view === 'selector' ? 'Cretum · Selector' : (orgPrefix + viewLabel);
@@ -12000,25 +12000,28 @@ function renderContactos() {
   if (!rows.length) { list.innerHTML = `<div class="cc-empty"><i class="fa-solid fa-address-book"></i>Sin contactos que coincidan.</div>`; return; }
   const shown = rows.slice(0, ccCap);
   const canW = ccCanWrite();
-  list.innerHTML = shown.map(c => {
-    const nombre = (c.nombre || '').trim() || c.email || '(sin nombre)';
-    const ini = (nombre.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('') || '?').toUpperCase();
-    const sub = [c.email, c.organizacion, c.puesto].map(x => (x || '').trim()).filter(Boolean);
-    const subHtml = sub.map((x, i) => (i === 0 && c.email) ? `<span class="cc-mail">${escapeHtml(x)}</span>` : escapeHtml(x)).join(' · ') || '—';
+  const body = shown.map(c => {
+    const nombre = (c.nombre || '').trim() || '(sin nombre)';
     const tags = (c.revisar ? '<span class="cc-tag rev" title="Posible personal, por revisar">revisar</span>' : '') +
                  (c.rebote ? '<span class="cc-tag reb" title="Su correo rebotó">rebotó</span>' : '');
-    const acts = canW ? `<div class="cc-acts">
-      <button class="cc-act${c.revisar ? ' on-rev' : ''}" title="${c.revisar ? 'Quitar marca por revisar' : 'Marcar por revisar (posible personal)'}" onclick="ccToggle('${c.id}','revisar')"><i class="fa-solid fa-flag"></i></button>
-      <button class="cc-act${c.rebote ? ' on-reb' : ''}" title="${c.rebote ? 'Quitar rebote' : 'Marcar: el correo rebotó'}" onclick="ccToggle('${c.id}','rebote')"><i class="fa-solid fa-triangle-exclamation"></i></button>
-      <button class="cc-act" title="Editar" onclick="ccEditOpen('${c.id}')"><i class="fa-solid fa-pen"></i></button>
-      <button class="cc-act del" title="Eliminar" onclick="ccDelete('${c.id}')"><i class="fa-solid fa-trash"></i></button>
-    </div>` : '';
-    return `<div class="cc-row${c.revisar ? ' rev' : ''}${c.rebote ? ' reb' : ''}">
-      <div class="cc-avatar">${escapeHtml(ini)}</div>
-      <div class="cc-main"><div class="cc-name">${escapeHtml(nombre)}${tags}</div><div class="cc-sub">${subHtml}</div></div>
+    const acts = canW ? `<td class="ctbl-acts">
+      <button class="ctbl-act" title="${c.revisar ? 'Quitar marca por revisar' : 'Marcar por revisar (posible personal)'}" onclick="ccToggle('${c.id}','revisar')"${c.revisar ? ' style="color:#e67e22"' : ''}><i class="fa-solid fa-flag"></i></button>
+      <button class="ctbl-act" title="${c.rebote ? 'Quitar rebote' : 'Marcar: el correo rebotó'}" onclick="ccToggle('${c.id}','rebote')"${c.rebote ? ' style="color:#c0392b"' : ''}><i class="fa-solid fa-triangle-exclamation"></i></button>
+      <button class="ctbl-act" title="Editar" onclick="ccEditOpen('${c.id}')"><i class="fa-solid fa-pen"></i></button>
+      <button class="ctbl-act del" title="Eliminar" onclick="ccDelete('${c.id}')"><i class="fa-solid fa-trash"></i></button>
+    </td>` : '';
+    const tel = c.telefono_movil || c.telefono_trabajo || '';
+    return `<tr class="${c.revisar ? 'cc-tr-rev' : ''}${c.rebote ? ' cc-tr-reb' : ''}">
+      <td class="ctbl-nm">${escapeHtml(nombre)}${tags}</td>
+      <td class="ctbl-em">${escapeHtml(c.email || '')}</td>
+      <td>${escapeHtml(c.organizacion || '')}</td>
+      <td>${escapeHtml(c.puesto || '')}</td>
+      <td>${escapeHtml(tel)}</td>
       ${acts}
-    </div>`;
+    </tr>`;
   }).join('');
+  const head = `<thead><tr><th>Nombre</th><th>Correo</th><th>Organización</th><th>Puesto</th><th>Teléfono</th>${canW ? '<th></th>' : ''}</tr></thead>`;
+  list.innerHTML = `<div class="cc-tablewrap"><table class="ctbl-table">${head}<tbody>${body}</tbody></table></div>`;
   if (rows.length > ccCap) list.insertAdjacentHTML('beforeend', `<button class="cc-more" onclick="ccShowMore()">Mostrar más (${(rows.length - ccCap).toLocaleString('es')} restantes)</button>`);
 }
 

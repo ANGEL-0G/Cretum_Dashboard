@@ -4591,6 +4591,13 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   .cc-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;font-size:12.5px;color:var(--ink-soft,#667)}
   .cc-meta b{font-family:var(--mono);color:var(--ink,#223)}
   .cc-list{display:flex;flex-direction:column;gap:5px}
+  .cc-tablewrap{overflow-x:auto}
+  .ctbl-table tbody tr.cc-tr-rev td{background:rgba(230,126,34,.08)}
+  .ctbl-table tbody tr.cc-tr-reb td{background:rgba(192,57,43,.06)}
+  .ctbl-table tbody tr.cc-tr-rev:hover td,.ctbl-table tbody tr.cc-tr-reb:hover td{background:var(--navy-ghost,#f4f7fc)}
+  .cc-tag{display:inline-block;font-size:9px;font-weight:700;color:#fff;padding:1px 6px;border-radius:8px;margin-left:6px;vertical-align:middle;letter-spacing:.3px}
+  .cc-tag.rev{background:#e67e22}
+  .cc-tag.reb{background:#c0392b}
   .cc-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line,#eef1f6);border-radius:10px;background:var(--white,#fff);transition:border-color .12s,background .12s}
   .cc-row:hover{border-color:var(--navy-light,#c5d3ec);background:var(--navy-ghost,#f7f9fc)}
   .cc-row.rev{background:rgba(230,126,34,.08)}
@@ -4619,7 +4626,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 </style>
 <div class="page page-db" id="pageContactos">
   <div class="db-toolbar">
-    <div class="db-title-block"><i class="fa-solid fa-address-book"></i> Contactos <span class="db-sub" style="font-weight:400;font-size:12px;color:var(--ink-soft,#8893a5)">· agenda de Cretum</span></div>
+    <div class="db-title-block"><i class="fa-solid fa-database"></i> Base de Datos Cretum <span class="db-sub" style="font-weight:400;font-size:12px;color:var(--ink-soft,#8893a5)">· contactos de Cretum</span></div>
   </div>
   <div class="cc-toolbar">
     <div class="db-search cc-search">
@@ -5634,6 +5641,6 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 </div>
 
 <script src="/i18n.js?v=20260724-notes2"></script>
-<script src="/app.js?v=20260731-contactos"></script>
+<script src="/app.js?v=20260731-dbcretum"></script>
 </body>
 </html>
