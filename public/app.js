@@ -12174,42 +12174,90 @@ async function loadUsuarios() {
 }
 async function reloadUsuarios() { usrLoaded = false; await loadUsuarios(); }
 
+const UM_COLORS = ['#4f6bed', '#0ea5a5', '#7c5cff', '#e0833a', '#e0518a', '#12a066', '#5566d6', '#64748b'];
+function umAvatar(seed) {
+  let h = 0; const s = String(seed || '');
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return UM_COLORS[h % UM_COLORS.length];
+}
+
 function renderUsuarios() {
   if (!usrLoaded) return;
   const q = ccStrip(document.getElementById('usrSearch')?.value);
   let rows = usrUsers;
   if (q) rows = rows.filter(u => ccStrip(u.full_name).includes(q) || ccNorm(u.email).includes(q) || ccNorm(ROLE_LABEL[u.role] || '').includes(q));
   const meta = document.getElementById('usrMeta');
-  if (meta) meta.innerHTML = `<span><b>${usrUsers.length}</b> usuario${usrUsers.length === 1 ? '' : 's'}</span>`;
+  if (meta) meta.innerHTML = `<b>${usrUsers.length}</b> ${usrUsers.length === 1 ? 'miembro' : 'miembros'} del equipo`;
   const list = document.getElementById('usrList');
   if (!list) return;
   if (!rows.length) { list.innerHTML = `<div class="cc-empty"><i class="fa-solid fa-users"></i>Sin usuarios que coincidan.</div>`; return; }
-  const body = rows.map(u => {
+  const ROLES = ['viewer', 'colaborador', 'editor', 'admin'];
+  list.innerHTML = '<div class="um-list">' + rows.map(u => {
     const isMe = u.id === usrMe;
-    const isAdminRow = u.role === 'admin';
-    const roleBadge = `<span class="usr-badge usr-role-${u.role || 'viewer'}">${ROLE_LABEL[u.role] || '—'}</span>`;
     const ini = ((u.full_name || u.email || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0] || '').join('') || '?').toUpperCase();
-    const status = u.disabled ? '<span class="usr-status off"><span class="usr-dot"></span>Deshabilitado</span>' : '<span class="usr-status"><span class="usr-dot"></span>Activo</span>';
-    // Deshabilitar/eliminar: no a admins ni a uno mismo (eso se hace en Supabase).
-    const canHardAct = !isMe && !isAdminRow;
-    const disBtn = canHardAct ? (u.disabled
-      ? `<button class="ctbl-act" title="Habilitar" onclick="usrToggle('${u.id}',true)"><i class="fa-solid fa-circle-check"></i></button>`
-      : `<button class="ctbl-act" title="Deshabilitar" onclick="usrToggle('${u.id}',false)"><i class="fa-solid fa-ban"></i></button>`) : '';
-    const delBtn = canHardAct ? `<button class="ctbl-act del" title="Eliminar" onclick="usrDelete('${u.id}')"><i class="fa-solid fa-trash"></i></button>` : '';
-    return `<tr>
-      <td class="ctbl-nm"><div class="usr-cell"><span class="usr-av">${escapeHtml(ini)}</span><span class="usr-nm">${escapeHtml(u.full_name || '(sin nombre)')}${isMe ? '<span class="usr-you">tú</span>' : ''}</span></div></td>
-      <td class="ctbl-em">${escapeHtml(u.email)}</td>
-      <td>${roleBadge}</td>
-      <td>${status}</td>
-      <td class="ctbl-acts">
-        <button class="ctbl-act" title="Editar (nombre, correo, rol)" onclick="usrEditOpen('${u.id}')"><i class="fa-solid fa-pen"></i></button>
-        <button class="ctbl-act" title="Restablecer contraseña" onclick="usrPwOpen('${u.id}')"><i class="fa-solid fa-key"></i></button>
-        ${disBtn}${delBtn}
-      </td>
-    </tr>`;
-  }).join('');
-  list.innerHTML = `<div class="cc-tablewrap"><table class="ctbl-table"><thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th></th></tr></thead><tbody>${body}</tbody></table></div>`;
+    const av = umAvatar(u.id || u.email);
+    const roleOpts = ROLES.map(r => `<option value="${r}"${u.role === r ? ' selected' : ''}>${ROLE_LABEL[r]}</option>`).join('');
+    const status = u.disabled
+      ? '<span class="um-status off"><span class="um-dot"></span>Deshabilitado</span>'
+      : '<span class="um-status"><span class="um-dot"></span>Activo</span>';
+    return `<div class="um-row${u.disabled ? ' um-off' : ''}">
+      <div class="um-av" style="background:${av}">${escapeHtml(ini)}</div>
+      <div class="um-id">
+        <div class="um-name">${escapeHtml(u.full_name || '(sin nombre)')}${isMe ? '<span class="um-you">Tú</span>' : ''}</div>
+        <div class="um-email">${escapeHtml(u.email)}</div>
+      </div>
+      <div class="um-status-wrap">${status}</div>
+      <select class="um-role um-role-${u.role || 'viewer'}" onchange="usrChangeRole('${u.id}', this.value, this)"${isMe ? ' disabled title="No puedes cambiar tu propio rol aquí"' : ''}>${roleOpts}</select>
+      <button class="um-kebab" title="Más acciones" aria-label="Más acciones" onclick="usrMenu('${u.id}', event)"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+    </div>`;
+  }).join('') + '</div>';
 }
+
+// Cambio de rol inline (rápido, sin modal); revierte si el backend rechaza.
+async function usrChangeRole(id, role, sel) {
+  const u = usrUsers.find(x => x.id === id); if (!u) return;
+  const prev = u.role;
+  sel.disabled = true;
+  try {
+    await usrApi({ action: 'users_update', id, role });
+    u.role = role;
+    sel.className = 'um-role um-role-' + role;
+    toast('Rol actualizado a ' + ROLE_LABEL[role]);
+  } catch (e) { sel.value = prev; toast(e.message); }
+  finally { sel.disabled = false; }
+}
+
+// Menú ⋯ por fila (posición fija para no recortarse).
+function usrMenu(id, ev) {
+  ev.stopPropagation();
+  const u = usrUsers.find(x => x.id === id); if (!u) return;
+  const canHard = u.id !== usrMe && u.role !== 'admin';
+  const items = [
+    `<button onclick="usrEditOpen('${id}');usrMenuClose()"><i class="fa-solid fa-pen"></i> Editar datos</button>`,
+    `<button onclick="usrPwOpen('${id}');usrMenuClose()"><i class="fa-solid fa-key"></i> Restablecer contraseña</button>`,
+  ];
+  if (canHard) items.push(u.disabled
+    ? `<button onclick="usrToggle('${id}',true);usrMenuClose()"><i class="fa-solid fa-circle-check"></i> Habilitar</button>`
+    : `<button onclick="usrToggle('${id}',false);usrMenuClose()"><i class="fa-solid fa-ban"></i> Deshabilitar</button>`);
+  if (canHard) items.push(`<button class="danger" onclick="usrDelete('${id}');usrMenuClose()"><i class="fa-solid fa-trash"></i> Eliminar</button>`);
+  const menu = document.getElementById('usrKebabMenu');
+  menu.innerHTML = items.join('');
+  menu.hidden = false;
+  const r = ev.currentTarget.getBoundingClientRect();
+  const mw = 212;
+  menu.style.left = Math.max(8, r.right - mw) + 'px';
+  menu.style.top = (r.bottom + 6) + 'px';
+  requestAnimationFrame(() => {
+    const mh = menu.offsetHeight;
+    if (r.bottom + 6 + mh > window.innerHeight - 8) menu.style.top = (r.top - mh - 6) + 'px';
+  });
+}
+function usrMenuClose() { const m = document.getElementById('usrKebabMenu'); if (m) m.hidden = true; }
+document.addEventListener('click', (e) => {
+  const m = document.getElementById('usrKebabMenu');
+  if (m && !m.hidden && !m.contains(e.target) && !e.target.closest('.um-kebab')) usrMenuClose();
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') usrMenuClose(); });
 
 function usrGenPw(inputId) {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
@@ -12224,6 +12272,7 @@ function usrCreateOpen() {
   document.getElementById('usrfNombre').value = '';
   const em = document.getElementById('usrfEmail'); em.value = ''; em.disabled = false;
   document.getElementById('usrfRole').value = 'viewer';
+  document.getElementById('usrfRoleBlock').style.display = '';
   document.getElementById('usrfPwBlock').style.display = '';
   document.getElementById('usrfPw').value = '';
   const m = document.getElementById('usrfMsg'); m.textContent = ''; m.className = 'camp-modal-msg';
@@ -12238,6 +12287,7 @@ function usrEditOpen(id) {
   document.getElementById('usrfNombre').value = u.full_name || '';
   document.getElementById('usrfEmail').value = u.email || '';
   document.getElementById('usrfRole').value = u.role || 'viewer';
+  document.getElementById('usrfRoleBlock').style.display = 'none';   // el rol se cambia inline en la lista
   document.getElementById('usrfPwBlock').style.display = 'none';
   const m = document.getElementById('usrfMsg'); m.textContent = ''; m.className = 'camp-modal-msg';
   document.getElementById('usrModal').classList.add('show');
@@ -12251,16 +12301,16 @@ async function usrSave() {
   const fail = t => { msg.textContent = t; msg.className = 'camp-modal-msg err'; };
   const full = document.getElementById('usrfNombre').value.trim();
   const email = ccNorm(document.getElementById('usrfEmail').value);
-  const role = document.getElementById('usrfRole').value;
   if (!full) return fail('El nombre es obligatorio.');
   if (!email.includes('@')) return fail('El correo no parece válido.');
   const btn = document.getElementById('usrfSave'); const orig = btn.innerHTML;
   btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
   try {
     if (usrEditId) {
-      await usrApi({ action: 'users_update', id: usrEditId, full_name: full, email, role });
+      await usrApi({ action: 'users_update', id: usrEditId, full_name: full, email });   // el rol se maneja inline
       toast('Usuario actualizado');
     } else {
+      const role = document.getElementById('usrfRole').value;
       const pw = document.getElementById('usrfPw').value.trim();
       if (pw.length < 8) { fail('La contraseña debe tener al menos 8 caracteres.'); return; }
       await usrApi({ action: 'users_create', full_name: full, email, role, password: pw });

@@ -4598,27 +4598,66 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 
 <!-- VISTA: USUARIOS (admin) — administración de cuentas -->
 <style>
-  #pageUsuarios.page-db{max-width:1080px}
-  .usr-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+  #pageUsuarios.page-db{max-width:920px}
+  .usr-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px}
   .usr-search{flex:1;min-width:220px}
-  .usr-badge{display:inline-block;font-size:11px;font-weight:600;padding:2px 10px;border-radius:20px}
-  .usr-cell{display:flex;align-items:center;gap:11px;min-width:0}
-  .usr-av{flex:none;width:30px;height:30px;border-radius:50%;background:var(--navy-ghost,#eef2f9);color:var(--navy);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;letter-spacing:.3px}
-  .usr-nm{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  [data-theme="dark"] .usr-av{background:rgba(93,143,245,.18);color:#8fb0f2}
-  .usr-role-admin{background:var(--navy-pale,#e6edf7);color:var(--navy)}
-  .usr-role-editor{background:#e3f4ea;color:#0a7a46}
-  .usr-role-colaborador{background:#fbedda;color:#a5620a}
-  .usr-role-viewer{background:#eef1f6;color:#586074}
-  [data-theme="dark"] .usr-role-viewer{background:rgba(255,255,255,.07);color:#b3bcca}
-  [data-theme="dark"] .usr-role-editor{background:rgba(15,155,90,.2);color:#5cd39a}
-  [data-theme="dark"] .usr-role-colaborador{background:rgba(196,125,26,.22);color:#e8ac52}
-  #pageUsuarios .ctbl-table td{padding:11px 12px}
-  .usr-status{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-soft,#556)}
-  .usr-dot{width:8px;height:8px;border-radius:50%;flex:none;background:#0f9b5a}
-  .usr-status.off{color:#c0392b}
-  .usr-status.off .usr-dot{background:#c0392b}
-  .usr-you{font-size:10px;font-weight:700;color:var(--navy);background:var(--navy-ghost,#eef2f9);padding:1px 6px;border-radius:8px;margin-left:6px}
+  .usr-meta{font-size:13px;color:var(--ink-soft,#8893a5);margin:4px 2px 16px}
+  .usr-meta b{color:var(--ink,#223);font-weight:600}
+  /* Lista de miembros — friendly pero pro */
+  .um-list{border:1px solid var(--line,#e7ebf2);border-radius:14px;overflow:hidden;background:var(--white,#fff)}
+  [data-theme="dark"] .um-list{background:var(--card,#161c28);border-color:rgba(255,255,255,.08)}
+  .um-row{display:flex;align-items:center;gap:14px;padding:12px 16px;border-top:1px solid var(--line,#eef1f6);transition:background .13s ease}
+  .um-row:first-child{border-top:none}
+  .um-row:hover{background:var(--navy-ghost,#f7f9fc)}
+  [data-theme="dark"] .um-row{border-color:rgba(255,255,255,.05)}
+  [data-theme="dark"] .um-row:hover{background:rgba(255,255,255,.03)}
+  .um-off{opacity:.6}
+  .um-av{flex:none;width:40px;height:40px;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;letter-spacing:.3px}
+  .um-id{min-width:0;flex:1}
+  .um-name{font-size:14px;font-weight:600;color:var(--ink,#1f2530);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .um-email{font-size:12.5px;color:var(--ink-soft,#8893a5);font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+  .um-you{font-size:10px;font-weight:700;color:var(--navy);background:var(--navy-ghost,#eaf0fb);padding:1px 7px;border-radius:20px;margin-left:8px;vertical-align:middle;letter-spacing:.2px}
+  [data-theme="dark"] .um-you{background:rgba(93,143,245,.2)}
+  .um-status{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-soft,#6b7480);white-space:nowrap}
+  .um-dot{width:7px;height:7px;border-radius:50%;flex:none;background:#12b76a;box-shadow:0 0 0 3px rgba(18,183,106,.16)}
+  .um-status.off{color:#c0392b}
+  .um-status.off .um-dot{background:#c0392b;box-shadow:0 0 0 3px rgba(192,57,43,.14)}
+  .um-role{appearance:none;-webkit-appearance:none;-moz-appearance:none;border:1px solid var(--line,#dde3ec);border-radius:20px;padding:6px 29px 6px 13px;font-size:12.5px;font-weight:600;font-family:inherit;cursor:pointer;color:var(--ink,#334);background-color:var(--white,#fff);
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5l3 3 3-3' fill='none' stroke='%238893a5' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 11px center;transition:border-color .13s,box-shadow .13s,background-color .13s}
+  .um-role:hover{border-color:var(--navy-light,#b9c8e6)}
+  .um-role:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px var(--navy-pale,#eaf0fb)}
+  .um-role:disabled{opacity:.65;cursor:default}
+  .um-role-admin{color:var(--navy);border-color:#c7d5ee;background-color:#f2f6fd}
+  .um-role-editor{color:#0a7a46;border-color:#c1e6d1;background-color:#f0faf4}
+  .um-role-colaborador{color:#a5620a;border-color:#f0d8b4;background-color:#fdf6ec}
+  .um-role-viewer{color:#586074}
+  [data-theme="dark"] .um-role{background-color:var(--card,#1a2030);color:#cdd5e2;border-color:rgba(255,255,255,.1)}
+  [data-theme="dark"] .um-role-admin{background-color:rgba(93,143,245,.14);color:#8fb0f2;border-color:rgba(93,143,245,.3)}
+  [data-theme="dark"] .um-role-editor{background-color:rgba(15,155,90,.16);color:#5cd39a;border-color:rgba(15,155,90,.35)}
+  [data-theme="dark"] .um-role-colaborador{background-color:rgba(196,125,26,.18);color:#e8ac52;border-color:rgba(196,125,26,.4)}
+  .um-kebab{width:32px;height:32px;border-radius:9px;border:none;background:none;color:var(--ink-soft,#9aa3b2);cursor:pointer;font-size:15px;display:inline-flex;align-items:center;justify-content:center;opacity:0;transition:opacity .12s,background .12s,color .12s}
+  .um-row:hover .um-kebab,.um-kebab:focus-visible{opacity:1}
+  @media(hover:none){.um-kebab{opacity:1}}
+  .um-kebab:hover{background:var(--navy-ghost,#eef2f9);color:var(--navy)}
+  .um-menu{position:fixed;min-width:212px;background:var(--white,#fff);border:1px solid var(--line,#e3e8f0);border-radius:12px;box-shadow:0 14px 34px rgba(20,30,55,.17);padding:6px;z-index:1200;animation:umPop .13s cubic-bezier(.23,1,.32,1)}
+  @keyframes umPop{from{opacity:0;transform:translateY(-5px) scale(.98)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.um-menu{animation:none}}
+  .um-menu[hidden]{display:none}
+  .um-menu button{display:flex;align-items:center;gap:11px;width:100%;text-align:left;padding:9px 11px;border:none;background:none;border-radius:8px;font-size:13px;font-family:inherit;color:var(--ink,#334);cursor:pointer;transition:background .1s}
+  .um-menu button i{width:15px;text-align:center;color:var(--ink-soft,#8893a5)}
+  .um-menu button:hover{background:var(--navy-ghost,#f4f7fc)}
+  .um-menu button.danger,.um-menu button.danger i{color:#c0392b}
+  .um-menu button.danger:hover{background:rgba(192,57,43,.08)}
+  [data-theme="dark"] .um-menu{background:var(--card,#1c2331);border-color:rgba(255,255,255,.1)}
+  [data-theme="dark"] .um-menu button{color:#dfe4ec}
+  [data-theme="dark"] .um-menu button:hover{background:rgba(255,255,255,.05)}
+  @media(max-width:620px){
+    .um-status{display:none}
+    .um-row{gap:11px;padding:11px 13px}
+    .um-av{width:36px;height:36px}
+    .um-role{padding:5px 26px 5px 11px;font-size:12px}
+  }
 </style>
 <div class="page page-db" id="pageUsuarios">
   <div class="db-toolbar">
@@ -4631,9 +4670,10 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
     </div>
     <button class="btn-primary" type="button" onclick="usrCreateOpen()"><i class="fa-solid fa-user-plus"></i> Crear usuario</button>
   </div>
-  <div class="cc-meta" id="usrMeta"></div>
+  <div class="usr-meta" id="usrMeta"></div>
   <div id="usrList"></div>
 </div>
+<div id="usrKebabMenu" class="um-menu" hidden></div>
 
 <!-- Modal: crear / editar usuario -->
 <div class="camp-modal-backdrop" id="usrModal" onclick="if(event.target===this)usrClose()">
@@ -4647,13 +4687,15 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
       <input id="usrfNombre" class="camp-f-inp" autocomplete="off">
       <label class="camp-f-lbl">Correo <span class="camp-req">*</span></label>
       <input id="usrfEmail" class="camp-f-inp" type="email" autocomplete="off">
-      <label class="camp-f-lbl">Rol</label>
-      <select id="usrfRole" class="camp-f-inp">
-        <option value="viewer">Viewer — solo lectura</option>
-        <option value="colaborador">Colaborador — editor sin Base de Datos Cretum</option>
-        <option value="editor">Editor</option>
-        <option value="admin">Admin</option>
-      </select>
+      <div id="usrfRoleBlock">
+        <label class="camp-f-lbl">Rol</label>
+        <select id="usrfRole" class="camp-f-inp">
+          <option value="viewer">Viewer — solo lectura</option>
+          <option value="colaborador">Colaborador — editor sin Base de Datos Cretum</option>
+          <option value="editor">Editor</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
       <div id="usrfPwBlock">
         <label class="camp-f-lbl">Contraseña <span class="camp-req">*</span></label>
         <div style="display:flex;gap:8px">
@@ -5754,6 +5796,6 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 </div>
 
 <script src="/i18n.js?v=20260724-notes2"></script>
-<script src="/app.js?v=20260731-usuarios2"></script>
+<script src="/app.js?v=20260731-usuarios3"></script>
 </body>
 </html>
