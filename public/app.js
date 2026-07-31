@@ -12152,7 +12152,7 @@ async function ccExport(btn) {
    Crear/editar/borrar, roles, contraseñas y habilitar/deshabilitar. Solo admin.
    Un admin no se borra ni deshabilita desde aquí (eso va por Supabase).
 ═══════════════════════════════════════════ */
-let usrUsers = null, usrLoaded = false, usrMe = null, usrEditId = null, usrPwId = null;
+let usrUsers = null, usrLoaded = false, usrMe = null, usrEditId = null, usrPwId = null, usrMenuId = null, usrRolePopId = null;
 const ROLE_LABEL = { admin: 'Admin', editor: 'Editor', colaborador: 'Colaborador', viewer: 'Viewer' };
 
 async function usrApi(body) {
@@ -12228,9 +12228,11 @@ const ROLE_META = {
 // opciones (tarjetitas), animado y flotante para no romper la fila.
 function usrRoleOpen(id, ev) {
   ev.stopPropagation();
-  usrMenuClose();
-  const u = usrUsers.find(x => x.id === id); if (!u) return;
   const pop = document.getElementById('usrRolePop');
+  if (!pop.hidden && usrRolePopId === id) { usrRolePopClose(); return; }   // segundo clic = cerrar
+  usrMenuClose();
+  usrRolePopId = id;
+  const u = usrUsers.find(x => x.id === id); if (!u) return;
   pop.innerHTML = ['viewer', 'colaborador', 'editor', 'admin'].map(r => {
     const m = ROLE_META[r]; const sel = u.role === r;
     return `<button class="rp-opt${sel ? ' sel' : ''}" style="${sel ? `border-color:${m.color}` : ''}" onclick="usrPickRole('${id}','${r}')" title="${m.desc}">
@@ -12247,7 +12249,7 @@ function usrRoleOpen(id, ev) {
   pop.style.top = (r.bottom + 8) + 'px';
   requestAnimationFrame(() => { const ph = pop.offsetHeight; if (r.bottom + 8 + ph > window.innerHeight - 8) pop.style.top = (r.top - ph - 8) + 'px'; });
 }
-function usrRolePopClose() { const p = document.getElementById('usrRolePop'); if (p) p.hidden = true; }
+function usrRolePopClose() { const p = document.getElementById('usrRolePop'); if (p) p.hidden = true; usrRolePopId = null; }
 
 async function usrPickRole(id, role) {
   const u = usrUsers.find(x => x.id === id);
@@ -12260,6 +12262,10 @@ async function usrPickRole(id, role) {
 // Menú ⋯ por fila (posición fija para no recortarse).
 function usrMenu(id, ev) {
   ev.stopPropagation();
+  const menu = document.getElementById('usrKebabMenu');
+  if (!menu.hidden && usrMenuId === id) { usrMenuClose(); return; }   // segundo clic = cerrar
+  usrRolePopClose();
+  usrMenuId = id;
   const u = usrUsers.find(x => x.id === id); if (!u) return;
   const canHard = u.id !== usrMe && u.role !== 'admin';
   const items = [
@@ -12270,7 +12276,6 @@ function usrMenu(id, ev) {
     ? `<button onclick="usrToggle('${id}',true);usrMenuClose()"><i class="fa-solid fa-circle-check"></i> Habilitar</button>`
     : `<button onclick="usrToggle('${id}',false);usrMenuClose()"><i class="fa-solid fa-ban"></i> Deshabilitar</button>`);
   if (canHard) items.push(`<button class="danger" onclick="usrDelete('${id}');usrMenuClose()"><i class="fa-solid fa-trash"></i> Eliminar</button>`);
-  const menu = document.getElementById('usrKebabMenu');
   menu.innerHTML = items.join('');
   menu.hidden = false;
   const r = ev.currentTarget.getBoundingClientRect();
@@ -12282,7 +12287,7 @@ function usrMenu(id, ev) {
     if (r.bottom + 6 + mh > window.innerHeight - 8) menu.style.top = (r.top - mh - 6) + 'px';
   });
 }
-function usrMenuClose() { const m = document.getElementById('usrKebabMenu'); if (m) m.hidden = true; }
+function usrMenuClose() { const m = document.getElementById('usrKebabMenu'); if (m) m.hidden = true; usrMenuId = null; }
 document.addEventListener('click', (e) => {
   const m = document.getElementById('usrKebabMenu');
   if (m && !m.hidden && !m.contains(e.target) && !e.target.closest('.um-kebab')) usrMenuClose();
