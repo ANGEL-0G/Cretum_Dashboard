@@ -12188,6 +12188,7 @@ function renderUsuarios() {
     const isMe = u.id === usrMe;
     const isAdminRow = u.role === 'admin';
     const roleBadge = `<span class="usr-badge usr-role-${u.role || 'viewer'}">${ROLE_LABEL[u.role] || '—'}</span>`;
+    const ini = ((u.full_name || u.email || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0] || '').join('') || '?').toUpperCase();
     const status = u.disabled ? '<span class="usr-status off"><span class="usr-dot"></span>Deshabilitado</span>' : '<span class="usr-status"><span class="usr-dot"></span>Activo</span>';
     // Deshabilitar/eliminar: no a admins ni a uno mismo (eso se hace en Supabase).
     const canHardAct = !isMe && !isAdminRow;
@@ -12196,7 +12197,7 @@ function renderUsuarios() {
       : `<button class="ctbl-act" title="Deshabilitar" onclick="usrToggle('${u.id}',false)"><i class="fa-solid fa-ban"></i></button>`) : '';
     const delBtn = canHardAct ? `<button class="ctbl-act del" title="Eliminar" onclick="usrDelete('${u.id}')"><i class="fa-solid fa-trash"></i></button>` : '';
     return `<tr>
-      <td class="ctbl-nm">${escapeHtml(u.full_name || '(sin nombre)')}${isMe ? '<span class="usr-you">tú</span>' : ''}</td>
+      <td class="ctbl-nm"><div class="usr-cell"><span class="usr-av">${escapeHtml(ini)}</span><span class="usr-nm">${escapeHtml(u.full_name || '(sin nombre)')}${isMe ? '<span class="usr-you">tú</span>' : ''}</span></div></td>
       <td class="ctbl-em">${escapeHtml(u.email)}</td>
       <td>${roleBadge}</td>
       <td>${status}</td>
