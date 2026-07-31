@@ -2711,7 +2711,7 @@ function toggleSettings(e) {
    navegador para probar la UI de editor/viewer. No toca la base; al refrescar
    vuelve el rol real. El backend sigue viendo tu rol real (admin). ── */
 function setRolePreview(r) {
-  if (!['admin', 'editor', 'viewer'].includes(r)) return;
+  if (!['admin', 'editor', 'colaborador', 'viewer'].includes(r)) return;
   if (roleReal === null) roleReal = currentProfile?.role || 'admin';
   if (!currentProfile) return;
   currentProfile.role = r;
