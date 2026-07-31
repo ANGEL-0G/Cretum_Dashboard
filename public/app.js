@@ -2946,7 +2946,7 @@ const ORG_MODULES = {
       desc: 'Tu espacio de notas por carpetas y colores, con editor de texto',
       iconClass: 'home-ico-notes' },
     { view: 'contactos', icon: 'fa-database', title: 'Base de Datos Cretum',
-      desc: 'Base de datos de contactos propia de Cretum (separada de MVP)',
+      desc: 'Base de datos de contactos propia de Cretum',
       iconClass: 'home-ico-cretumdb' },
     { view: 'dropbox', icon: 'fa-dropbox', iconBrand: true, title: 'Dropbox',
       desc: 'Archivos compartidos del equipo desde Dropbox',
