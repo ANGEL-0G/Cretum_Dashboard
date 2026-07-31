@@ -4581,6 +4581,92 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   @media (max-width:560px){ .fm-new .btn-primary{flex:1 1 100%;justify-content:center} }
 </style>
 
+<!-- VISTA: CONTACTOS (Cretum) — agenda propia, tabla cretum_contactos aislada de MVP -->
+<style>
+  #pageContactos.page-db{max-width:1200px}
+  .cc-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+  .cc-search{flex:1;min-width:240px}
+  .cc-chips{display:flex;gap:8px;flex-wrap:wrap}
+  .cc-actions{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+  .cc-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;font-size:12.5px;color:var(--ink-soft,#667)}
+  .cc-meta b{font-family:var(--mono);color:var(--ink,#223)}
+  .cc-list{display:flex;flex-direction:column;gap:5px}
+  .cc-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line,#eef1f6);border-radius:10px;background:var(--white,#fff);transition:border-color .12s,background .12s}
+  .cc-row:hover{border-color:var(--navy-light,#c5d3ec);background:var(--navy-ghost,#f7f9fc)}
+  .cc-row.rev{background:rgba(230,126,34,.08)}
+  .cc-row.reb{background:rgba(192,57,43,.06)}
+  .cc-avatar{flex:none;width:34px;height:34px;border-radius:50%;background:var(--navy-ghost,#eef2f9);color:var(--navy);display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700}
+  .cc-main{min-width:0;flex:1}
+  .cc-name{font-size:14px;font-weight:500;color:var(--ink,#223);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cc-sub{font-size:12px;color:var(--ink-soft,#8893a5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+  .cc-sub .cc-mail{font-family:var(--mono)}
+  .cc-tag{display:inline-block;font-size:9px;font-weight:700;color:#fff;padding:1px 6px;border-radius:8px;margin-left:6px;vertical-align:middle;letter-spacing:.3px}
+  .cc-tag.rev{background:#e67e22}
+  .cc-tag.reb{background:#c0392b}
+  .cc-acts{flex:none;display:inline-flex;gap:1px;opacity:0;transition:opacity .12s}
+  .cc-row:hover .cc-acts{opacity:1}
+  @media(hover:none){.cc-acts{opacity:1}}
+  .cc-act{background:none;border:none;color:var(--ink-soft,#b3bccb);cursor:pointer;font-size:12.5px;padding:6px 7px;border-radius:6px;transition:color .12s,background .12s}
+  .cc-act:hover{color:var(--navy);background:var(--navy-ghost,#eef2f9)}
+  .cc-act.on-rev{color:#e67e22}
+  .cc-act.on-reb{color:#c0392b}
+  .cc-act.del:hover{color:#c0392b;background:rgba(192,57,43,.08)}
+  .cc-more{margin:12px auto 0;display:block;padding:10px 18px;border:1px solid var(--line,#dde3ec);border-radius:9px;background:var(--white,#fff);color:var(--navy);font-weight:600;font-size:13px;font-family:inherit;cursor:pointer}
+  .cc-more:hover{border-color:var(--navy)}
+  .cc-empty{padding:40px 16px;text-align:center;color:var(--ink-soft,#98a2b3);font-size:13px}
+  .cc-empty i{font-size:26px;display:block;margin-bottom:10px;opacity:.4}
+  [data-theme="dark"] .cc-row,[data-theme="dark"] .cc-more{background:var(--card,#1a2030)}
+</style>
+<div class="page page-db" id="pageContactos">
+  <div class="db-toolbar">
+    <div class="db-title-block"><i class="fa-solid fa-address-book"></i> Contactos <span class="db-sub" style="font-weight:400;font-size:12px;color:var(--ink-soft,#8893a5)">· agenda de Cretum</span></div>
+  </div>
+  <div class="cc-toolbar">
+    <div class="db-search cc-search">
+      <i class="fa-solid fa-magnifying-glass db-search-ico"></i>
+      <input id="ccSearch" class="db-search-inp" placeholder="Buscar nombre, correo, organización o puesto…" oninput="renderContactos()" autocomplete="off">
+    </div>
+    <div class="cc-chips">
+      <button class="camp-fchip on" id="ccChipAll" onclick="ccSetFilter('all')"><i class="fa-solid fa-layer-group"></i> Todos</button>
+      <button class="camp-fchip" id="ccChipRev" onclick="ccSetFilter('revisar')"><i class="fa-solid fa-flag"></i> Por revisar</button>
+      <button class="camp-fchip" id="ccChipReb" onclick="ccSetFilter('rebote')"><i class="fa-solid fa-triangle-exclamation"></i> Rebotados</button>
+    </div>
+    <div class="cc-actions">
+      <button class="cdd-btn" type="button" onclick="ccAddOpen()"><i class="fa-solid fa-user-plus"></i> Añadir</button>
+      <button class="cdd-btn" type="button" onclick="ccExport(this)"><i class="fa-solid fa-file-excel"></i> Exportar Excel</button>
+    </div>
+  </div>
+  <div class="cc-meta" id="ccMeta"></div>
+  <div class="cc-list" id="ccList"></div>
+</div>
+
+<!-- Modal: Añadir / Editar contacto Cretum -->
+<div class="camp-modal-backdrop" id="ccModal" onclick="if(event.target===this)ccClose()">
+  <div class="camp-modal">
+    <div class="camp-modal-head">
+      <div class="camp-modal-title" id="ccTitle"><i class="fa-solid fa-user-plus"></i> Añadir contacto</div>
+      <button class="camp-modal-x" onclick="ccClose()" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="camp-modal-body">
+      <label class="camp-f-lbl">Nombre <span class="camp-req">*</span></label>
+      <input id="ccfNombre" class="camp-f-inp" autocomplete="off">
+      <label class="camp-f-lbl">Correo <span class="camp-opt">opcional</span></label>
+      <input id="ccfEmail" class="camp-f-inp" type="email" autocomplete="off">
+      <label class="camp-f-lbl">Organización <span class="camp-opt">opcional</span></label>
+      <input id="ccfOrg" class="camp-f-inp" autocomplete="off">
+      <label class="camp-f-lbl">Puesto <span class="camp-opt">opcional</span></label>
+      <input id="ccfPuesto" class="camp-f-inp" autocomplete="off">
+      <label class="camp-f-lbl">Teléfono <span class="camp-opt">opcional</span></label>
+      <input id="ccfTel" class="camp-f-inp" autocomplete="off">
+      <div class="camp-modal-msg" id="ccfMsg"></div>
+    </div>
+    <div class="camp-modal-foot">
+      <button class="camp-prev-cancel" onclick="ccClose()">Cancelar</button>
+      <button class="btn-primary" id="ccfSave" onclick="ccSave()"><i class="fa-solid fa-check"></i> Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- VISTA: FORMULARIOS (Cretum) — utilería para el equipo administrativo -->
 <div class="page page-db" id="pageForms">
   <div class="db-toolbar">
@@ -5548,6 +5634,6 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 </div>
 
 <script src="/i18n.js?v=20260724-notes2"></script>
-<script src="/app.js?v=20260731-rebote"></script>
+<script src="/app.js?v=20260731-contactos"></script>
 </body>
 </html>

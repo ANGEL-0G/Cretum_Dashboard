@@ -2948,6 +2948,9 @@ const ORG_MODULES = {
     { view: 'db', icon: 'fa-database', title: 'Base de Datos',
       desc: 'Consulta inversionistas, empresas y posiciones del portafolio',
       iconClass: 'home-ico-db' },
+    { view: 'contactos', icon: 'fa-address-book', title: 'Contactos',
+      desc: 'Agenda de contactos de Cretum: busca, filtra, depura y exporta',
+      iconClass: 'home-ico-db' },
     { view: 'dropbox', icon: 'fa-dropbox', iconBrand: true, title: 'Dropbox',
       desc: 'Archivos compartidos del equipo desde Dropbox',
       iconClass: 'home-ico-dropbox' },
@@ -2992,6 +2995,7 @@ const ORG_NAV = {
     { view: 'tasks',   icon: 'fa-list-check',  label: 'To Do Dashboard' },
     { view: 'notes',   icon: 'fa-book',        label: 'Notas' },
     { view: 'db',      icon: 'fa-database',    label: 'Base de Datos' },
+    { view: 'contactos', icon: 'fa-address-book', label: 'Contactos' },
     { view: 'dropbox', icon: 'fa-dropbox',     label: 'Dropbox', brand: true },
     { view: 'campaigns', icon: 'fa-bolt',      label: 'Campañas' },
     { view: 'forms',     icon: 'fa-clipboard-list', label: 'Formularios' },
@@ -3472,6 +3476,8 @@ function switchView(view, isBack = false) {
   if (pageVentas) pageVentas.classList.toggle('active', view === 'ventas');
   const pageNotes = document.getElementById('pageNotes');
   if (pageNotes) pageNotes.classList.toggle('active', view === 'notes');
+  const pageContactos = document.getElementById('pageContactos');
+  if (pageContactos) pageContactos.classList.toggle('active', view === 'contactos');
 
   highlightActiveNav();
 
@@ -3490,6 +3496,7 @@ function switchView(view, isBack = false) {
     'portal':       'Portal de clientes',
     'ventas':       'Ventas',
     'notes':        'Notas',
+    'contactos':    'Contactos',
   }[view] || '';
   document.getElementById('headerBrandText').textContent =
     view === 'selector' ? 'Cretum · Selector' : (orgPrefix + viewLabel);
@@ -3515,6 +3522,7 @@ function switchView(view, isBack = false) {
   if (view === 'forms') formsBackHome();
   if (view === 'ventas') ventasBackHome();
   if (view === 'notes') openNotesPage();
+  if (view === 'contactos') loadContactos();
   if (view === 'tasks') requestAnimationFrame(tkMoveSliders);   // coloca las pills una vez visible
 
   syncHash();
@@ -11927,6 +11935,198 @@ function lstShowImportResult(list, mode, added, skipped, removed) {
   document.getElementById('lstImportModal').classList.add('show');
 }
 function lstImportClose() { document.getElementById('lstImportModal').classList.remove('show'); }
+
+/* ═══════════════════════════════════════════
+   CONTACTOS (Cretum) — agenda propia, tabla `cretum_contactos` AISLADA de MVP.
+   Carga paginada (Supabase limita a 1000 por consulta), búsqueda/filtrado en
+   cliente y render acotado para aguantar ~11k filas sin trabar el DOM.
+   Lee cualquier autenticado; escribe editor/admin (RLS).
+═══════════════════════════════════════════ */
+let cretumContactos = null, cretumLoaded = false, ccFilter = 'all', ccCap = 300, ccEditId = null;
+const ccNorm = s => String(s || '').trim().toLowerCase();
+const ccStrip = s => ccNorm(s).normalize('NFD').replace(/[̀-ͯ]/g, '');
+const ccCanWrite = () => ['admin', 'editor'].includes(currentProfile?.role);
+
+async function loadContactos() {
+  if (cretumLoaded) { renderContactos(); return; }
+  const list = document.getElementById('ccList');
+  if (list) list.innerHTML = '<div class="db-loading"><i class="fa-solid fa-spinner fa-spin"></i> Cargando contactos…</div>';
+  try {
+    let all = [], from = 0; const page = 1000;
+    for (let i = 0; i < 60; i++) {   // guard: hasta 60k filas
+      const { data, error } = await sb.from('cretum_contactos')
+        .select('id,email,nombre,organizacion,puesto,telefono_movil,telefono_trabajo,pais,revisar,rebote')
+        .order('nombre').range(from, from + page - 1);
+      if (error) throw error;
+      all = all.concat(data || []);
+      if (!data || data.length < page) break;
+      from += page;
+    }
+    cretumContactos = all;
+    cretumLoaded = true;
+    renderContactos();
+  } catch (e) {
+    console.error('[contactos]', e);
+    if (list) list.innerHTML = `<div class="cc-empty">No se pudieron cargar los contactos: ${escapeHtml(e.message || '')}</div>`;
+  }
+}
+
+function ccSetFilter(f) {
+  ccFilter = f; ccCap = 300;
+  const idOf = { all: 'ccChipAll', revisar: 'ccChipRev', rebote: 'ccChipReb' };
+  Object.entries(idOf).forEach(([k, id]) => document.getElementById(id)?.classList.toggle('on', k === f));
+  renderContactos();
+}
+
+function ccFiltered() {
+  if (!cretumContactos) return [];
+  const q = ccStrip(document.getElementById('ccSearch')?.value);
+  let rows = cretumContactos;
+  if (ccFilter === 'revisar') rows = rows.filter(c => c.revisar);
+  else if (ccFilter === 'rebote') rows = rows.filter(c => c.rebote);
+  if (q) rows = rows.filter(c => ccStrip(c.nombre).includes(q) || ccNorm(c.email).includes(q) || ccStrip(c.organizacion).includes(q) || ccStrip(c.puesto).includes(q));
+  return rows;
+}
+
+function renderContactos() {
+  if (!cretumLoaded) return;
+  const rows = ccFiltered();
+  const nRev = cretumContactos.filter(c => c.revisar).length;
+  const meta = document.getElementById('ccMeta');
+  if (meta) meta.innerHTML = `<span><b>${cretumContactos.length.toLocaleString('es')}</b> contactos</span><span>·</span>` +
+    `<span><b>${rows.length.toLocaleString('es')}</b> en la vista</span>` + (nRev ? `<span>·</span><span><b>${nRev}</b> por revisar</span>` : '');
+  const list = document.getElementById('ccList');
+  if (!list) return;
+  if (!rows.length) { list.innerHTML = `<div class="cc-empty"><i class="fa-solid fa-address-book"></i>Sin contactos que coincidan.</div>`; return; }
+  const shown = rows.slice(0, ccCap);
+  const canW = ccCanWrite();
+  list.innerHTML = shown.map(c => {
+    const nombre = (c.nombre || '').trim() || c.email || '(sin nombre)';
+    const ini = (nombre.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('') || '?').toUpperCase();
+    const sub = [c.email, c.organizacion, c.puesto].map(x => (x || '').trim()).filter(Boolean);
+    const subHtml = sub.map((x, i) => (i === 0 && c.email) ? `<span class="cc-mail">${escapeHtml(x)}</span>` : escapeHtml(x)).join(' · ') || '—';
+    const tags = (c.revisar ? '<span class="cc-tag rev" title="Posible personal, por revisar">revisar</span>' : '') +
+                 (c.rebote ? '<span class="cc-tag reb" title="Su correo rebotó">rebotó</span>' : '');
+    const acts = canW ? `<div class="cc-acts">
+      <button class="cc-act${c.revisar ? ' on-rev' : ''}" title="${c.revisar ? 'Quitar marca por revisar' : 'Marcar por revisar (posible personal)'}" onclick="ccToggle('${c.id}','revisar')"><i class="fa-solid fa-flag"></i></button>
+      <button class="cc-act${c.rebote ? ' on-reb' : ''}" title="${c.rebote ? 'Quitar rebote' : 'Marcar: el correo rebotó'}" onclick="ccToggle('${c.id}','rebote')"><i class="fa-solid fa-triangle-exclamation"></i></button>
+      <button class="cc-act" title="Editar" onclick="ccEditOpen('${c.id}')"><i class="fa-solid fa-pen"></i></button>
+      <button class="cc-act del" title="Eliminar" onclick="ccDelete('${c.id}')"><i class="fa-solid fa-trash"></i></button>
+    </div>` : '';
+    return `<div class="cc-row${c.revisar ? ' rev' : ''}${c.rebote ? ' reb' : ''}">
+      <div class="cc-avatar">${escapeHtml(ini)}</div>
+      <div class="cc-main"><div class="cc-name">${escapeHtml(nombre)}${tags}</div><div class="cc-sub">${subHtml}</div></div>
+      ${acts}
+    </div>`;
+  }).join('');
+  if (rows.length > ccCap) list.insertAdjacentHTML('beforeend', `<button class="cc-more" onclick="ccShowMore()">Mostrar más (${(rows.length - ccCap).toLocaleString('es')} restantes)</button>`);
+}
+
+function ccShowMore() { ccCap += 500; renderContactos(); }
+
+async function ccToggle(id, field) {
+  const c = cretumContactos.find(x => x.id === id);
+  if (!c) return;
+  const nuevo = !c[field];
+  const { error } = await sb.from('cretum_contactos').update({ [field]: nuevo }).eq('id', id);
+  if (error) { toast('Error: ' + error.message); return; }
+  c[field] = nuevo;
+  renderContactos();
+}
+
+async function ccDelete(id) {
+  const c = cretumContactos.find(x => x.id === id);
+  if (!c) return;
+  const ok = await showConfirm('Eliminar contacto', `¿Eliminar a ${c.nombre || c.email || 'este contacto'} de la agenda de Cretum?`);
+  if (!ok) return;
+  const { error } = await sb.from('cretum_contactos').delete().eq('id', id);
+  if (error) { toast('Error al eliminar: ' + error.message); return; }
+  cretumContactos = cretumContactos.filter(x => x.id !== id);
+  renderContactos();
+  toast('Contacto eliminado');
+}
+
+function ccAddOpen() {
+  ccEditId = null;
+  ['ccfNombre', 'ccfEmail', 'ccfOrg', 'ccfPuesto', 'ccfTel'].forEach(i => { const el = document.getElementById(i); if (el) { el.value = ''; el.disabled = false; } });
+  document.getElementById('ccTitle').innerHTML = '<i class="fa-solid fa-user-plus"></i> Añadir contacto';
+  const m = document.getElementById('ccfMsg'); m.textContent = ''; m.className = 'camp-modal-msg';
+  document.getElementById('ccModal').classList.add('show');
+  setTimeout(() => document.getElementById('ccfNombre').focus(), 60);
+}
+
+function ccEditOpen(id) {
+  const c = cretumContactos.find(x => x.id === id); if (!c) return;
+  ccEditId = id;
+  document.getElementById('ccfNombre').value = c.nombre || '';
+  document.getElementById('ccfEmail').value = c.email || '';
+  document.getElementById('ccfOrg').value = c.organizacion || '';
+  document.getElementById('ccfPuesto').value = c.puesto || '';
+  document.getElementById('ccfTel').value = c.telefono_movil || c.telefono_trabajo || '';
+  document.getElementById('ccTitle').innerHTML = '<i class="fa-solid fa-user-pen"></i> Editar contacto';
+  const m = document.getElementById('ccfMsg'); m.textContent = ''; m.className = 'camp-modal-msg';
+  document.getElementById('ccModal').classList.add('show');
+  setTimeout(() => document.getElementById('ccfNombre').focus(), 60);
+}
+
+function ccClose() { document.getElementById('ccModal').classList.remove('show'); ccEditId = null; }
+
+async function ccSave() {
+  const msg = document.getElementById('ccfMsg');
+  const fail = t => { msg.textContent = t; msg.className = 'camp-modal-msg err'; };
+  const nombre = document.getElementById('ccfNombre').value.trim();
+  const email = ccNorm(document.getElementById('ccfEmail').value);
+  const org = document.getElementById('ccfOrg').value.trim();
+  const puesto = document.getElementById('ccfPuesto').value.trim();
+  const tel = document.getElementById('ccfTel').value.trim();
+  if (!nombre) return fail('El nombre es obligatorio.');
+  if (email && !email.includes('@')) return fail('El correo no parece válido.');
+  const payload = { nombre, email: email || null, organizacion: org || null, puesto: puesto || null, telefono_movil: tel || null };
+  if (ccEditId) {
+    const { error } = await sb.from('cretum_contactos').update(payload).eq('id', ccEditId);
+    if (error) return fail('Error al guardar: ' + error.message);
+    const c = cretumContactos.find(x => x.id === ccEditId); if (c) Object.assign(c, payload);
+    toast('Contacto actualizado');
+  } else {
+    if (email && cretumContactos.some(c => ccNorm(c.email) === email)) return fail('Ya existe un contacto con ese correo.');
+    const { data, error } = await sb.from('cretum_contactos').insert(payload).select().single();
+    if (error) return fail('Error al guardar: ' + error.message);
+    cretumContactos.push(data);
+    toast('Contacto añadido');
+  }
+  cretumContactos.sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es'));
+  ccClose();
+  renderContactos();
+}
+
+async function ccExport(btn) {
+  const rows = ccFiltered();
+  if (!rows.length) { toast('No hay contactos para exportar'); return; }
+  const orig = btn ? btn.innerHTML : null;
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Exportando…'; }
+  try {
+    await loadExcelJS();
+    const NAVY = 'FF1A3A6B', WHITE = 'FFFFFFFF', STRIPE = 'FFEFF3FA';
+    const wb = new ExcelJS.Workbook(); wb.creator = 'Cretum Partners';
+    const ws = wb.addWorksheet('Contactos', { views: [{ showGridLines: false, state: 'frozen', ySplit: 1 }] });
+    const H = ['Nombre', 'Correo', 'Organización', 'Puesto', 'Teléfono móvil', 'Teléfono trabajo', 'País', 'Por revisar', 'Rebote'];
+    ws.columns = [{ width: 30 }, { width: 34 }, { width: 28 }, { width: 22 }, { width: 16 }, { width: 16 }, { width: 14 }, { width: 12 }, { width: 10 }];
+    H.forEach((h, i) => { const c = ws.getCell(1, i + 1); c.value = h; c.font = { bold: true, size: 10, color: { argb: WHITE } }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } }; });
+    ws.getRow(1).height = 20;
+    ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: H.length } };
+    rows.forEach((c, idx) => {
+      const vals = [c.nombre || '', c.email || '', c.organizacion || '', c.puesto || '', c.telefono_movil || '', c.telefono_trabajo || '', c.pais || '', c.revisar ? 'Sí' : '', c.rebote ? 'Sí' : ''];
+      vals.forEach((v, i) => { const cell = ws.getCell(idx + 2, i + 1); cell.value = v; cell.font = { size: 10 }; if (idx % 2 === 1) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: STRIPE } }; });
+    });
+    const buf = await wb.xlsx.writeBuffer();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+    a.download = `cretum_contactos_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    toast('Exportado a Excel');
+  } catch (e) { console.error('[cc export]', e); toast('No se pudo exportar: ' + (e.message || '')); }
+  finally { if (btn) { btn.disabled = false; btn.innerHTML = orig; } }
+}
 
 /* ═══════════════════════════════════════════
    TABLA DE CONTACTOS (no-admin) — vía /api/contacts (service role server-side)
