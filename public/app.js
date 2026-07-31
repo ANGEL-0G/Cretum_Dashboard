@@ -2963,6 +2963,9 @@ const ORG_MODULES = {
     { view: 'ventas', icon: 'fa-chart-line', title: 'Ventas',
       desc: 'Dashboards y análisis de ventas del fondo',
       iconClass: 'home-ico-ventas' },
+    { view: 'usuarios', icon: 'fa-users-gear', title: 'Usuarios',
+      desc: 'Administra cuentas: roles, contraseñas, altas, bajas',
+      iconClass: 'home-ico-users', adminOnly: true },
   ],
   mvp: [
     { view: 'notes', icon: 'fa-book', title: 'Notas',
@@ -2983,6 +2986,9 @@ const ORG_MODULES = {
     { view: 'portal', icon: 'fa-share-nodes', title: 'Portal de clientes',
       desc: 'Sube dashboards de MVP y da acceso a clientes con su propio usuario',
       iconClass: 'home-ico-portal' },
+    { view: 'usuarios', icon: 'fa-users-gear', title: 'Usuarios',
+      desc: 'Administra cuentas: roles, contraseñas, altas, bajas',
+      iconClass: 'home-ico-users', adminOnly: true },
   ],
 };
 
@@ -2997,6 +3003,7 @@ const ORG_NAV = {
     { view: 'forms',     icon: 'fa-clipboard-list', label: 'Formularios' },
     { view: 'portal',    icon: 'fa-share-nodes', label: 'Portal de clientes' },
     { view: 'ventas',    icon: 'fa-chart-line', label: 'Ventas' },
+    { view: 'usuarios',  icon: 'fa-users-gear', label: 'Usuarios', adminOnly: true },
   ],
   mvp: [
     { view: 'home',         icon: 'fa-house',         label: 'Inicio' },
@@ -3006,6 +3013,7 @@ const ORG_NAV = {
     { view: 'fundraising',  icon: 'fa-hand-holding-dollar', label: 'Fund Rising Tracker' },
     { view: 'reports',      icon: 'fa-chart-pie',     label: 'Reportes' },
     { view: 'portal',       icon: 'fa-share-nodes',   label: 'Portal de clientes' },
+    { view: 'usuarios',     icon: 'fa-users-gear',    label: 'Usuarios', adminOnly: true },
   ],
 };
 
@@ -3476,6 +3484,8 @@ function switchView(view, isBack = false) {
   if (pageNotes) pageNotes.classList.toggle('active', view === 'notes');
   const pageContactos = document.getElementById('pageContactos');
   if (pageContactos) pageContactos.classList.toggle('active', view === 'contactos');
+  const pageUsuarios = document.getElementById('pageUsuarios');
+  if (pageUsuarios) pageUsuarios.classList.toggle('active', view === 'usuarios');
 
   highlightActiveNav();
 
@@ -3495,6 +3505,7 @@ function switchView(view, isBack = false) {
     'ventas':       'Ventas',
     'notes':        'Notas',
     'contactos':    'Base de Datos Cretum',
+    'usuarios':     'Usuarios',
   }[view] || '';
   document.getElementById('headerBrandText').textContent =
     view === 'selector' ? 'Cretum · Selector' : (orgPrefix + viewLabel);
@@ -3521,6 +3532,7 @@ function switchView(view, isBack = false) {
   if (view === 'ventas') ventasBackHome();
   if (view === 'notes') openNotesPage();
   if (view === 'contactos') loadContactos();
+  if (view === 'usuarios') loadUsuarios();
   if (view === 'tasks') requestAnimationFrame(tkMoveSliders);   // coloca las pills una vez visible
 
   syncHash();
@@ -12133,6 +12145,163 @@ async function ccExport(btn) {
     toast('Exportado a Excel');
   } catch (e) { console.error('[cc export]', e); toast('No se pudo exportar: ' + (e.message || '')); }
   finally { if (btn) { btn.disabled = false; btn.innerHTML = orig; } }
+}
+
+/* ═══════════════════════════════════════════
+   USUARIOS (admin) — administración de cuentas vía /api/contacts (service role).
+   Crear/editar/borrar, roles, contraseñas y habilitar/deshabilitar. Solo admin.
+   Un admin no se borra ni deshabilita desde aquí (eso va por Supabase).
+═══════════════════════════════════════════ */
+let usrUsers = null, usrLoaded = false, usrMe = null, usrEditId = null, usrPwId = null;
+const ROLE_LABEL = { admin: 'Admin', editor: 'Editor', colaborador: 'Colaborador', viewer: 'Viewer' };
+
+async function usrApi(body) {
+  const r = await authedFetch('/api/contacts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || ('Error ' + r.status));
+  return d;
+}
+
+async function loadUsuarios() {
+  const list = document.getElementById('usrList');
+  if (currentProfile?.role !== 'admin') { if (list) list.innerHTML = '<div class="cc-empty"><i class="fa-solid fa-lock"></i>Solo administradores.</div>'; return; }
+  if (list) list.innerHTML = '<div class="db-loading"><i class="fa-solid fa-spinner fa-spin"></i> Cargando usuarios…</div>';
+  try {
+    const d = await usrApi({ action: 'users_list' });
+    usrUsers = d.users || []; usrMe = d.me; usrLoaded = true;
+    renderUsuarios();
+  } catch (e) { if (list) list.innerHTML = `<div class="cc-empty">No se pudo cargar: ${escapeHtml(e.message)}</div>`; }
+}
+async function reloadUsuarios() { usrLoaded = false; await loadUsuarios(); }
+
+function renderUsuarios() {
+  if (!usrLoaded) return;
+  const q = ccStrip(document.getElementById('usrSearch')?.value);
+  let rows = usrUsers;
+  if (q) rows = rows.filter(u => ccStrip(u.full_name).includes(q) || ccNorm(u.email).includes(q) || ccNorm(ROLE_LABEL[u.role] || '').includes(q));
+  const meta = document.getElementById('usrMeta');
+  if (meta) meta.innerHTML = `<span><b>${usrUsers.length}</b> usuario${usrUsers.length === 1 ? '' : 's'}</span>`;
+  const list = document.getElementById('usrList');
+  if (!list) return;
+  if (!rows.length) { list.innerHTML = `<div class="cc-empty"><i class="fa-solid fa-users"></i>Sin usuarios que coincidan.</div>`; return; }
+  const body = rows.map(u => {
+    const isMe = u.id === usrMe;
+    const isAdminRow = u.role === 'admin';
+    const roleBadge = `<span class="usr-badge usr-role-${u.role || 'viewer'}">${ROLE_LABEL[u.role] || '—'}</span>`;
+    const status = u.disabled ? '<span class="usr-status off"><span class="usr-dot"></span>Deshabilitado</span>' : '<span class="usr-status"><span class="usr-dot"></span>Activo</span>';
+    // Deshabilitar/eliminar: no a admins ni a uno mismo (eso se hace en Supabase).
+    const canHardAct = !isMe && !isAdminRow;
+    const disBtn = canHardAct ? (u.disabled
+      ? `<button class="ctbl-act" title="Habilitar" onclick="usrToggle('${u.id}',true)"><i class="fa-solid fa-circle-check"></i></button>`
+      : `<button class="ctbl-act" title="Deshabilitar" onclick="usrToggle('${u.id}',false)"><i class="fa-solid fa-ban"></i></button>`) : '';
+    const delBtn = canHardAct ? `<button class="ctbl-act del" title="Eliminar" onclick="usrDelete('${u.id}')"><i class="fa-solid fa-trash"></i></button>` : '';
+    return `<tr>
+      <td class="ctbl-nm">${escapeHtml(u.full_name || '(sin nombre)')}${isMe ? '<span class="usr-you">tú</span>' : ''}</td>
+      <td class="ctbl-em">${escapeHtml(u.email)}</td>
+      <td>${roleBadge}</td>
+      <td>${status}</td>
+      <td class="ctbl-acts">
+        <button class="ctbl-act" title="Editar (nombre, correo, rol)" onclick="usrEditOpen('${u.id}')"><i class="fa-solid fa-pen"></i></button>
+        <button class="ctbl-act" title="Restablecer contraseña" onclick="usrPwOpen('${u.id}')"><i class="fa-solid fa-key"></i></button>
+        ${disBtn}${delBtn}
+      </td>
+    </tr>`;
+  }).join('');
+  list.innerHTML = `<div class="cc-tablewrap"><table class="ctbl-table"><thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th></th></tr></thead><tbody>${body}</tbody></table></div>`;
+}
+
+function usrGenPw(inputId) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+  const a = new Uint32Array(12); crypto.getRandomValues(a);
+  let s = ''; for (let i = 0; i < 12; i++) s += chars[a[i] % chars.length];
+  const el = document.getElementById(inputId); if (el) el.value = s;
+}
+
+function usrCreateOpen() {
+  usrEditId = null;
+  document.getElementById('usrTitle').innerHTML = '<i class="fa-solid fa-user-plus"></i> Crear usuario';
+  document.getElementById('usrfNombre').value = '';
+  const em = document.getElementById('usrfEmail'); em.value = ''; em.disabled = false;
+  document.getElementById('usrfRole').value = 'viewer';
+  document.getElementById('usrfPwBlock').style.display = '';
+  document.getElementById('usrfPw').value = '';
+  const m = document.getElementById('usrfMsg'); m.textContent = ''; m.className = 'camp-modal-msg';
+  document.getElementById('usrModal').classList.add('show');
+  setTimeout(() => document.getElementById('usrfNombre').focus(), 60);
+}
+
+function usrEditOpen(id) {
+  const u = usrUsers.find(x => x.id === id); if (!u) return;
+  usrEditId = id;
+  document.getElementById('usrTitle').innerHTML = '<i class="fa-solid fa-user-pen"></i> Editar usuario';
+  document.getElementById('usrfNombre').value = u.full_name || '';
+  document.getElementById('usrfEmail').value = u.email || '';
+  document.getElementById('usrfRole').value = u.role || 'viewer';
+  document.getElementById('usrfPwBlock').style.display = 'none';
+  const m = document.getElementById('usrfMsg'); m.textContent = ''; m.className = 'camp-modal-msg';
+  document.getElementById('usrModal').classList.add('show');
+  setTimeout(() => document.getElementById('usrfNombre').focus(), 60);
+}
+
+function usrClose() { document.getElementById('usrModal').classList.remove('show'); usrEditId = null; }
+
+async function usrSave() {
+  const msg = document.getElementById('usrfMsg');
+  const fail = t => { msg.textContent = t; msg.className = 'camp-modal-msg err'; };
+  const full = document.getElementById('usrfNombre').value.trim();
+  const email = ccNorm(document.getElementById('usrfEmail').value);
+  const role = document.getElementById('usrfRole').value;
+  if (!full) return fail('El nombre es obligatorio.');
+  if (!email.includes('@')) return fail('El correo no parece válido.');
+  const btn = document.getElementById('usrfSave'); const orig = btn.innerHTML;
+  btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+  try {
+    if (usrEditId) {
+      await usrApi({ action: 'users_update', id: usrEditId, full_name: full, email, role });
+      toast('Usuario actualizado');
+    } else {
+      const pw = document.getElementById('usrfPw').value.trim();
+      if (pw.length < 8) { fail('La contraseña debe tener al menos 8 caracteres.'); return; }
+      await usrApi({ action: 'users_create', full_name: full, email, role, password: pw });
+      toast('Usuario creado');
+    }
+    usrClose(); await reloadUsuarios();
+  } catch (e) { fail(e.message); }
+  finally { btn.disabled = false; btn.innerHTML = orig; }
+}
+
+function usrPwOpen(id) {
+  const u = usrUsers.find(x => x.id === id); if (!u) return;
+  usrPwId = id;
+  document.getElementById('usrPwWho').innerHTML = `Nueva contraseña para <b>${escapeHtml(u.full_name || u.email)}</b>`;
+  document.getElementById('usrPwInput').value = '';
+  const m = document.getElementById('usrPwMsg'); m.textContent = ''; m.className = 'camp-modal-msg';
+  document.getElementById('usrPwModal').classList.add('show');
+}
+function usrPwClose() { document.getElementById('usrPwModal').classList.remove('show'); usrPwId = null; }
+async function usrPwSave() {
+  const msg = document.getElementById('usrPwMsg');
+  const pw = document.getElementById('usrPwInput').value.trim();
+  if (pw.length < 8) { msg.textContent = 'Mínimo 8 caracteres.'; msg.className = 'camp-modal-msg err'; return; }
+  try { await usrApi({ action: 'users_reset_pw', id: usrPwId, password: pw }); usrPwClose(); toast('Contraseña restablecida'); }
+  catch (e) { msg.textContent = e.message; msg.className = 'camp-modal-msg err'; }
+}
+
+async function usrToggle(id, enable) {
+  const u = usrUsers.find(x => x.id === id); if (!u) return;
+  const ok = await showConfirm(`${enable ? 'Habilitar' : 'Deshabilitar'} usuario`,
+    `¿${enable ? 'Habilitar' : 'Deshabilitar'} a ${u.full_name || u.email}?${enable ? '' : ' No podrá iniciar sesión.'}`);
+  if (!ok) return;
+  try { await usrApi({ action: enable ? 'users_enable' : 'users_disable', id }); await reloadUsuarios(); toast(`Usuario ${enable ? 'habilitado' : 'deshabilitado'}`); }
+  catch (e) { toast(e.message); }
+}
+
+async function usrDelete(id) {
+  const u = usrUsers.find(x => x.id === id); if (!u) return;
+  const ok = await showConfirm('Eliminar usuario', `¿Eliminar a ${u.full_name || u.email}? Se borra su cuenta por completo. No se puede deshacer.`);
+  if (!ok) return;
+  try { await usrApi({ action: 'users_delete', id }); await reloadUsuarios(); toast('Usuario eliminado'); }
+  catch (e) { toast(e.message); }
 }
 
 /* ═══════════════════════════════════════════
