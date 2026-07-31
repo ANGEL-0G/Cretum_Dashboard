@@ -462,7 +462,7 @@ async function saveData() {
   // Solo editores/admins guardan (el backend también lo exige). Usamos el rol
   // REAL (no el simulado por "Ver como") para no meter a un viewer en un bucle
   // de reintentos con error 403.
-  if (roleReal && roleReal !== 'editor' && roleReal !== 'admin') return;
+  if (roleReal && roleReal !== 'editor' && roleReal !== 'admin' && roleReal !== 'colaborador') return;
   setSyncStatus('saving');
   try {
     const r = await authedFetch('/api/tasks', {
@@ -2947,7 +2947,7 @@ const ORG_MODULES = {
       iconClass: 'home-ico-notes' },
     { view: 'contactos', icon: 'fa-database', title: 'Base de Datos Cretum',
       desc: 'Base de datos de contactos propia de Cretum',
-      iconClass: 'home-ico-cretumdb' },
+      iconClass: 'home-ico-cretumdb', hideColaborador: true },
     { view: 'dropbox', icon: 'fa-dropbox', iconBrand: true, title: 'Dropbox',
       desc: 'Archivos compartidos del equipo desde Dropbox',
       iconClass: 'home-ico-dropbox' },
@@ -2991,7 +2991,7 @@ const ORG_NAV = {
     { view: 'home',    icon: 'fa-house',       label: 'Inicio' },
     { view: 'tasks',   icon: 'fa-list-check',  label: 'To Do Dashboard' },
     { view: 'notes',   icon: 'fa-book',        label: 'Notas' },
-    { view: 'contactos', icon: 'fa-database',  label: 'Base de Datos Cretum' },
+    { view: 'contactos', icon: 'fa-database',  label: 'Base de Datos Cretum', hideColaborador: true },
     { view: 'dropbox', icon: 'fa-dropbox',     label: 'Dropbox', brand: true },
     { view: 'campaigns', icon: 'fa-bolt',      label: 'Campañas' },
     { view: 'forms',     icon: 'fa-clipboard-list', label: 'Formularios' },
@@ -3116,9 +3116,10 @@ function renderHomeModules() {
   const el = document.getElementById('homeModules');
   if (!el || !currentOrg) return;
   const isAdmin = currentProfile?.role === 'admin';
-  const isEditorOrAdmin = isAdmin || currentProfile?.role === 'editor';
+  const isColab = currentProfile?.role === 'colaborador';
+  const isEditorOrAdmin = isAdmin || currentProfile?.role === 'editor' || isColab;
   const mods = (ORG_MODULES[currentOrg] || []).filter(m =>
-    (!m.adminOnly || isAdmin) && (!m.editorOrAdmin || isEditorOrAdmin));
+    (!m.adminOnly || isAdmin) && (!m.editorOrAdmin || isEditorOrAdmin) && !(m.hideColaborador && isColab));
   el.innerHTML = mods.map(m => `
     <button class="home-module${m.disabled ? ' disabled' : ''}" data-mod="${m.view}"${m.disabled ? ' disabled aria-disabled="true"' : ` onclick="switchView('${m.view}')"`}>
       ${m.disabled ? `<span class="home-module-badge">${t('Pronto')}</span>` : ''}
@@ -3393,9 +3394,10 @@ function renderNavList() {
   const list = document.getElementById('navList');
   if (!list) return;
   const isAdmin = currentProfile?.role === 'admin';
-  const isEditorOrAdmin = isAdmin || currentProfile?.role === 'editor';
+  const isColab = currentProfile?.role === 'colaborador';
+  const isEditorOrAdmin = isAdmin || currentProfile?.role === 'editor' || isColab;
   const items = (currentOrg ? ORG_NAV[currentOrg] : []).filter(it =>
-    (!it.adminOnly || isAdmin) && (!it.editorOrAdmin || isEditorOrAdmin));
+    (!it.adminOnly || isAdmin) && (!it.editorOrAdmin || isEditorOrAdmin) && !(it.hideColaborador && isColab));
   list.innerHTML = items.map(it => `
     <button class="nav-item" data-view="${it.view}" onclick="switchView('${it.view}')">
       <i class="${it.brand ? 'fa-brands' : 'fa-solid'} ${it.icon}"></i>
@@ -4130,7 +4132,8 @@ function applyRoute() {
       viewHistory = [];
     }
     const isAdmin = currentProfile?.role === 'admin';
-    const allowed = (ORG_NAV[org] || []).some(it => it.view === view && (!it.adminOnly || isAdmin));
+    const isColab = currentProfile?.role === 'colaborador';
+    const allowed = (ORG_NAV[org] || []).some(it => it.view === view && (!it.adminOnly || isAdmin) && !(it.hideColaborador && isColab));
     switchView(allowed ? view : 'home', true);
   } else {
     switchView('selector', true);
@@ -4427,7 +4430,7 @@ let portalOrg = 'cretum';   // empresa que se gestiona en el módulo Portal (seg
 
 // Todo el equipo VE los dashboards y accesos (sin contraseñas); solo editores/
 // admins pueden crear/editar/borrar. El backend lo exige igual (canManage).
-const ptCanManage = () => currentProfile?.role === 'admin' || currentProfile?.role === 'editor';
+const ptCanManage = () => ['admin', 'editor', 'colaborador'].includes(currentProfile?.role);
 
 async function portalApi(body) {
   const r = await authedFetch('/api/portal', {
@@ -7902,7 +7905,7 @@ const LP_KPI_INFO = {
 function renderInvestorDetail(inv, contacts, positions) {
   lastInvestorDetail = { inv, contacts, positions };
   const combined = !!inv._combined;
-  const canEditTitular = !combined && (currentProfile?.role === 'admin' || currentProfile?.role === 'editor');
+  const canEditTitular = !combined && ['admin', 'editor', 'colaborador'].includes(currentProfile?.role);
   const totalEv = positions.reduce((s, p) => s + (+p.current_ev_b || 0), 0);
   const DIVERSIFIED_FUND_ID = 10;
   const activePositions = positions.filter(p => !p.distributed_at);
@@ -10701,7 +10704,7 @@ function campToggleMatrix() {
 
 async function loadCampaigns() {
   const isAdmin = currentProfile?.role === 'admin';
-  const isEditorOrAdmin = isAdmin || currentProfile?.role === 'editor';
+  const isEditorOrAdmin = isAdmin || currentProfile?.role === 'editor' || currentProfile?.role === 'colaborador';
   // Gestión: solo admin. Listas: editores y admin (lectura). Tabla de Contactos: el resto.
   document.querySelectorAll('#pageCampaigns .camp-tab-admin').forEach(t => { t.style.display = isAdmin ? '' : 'none'; });
   document.querySelectorAll('#pageCampaigns .camp-tab-editor').forEach(t => { t.style.display = isEditorOrAdmin ? '' : 'none'; });
@@ -11944,6 +11947,11 @@ const ccStrip = s => ccNorm(s).normalize('NFD').replace(/[̀-ͯ]/g, '');
 const ccCanWrite = () => ['admin', 'editor'].includes(currentProfile?.role);
 
 async function loadContactos() {
+  if (currentProfile?.role === 'colaborador') {   // sin acceso a la Base de Datos Cretum
+    const list = document.getElementById('ccList');
+    if (list) list.innerHTML = '<div class="cc-empty"><i class="fa-solid fa-lock"></i>No tienes acceso a la Base de Datos Cretum.</div>';
+    return;
+  }
   if (cretumLoaded) { renderContactos(); return; }
   const list = document.getElementById('ccList');
   if (list) list.innerHTML = '<div class="db-loading"><i class="fa-solid fa-spinner fa-spin"></i> Cargando contactos…</div>';
