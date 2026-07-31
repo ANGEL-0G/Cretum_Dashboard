@@ -4622,20 +4622,36 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   .um-dot{width:7px;height:7px;border-radius:50%;flex:none;background:#12b76a;box-shadow:0 0 0 3px rgba(18,183,106,.16)}
   .um-status.off{color:#c0392b}
   .um-status.off .um-dot{background:#c0392b;box-shadow:0 0 0 3px rgba(192,57,43,.14)}
-  .um-role{appearance:none;-webkit-appearance:none;-moz-appearance:none;border:1px solid var(--line,#dde3ec);border-radius:20px;padding:6px 29px 6px 13px;font-size:12.5px;font-weight:600;font-family:inherit;cursor:pointer;color:var(--ink,#334);background-color:var(--white,#fff);
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5l3 3 3-3' fill='none' stroke='%238893a5' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-    background-repeat:no-repeat;background-position:right 11px center;transition:border-color .13s,box-shadow .13s,background-color .13s}
-  .um-role:hover{border-color:var(--navy-light,#b9c8e6)}
-  .um-role:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px var(--navy-pale,#eaf0fb)}
-  .um-role:disabled{opacity:.65;cursor:default}
-  .um-role-admin{color:var(--navy);border-color:#c7d5ee;background-color:#f2f6fd}
-  .um-role-editor{color:#0a7a46;border-color:#c1e6d1;background-color:#f0faf4}
-  .um-role-colaborador{color:#a5620a;border-color:#f0d8b4;background-color:#fdf6ec}
-  .um-role-viewer{color:#586074}
-  [data-theme="dark"] .um-role{background-color:var(--card,#1a2030);color:#cdd5e2;border-color:rgba(255,255,255,.1)}
-  [data-theme="dark"] .um-role-admin{background-color:rgba(93,143,245,.14);color:#8fb0f2;border-color:rgba(93,143,245,.3)}
-  [data-theme="dark"] .um-role-editor{background-color:rgba(15,155,90,.16);color:#5cd39a;border-color:rgba(15,155,90,.35)}
-  [data-theme="dark"] .um-role-colaborador{background-color:rgba(196,125,26,.18);color:#e8ac52;border-color:rgba(196,125,26,.4)}
+  /* Selector de rol horizontal (tipo "perfiles"): pill colapsado + popover con tarjetas */
+  .rp-pill{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line,#dde3ec);border-radius:20px;padding:6px 11px 6px 12px;font-size:12.5px;font-weight:600;font-family:inherit;cursor:pointer;color:var(--ink,#334);background:var(--white,#fff);white-space:nowrap;transition:border-color .13s,box-shadow .13s,background .13s}
+  .rp-pill:hover{border-color:var(--navy-light,#b9c8e6)}
+  .rp-pill:focus-visible{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px var(--navy-pale,#eaf0fb)}
+  .rp-pill.rp-static{cursor:default}
+  .rp-cir{width:8px;height:8px;border-radius:50%;flex:none;background:#8a94a6}
+  .rp-cv{font-size:8px;opacity:.55;margin-left:1px}
+  .rp-admin{color:var(--navy);border-color:#c7d5ee;background:#f2f6fd}
+  .rp-admin .rp-cir{background:var(--navy)}
+  .rp-editor{color:#0a7a46;border-color:#c1e6d1;background:#f0faf4}
+  .rp-editor .rp-cir{background:#12a066}
+  .rp-colaborador{color:#a5620a;border-color:#f0d8b4;background:#fdf6ec}
+  .rp-colaborador .rp-cir{background:#e0833a}
+  .rp-viewer{color:#586074}
+  [data-theme="dark"] .rp-pill{background:var(--card,#1a2030);color:#cdd5e2;border-color:rgba(255,255,255,.1)}
+  [data-theme="dark"] .rp-admin{background:rgba(93,143,245,.14);color:#8fb0f2;border-color:rgba(93,143,245,.3)}
+  [data-theme="dark"] .rp-editor{background:rgba(15,155,90,.16);color:#5cd39a;border-color:rgba(15,155,90,.35)}
+  [data-theme="dark"] .rp-colaborador{background:rgba(196,125,26,.18);color:#e8ac52;border-color:rgba(196,125,26,.4)}
+  .rp-pop{position:fixed;display:flex;gap:6px;background:var(--white,#fff);border:1px solid var(--line,#e3e8f0);border-radius:16px;box-shadow:0 16px 42px rgba(20,30,55,.2);padding:9px;z-index:1250;animation:rpIn .17s cubic-bezier(.23,1,.32,1)}
+  .rp-pop[hidden]{display:none}
+  @keyframes rpIn{from{opacity:0;transform:translateY(-7px) scale(.94)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.rp-pop{animation:none}}
+  .rp-opt{display:flex;flex-direction:column;align-items:center;gap:8px;width:84px;padding:12px 8px 10px;border:2px solid transparent;border-radius:14px;background:none;cursor:pointer;font-family:inherit;transition:transform .13s cubic-bezier(.23,1,.32,1),background .13s,border-color .13s}
+  .rp-opt:hover{background:var(--navy-ghost,#f5f7fb);transform:translateY(-3px)}
+  .rp-opt.sel{background:var(--navy-ghost,#f5f7fb)}
+  .rp-ic{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;box-shadow:0 3px 8px rgba(20,30,55,.14)}
+  .rp-lbl{font-size:12px;font-weight:600;color:var(--ink,#2a3444)}
+  [data-theme="dark"] .rp-pop{background:var(--card,#1c2331);border-color:rgba(255,255,255,.1)}
+  [data-theme="dark"] .rp-opt:hover,[data-theme="dark"] .rp-opt.sel{background:rgba(255,255,255,.05)}
+  [data-theme="dark"] .rp-lbl{color:#dfe4ec}
   .um-kebab{width:32px;height:32px;border-radius:9px;border:none;background:none;color:var(--ink-soft,#9aa3b2);cursor:pointer;font-size:15px;display:inline-flex;align-items:center;justify-content:center;opacity:0;transition:opacity .12s,background .12s,color .12s}
   .um-row:hover .um-kebab,.um-kebab:focus-visible{opacity:1}
   @media(hover:none){.um-kebab{opacity:1}}
@@ -4674,6 +4690,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   <div id="usrList"></div>
 </div>
 <div id="usrKebabMenu" class="um-menu" hidden></div>
+<div id="usrRolePop" class="rp-pop" hidden></div>
 
 <!-- Modal: crear / editar usuario -->
 <div class="camp-modal-backdrop" id="usrModal" onclick="if(event.target===this)usrClose()">
@@ -5796,6 +5813,6 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 </div>
 
 <script src="/i18n.js?v=20260724-notes2"></script>
-<script src="/app.js?v=20260731-usuarios3"></script>
+<script src="/app.js?v=20260731-rolepick"></script>
 </body>
 </html>

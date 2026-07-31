@@ -12196,7 +12196,10 @@ function renderUsuarios() {
     const isMe = u.id === usrMe;
     const ini = ((u.full_name || u.email || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0] || '').join('') || '?').toUpperCase();
     const av = umAvatar(u.id || u.email);
-    const roleOpts = ROLES.map(r => `<option value="${r}"${u.role === r ? ' selected' : ''}>${ROLE_LABEL[r]}</option>`).join('');
+    const rm = ROLE_META[u.role] || ROLE_META.viewer;
+    const rolePill = isMe
+      ? `<span class="rp-pill rp-${u.role || 'viewer'} rp-static" title="No puedes cambiar tu propio rol aquí"><span class="rp-cir"></span>${rm.label}</span>`
+      : `<button class="rp-pill rp-${u.role || 'viewer'}" onclick="usrRoleOpen('${u.id}', event)"><span class="rp-cir"></span>${rm.label}<span class="rp-cv"><i class="fa-solid fa-chevron-down"></i></span></button>`;
     const status = u.disabled
       ? '<span class="um-status off"><span class="um-dot"></span>Deshabilitado</span>'
       : '<span class="um-status"><span class="um-dot"></span>Activo</span>';
@@ -12207,24 +12210,51 @@ function renderUsuarios() {
         <div class="um-email">${escapeHtml(u.email)}</div>
       </div>
       <div class="um-status-wrap">${status}</div>
-      <select class="um-role um-role-${u.role || 'viewer'}" onchange="usrChangeRole('${u.id}', this.value, this)"${isMe ? ' disabled title="No puedes cambiar tu propio rol aquí"' : ''}>${roleOpts}</select>
+      <div class="um-role-wrap">${rolePill}</div>
       <button class="um-kebab" title="Más acciones" aria-label="Más acciones" onclick="usrMenu('${u.id}', event)"><i class="fa-solid fa-ellipsis-vertical"></i></button>
     </div>`;
   }).join('') + '</div>';
 }
 
-// Cambio de rol inline (rápido, sin modal); revierte si el backend rechaza.
-async function usrChangeRole(id, role, sel) {
+// Metadatos visuales de cada rol (para el selector horizontal tipo "perfiles").
+const ROLE_META = {
+  viewer:      { label: 'Viewer',      color: '#8a94a6', icon: 'fa-eye',           desc: 'Solo lectura' },
+  colaborador: { label: 'Colaborador', color: '#e0833a', icon: 'fa-user',          desc: 'Editor sin BD Cretum' },
+  editor:      { label: 'Editor',      color: '#12a066', icon: 'fa-pen',           desc: 'Crea y edita' },
+  admin:       { label: 'Admin',       color: '#1a3a6b', icon: 'fa-shield-halved', desc: 'Todo el control' },
+};
+
+// Selector de rol horizontal: al pulsar el rol actual se abre un menú con las
+// opciones (tarjetitas), animado y flotante para no romper la fila.
+function usrRoleOpen(id, ev) {
+  ev.stopPropagation();
+  usrMenuClose();
   const u = usrUsers.find(x => x.id === id); if (!u) return;
-  const prev = u.role;
-  sel.disabled = true;
-  try {
-    await usrApi({ action: 'users_update', id, role });
-    u.role = role;
-    sel.className = 'um-role um-role-' + role;
-    toast('Rol actualizado a ' + ROLE_LABEL[role]);
-  } catch (e) { sel.value = prev; toast(e.message); }
-  finally { sel.disabled = false; }
+  const pop = document.getElementById('usrRolePop');
+  pop.innerHTML = ['viewer', 'colaborador', 'editor', 'admin'].map(r => {
+    const m = ROLE_META[r]; const sel = u.role === r;
+    return `<button class="rp-opt${sel ? ' sel' : ''}" style="${sel ? `border-color:${m.color}` : ''}" onclick="usrPickRole('${id}','${r}')" title="${m.desc}">
+      <span class="rp-ic" style="background:${m.color}"><i class="fa-solid ${m.icon}"></i></span>
+      <span class="rp-lbl">${m.label}</span>
+    </button>`;
+  }).join('');
+  pop.hidden = false;
+  const r = ev.currentTarget.getBoundingClientRect();
+  const pw = pop.offsetWidth;
+  let left = Math.round(r.left + r.width / 2 - pw / 2);
+  left = Math.max(8, Math.min(left, window.innerWidth - pw - 8));
+  pop.style.left = left + 'px';
+  pop.style.top = (r.bottom + 8) + 'px';
+  requestAnimationFrame(() => { const ph = pop.offsetHeight; if (r.bottom + 8 + ph > window.innerHeight - 8) pop.style.top = (r.top - ph - 8) + 'px'; });
+}
+function usrRolePopClose() { const p = document.getElementById('usrRolePop'); if (p) p.hidden = true; }
+
+async function usrPickRole(id, role) {
+  const u = usrUsers.find(x => x.id === id);
+  usrRolePopClose();
+  if (!u || u.role === role) return;
+  try { await usrApi({ action: 'users_update', id, role }); u.role = role; renderUsuarios(); toast('Rol actualizado a ' + ROLE_LABEL[role]); }
+  catch (e) { toast(e.message); }
 }
 
 // Menú ⋯ por fila (posición fija para no recortarse).
@@ -12256,8 +12286,10 @@ function usrMenuClose() { const m = document.getElementById('usrKebabMenu'); if 
 document.addEventListener('click', (e) => {
   const m = document.getElementById('usrKebabMenu');
   if (m && !m.hidden && !m.contains(e.target) && !e.target.closest('.um-kebab')) usrMenuClose();
+  const p = document.getElementById('usrRolePop');
+  if (p && !p.hidden && !p.contains(e.target) && !e.target.closest('.rp-pill')) usrRolePopClose();
 });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') usrMenuClose(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { usrMenuClose(); usrRolePopClose(); } });
 
 function usrGenPw(inputId) {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
