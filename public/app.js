@@ -11699,6 +11699,121 @@ async function listasExportExcel(btn) {
   }
 }
 
+/* ── Importar contactos desde archivo (CSV/Excel, estilo Yesware) ──
+   Jala nombres + correos, agrega los nuevos y avisa los que se omiten por
+   estar ya en la lista. Solo-admin (los botones viven en el add-row, oculto
+   para editores). */
+let lstImportTarget = null;
+const LST_EMAIL_RE = /[^\s,;<>"']+@[^\s,;<>"']+\.[^\s,;<>"']+/;
+
+function listasImportOpen(list) {
+  lstImportTarget = list;
+  const inp = document.getElementById('lstImportFile');
+  if (inp) { inp.value = ''; inp.click(); }
+}
+
+async function listasImportFile(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const list = lstImportTarget || 'cartas';
+  try {
+    await loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
+    const buf = await file.arrayBuffer();
+    const wbk = XLSX.read(buf, { type: 'array' });
+    const ws = wbk.Sheets[wbk.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, blankrows: false, defval: '' });
+    const entries = lstParseImport(rows);
+    if (!entries.length) { toast('No encontré correos en el archivo'); return; }
+    await lstApplyImport(list, entries);
+  } catch (e) {
+    console.error('[listas import]', e);
+    toast('No se pudo leer el archivo: ' + (e.message || ''));
+  } finally {
+    input.value = '';
+  }
+}
+
+// Extrae [{name, email}] de una matriz de filas. Detecta encabezado (email/correo,
+// nombre/name); si no hay, busca el correo por regex y el nombre por la celda de
+// texto más larga que no sea correo ni teléfono.
+function lstParseImport(rows) {
+  if (!rows || !rows.length) return [];
+  const head = (rows[0] || []).map(x => String(x).toLowerCase());
+  const hasHeader = head.some(h => /mail|correo|name|nombre/.test(h));
+  let emailCol = -1, nameCol = -1;
+  if (hasHeader) {
+    head.forEach((h, i) => {
+      if (emailCol < 0 && /mail|correo/.test(h)) emailCol = i;
+      if (nameCol < 0 && /nombre|name/.test(h) && !/user|usuario/.test(h)) nameCol = i;
+    });
+  }
+  const body = hasHeader ? rows.slice(1) : rows;
+  const out = [];
+  body.forEach(r => {
+    const cells = (r || []).map(x => String(x == null ? '' : x).trim());
+    let email = emailCol >= 0 ? cells[emailCol] : '';
+    const em = (email.match(LST_EMAIL_RE) || [])[0]
+      || cells.map(c => (c.match(LST_EMAIL_RE) || [])[0]).find(Boolean) || '';
+    if (!em) return;
+    let name = nameCol >= 0 ? cells[nameCol] : '';
+    if (!name) {
+      name = cells.filter(c => c && !LST_EMAIL_RE.test(c) && !/^\+?[\d\s()-]+$/.test(c))
+        .sort((a, b) => b.length - a.length)[0] || '';
+    }
+    out.push({ name: name.trim(), email: em.trim().toLowerCase() });
+  });
+  return out;
+}
+
+async function lstApplyImport(list, entries) {
+  // Dedupe dentro del archivo (primera aparición gana).
+  const seen = new Set(); const uniq = [];
+  entries.forEach(e => { if (!seen.has(e.email)) { seen.add(e.email); uniq.push(e); } });
+
+  const arr = list === 'apertura' ? listasApertura : listasCartas;
+  const existing = new Set(arr.map(c => lstNorm(c.email)));
+  const toAdd = uniq.filter(e => !existing.has(e.email));
+  const skipped = uniq.filter(e => existing.has(e.email)).map(e => e.email);
+
+  if (toAdd.length) {
+    if (list === 'apertura') {
+      const payload = toAdd.map(e => ({ email: e.email, nombre: e.name || null }));
+      // ignoreDuplicates: si alguno ya existiera en BD (lista en pantalla desfasada) no truena el lote.
+      const { error } = await sb.from('apertura_contacts').upsert(payload, { onConflict: 'email', ignoreDuplicates: true });
+      if (error) { toast('Error al guardar: ' + error.message); return; }
+      toAdd.forEach(e => listasApertura.push({ email: e.email, nombre: e.name || null }));
+      listasApertura.sort((a, b) => (a.email || '').localeCompare(b.email || ''));
+      aperturaContacts = null;
+    } else {
+      const payload = toAdd.map(e => ({
+        email: e.email, nombre: lstFirst(e.name) || null, nombre_completo: e.name || '', responsable: null, cancelado: false,
+      }));
+      const { error } = await sb.from('lp_contacts').upsert(payload, { onConflict: 'email', ignoreDuplicates: true });
+      if (error) { toast('Error al guardar: ' + error.message); return; }
+      payload.forEach(p => listasCartas.push({ ...p }));
+      listasCartas.sort((a, b) => (a.nombre_completo || '').localeCompare(b.nombre_completo || ''));
+      campaignsLoaded = false;
+    }
+    renderListas();
+  }
+  lstShowImportResult(list, toAdd.length, skipped);
+}
+
+function lstShowImportResult(list, added, skipped) {
+  const listName = list === 'apertura' ? 'Apertura Cretum' : 'Cartas GVV';
+  document.getElementById('lstImpTitle').innerHTML = `<i class="fa-solid fa-file-import"></i> Importación · ${escapeHtml(listName)}`;
+  let html = `<div class="lst-imp-added"><i class="fa-solid fa-circle-check"></i> <span>Se agregaron <b>${added}</b> contacto${added === 1 ? '' : 's'} a ${escapeHtml(listName)}.</span></div>`;
+  if (skipped.length) {
+    html += `<div class="lst-imp-skip-h">Se omitieron <b>${skipped.length}</b> porque ya estaban en la lista:</div>`;
+    html += '<ul class="lst-imp-skip">' + skipped.map(e => `<li>El correo ${escapeHtml(e)} se omitió — ya está en la lista.</li>`).join('') + '</ul>';
+  } else if (added > 0) {
+    html += `<div class="lst-imp-skip-h">Sin correos duplicados.</div>`;
+  }
+  document.getElementById('lstImpBody').innerHTML = html;
+  document.getElementById('lstImportModal').classList.add('show');
+}
+function lstImportClose() { document.getElementById('lstImportModal').classList.remove('show'); }
+
 /* ═══════════════════════════════════════════
    TABLA DE CONTACTOS (no-admin) — vía /api/contacts (service role server-side)
    Ven todos; añaden con responsable = ellos mismos; editan/borran solo los suyos.
