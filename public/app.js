@@ -11483,9 +11483,12 @@ function renderListaCol(elId, rows, col, otherSet, emptyMsg) {
     // Editar en ambas listas. Quitar solo en Apertura: borrar un LP arrastra su
     // histórico de campañas, así que eso se hace en Gestión (no por accidente aquí).
     // Solo-admin: los editores ven la lista pero no las acciones de fila.
+    const delBtn = col === 'apertura'
+      ? `<button class="lst-row-act del" title="Quitar de Apertura" onclick="listasRemoveApertura('${jsArg(email)}')"><i class="fa-solid fa-xmark"></i></button>`
+      : `<button class="lst-row-act del" title="Quitar de Cartas GVV (borra también su historial)" onclick="listasRemoveCartas('${jsArg(email)}')"><i class="fa-solid fa-xmark"></i></button>`;
     const acts = lstCanWrite() ? `<div class="lst-row-acts">
       <button class="lst-row-act" title="Editar" onclick="lstEditOpen('${col}','${jsArg(email)}')"><i class="fa-solid fa-pen"></i></button>
-      ${col === 'apertura' ? `<button class="lst-row-act del" title="Quitar de Apertura" onclick="listasRemoveApertura('${jsArg(email)}')"><i class="fa-solid fa-xmark"></i></button>` : ''}
+      ${delBtn}
     </div>` : '';
     return `<div class="lst-row${both ? ' both' : ''}${cancel ? ' lst-row-cancel' : ''}">
       <div class="lst-row-main">
@@ -11543,6 +11546,22 @@ async function listasRemoveApertura(email) {
   aperturaContacts = null;
   renderListas();
   toast('Quitado de Apertura');
+}
+
+async function listasRemoveCartas(email) {
+  const c = listasCartas.find(x => lstNorm(x.email) === lstNorm(email));
+  const label = c ? (c.nombre_completo || c.nombre || email) : email;
+  const ok = await showConfirm('Quitar de Cartas GVV',
+    `¿Quitar a ${label} de Cartas GVV? También se borra su historial de campañas (aperturas/clics). Esto no se puede deshacer.`);
+  if (!ok) return;
+  const { error: e1 } = await sb.from('campaign_engagement').delete().eq('email', email);
+  if (e1) { toast('Error al borrar historial: ' + e1.message); return; }
+  const { error: e2 } = await sb.from('lp_contacts').delete().eq('email', email);
+  if (e2) { toast('Error al borrar: ' + e2.message); return; }
+  listasCartas = listasCartas.filter(x => lstNorm(x.email) !== lstNorm(email));
+  campaignsLoaded = false;
+  renderListas();
+  toast('Quitado de Cartas GVV');
 }
 
 /* ── Editar contacto (modal compartido para ambas listas) ── */
@@ -11704,6 +11723,7 @@ async function listasExportExcel(btn) {
    estar ya en la lista. Solo-admin (los botones viven en el add-row, oculto
    para editores). */
 let lstImportTarget = null;
+let lstImportPending = null;   // { list, entries } a la espera de elegir Agregar o Reemplazar
 const LST_EMAIL_RE = /[^\s,;<>"']+@[^\s,;<>"']+\.[^\s,;<>"']+/;
 
 function listasImportOpen(list) {
@@ -11722,15 +11742,58 @@ async function listasImportFile(input) {
     const wbk = XLSX.read(buf, { type: 'array' });
     const ws = wbk.Sheets[wbk.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(ws, { header: 1, blankrows: false, defval: '' });
-    const entries = lstParseImport(rows);
+    const parsed = lstParseImport(rows);
+    const seen = new Set(); const entries = [];
+    parsed.forEach(e => { if (!seen.has(e.email)) { seen.add(e.email); entries.push(e); } });   // dedupe archivo
     if (!entries.length) { toast('No encontré correos en el archivo'); return; }
-    await lstApplyImport(list, entries);
+    lstImportPending = { list, entries };
+    lstChoiceOpen();
   } catch (e) {
     console.error('[listas import]', e);
     toast('No se pudo leer el archivo: ' + (e.message || ''));
   } finally {
     input.value = '';
   }
+}
+
+// Tras leer el archivo: elige Agregar (suma nuevos) o Reemplazar (deja solo los del archivo).
+function lstChoiceOpen() {
+  if (!lstImportPending) return;
+  const { list, entries } = lstImportPending;
+  const listName = list === 'apertura' ? 'Apertura Cretum' : 'Cartas GVV';
+  const arr = list === 'apertura' ? listasApertura : listasCartas;
+  const existing = new Set(arr.map(c => lstNorm(c.email)));
+  const fileSet = new Set(entries.map(e => e.email));
+  const nuevos = entries.filter(e => !existing.has(e.email)).length;
+  const quitar = arr.filter(c => !fileSet.has(lstNorm(c.email))).length;
+
+  document.getElementById('lstChoiceList').textContent = listName;
+  document.getElementById('lstChoiceInfo').innerHTML =
+    `El archivo tiene <b>${entries.length}</b> contacto${entries.length === 1 ? '' : 's'}. La lista actual tiene <b>${arr.length}</b>.`;
+  document.getElementById('lstChoiceAddSub').textContent =
+    `Suma ${nuevos} nuevo${nuevos === 1 ? '' : 's'} y conserva lo que ya está.`;
+  document.getElementById('lstChoiceRepSub').textContent =
+    `Deja solo los ${entries.length} del archivo (quita ${quitar}, agrega ${nuevos}).`;
+  document.getElementById('lstChoiceModal').classList.add('show');
+}
+function lstChoiceClose() { document.getElementById('lstChoiceModal').classList.remove('show'); lstImportPending = null; }
+
+async function lstChoicePick(mode) {
+  if (!lstImportPending) return;
+  const { list, entries } = lstImportPending;
+  const listName = list === 'apertura' ? 'Apertura Cretum' : 'Cartas GVV';
+  if (mode === 'replace') {
+    const arr = list === 'apertura' ? listasApertura : listasCartas;
+    const fileSet = new Set(entries.map(e => e.email));
+    const quitar = arr.filter(c => !fileSet.has(lstNorm(c.email))).length;
+    const extra = list === 'cartas' ? ' También se borra el historial de campañas de los que se quiten.' : '';
+    const ok = await showConfirm('Reemplazar ' + listName,
+      `Se quitarán ${quitar} contacto(s) que no están en el archivo; la lista quedará con ${entries.length}.${extra} Esto no se puede deshacer.`);
+    if (!ok) return;
+  }
+  document.getElementById('lstChoiceModal').classList.remove('show');
+  lstImportPending = null;
+  await lstApplyImport(list, entries, mode);
 }
 
 // Extrae [{name, email}] de una matriz de filas. Detecta encabezado (email/correo,
@@ -11765,49 +11828,69 @@ function lstParseImport(rows) {
   return out;
 }
 
-async function lstApplyImport(list, entries) {
-  // Dedupe dentro del archivo (primera aparición gana).
-  const seen = new Set(); const uniq = [];
-  entries.forEach(e => { if (!seen.has(e.email)) { seen.add(e.email); uniq.push(e); } });
-
+async function lstApplyImport(list, entries, mode) {
   const arr = list === 'apertura' ? listasApertura : listasCartas;
   const existing = new Set(arr.map(c => lstNorm(c.email)));
-  const toAdd = uniq.filter(e => !existing.has(e.email));
-  const skipped = uniq.filter(e => existing.has(e.email)).map(e => e.email);
+  const fileSet = new Set(entries.map(e => e.email));
+  const toAdd = entries.filter(e => !existing.has(e.email));
+  const skipped = mode === 'add' ? entries.filter(e => existing.has(e.email)).map(e => e.email) : [];
+  const toDelete = mode === 'replace' ? arr.filter(c => !fileSet.has(lstNorm(c.email))).map(c => c.email) : [];
 
-  if (toAdd.length) {
+  try {
     if (list === 'apertura') {
-      const payload = toAdd.map(e => ({ email: e.email, nombre: e.name || null }));
-      // ignoreDuplicates: si alguno ya existiera en BD (lista en pantalla desfasada) no truena el lote.
-      const { error } = await sb.from('apertura_contacts').upsert(payload, { onConflict: 'email', ignoreDuplicates: true });
-      if (error) { toast('Error al guardar: ' + error.message); return; }
-      toAdd.forEach(e => listasApertura.push({ email: e.email, nombre: e.name || null }));
-      listasApertura.sort((a, b) => (a.email || '').localeCompare(b.email || ''));
+      if (toDelete.length) {
+        const { error } = await sb.from('apertura_contacts').delete().in('email', toDelete);
+        if (error) throw error;
+      }
+      if (toAdd.length) {
+        const payload = toAdd.map(e => ({ email: e.email, nombre: e.name || null }));
+        // ignoreDuplicates: si alguno ya existiera en BD (lista en pantalla desfasada) no truena el lote.
+        const { error } = await sb.from('apertura_contacts').upsert(payload, { onConflict: 'email', ignoreDuplicates: true });
+        if (error) throw error;
+      }
+      let next = mode === 'replace' ? arr.filter(c => fileSet.has(lstNorm(c.email))) : arr.slice();
+      toAdd.forEach(e => next.push({ email: e.email, nombre: e.name || null }));
+      next.sort((a, b) => (a.email || '').localeCompare(b.email || ''));
+      listasApertura = next;
       aperturaContacts = null;
     } else {
-      const payload = toAdd.map(e => ({
-        email: e.email, nombre: lstFirst(e.name) || null, nombre_completo: e.name || '', responsable: null, cancelado: false,
-      }));
-      const { error } = await sb.from('lp_contacts').upsert(payload, { onConflict: 'email', ignoreDuplicates: true });
-      if (error) { toast('Error al guardar: ' + error.message); return; }
-      payload.forEach(p => listasCartas.push({ ...p }));
-      listasCartas.sort((a, b) => (a.nombre_completo || '').localeCompare(b.nombre_completo || ''));
+      if (toDelete.length) {
+        // Borrar un LP arrastra su histórico de campañas (igual que en Gestión).
+        const { error: eE } = await sb.from('campaign_engagement').delete().in('email', toDelete);
+        if (eE) throw eE;
+        const { error: eC } = await sb.from('lp_contacts').delete().in('email', toDelete);
+        if (eC) throw eC;
+      }
+      if (toAdd.length) {
+        const payload = toAdd.map(e => ({
+          email: e.email, nombre: lstFirst(e.name) || null, nombre_completo: e.name || '', responsable: null, cancelado: false,
+        }));
+        const { error } = await sb.from('lp_contacts').upsert(payload, { onConflict: 'email', ignoreDuplicates: true });
+        if (error) throw error;
+      }
+      let next = mode === 'replace' ? arr.filter(c => fileSet.has(lstNorm(c.email))) : arr.slice();
+      toAdd.forEach(e => next.push({ email: e.email, nombre: lstFirst(e.name) || null, nombre_completo: e.name || '', responsable: null, cancelado: false }));
+      next.sort((a, b) => (a.nombre_completo || '').localeCompare(b.nombre_completo || ''));
+      listasCartas = next;
       campaignsLoaded = false;
     }
     renderListas();
+    lstShowImportResult(list, mode, toAdd.length, skipped, toDelete.length);
+  } catch (e) {
+    console.error('[listas import apply]', e);
+    toast('Error al aplicar: ' + (e.message || ''));
   }
-  lstShowImportResult(list, toAdd.length, skipped);
 }
 
-function lstShowImportResult(list, added, skipped) {
+function lstShowImportResult(list, mode, added, skipped, removed) {
   const listName = list === 'apertura' ? 'Apertura Cretum' : 'Cartas GVV';
   document.getElementById('lstImpTitle').innerHTML = `<i class="fa-solid fa-file-import"></i> Importación · ${escapeHtml(listName)}`;
-  let html = `<div class="lst-imp-added"><i class="fa-solid fa-circle-check"></i> <span>Se agregaron <b>${added}</b> contacto${added === 1 ? '' : 's'} a ${escapeHtml(listName)}.</span></div>`;
+  let head = `Se agregaron <b>${added}</b> contacto${added === 1 ? '' : 's'} a ${escapeHtml(listName)}.`;
+  if (mode === 'replace' && removed) head += ` Se quitaron <b>${removed}</b> que no estaban en el archivo.`;
+  let html = `<div class="lst-imp-added"><i class="fa-solid fa-circle-check"></i> <span>${head}</span></div>`;
   if (skipped.length) {
     html += `<div class="lst-imp-skip-h">Se omitieron <b>${skipped.length}</b> porque ya estaban en la lista:</div>`;
     html += '<ul class="lst-imp-skip">' + skipped.map(e => `<li>El correo ${escapeHtml(e)} se omitió — ya está en la lista.</li>`).join('') + '</ul>';
-  } else if (added > 0) {
-    html += `<div class="lst-imp-skip-h">Sin correos duplicados.</div>`;
   }
   document.getElementById('lstImpBody').innerHTML = html;
   document.getElementById('lstImportModal').classList.add('show');

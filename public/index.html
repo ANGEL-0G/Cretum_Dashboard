@@ -3860,6 +3860,20 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
     .lst-import-btn:hover{border-color:var(--navy);color:var(--navy)}
     .lst-import-btn:active{transform:translateY(1px)}
     [data-theme="dark"] .lst-import-btn{background:var(--card,#1a2030)}
+    /* modal de elección de importación (Agregar / Reemplazar) */
+    .lst-choice-info{font-size:13px;color:var(--ink-soft,#56607a);margin-bottom:14px;line-height:1.5}
+    .lst-choice-info b{color:var(--navy)}
+    .lst-choice-opts{display:flex;flex-direction:column;gap:10px}
+    .lst-choice-opt{display:flex;align-items:center;gap:13px;width:100%;text-align:left;padding:14px 16px;border:1px solid var(--line,#dde3ec);border-radius:10px;background:var(--white,#fff);cursor:pointer;font-family:inherit;transition:border-color .15s,background .15s,transform .08s}
+    .lst-choice-opt:hover{border-color:var(--navy);background:var(--navy-ghost,#f5f7fb)}
+    .lst-choice-opt:active{transform:translateY(1px)}
+    .lst-choice-opt > i{font-size:16px;color:var(--navy);width:22px;text-align:center;flex:none}
+    .lst-choice-opt.danger > i{color:#c0392b}
+    .lst-choice-opt.danger:hover{border-color:#c0392b;background:rgba(192,57,43,.05)}
+    .lst-choice-txt{display:flex;flex-direction:column;gap:2px;min-width:0}
+    .lst-choice-txt b{font-size:14px;color:var(--ink,#223);font-weight:600}
+    .lst-choice-txt span{font-size:12px;color:var(--ink-soft,#8893a5)}
+    [data-theme="dark"] .lst-choice-opt{background:var(--card,#1a2030)}
     /* modal de resultados de importación */
     .lst-imp-added{font-size:14px;color:var(--ink,#223);display:flex;align-items:flex-start;gap:8px;line-height:1.5}
     .lst-imp-added i{color:#0f9b5a;margin-top:2px}
@@ -4198,8 +4212,29 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
     </div>
   </div>
 
-  <!-- Import de Listas: input oculto + modal de resultados -->
+  <!-- Import de Listas: input oculto + modal de elección + modal de resultados -->
   <input type="file" id="lstImportFile" accept=".csv,.xlsx,.xls,text/csv" style="display:none" onchange="listasImportFile(this)">
+  <div class="camp-modal-backdrop" id="lstChoiceModal" onclick="if(event.target===this)lstChoiceClose()">
+    <div class="camp-modal">
+      <div class="camp-modal-head">
+        <div class="camp-modal-title"><i class="fa-solid fa-file-import"></i> Importar a <span id="lstChoiceList"></span></div>
+        <button class="camp-modal-x" onclick="lstChoiceClose()" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="camp-modal-body">
+        <div class="lst-choice-info" id="lstChoiceInfo"></div>
+        <div class="lst-choice-opts">
+          <button class="lst-choice-opt" onclick="lstChoicePick('add')">
+            <i class="fa-solid fa-plus"></i>
+            <div class="lst-choice-txt"><b>Agregar nuevos</b><span id="lstChoiceAddSub"></span></div>
+          </button>
+          <button class="lst-choice-opt danger" onclick="lstChoicePick('replace')">
+            <i class="fa-solid fa-arrows-rotate"></i>
+            <div class="lst-choice-txt"><b>Reemplazar la lista</b><span id="lstChoiceRepSub"></span></div>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
   <div class="camp-modal-backdrop" id="lstImportModal" onclick="if(event.target===this)lstImportClose()">
     <div class="camp-modal">
       <div class="camp-modal-head">
@@ -5505,6 +5540,6 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 </div>
 
 <script src="/i18n.js?v=20260724-notes2"></script>
-<script src="/app.js?v=20260731-listasimport"></script>
+<script src="/app.js?v=20260731-listasreplace"></script>
 </body>
 </html>
