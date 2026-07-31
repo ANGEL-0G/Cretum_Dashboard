@@ -3898,6 +3898,13 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
     .lst-row-act{background:none;border:none;color:var(--ink-soft,#b3bccb);cursor:pointer;font-size:12.5px;padding:5px 7px;border-radius:6px;transition:color .12s,background .12s}
     .lst-row-act:hover{color:var(--navy);background:var(--navy-ghost,#eef2f9)}
     .lst-row-act.del:hover{color:#c0392b;background:rgba(192,57,43,.08)}
+    /* marca de rebote: fila ámbar + etiqueta + botón activo */
+    .lst-row-rebote,.lst-row-rebote.both{background:rgba(230,126,34,.12)}
+    .lst-row-rebote:hover{background:rgba(230,126,34,.18)}
+    .lst-rebote-tag{font-size:9px;font-weight:700;color:#fff;background:#e67e22;padding:1px 6px;border-radius:8px;margin-left:6px;vertical-align:middle;letter-spacing:.3px}
+    .lst-row-act.rebote.on{color:#e67e22}
+    .lst-row-act.rebote.on:hover{color:#cf6d13;background:rgba(230,126,34,.12)}
+    .lst-rebote-chip.on{background:#e67e22;border-color:#e67e22;color:#fff}
     .lst-row-cancel .lst-row-name{color:#c0392b;text-decoration:line-through}
     .lst-baja{font-size:9px;font-weight:700;color:#fff;background:#c0392b;padding:1px 5px;border-radius:8px;margin-left:6px;vertical-align:middle;letter-spacing:.3px}
     .lst-empty{padding:30px 16px;text-align:center;color:var(--ink-soft,#98a2b3);font-size:13px}
@@ -4138,6 +4145,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
           <input id="lstSearch" class="db-search-inp" placeholder="Buscar por nombre o correo…" oninput="renderListas()" autocomplete="off">
         </div>
         <button class="camp-fchip" id="lstBothChip" onclick="lstToggleBoth()"><i class="fa-solid fa-code-compare"></i> Solo en ambas</button>
+        <button class="camp-fchip lst-rebote-chip" id="lstReboteChip" onclick="lstToggleRebote()"><i class="fa-solid fa-triangle-exclamation"></i> Solo rebotados</button>
         <button class="cdd-btn lst-export" type="button" onclick="listasExportExcel(this)" title="Descargar las dos listas en Excel, con formato para editar y presentar"><i class="fa-solid fa-file-excel"></i> Exportar Excel</button>
       </div>
       <div class="lst-summary" id="lstSummary"></div>
@@ -5540,6 +5548,6 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 </div>
 
 <script src="/i18n.js?v=20260724-notes2"></script>
-<script src="/app.js?v=20260731-listasreplace"></script>
+<script src="/app.js?v=20260731-rebote"></script>
 </body>
 </html>

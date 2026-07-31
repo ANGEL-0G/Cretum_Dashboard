@@ -11384,7 +11384,7 @@ async function campAddContactSave() {
    (los destinatarios de las cartas). Ambas tablas son RLS solo-admin, así que
    se leen/escriben directo con el cliente sb del navegador.
 ═══════════════════════════════════════════ */
-let listasApertura = null, listasCartas = null, listasOnlyBoth = false, listasLoaded = false;
+let listasApertura = null, listasCartas = null, listasOnlyBoth = false, listasOnlyRebote = false, listasLoaded = false;
 let listasView = 'both';       // 'both' | 'apertura' | 'cartas' (control segmentado)
 let lstEditing = null;         // { list, email } del contacto en edición
 
@@ -11403,8 +11403,8 @@ async function loadListas() {
   if (gvvList) gvvList.innerHTML = '';
   try {
     const [{ data: ap, error: e1 }, { data: gvv, error: e2 }] = await Promise.all([
-      sb.from('apertura_contacts').select('email, nombre').order('email'),
-      sb.from('lp_contacts').select('email, nombre, nombre_completo, responsable, cancelado').order('nombre_completo', { nullsFirst: false }),
+      sb.from('apertura_contacts').select('email, nombre, rebote').order('email'),
+      sb.from('lp_contacts').select('email, nombre, nombre_completo, responsable, cancelado, rebote').order('nombre_completo', { nullsFirst: false }),
     ]);
     if (e1) throw e1; if (e2) throw e2;
     listasApertura = ap || [];
@@ -11420,6 +11420,12 @@ async function loadListas() {
 function lstToggleBoth() {
   listasOnlyBoth = !listasOnlyBoth;
   document.getElementById('lstBothChip')?.classList.toggle('on', listasOnlyBoth);
+  renderListas();
+}
+
+function lstToggleRebote() {
+  listasOnlyRebote = !listasOnlyRebote;
+  document.getElementById('lstReboteChip')?.classList.toggle('on', listasOnlyRebote);
   renderListas();
 }
 
@@ -11453,14 +11459,20 @@ function renderListas() {
 
   const match = (c) => !q || lstNorm(c.email).includes(q) || lstNorm(c.nombre).includes(q) || lstNorm(c.nombre_completo).includes(q);
 
-  // Mensaje de columna vacía según el filtro activo (búsqueda / solo-ambas / nada).
-  const emptyMsg = q ? 'Nada coincide con tu búsqueda.' : listasOnlyBoth ? 'Nadie coincide en ambas.' : 'Sin contactos todavía.';
+  // Mensaje de columna vacía según el filtro activo (búsqueda / rebotados / solo-ambas / nada).
+  const emptyMsg = q ? 'Nada coincide con tu búsqueda.'
+    : listasOnlyRebote ? 'Nadie marcado como rebotado.'
+    : listasOnlyBoth ? 'Nadie coincide en ambas.' : 'Sin contactos todavía.';
 
-  const apRows = listasApertura.filter(c => match(c) && (!listasOnlyBoth || gvvSet.has(lstNorm(c.email))));
+  const pass = (c, otherSet) => match(c)
+    && (!listasOnlyBoth || otherSet.has(lstNorm(c.email)))
+    && (!listasOnlyRebote || c.rebote);
+
+  const apRows = listasApertura.filter(c => pass(c, gvvSet));
   renderListaCol('lstApList', apRows, 'apertura', gvvSet, emptyMsg);
   const apCount = document.getElementById('lstApCount'); if (apCount) apCount.textContent = listasApertura.length;
 
-  const gvvRows = listasCartas.filter(c => match(c) && (!listasOnlyBoth || apSet.has(lstNorm(c.email))));
+  const gvvRows = listasCartas.filter(c => pass(c, apSet));
   renderListaCol('lstGvvList', gvvRows, 'cartas', apSet, emptyMsg);
   const gvvCount = document.getElementById('lstGvvCount'); if (gvvCount) gvvCount.textContent = listasCartas.length;
 }
@@ -11478,22 +11490,27 @@ function renderListaCol(elId, rows, col, otherSet, emptyMsg) {
     const showName = name && name !== email;
     const both = otherSet.has(lstNorm(email));
     const cancel = col === 'cartas' && c.cancelado;
+    const rebote = !!c.rebote;
     const bothPill = both ? `<span class="lst-both-pill" title="También está en la otra lista"><i class="fa-solid fa-code-compare"></i> En ambas</span>` : '';
     const bajaTag = cancel ? `<span class="lst-baja" title="Dada de baja">baja</span>` : '';
+    const reboteTag = rebote ? `<span class="lst-rebote-tag" title="Su correo rebotó — reinvestigar">rebotó</span>` : '';
+    const tags = `${reboteTag}${bajaTag}`;
     // Editar en ambas listas. Quitar solo en Apertura: borrar un LP arrastra su
     // histórico de campañas, así que eso se hace en Gestión (no por accidente aquí).
-    // Solo-admin: los editores ven la lista pero no las acciones de fila.
+    // Solo-admin: los editores ven la lista/color pero no las acciones de fila.
     const delBtn = col === 'apertura'
       ? `<button class="lst-row-act del" title="Quitar de Apertura" onclick="listasRemoveApertura('${jsArg(email)}')"><i class="fa-solid fa-xmark"></i></button>`
       : `<button class="lst-row-act del" title="Quitar de Cartas GVV (borra también su historial)" onclick="listasRemoveCartas('${jsArg(email)}')"><i class="fa-solid fa-xmark"></i></button>`;
+    const reboteBtn = `<button class="lst-row-act rebote${rebote ? ' on' : ''}" title="${rebote ? 'Quitar marca de rebote' : 'Marcar: el correo rebotó'}" onclick="listasToggleRebote('${col}','${jsArg(email)}')"><i class="fa-solid fa-triangle-exclamation"></i></button>`;
     const acts = lstCanWrite() ? `<div class="lst-row-acts">
+      ${reboteBtn}
       <button class="lst-row-act" title="Editar" onclick="lstEditOpen('${col}','${jsArg(email)}')"><i class="fa-solid fa-pen"></i></button>
       ${delBtn}
     </div>` : '';
-    return `<div class="lst-row${both ? ' both' : ''}${cancel ? ' lst-row-cancel' : ''}">
+    return `<div class="lst-row${both ? ' both' : ''}${cancel ? ' lst-row-cancel' : ''}${rebote ? ' lst-row-rebote' : ''}">
       <div class="lst-row-main">
-        ${showName ? `<div class="lst-row-name">${escapeHtml(name)}${bajaTag}</div>` : ''}
-        <div class="lst-row-mail">${escapeHtml(email)}${!showName ? bajaTag : ''}</div>
+        ${showName ? `<div class="lst-row-name">${escapeHtml(name)}${tags}</div>` : ''}
+        <div class="lst-row-mail">${escapeHtml(email)}${!showName ? tags : ''}</div>
       </div>
       ${bothPill}${acts}
     </div>`;
@@ -11562,6 +11579,20 @@ async function listasRemoveCartas(email) {
   campaignsLoaded = false;
   renderListas();
   toast('Quitado de Cartas GVV');
+}
+
+// Marca / desmarca "rebote" (correo que rebotó) para reinvestigar después.
+async function listasToggleRebote(col, email) {
+  const arr = col === 'apertura' ? listasApertura : listasCartas;
+  const c = arr.find(x => lstNorm(x.email) === lstNorm(email));
+  if (!c) return;
+  const nuevo = !c.rebote;
+  const table = col === 'apertura' ? 'apertura_contacts' : 'lp_contacts';
+  const { error } = await sb.from(table).update({ rebote: nuevo }).eq('email', email);
+  if (error) { toast('Error: ' + error.message); return; }
+  c.rebote = nuevo;
+  renderListas();
+  toast(nuevo ? 'Marcado como rebotado' : 'Quitada la marca de rebote');
 }
 
 /* ── Editar contacto (modal compartido para ambas listas) ── */
@@ -11691,17 +11722,17 @@ async function listasExportExcel(btn) {
     // Apertura Cretum: nombre, correo, ¿en Cartas GVV?
     const apRows = listasApertura.slice()
       .sort((a, b) => (a.email || '').localeCompare(b.email || '', 'es'))
-      .map(c => [(c.nombre || '').trim(), c.email || '', gvvSet.has(lstNorm(c.email)) ? 'Sí' : '']);
+      .map(c => [(c.nombre || '').trim(), c.email || '', gvvSet.has(lstNorm(c.email)) ? 'Sí' : '', c.rebote ? 'Sí' : '']);
     buildSheet('Apertura Cretum', 'Correo diario de apertura de mercados',
-      ['Nombre', 'Correo', '¿En Cartas GVV?'], [26, 34, 16], apRows, 2);
+      ['Nombre', 'Correo', '¿En Cartas GVV?', 'Rebote'], [26, 34, 16, 10], apRows, 2);
 
-    // Cartas GVV: nombre completo, nombre, correo, responsable, estado, ¿en Apertura?
+    // Cartas GVV: nombre completo, nombre, correo, responsable, estado, ¿en Apertura?, rebote
     const gvvRows = listasCartas.slice()
       .sort((a, b) => (a.nombre_completo || a.email).localeCompare(b.nombre_completo || b.email, 'es'))
       .map(c => [(c.nombre_completo || c.nombre || '').trim(), (c.nombre || '').trim(), c.email || '',
-        (c.responsable || '').trim(), c.cancelado ? 'Baja' : 'Activo', apSet.has(lstNorm(c.email)) ? 'Sí' : '']);
+        (c.responsable || '').trim(), c.cancelado ? 'Baja' : 'Activo', apSet.has(lstNorm(c.email)) ? 'Sí' : '', c.rebote ? 'Sí' : '']);
     buildSheet('Cartas GVV', 'Destinatarios de la carta mensual del fondo',
-      ['Nombre completo', 'Nombre', 'Correo', 'Responsable', 'Estado', '¿En Apertura?'], [30, 16, 34, 24, 10, 15], gvvRows, 5);
+      ['Nombre completo', 'Nombre', 'Correo', 'Responsable', 'Estado', '¿En Apertura?', 'Rebote'], [30, 16, 34, 24, 10, 15, 10], gvvRows, 5);
 
     const buf = await wb.xlsx.writeBuffer();
     const a = document.createElement('a');
