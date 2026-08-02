@@ -14191,7 +14191,18 @@ async function openLettersModal() {
       const last = (rows) => rows.reduce((m, l) => (l.reference_date || '') > m ? l.reference_date : m, '');
       return last(b[1]).localeCompare(last(a[1]));
     });
+    // docs a nivel serie (Supplement, etc.) archivados de la libreria Fund de Altareturn
+    let fundDocs = [];
+    try {
+      const { data: fd } = await sb.from('fund_documents').select('*').in('fund_label', [...groups.keys()]);
+      fundDocs = fd || [];
+    } catch (_) { /* tabla opcional: sin docs de serie el modal sigue funcionando */ }
     body.innerHTML = ordered.map(([g, rows]) => {
+      const serieDocs = fundDocs.filter(f => f.fund_label === g)
+        .sort((a, b) => (b.reference_date || '').localeCompare(a.reference_date || ''));
+      const serieHtml = serieDocs.length
+        ? `<div class="ltr-sec"><div class="ltr-sec-h"><i class="fa-solid fa-file-contract"></i> Documentos de la serie <span class="ltr-count">${serieDocs.length}</span></div>${serieDocs.map(_letterRow).join('')}</div>`
+        : '';
       const byCat = {};
       rows.forEach(l => {
         const c = LETTER_CATS[l.category_id] ? (LETTER_CATS[l.category_id].mode === 'comms' ? 'comms' : l.category_id) : 'otros';
@@ -14202,7 +14213,8 @@ async function openLettersModal() {
         ? `<details class="ltr-more ltr-comms" open><summary><i class="fa-solid fa-bullhorn"></i> Updates y comunicados (${_letterDedupe(comms).length})</summary>${_letterDedupe(comms).sort((a, b) => (b.reference_date || '').localeCompare(a.reference_date || '')).map(_letterRow).join('')}</details>`
         : '';
       const otros = byCat['otros'] || [];
-      return `<div class="ltr-group"><div class="ltr-group-h">${escapeHtml(g)} <span class="ltr-count">${rows.length} docs</span></div>
+      return `<div class="ltr-group"><div class="ltr-group-h">${escapeHtml(g)} <span class="ltr-count">${rows.length + serieDocs.length} docs</span></div>
+        ${serieHtml}
         ${_letterSection(22, byCat[22] || [])}
         ${commsHtml}
         ${[23, 24, 25, 26].map(c => _letterSection(c, byCat[c] || [])).join('')}
