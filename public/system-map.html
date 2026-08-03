@@ -102,8 +102,8 @@
   </div>
   <aside class="side">
     <div class="modebar">
-      <button class="modebtn on" id="mode-arch" onclick="setMode('arch')">Arquitectura<small>~30 módulos, curado</small></button>
-      <button class="modebtn" id="mode-code" onclick="setMode('code')">Código completo<small>659 símbolos</small></button>
+      <button class="modebtn on" id="mode-code" onclick="setMode('code')">Código completo<small>659 símbolos</small></button>
+      <button class="modebtn" id="mode-arch" onclick="setMode('arch')">Arquitectura<small>~30 módulos, curado</small></button>
     </div>
     <div class="panel" id="panel"></div>
     <div class="bar">
@@ -269,7 +269,7 @@ function boot(){
   Graph.d3Force('link').distance(60);
 
   document.getElementById('loading').style.display = 'none';
-  loadMode('arch', true);
+  loadMode('code', true);
 
   const resize = () => Graph.width(el.clientWidth).height(el.clientHeight);
   window.addEventListener('resize', resize);
