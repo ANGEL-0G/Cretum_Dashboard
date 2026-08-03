@@ -66,6 +66,10 @@
       "use": "@vercel/static"
     },
     {
+      "src": "public/logo-cretum-dark.png",
+      "use": "@vercel/static"
+    },
+    {
       "src": "public/chaos-industries.png",
       "use": "@vercel/static"
     },
@@ -273,6 +277,10 @@
     {
       "src": "/logo-mvp-cream.png",
       "dest": "/public/logo-mvp-cream.png"
+    },
+    {
+      "src": "/logo-cretum-dark.png",
+      "dest": "/public/logo-cretum-dark.png"
     },
     {
       "src": "/chaos-industries.png",

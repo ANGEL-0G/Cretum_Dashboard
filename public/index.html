@@ -1689,6 +1689,8 @@ select.camp-f-inp::-ms-expand,select.form-input::-ms-expand{display:none}
 .selector-card-logo.sel-logo-dark{display:none}
 [data-theme="dark"] .selector-card-logo.sel-logo-light{display:none}
 [data-theme="dark"] .selector-card-logo.sel-logo-dark{display:inline}
+/* Cretum en oscuro es wordmark horizontal: más ancho, altura acorde */
+.sel-cretum-word{width:auto;max-width:190px;max-height:74px}
 .sel-cretum .selector-card-logo{
   filter:drop-shadow(0 0 24px rgba(61,125,240,.6)) drop-shadow(0 0 8px rgba(61,125,240,.45));
 }
@@ -1724,6 +1726,7 @@ select.camp-f-inp::-ms-expand,select.form-input::-ms-expand{display:none}
   .selector-cards{gap:14px}
   .selector-card{width:160px;height:200px;padding:18px 12px;gap:10px}
   .selector-card-logo{width:64px;max-height:50px}
+  .sel-cretum-word{width:auto;max-width:124px;max-height:48px}
   .sel-cretum .selector-card-logo{padding:6px 10px}
   .selector-card-name{font-size:18px}
   .selector-card-sub{font-size:10px}
@@ -3479,7 +3482,8 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
     </div>
     <div class="selector-cards">
       <button class="selector-card sel-cretum" onclick="selectOrg('cretum')">
-        <img src="/logo-icon.png" alt="Cretum" class="selector-card-logo">
+        <img src="/logo-icon.png" alt="Cretum" class="selector-card-logo sel-logo-light">
+        <img src="/logo-cretum-dark.png" alt="Cretum" class="selector-card-logo sel-logo-dark sel-cretum-word">
         <div class="selector-card-name">Cretum</div>
         <div class="selector-card-sub">Partners</div>
       </button>
@@ -6003,6 +6007,6 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 </div>
 
 <script src="/i18n.js?v=20260724-notes2"></script>
-<script src="/app.js?v=20260731-mvplogodark"></script>
+<script src="/app.js?v=20260731-cretumlogodark"></script>
 </body>
 </html>
