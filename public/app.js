@@ -3202,25 +3202,149 @@ function refreshTodoBadge() {
   }
 }
 
-function renderHomeModules() {
-  const el = document.getElementById('homeModules');
-  if (!el || !currentOrg) return;
+/* ── Personalización del home (por usuario, en localStorage) ──
+   Cada usuario reordena / oculta / re-agrega sus módulos. Se guarda por
+   usuario y por org; los módulos nuevos aparecen solos (no están en 'order'). */
+let homeEditMode = false;
+let homeDragView = null;
+
+function homeLayoutKey() { return `cretum_home_layout_${currentUser || 'anon'}`; }
+function loadHomeLayoutAll() {
+  try { return JSON.parse(localStorage.getItem(homeLayoutKey())) || {}; } catch (e) { return {}; }
+}
+function loadHomeLayout() {
+  const l = loadHomeLayoutAll()[currentOrg] || {};
+  return { order: Array.isArray(l.order) ? l.order : [], hidden: Array.isArray(l.hidden) ? l.hidden : [] };
+}
+function saveHomeLayout(layout) {
+  const all = loadHomeLayoutAll();
+  all[currentOrg] = layout;
+  try { localStorage.setItem(homeLayoutKey(), JSON.stringify(all)); } catch (e) {}
+}
+
+function homeAllowedModules() {
   const isAdmin = currentProfile?.role === 'admin';
   const isColab = currentProfile?.role === 'colaborador';
   const isEditorOrAdmin = isAdmin || currentProfile?.role === 'editor' || isColab;
-  const mods = (ORG_MODULES[currentOrg] || []).filter(m =>
+  return (ORG_MODULES[currentOrg] || []).filter(m =>
     (!m.adminOnly || isAdmin) && (!m.editorOrAdmin || isEditorOrAdmin) && !(m.hideColaborador && isColab));
-  el.innerHTML = mods.map(m => `
-    <button class="home-module${m.disabled ? ' disabled' : ''}" data-mod="${m.view}"${m.disabled ? ' disabled aria-disabled="true"' : ` onclick="switchView('${m.view}')"`}>
-      ${m.disabled ? `<span class="home-module-badge">${t('Pronto')}</span>` : ''}
-      ${(!m.disabled && m.view === 'tasks' && pendingInviteCount() > 0) ? '<span class="home-module-pulse" aria-label="Tienes tareas por aceptar"></span>' : ''}
-      <div class="home-module-ico ${m.iconClass}"><i class="${m.iconBrand ? 'fa-brands' : 'fa-solid'} ${m.icon}"></i></div>
+}
+
+// Aplica orden guardado (los desconocidos van al final, en su orden original) y separa ocultos.
+function homeOrderedModules() {
+  const mods = homeAllowedModules();
+  const { order, hidden } = loadHomeLayout();
+  const hiddenSet = new Set(hidden);
+  const oi = new Map(order.map((v, i) => [v, i]));
+  const ordered = mods.map((m, i) => ({ m, i })).sort((a, b) => {
+    const ai = oi.has(a.m.view) ? oi.get(a.m.view) : Infinity;
+    const bi = oi.has(b.m.view) ? oi.get(b.m.view) : Infinity;
+    return ai === bi ? a.i - b.i : ai - bi;
+  }).map(x => x.m);
+  return { visible: ordered.filter(m => !hiddenSet.has(m.view)), hidden: ordered.filter(m => hiddenSet.has(m.view)) };
+}
+
+function homeModuleInner(m) {
+  return `<div class="home-module-ico ${m.iconClass}"><i class="${m.iconBrand ? 'fa-brands' : 'fa-solid'} ${m.icon}"></i></div>
       <div class="home-module-content">
         <div class="home-module-title">${t(m.title)}</div>
         <div class="home-module-desc">${t(m.desc)}</div>
+      </div>`;
+}
+function homeModuleHTML(m, editing) {
+  if (editing) {
+    return `<div class="home-module editing" data-mod="${m.view}" draggable="true"
+        ondragstart="homeDragStart(event,'${m.view}')" ondragover="homeDragOver(event)"
+        ondrop="homeDrop(event,'${m.view}')" ondragend="homeDragEnd(event)">
+      <button class="home-module-x" title="${t('Quitar')}" aria-label="${t('Quitar')}" onclick="homeRemoveModule('${m.view}')"><i class="fa-solid fa-xmark"></i></button>
+      ${homeModuleInner(m)}
+    </div>`;
+  }
+  const badge = m.disabled ? `<span class="home-module-badge">${t('Pronto')}</span>` : '';
+  const pulse = (!m.disabled && m.view === 'tasks' && pendingInviteCount() > 0)
+    ? '<span class="home-module-pulse" aria-label="Tienes tareas por aceptar"></span>' : '';
+  return `<button class="home-module${m.disabled ? ' disabled' : ''}" data-mod="${m.view}"${m.disabled ? ' disabled aria-disabled="true"' : ` onclick="switchView('${m.view}')"`}>
+      ${badge}${pulse}${homeModuleInner(m)}
+    </button>`;
+}
+function homeAddTileHTML() {
+  return `<button class="home-module home-module-add" onclick="openHomePicker()" title="${t('Agregar módulos')}" aria-label="${t('Agregar módulos')}">
+      <div class="home-module-add-ico"><i class="fa-solid fa-plus"></i></div>
+      <div class="home-module-add-lbl">${t('Agregar')}</div>
+    </button>`;
+}
+
+function toggleHomeEdit() { homeEditMode = !homeEditMode; renderHomeModules(); }
+
+function homeDragStart(e, view) {
+  homeDragView = view;
+  try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', view); } catch (er) {}
+  e.currentTarget.classList.add('dragging');
+}
+function homeDragOver(e) { e.preventDefault(); try { e.dataTransfer.dropEffect = 'move'; } catch (er) {} }
+function homeDrop(e, targetView) {
+  e.preventDefault();
+  if (!homeDragView || homeDragView === targetView) return;
+  const { visible, hidden } = homeOrderedModules();
+  const views = visible.map(m => m.view);
+  const from = views.indexOf(homeDragView), to = views.indexOf(targetView);
+  if (from < 0 || to < 0) return;
+  views.splice(to, 0, views.splice(from, 1)[0]);
+  const layout = loadHomeLayout();
+  layout.order = [...views, ...hidden.map(m => m.view)];
+  saveHomeLayout(layout);
+  renderHomeModules();
+}
+function homeDragEnd(e) { e.currentTarget.classList.remove('dragging'); homeDragView = null; }
+
+function homeRemoveModule(view) {
+  const layout = loadHomeLayout();
+  if (!layout.hidden.includes(view)) layout.hidden.push(view);
+  saveHomeLayout(layout);
+  renderHomeModules();
+}
+function homeAddModule(view) {
+  const layout = loadHomeLayout();
+  layout.hidden = layout.hidden.filter(v => v !== view);
+  saveHomeLayout(layout);
+  renderHomeModules();
+  renderHomePicker();
+}
+
+function renderHomePicker() {
+  const list = document.getElementById('homePickerList');
+  if (!list) return;
+  const { hidden } = homeOrderedModules();
+  if (!hidden.length) { list.innerHTML = `<div class="home-picker-empty">${t('Todos los módulos ya están visibles.')}</div>`; return; }
+  list.innerHTML = hidden.map(m => `
+    <div class="home-picker-item">
+      <div class="home-picker-ico ${m.iconClass}"><i class="${m.iconBrand ? 'fa-brands' : 'fa-solid'} ${m.icon}"></i></div>
+      <div class="home-picker-info">
+        <div class="home-picker-nm">${t(m.title)}</div>
+        <div class="home-picker-sub">${t(m.desc)}</div>
       </div>
-    </button>
-  `).join('');
+      <button class="home-picker-add" onclick="homeAddModule('${m.view}')"><i class="fa-solid fa-plus"></i> ${t('Agregar')}</button>
+    </div>`).join('');
+}
+function openHomePicker() { renderHomePicker(); document.getElementById('homePickerBackdrop')?.classList.add('show'); }
+function closeHomePicker() { document.getElementById('homePickerBackdrop')?.classList.remove('show'); }
+
+function renderHomeModules() {
+  const el = document.getElementById('homeModules');
+  if (!el || !currentOrg) return;
+  const { visible, hidden } = homeOrderedModules();
+  const editing = homeEditMode;
+  el.classList.toggle('editing', editing);
+  el.innerHTML = visible.map(m => homeModuleHTML(m, editing)).join('')
+    + ((editing || hidden.length) ? homeAddTileHTML() : '');
+
+  const btn = document.getElementById('homeCustBtn');
+  if (btn) btn.innerHTML = editing
+    ? `<i class="fa-solid fa-check"></i> <span>${t('Listo')}</span>`
+    : `<i class="fa-solid fa-sliders"></i> <span>${t('Personalizar')}</span>`;
+  const hint = document.getElementById('homeCustHint');
+  if (hint) hint.textContent = editing ? t('Arrastra para reordenar · ✕ para quitar') : '';
+
   document.getElementById('homeQuestion').textContent = t('¿Con qué quieres empezar hoy?');
 
   // Próximamente — items dependen del org
@@ -3619,6 +3743,7 @@ function switchView(view, isBack = false) {
   if (view === 'notes') openNotesPage();
   if (view === 'contactos') loadContactos();
   if (view === 'usuarios') loadUsuarios();
+  if (view === 'home') { homeEditMode = false; renderHomeModules(); } else closeHomePicker();
   if (view === 'tasks') requestAnimationFrame(tkMoveSliders);   // coloca las pills una vez visible
 
   syncHash();

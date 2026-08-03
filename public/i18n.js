@@ -910,6 +910,14 @@ const EN = {
   'Usuarios': 'Users',
   'Gestiona los miembros del equipo y sus roles': 'Manage team members and their roles',
 
+  // ── Home personalizable ──
+  'Personalizar': 'Customize',
+  'Listo': 'Done',
+  'Quitar': 'Remove',
+  'Agregar módulos': 'Add modules',
+  'Arrastra para reordenar · ✕ para quitar': 'Drag to reorder · ✕ to remove',
+  'Todos los módulos ya están visibles.': 'All modules are already visible.',
+
   // ── Módulo de Notas ──
   'Carpetas': 'Folders',
   'Nueva carpeta': 'New folder',
