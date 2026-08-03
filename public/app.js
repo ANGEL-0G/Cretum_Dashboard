@@ -10721,6 +10721,8 @@ function campSetFrente(f) {
 }
 
 async function loadAperturaFrente() {
+  const fEl = document.getElementById('aptFecha');
+  if (fEl && !fEl.value) fEl.value = new Date().toISOString().slice(0, 10);   // hoy por defecto
   const cEl = document.getElementById('aptContactCount');
   try {
     const { count } = await sb.from('apertura_contacts').select('*', { count: 'exact', head: true });
@@ -10750,8 +10752,7 @@ async function aptMatrixRender() {
     const body = emails.map(em => {
       const cells = fechas.map(f => {
         const e = map[key(em, f)];
-        const mark = e && e.nivel >= 2 ? '⚡⚡' : e && (e.opened || e.nivel >= 1) ? '⚡' : '';
-        return `<td style="text-align:center">${mark}</td>`;
+        return `<td style="text-align:center">${e ? nivelGlyph(e.nivel) : ''}</td>`;
       }).join('');
       return `<tr><td class="ctbl-nm">${escapeHtml(nameOf[em] || em)}<div class="ctbl-em">${escapeHtml(em)}</div></td>${cells}</tr>`;
     }).join('');
@@ -10761,27 +10762,84 @@ async function aptMatrixRender() {
   }
 }
 
-// Subir archivo del día → SOLO previsualiza (el parser/guardado se define con el flujo).
+// Subir archivo del día: MISMO CSV de Yesware que GVV → deriveEngagement (⚡),
+// pero guardado por FECHA en apertura_engagement (no por mes).
+let aptPending = null;
+
+async function aptFileRows(file) {
+  const name = (file.name || '').toLowerCase();
+  if (name.endsWith('.csv') || name.endsWith('.txt') || (file.type || '').includes('csv')) {
+    return parseCSV(await file.text());
+  }
+  await loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
+  const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+  return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, blankrows: false, defval: '' });
+}
+
 async function aptHandleFile(files) {
   const file = files && files[0]; if (!file) return;
+  const inp = document.getElementById('aptFileInput');
+  const fecha = document.getElementById('aptFecha').value;
+  if (!fecha) { toast('Elige primero la fecha del envío'); if (inp) inp.value = ''; return; }
   const prev = document.getElementById('aptPreview');
   prev.style.display = ''; prev.innerHTML = '<div class="db-loading"><i class="fa-solid fa-spinner fa-spin"></i> Leyendo…</div>';
   try {
-    await loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
-    const buf = await file.arrayBuffer();
-    const wb = XLSX.read(buf, { type: 'array' });
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, blankrows: false, defval: '' });
-    if (!rows.length) { prev.innerHTML = '<div class="apt-empty">El archivo está vacío.</div>'; return; }
-    const header = rows[0]; const sample = rows.slice(1, 9);
-    const th = header.map(h => `<th>${escapeHtml(String(h))}</th>`).join('');
-    const trs = sample.map(r => '<tr>' + header.map((_, i) => `<td>${escapeHtml(String(r[i] == null ? '' : r[i]))}</td>`).join('') + '</tr>').join('');
-    prev.innerHTML = `<div style="font-size:12.5px;color:var(--ink-soft,#8893a5);margin-bottom:8px"><b>${escapeHtml(file.name)}</b> — ${rows.length - 1} filas, ${header.length} columnas. Vista previa (primeras ${sample.length}):</div>
-      <div class="cc-tablewrap"><table class="ctbl-table"><thead><tr>${th}</tr></thead><tbody>${trs}</tbody></table></div>`;
+    const eng = deriveEngagement(await aptFileRows(file));
+    if (!eng.length) { prev.innerHTML = '<div class="apt-empty">El archivo no trae filas con email.</div>'; return; }
+    const { data: cts } = await sb.from('apertura_contacts').select('email');
+    const known = new Set((cts || []).map(c => (c.email || '').trim().toLowerCase()));
+    const matched = eng.filter(e => known.has(e.email));
+    const nuevos = eng.filter(e => !known.has(e.email) && e.nivel >= 1);
+    aptPending = { fecha, label: file.name, rows: matched };
+    aptShowPreview(eng, matched, nuevos, fecha);
   } catch (e) {
-    prev.innerHTML = `<div class="apt-empty">No se pudo leer: ${escapeHtml(e.message || '')}</div>`;
+    console.error('[apertura csv]', e);
+    prev.innerHTML = `<div class="apt-empty">Error al leer: ${escapeHtml(e.message || '')}</div>`;
   } finally {
-    const inp = document.getElementById('aptFileInput'); if (inp) inp.value = '';
+    if (inp) inp.value = '';
+  }
+}
+
+function aptShowPreview(eng, matched, nuevos, fecha) {
+  const t = { 1: 0, 2: 0, 3: 0 }; matched.forEach(e => { if (e.nivel >= 1) t[e.nivel]++; });
+  const box = document.getElementById('aptPreview'); box.style.display = '';
+  box.innerHTML = `
+    <div class="camp-prev-head"><i class="fa-solid fa-circle-check"></i> Archivo leído para <strong>${escapeHtml(fecha)}</strong> — ${eng.length} destinatarios</div>
+    <div class="camp-prev-stats">
+      <div class="camp-stat camp-l1"><span class="camp-stat-n">${t[1]}</span> ⚡ abrieron</div>
+      <div class="camp-stat camp-l2"><span class="camp-stat-n">${t[2]}</span> ⚡⚡ + click</div>
+      <div class="camp-stat camp-l3"><span class="camp-stat-n">${t[3]}</span> ⚡⚡⚡ + respondieron</div>
+      <div class="camp-stat"><span class="camp-stat-n">${matched.length}</span> emparejados con Apertura</div>
+    </div>
+    ${nuevos.length ? `<details class="camp-prev-new"><summary>⚠️ ${nuevos.length} con interacción que NO están en tu lista de Apertura (no se guardarán)</summary><div class="camp-prev-new-list">${nuevos.map(e => `${escapeHtml(e.email)} <span class="camp-l${e.nivel}">${nivelGlyph(e.nivel)}</span>`).join('<br>')}</div></details>` : ''}
+    <div class="camp-prev-actions">
+      <button class="btn-primary" onclick="aptConfirmUpload()"><i class="fa-solid fa-floppy-disk"></i> Guardar ${escapeHtml(fecha)}</button>
+      <button class="camp-prev-cancel" onclick="aptCancelUpload()">Cancelar</button>
+    </div>`;
+}
+
+function aptCancelUpload() {
+  aptPending = null;
+  const box = document.getElementById('aptPreview');
+  if (box) { box.style.display = 'none'; box.innerHTML = ''; }
+}
+
+async function aptConfirmUpload() {
+  if (!aptPending) return;
+  const { fecha, rows } = aptPending;
+  const payload = rows.map(e => ({
+    email: e.email, fecha, opened: e.opened, clicked: e.clicked, nivel: e.nivel,
+    uploaded_by: currentUser, uploaded_at: new Date().toISOString(),
+  }));
+  try {
+    const { error } = await sb.from('apertura_engagement').upsert(payload, { onConflict: 'email,fecha' });
+    if (error) throw error;
+    toast(`Guardado ${fecha} — ${payload.length} contactos`);
+    aptCancelUpload();
+    aptMatrixRender();
+  } catch (err) {
+    console.error('[apertura upsert]', err);
+    toast('Error al guardar: ' + err.message);
   }
 }
 function aptDragOver(e) { e.preventDefault(); document.getElementById('aptDrop')?.classList.add('drag'); }
