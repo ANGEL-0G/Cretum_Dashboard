@@ -1541,8 +1541,15 @@ function ntPlainPreview(content) {
   return (d.textContent || '').replace(/\s+/g, ' ').trim();
 }
 
+function ntTodoUpdateShine() {
+  let used = false;
+  try { used = localStorage.getItem('cretum_note2task_used') === '1'; } catch (e) {}
+  document.getElementById('ntTodoBtn')?.classList.toggle('nt-todo-new', !used);
+}
+
 function openNotesPage() {
   if (!document.getElementById('ntFolders')) return;
+  ntTodoUpdateShine();               // brillo "nueva función" solo hasta el primer uso
   if (!notesLoaded) loadNotes();     // al terminar hace renderDrawer → ntRenderAll
   else ntRenderAll();
   if (!ntCurrentId || !notesData.some(n => String(n.id) === String(ntCurrentId))) ntShowEmpty();
@@ -1647,6 +1654,9 @@ async function ntNewNote() {
 // prerrellenado con el título y el texto de la nota; el usuario completa el resto.
 function noteToTask() {
   if (!ntCurrentId) { toast('Abre una nota primero'); return; }
+  // Ya se usó: apaga el brillo de "nueva función" (para siempre en este navegador).
+  try { localStorage.setItem('cretum_note2task_used', '1'); } catch (e) {}
+  document.getElementById('ntTodoBtn')?.classList.remove('nt-todo-new');
   const title = (document.getElementById('ntTitle')?.value || '').trim();
   const bodyEl = document.getElementById('ntBody');
   const desc = bodyEl ? (bodyEl.innerText || bodyEl.textContent || '').trim() : '';
