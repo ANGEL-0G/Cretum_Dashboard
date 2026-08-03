@@ -609,7 +609,7 @@ select.camp-f-inp::-ms-expand,select.form-input::-ms-expand{display:none}
 [data-theme="dark"] .et-dropzone{background:rgba(93,143,245,.14);border-color:var(--navy-light)}
 [data-theme="dark"] .et-dropzone-in{color:var(--navy-light)}
 .et-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
-.et-card{border:1px solid var(--gray-200);border-radius:var(--r-lg);background:var(--white);overflow:hidden;display:flex;flex-direction:column;transition:border-color .18s,box-shadow .18s,transform .18s var(--et-ease);animation:etCardIn .34s var(--et-ease) both}
+.et-card{border:1px solid var(--gray-200);border-radius:var(--r-lg);background:var(--white);overflow:hidden;display:flex;flex-direction:column;transition:border-color .16s,box-shadow .16s,transform .16s var(--et-ease);animation:etCardIn .17s var(--et-ease) both}
 .et-card:hover{border-color:var(--navy-light);box-shadow:0 8px 24px rgba(26,58,107,.10);transform:translateY(-2px)}
 @keyframes etCardIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 .et-card:nth-child(1){animation-delay:0ms}.et-card:nth-child(2){animation-delay:45ms}.et-card:nth-child(3){animation-delay:90ms}.et-card:nth-child(4){animation-delay:135ms}.et-card:nth-child(5){animation-delay:180ms}.et-card:nth-child(6){animation-delay:225ms}.et-card:nth-child(n+7){animation-delay:260ms}
@@ -783,7 +783,7 @@ select.camp-f-inp::-ms-expand,select.form-input::-ms-expand{display:none}
 .notes-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:2px 0 16px;flex-wrap:wrap}
 .notes-title{font-size:15px;font-weight:600;color:var(--navy);display:flex;align-items:center;gap:9px}
 .notes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
-.note-block{display:flex;flex-direction:column;background:var(--white);border:1px solid var(--gray-100);border-radius:var(--r-lg);box-shadow:var(--shadow-sm);overflow:hidden;transition:box-shadow .18s cubic-bezier(.23,1,.32,1),border-color .18s;animation:noteIn .28s cubic-bezier(.23,1,.32,1) both}
+.note-block{display:flex;flex-direction:column;background:var(--white);border:1px solid var(--gray-100);border-radius:var(--r-lg);box-shadow:var(--shadow-sm);overflow:hidden;transition:box-shadow .16s ease-out,border-color .16s;animation:noteIn .15s ease-out both}
 .note-block:hover{box-shadow:var(--shadow-md);border-color:var(--gray-200)}
 .note-head{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--gray-100)}
 .note-title{flex:1;min-width:0;border:0;background:none;font-family:var(--font);font-size:14px;font-weight:600;color:var(--gray-900);outline:none}
@@ -2924,8 +2924,8 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 .login-box:hover .login-logo{transform:scale(1.04)}
 .login-err{animation:shake .35s cubic-bezier(.36,.07,.19,.97)}
 
-/* Tarjetas con entrada escalonada */
-.list-item,.kb-card,.tl-item{animation:taskIn .4s cubic-bezier(.34,1.2,.64,1) backwards}
+/* Sin animación de entrada: la lista se re-renderiza en cada acción y el
+   "settle" de .4s con rebote se sentía lento. Aparecen al instante. */
 
 /* Hover lifts coherentes */
 .list-item{transition:transform .18s cubic-bezier(.4,0,.2,1),box-shadow .18s,border-color .15s}
@@ -2956,12 +2956,12 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 /* Checkbox pop al marcar */
 .li-chk{transition:all .2s cubic-bezier(.4,0,.2,1)}
 .li-chk:hover{border-color:var(--navy);transform:scale(1.08)}
-.li-chk.on{animation:pop .4s cubic-bezier(.34,1.56,.64,1)}
+.li-chk.on{animation:pop .22s ease-out}
 
 /* Drawer expand/collapse suave */
-.drawer-body{display:block;max-height:0;overflow:hidden;padding:0 16px;border-top:0 solid var(--gray-100);transition:max-height .4s cubic-bezier(.4,0,.2,1),padding .25s ease,border-top-width .25s}
+.drawer-body{display:block;max-height:0;overflow:hidden;padding:0 16px;border-top:0 solid var(--gray-100);transition:max-height .24s cubic-bezier(.4,0,.2,1),padding .2s ease,border-top-width .2s}
 .drawer-body.open{max-height:600px;padding:16px;border-top-width:1px}
-.assign-body{display:block;max-height:0;overflow:hidden;padding:0 16px;border-top:0 solid var(--amber);background:white;transition:max-height .4s cubic-bezier(.4,0,.2,1),padding .25s ease,border-top-width .25s}
+.assign-body{display:block;max-height:0;overflow:hidden;padding:0 16px;border-top:0 solid var(--amber);background:white;transition:max-height .24s cubic-bezier(.4,0,.2,1),padding .2s ease,border-top-width .2s}
 .assign-body.open{max-height:600px;padding:16px;border-top-width:1px}
 
 /* Sync indicator saving — pulse ring */
@@ -2970,10 +2970,10 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 /* Settings popup: animación via transitions con transform-origin (ver arriba) */
 
 /* Reminder banner entrada */
-.reminder{animation:taskIn .4s cubic-bezier(.34,1.2,.64,1)}
+.reminder{animation:taskIn .2s ease-out}
 
 /* Invite */
-.tk-invite{animation:taskIn .4s cubic-bezier(.34,1.2,.64,1);transition:transform .18s,box-shadow .18s}
+.tk-invite{animation:taskIn .2s ease-out;transition:transform .16s,box-shadow .16s}
 .tk-invite:hover{transform:translateY(-1px);box-shadow:var(--shadow-sm)}
 
 /* Backdrop fade */
@@ -3950,7 +3950,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
     .seg-track{position:relative;display:inline-flex;background:var(--navy-ghost,#f0f3fa);border-radius:10px;padding:4px;gap:2px;max-width:100%}
     [data-theme="dark"] .seg-track{background:rgba(255,255,255,.05)}
     .seg-ind{position:absolute;left:0;top:0;width:0;height:0;background:var(--navy);border-radius:7px;box-shadow:0 1px 4px rgba(20,30,55,.25);pointer-events:none;z-index:0;
-      transition:left .26s cubic-bezier(.23,1,.32,1),top .26s cubic-bezier(.23,1,.32,1),width .26s cubic-bezier(.23,1,.32,1),height .26s cubic-bezier(.23,1,.32,1)}
+      transition:left .17s cubic-bezier(.23,1,.32,1),top .17s cubic-bezier(.23,1,.32,1),width .17s cubic-bezier(.23,1,.32,1),height .17s cubic-bezier(.23,1,.32,1)}
     @media (prefers-reduced-motion:reduce){.seg-ind{transition:none}}
     .seg-btn{position:relative;z-index:1;border:none;background:none;padding:8px 15px;border-radius:7px;font-size:13px;font-weight:600;font-family:inherit;color:var(--ink-soft,#667);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:7px;white-space:nowrap;transition:color .2s ease}
     .seg-btn i{font-size:12px}
@@ -5910,6 +5910,6 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 </div>
 
 <script src="/i18n.js?v=20260724-notes2"></script>
-<script src="/app.js?v=20260731-apttabla"></script>
+<script src="/app.js?v=20260731-anim3"></script>
 </body>
 </html>

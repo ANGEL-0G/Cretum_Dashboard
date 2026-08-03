@@ -10726,6 +10726,8 @@ function campSetFrente(f) {
 }
 
 function aptSetTab(tab) {
+  // Seguimiento (subir/matriz) es SOLO admin — defensa aunque el tab se muestre.
+  if (tab === 'seg' && currentProfile?.role !== 'admin') tab = 'ranking';
   aptTab = tab;
   document.querySelectorAll('#aptTabsTrack .seg-btn').forEach(b => b.classList.toggle('on', b.dataset.apttab === tab));
   segMove('aptTabsTrack');
