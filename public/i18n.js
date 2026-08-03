@@ -917,6 +917,7 @@ const EN = {
   'Agregar módulos': 'Add modules',
   'Arrastra para reordenar · ✕ para quitar': 'Drag to reorder · ✕ to remove',
   'Todos los módulos ya están visibles.': 'All modules are already visible.',
+  'Personaliza tu menú dentro de Cretum Desk': 'Customize your menu inside Cretum Desk',
 
   // ── Módulo de Notas ──
   'Carpetas': 'Folders',

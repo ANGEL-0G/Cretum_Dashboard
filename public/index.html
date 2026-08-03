@@ -1924,11 +1924,29 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 /* ── Personalización del home (reordenar / quitar / agregar) ── */
 .home-cust-bar{display:flex;align-items:center;gap:12px;max-width:740px;margin:0 auto 12px;padding:0 4px}
 .home-cust-hint{flex:1;font-size:12px;color:var(--gray-400)}
-.home-cust-btn{display:inline-flex;align-items:center;gap:7px;background:none;border:1px solid var(--gray-200);
+.home-cust-btn{position:relative;overflow:hidden;display:inline-flex;align-items:center;gap:7px;background:none;border:1px solid var(--gray-200);
   color:var(--gray-600);font-family:var(--font);font-size:12.5px;font-weight:500;padding:6px 13px;border-radius:999px;
   cursor:pointer;transition:background .15s,border-color .15s,color .15s;white-space:nowrap}
 .home-cust-btn:hover{border-color:var(--navy-light);color:var(--navy)}
 .home-modules.editing .home-cust-btn{background:var(--navy);border-color:var(--navy);color:#fff}
+/* Brillo "nueva función" en Personalizar y +Agregar (hasta el primer uso) */
+.home-cust-btn.shine-new{box-shadow:0 0 0 3px var(--navy-pale)}
+.home-cust-btn.shine-new::before,
+.home-module-add.shine-new::before{content:'';position:absolute;top:0;left:-140%;width:55%;height:100%;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.5),transparent);transform:skewX(-20deg);
+  animation:ntShine 2.8s ease-in-out 1s infinite;pointer-events:none;z-index:1}
+.home-module-add.shine-new{overflow:hidden;box-shadow:0 0 0 3px var(--navy-pale);border-color:var(--navy-light)}
+@media (prefers-reduced-motion:reduce){.home-cust-btn.shine-new::before,.home-module-add.shine-new::before{animation:none}}
+/* Globo de ayuda "nueva función" apuntando al botón Personalizar */
+.home-cust-tip{display:none;align-items:center;position:relative;font-size:11.5px;font-weight:500;color:#fff;
+  background:var(--navy);padding:5px 11px;border-radius:9px;white-space:nowrap;
+  box-shadow:0 6px 16px -6px rgba(26,58,107,.55);animation:homeTipFloat 2.4s ease-in-out infinite}
+.home-cust-tip.on{display:inline-flex}
+.home-cust-tip::after{content:'';position:absolute;right:-4px;top:50%;transform:translateY(-50%) rotate(45deg);
+  width:9px;height:9px;background:var(--navy);border-radius:2px}
+@keyframes homeTipFloat{0%,100%{transform:translateX(0)}50%{transform:translateX(-3px)}}
+@media (max-width:560px){.home-cust-tip{display:none!important}}
+@media (prefers-reduced-motion:reduce){.home-cust-tip{animation:none}}
 .home-module.editing{cursor:grab;border-style:dashed;border-color:var(--gray-300)}
 .home-module.editing:hover{transform:none;box-shadow:var(--shadow-sm);border-color:var(--gray-300)}
 .home-module.editing:active{cursor:grabbing}
@@ -3599,6 +3617,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 
     <div class="home-cust-bar" id="homeCustBar">
       <span class="home-cust-hint" id="homeCustHint"></span>
+      <span class="home-cust-tip" id="homeCustTip" data-i18n>Personaliza tu menú dentro de Cretum Desk</span>
       <button class="home-cust-btn" id="homeCustBtn" onclick="toggleHomeEdit()">
         <i class="fa-solid fa-sliders"></i> <span data-i18n>Personalizar</span>
       </button>
@@ -6116,7 +6135,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   </div>
 </div>
 
-<script src="/i18n.js?v=20260803-homecustom"></script>
-<script src="/app.js?v=20260803-homecustom"></script>
+<script src="/i18n.js?v=20260803-homeshine"></script>
+<script src="/app.js?v=20260803-homeshine"></script>
 </body>
 </html>

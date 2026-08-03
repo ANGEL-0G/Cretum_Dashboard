@@ -3267,14 +3267,25 @@ function homeModuleHTML(m, editing) {
       ${badge}${pulse}${homeModuleInner(m)}
     </button>`;
 }
-function homeAddTileHTML() {
-  return `<button class="home-module home-module-add" onclick="openHomePicker()" title="${t('Agregar módulos')}" aria-label="${t('Agregar módulos')}">
+function homeAddTileHTML(shine) {
+  return `<button class="home-module home-module-add${shine ? ' shine-new' : ''}" onclick="openHomePicker()" title="${t('Agregar módulos')}" aria-label="${t('Agregar módulos')}">
       <div class="home-module-add-ico"><i class="fa-solid fa-plus"></i></div>
       <div class="home-module-add-lbl">${t('Agregar')}</div>
     </button>`;
 }
 
-function toggleHomeEdit() { homeEditMode = !homeEditMode; renderHomeModules(); }
+/* Indicador "nueva función" (brillo + globo) hasta que el usuario lo usa por primera vez */
+function homeCustSeen() { try { return localStorage.getItem('cretum_home_custom_seen') === '1'; } catch (e) { return true; } }
+function markHomeCustSeen() {
+  try { localStorage.setItem('cretum_home_custom_seen', '1'); } catch (e) {}
+  renderHomeModules();
+}
+
+function toggleHomeEdit() {
+  homeEditMode = !homeEditMode;
+  if (!homeEditMode) markHomeCustSeen();   // al terminar de personalizar, ya no es "nuevo"
+  renderHomeModules();
+}
 
 function homeDragStart(e, view) {
   homeDragView = view;
@@ -3326,7 +3337,7 @@ function renderHomePicker() {
       <button class="home-picker-add" onclick="homeAddModule('${m.view}')"><i class="fa-solid fa-plus"></i> ${t('Agregar')}</button>
     </div>`).join('');
 }
-function openHomePicker() { renderHomePicker(); document.getElementById('homePickerBackdrop')?.classList.add('show'); }
+function openHomePicker() { renderHomePicker(); document.getElementById('homePickerBackdrop')?.classList.add('show'); try { localStorage.setItem('cretum_home_custom_seen', '1'); } catch (e) {} }
 function closeHomePicker() { document.getElementById('homePickerBackdrop')?.classList.remove('show'); }
 
 function renderHomeModules() {
@@ -3334,14 +3345,20 @@ function renderHomeModules() {
   if (!el || !currentOrg) return;
   const { visible, hidden } = homeOrderedModules();
   const editing = homeEditMode;
+  const isNew = !homeCustSeen();   // aún no lo usa → brillo + globo
   el.classList.toggle('editing', editing);
   el.innerHTML = visible.map(m => homeModuleHTML(m, editing)).join('')
-    + ((editing || hidden.length) ? homeAddTileHTML() : '');
+    + ((editing || hidden.length) ? homeAddTileHTML(isNew) : '');
 
   const btn = document.getElementById('homeCustBtn');
-  if (btn) btn.innerHTML = editing
-    ? `<i class="fa-solid fa-check"></i> <span>${t('Listo')}</span>`
-    : `<i class="fa-solid fa-sliders"></i> <span>${t('Personalizar')}</span>`;
+  if (btn) {
+    btn.innerHTML = editing
+      ? `<i class="fa-solid fa-check"></i> <span>${t('Listo')}</span>`
+      : `<i class="fa-solid fa-sliders"></i> <span>${t('Personalizar')}</span>`;
+    btn.classList.toggle('shine-new', isNew && !editing);
+  }
+  const tip = document.getElementById('homeCustTip');
+  if (tip) tip.classList.toggle('on', isNew && !editing);
   const hint = document.getElementById('homeCustHint');
   if (hint) hint.textContent = editing ? t('Arrastra para reordenar · ✕ para quitar') : '';
 
