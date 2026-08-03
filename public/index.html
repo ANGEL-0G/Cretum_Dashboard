@@ -3840,6 +3840,21 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
     [data-theme="dark"] .camp-modal,[data-theme="dark"] .camp-f-inp{background:var(--card,#1a2030)}
     @media(max-width:760px){.camp-tpl-grid{grid-template-columns:1fr}#campTplFrame{height:360px}}
     /* ── Listas: Apertura Cretum vs Cartas GVV (comparación de dos columnas) ── */
+    /* ── Frente Apertura Cretum Diaria ── */
+    .camp-frente{margin-bottom:4px}
+    .apt-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px}
+    .apt-card{display:flex;align-items:center;gap:12px;border:1px solid var(--line,#e7ebf2);border-radius:12px;padding:12px 14px;background:var(--white,#fff);min-width:290px;flex:1}
+    [data-theme="dark"] .apt-card{background:var(--card,#161c28);border-color:rgba(255,255,255,.08)}
+    .apt-card-ic{width:38px;height:38px;border-radius:10px;background:rgba(230,164,25,.14);color:#c98a12;display:flex;align-items:center;justify-content:center;font-size:16px;flex:none}
+    .apt-card-body{flex:1;min-width:0}
+    .apt-card-t{font-size:13.5px;font-weight:600;color:var(--ink,#223)}
+    .apt-card-d{font-size:12.5px;color:var(--ink-soft,#8893a5);margin-top:1px}
+    .apt-note{font-size:12px;color:var(--ink-soft,#8893a5);margin-top:10px;line-height:1.5}
+    .apt-note i{color:#c98a12}
+    .apt-note b{color:var(--ink,#334);font-weight:600}
+    .apt-empty{padding:36px 16px;text-align:center;color:var(--ink-soft,#98a2b3);font-size:13px;border:1px dashed var(--line,#dbe1ea);border-radius:12px}
+    .apt-empty i{font-size:24px;display:block;margin-bottom:10px;opacity:.5}
+    #aptDrop.drag{border-color:var(--navy);background:var(--navy-ghost,#f5f7fb)}
     .lst-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
     .lst-search{flex:1;min-width:200px}
     .lst-summary{display:flex;gap:22px;flex-wrap:wrap;align-items:center;margin-bottom:16px;font-size:13px;color:var(--ink-soft,#667)}
@@ -4049,8 +4064,16 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
     }
   </style>
   <div class="page page-db" id="pageCampaigns">
-    <div class="db-toolbar">
-      <div class="db-title-block"><i class="fa-solid fa-bolt"></i> Campañas</div>
+    <div class="seg-track camp-frente" id="campFrenteTrack">
+      <span class="seg-ind" aria-hidden="true"></span>
+      <button class="seg-btn on" data-frente="gvv" onclick="campSetFrente('gvv')"><i class="fa-solid fa-envelope-open-text"></i> Cartas Mensuales GVV</button>
+      <button class="seg-btn" data-frente="apertura" onclick="campSetFrente('apertura')"><i class="fa-solid fa-sun"></i> Apertura Cretum Diaria</button>
+    </div>
+
+    <!-- ── FRENTE: Cartas Mensuales GVV (lo de siempre) ── -->
+    <div id="campFrenteGvv">
+    <div class="db-toolbar" style="margin-top:14px">
+      <div class="db-title-block"><i class="fa-solid fa-envelope-open-text"></i> Cartas Mensuales GVV</div>
       <div class="camp-tabs seg-track" id="campTabsTrack">
         <span class="seg-ind" aria-hidden="true"></span>
         <button class="camp-tab seg-btn on" data-ctab="ranking" onclick="campSetTab('ranking')"><i class="fa-solid fa-ranking-star"></i> Ranking</button>
@@ -4210,6 +4233,48 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
         <span class="ctbl-hint">Al añadir, tú quedas como responsable. Solo puedes editar/borrar los tuyos.</span>
       </div>
       <div id="ctblList"></div>
+    </div>
+    </div><!-- /#campFrenteGvv -->
+
+    <!-- ── FRENTE: Apertura Cretum Diaria ── -->
+    <div id="campFrenteApertura" style="display:none">
+      <div class="db-toolbar" style="margin-top:14px">
+        <div class="db-title-block"><i class="fa-solid fa-sun"></i> Apertura Cretum Diaria <span class="db-sub" style="font-weight:400;font-size:12px;color:var(--ink-soft,#8893a5)">· seguimiento del correo diario</span></div>
+      </div>
+
+      <div class="apt-actions">
+        <div class="apt-card">
+          <div class="apt-card-ic"><i class="fa-solid fa-address-book"></i></div>
+          <div class="apt-card-body">
+            <div class="apt-card-t">Contactos de Apertura</div>
+            <div class="apt-card-d" id="aptContactCount">—</div>
+          </div>
+          <button class="cdd-btn" type="button" onclick="aperturaOpen()">Gestionar</button>
+        </div>
+      </div>
+
+      <div class="camp-upload" style="margin-top:16px">
+        <div class="camp-upload-title"><i class="fa-solid fa-cloud-arrow-up"></i> Subir archivo del día</div>
+        <div class="camp-upload-row">
+          <label class="camp-month-lbl">Fecha del envío
+            <input type="date" id="aptFecha" class="camp-month">
+          </label>
+          <div class="camp-drop" id="aptDrop"
+               ondragover="aptDragOver(event)" ondragleave="aptDragLeave()" ondrop="aptDropFile(event)"
+               onclick="document.getElementById('aptFileInput').click()">
+            <i class="fa-solid fa-cloud-arrow-up"></i>
+            <span>Arrastra aquí el archivo (CSV o Excel), o haz clic para elegirlo</span>
+            <input type="file" id="aptFileInput" accept=".csv,.xlsx,.xls,text/csv" style="display:none" onchange="aptHandleFile(this.files)">
+          </div>
+        </div>
+        <div class="apt-note"><i class="fa-solid fa-circle-info"></i> Por ahora solo <b>previsualizo</b> el archivo para diseñar juntos el flujo; todavía no guarda el seguimiento.</div>
+        <div id="aptPreview" class="camp-preview" style="display:none"></div>
+      </div>
+
+      <div style="margin-top:22px">
+        <div class="camp-rank-title" style="font-size:16px;margin-bottom:12px">Seguimiento diario</div>
+        <div id="aptMatrix"></div>
+      </div>
     </div>
   </div>
 
@@ -5816,6 +5881,6 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 </div>
 
 <script src="/i18n.js?v=20260724-notes2"></script>
-<script src="/app.js?v=20260731-rolepick2"></script>
+<script src="/app.js?v=20260731-frenteapertura"></script>
 </body>
 </html>

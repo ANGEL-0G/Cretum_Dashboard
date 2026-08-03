@@ -10686,6 +10686,88 @@ function segMove(track, animate) {
   if (instant) { void ind.offsetWidth; ind.style.transition = ''; }   // reflow para fijar sin animación
 }
 
+/* ── Split de Campañas: Cartas Mensuales GVV ↔ Apertura Cretum Diaria ── */
+let campFrente = 'gvv';
+function campSetFrente(f) {
+  campFrente = f;
+  document.querySelectorAll('#campFrenteTrack .seg-btn').forEach(b => b.classList.toggle('on', b.dataset.frente === f));
+  segMove('campFrenteTrack');
+  const gvv = document.getElementById('campFrenteGvv');
+  const apt = document.getElementById('campFrenteApertura');
+  if (gvv) gvv.style.display = f === 'gvv' ? '' : 'none';
+  if (apt) apt.style.display = f === 'apertura' ? '' : 'none';
+  if (f === 'gvv') segMove('campTabsTrack');
+  else loadAperturaFrente();
+}
+
+async function loadAperturaFrente() {
+  const cEl = document.getElementById('aptContactCount');
+  try {
+    const { count } = await sb.from('apertura_contacts').select('*', { count: 'exact', head: true });
+    if (cEl) cEl.textContent = `${count ?? 0} destinatario${count === 1 ? '' : 's'}`;
+  } catch { if (cEl) cEl.textContent = '—'; }
+  aptMatrixRender();
+}
+
+async function aptMatrixRender() {
+  const el = document.getElementById('aptMatrix');
+  if (!el) return;
+  el.innerHTML = '<div class="db-loading"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
+  try {
+    const { data: eng, error } = await sb.from('apertura_engagement').select('email, fecha, opened, clicked, nivel').order('fecha');
+    if (error) throw error;
+    if (!eng || !eng.length) {
+      el.innerHTML = `<div class="apt-empty"><i class="fa-solid fa-chart-simple"></i>Aún no hay seguimiento de Apertura.<br>Cuando definamos el flujo y subas el archivo del día, aquí verás la matriz de quién abrió, por día.</div>`;
+      return;
+    }
+    const { data: cts } = await sb.from('apertura_contacts').select('email, nombre');
+    const nameOf = {}; (cts || []).forEach(c => { nameOf[c.email] = c.nombre; });
+    const fechas = [...new Set(eng.map(e => e.fecha))].sort();
+    const emails = [...new Set(eng.map(e => e.email))].sort();
+    const key = (e, f) => e + '|' + f;
+    const map = {}; eng.forEach(e => { map[key(e.email, e.fecha)] = e; });
+    const head = '<th>Contacto</th>' + fechas.map(f => `<th>${escapeHtml(f)}</th>`).join('');
+    const body = emails.map(em => {
+      const cells = fechas.map(f => {
+        const e = map[key(em, f)];
+        const mark = e && e.nivel >= 2 ? '⚡⚡' : e && (e.opened || e.nivel >= 1) ? '⚡' : '';
+        return `<td style="text-align:center">${mark}</td>`;
+      }).join('');
+      return `<tr><td class="ctbl-nm">${escapeHtml(nameOf[em] || em)}<div class="ctbl-em">${escapeHtml(em)}</div></td>${cells}</tr>`;
+    }).join('');
+    el.innerHTML = `<div class="cc-tablewrap"><table class="ctbl-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+  } catch (e) {
+    el.innerHTML = `<div class="apt-empty">No se pudo cargar: ${escapeHtml(e.message || '')}</div>`;
+  }
+}
+
+// Subir archivo del día → SOLO previsualiza (el parser/guardado se define con el flujo).
+async function aptHandleFile(files) {
+  const file = files && files[0]; if (!file) return;
+  const prev = document.getElementById('aptPreview');
+  prev.style.display = ''; prev.innerHTML = '<div class="db-loading"><i class="fa-solid fa-spinner fa-spin"></i> Leyendo…</div>';
+  try {
+    await loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type: 'array' });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, blankrows: false, defval: '' });
+    if (!rows.length) { prev.innerHTML = '<div class="apt-empty">El archivo está vacío.</div>'; return; }
+    const header = rows[0]; const sample = rows.slice(1, 9);
+    const th = header.map(h => `<th>${escapeHtml(String(h))}</th>`).join('');
+    const trs = sample.map(r => '<tr>' + header.map((_, i) => `<td>${escapeHtml(String(r[i] == null ? '' : r[i]))}</td>`).join('') + '</tr>').join('');
+    prev.innerHTML = `<div style="font-size:12.5px;color:var(--ink-soft,#8893a5);margin-bottom:8px"><b>${escapeHtml(file.name)}</b> — ${rows.length - 1} filas, ${header.length} columnas. Vista previa (primeras ${sample.length}):</div>
+      <div class="cc-tablewrap"><table class="ctbl-table"><thead><tr>${th}</tr></thead><tbody>${trs}</tbody></table></div>`;
+  } catch (e) {
+    prev.innerHTML = `<div class="apt-empty">No se pudo leer: ${escapeHtml(e.message || '')}</div>`;
+  } finally {
+    const inp = document.getElementById('aptFileInput'); if (inp) inp.value = '';
+  }
+}
+function aptDragOver(e) { e.preventDefault(); document.getElementById('aptDrop')?.classList.add('drag'); }
+function aptDragLeave() { document.getElementById('aptDrop')?.classList.remove('drag'); }
+function aptDropFile(e) { e.preventDefault(); document.getElementById('aptDrop')?.classList.remove('drag'); aptHandleFile(e.dataTransfer.files); }
+
 function campSetTab(tab) {
   campTab = tab;
   document.querySelectorAll('#pageCampaigns .camp-tab').forEach(b =>
@@ -10717,6 +10799,10 @@ function campToggleMatrix() {
 async function loadCampaigns() {
   const isAdmin = currentProfile?.role === 'admin';
   const isEditorOrAdmin = isAdmin || currentProfile?.role === 'editor' || currentProfile?.role === 'colaborador';
+  // El split de frentes (GVV / Apertura) es solo-admin (Apertura es tracking admin).
+  const frenteTrack = document.getElementById('campFrenteTrack');
+  if (frenteTrack) frenteTrack.style.display = isAdmin ? '' : 'none';
+  if (!isAdmin && campFrente === 'apertura') campSetFrente('gvv');
   // Gestión: solo admin. Listas: editores y admin (lectura). Tabla de Contactos: el resto.
   document.querySelectorAll('#pageCampaigns .camp-tab-admin').forEach(t => { t.style.display = isAdmin ? '' : 'none'; });
   document.querySelectorAll('#pageCampaigns .camp-tab-editor').forEach(t => { t.style.display = isEditorOrAdmin ? '' : 'none'; });
@@ -10727,7 +10813,8 @@ async function loadCampaigns() {
   else if (campTab === 'gestion' && !isAdmin) campSetTab('ranking');
   else if (campTab === 'listas' && !isEditorOrAdmin) campSetTab('ranking');
   else if (campTab === 'tabla' && isAdmin) campSetTab('ranking');
-  // Reposiciona el indicador ahora que ya se sabe qué pestañas son visibles.
+  // Reposiciona los indicadores (frentes + pestañas) ya que la vista es visible.
+  segMove('campFrenteTrack', false);
   segMove('campTabsTrack', false);
 
   // Ranking y Campaña Actual: para TODOS (ranking primero para saber el último mes)
