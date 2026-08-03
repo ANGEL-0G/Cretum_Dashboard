@@ -3867,6 +3867,18 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
     #aptPaneTabla .ctbl-table th:nth-child(3),#aptPaneTabla .ctbl-table td:nth-child(3){width:82px;text-align:center}
     #aptPaneTabla .ctbl-table th:nth-child(4),#aptPaneTabla .ctbl-table td:nth-child(4){width:96px;white-space:nowrap;font-size:11.5px}
     #aptPaneTabla .ctbl-streak{padding:1px 8px;font-size:11.5px}
+    /* Gestión de Apertura: administrar contactos (compacto y centrado) */
+    #aptPaneGest{max-width:760px;margin-left:auto;margin-right:auto}
+    #aptPaneGest .ctbl-search{max-width:340px}
+    .apt-addrow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+    .apt-addrow .lst-add-inp{flex:1;min-width:150px}
+    #aptPaneGest .ctbl-table{font-size:12.5px;table-layout:fixed}
+    #aptPaneGest .ctbl-table th{padding:8px 10px;font-size:10px}
+    #aptPaneGest .ctbl-table td{padding:7px 10px}
+    #aptPaneGest .ctbl-nm{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    #aptPaneGest .ctbl-em{font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    #aptPaneGest .ctbl-table th:nth-child(3),#aptPaneGest .ctbl-table td:nth-child(3){width:92px;text-align:right}
+    #aptPaneGest .ctbl-acts{white-space:nowrap}
     .lst-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
     .lst-search{flex:1;min-width:200px}
     .lst-summary{display:flex;gap:22px;flex-wrap:wrap;align-items:center;margin-bottom:16px;font-size:13px;color:var(--ink-soft,#667)}
@@ -4256,6 +4268,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
           <span class="seg-ind" aria-hidden="true"></span>
           <button class="seg-btn on" data-apttab="ranking" onclick="aptSetTab('ranking')"><i class="fa-solid fa-ranking-star"></i> Ranking</button>
           <button class="seg-btn" data-apttab="tabla" onclick="aptSetTab('tabla')"><i class="fa-solid fa-address-book"></i> Tabla de Contactos</button>
+          <button class="seg-btn apt-tab-admin" data-apttab="gestion" onclick="aptSetTab('gestion')" style="display:none"><i class="fa-solid fa-user-gear"></i> Gestión</button>
           <button class="seg-btn apt-tab-admin" data-apttab="seg" onclick="aptSetTab('seg')" style="display:none"><i class="fa-solid fa-sliders"></i> Seguimiento</button>
         </div>
       </div>
@@ -4281,7 +4294,26 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
         <div id="aptTblList"></div>
       </div>
 
-      <!-- Pane: Seguimiento (solo admin) — contactos + subir + matriz -->
+      <!-- Pane: Gestión (solo admin) — administrar contactos de Apertura -->
+      <div class="camp-pane" id="aptPaneGest" style="display:none">
+        <div class="ctbl-bar">
+          <div class="db-search ctbl-search">
+            <i class="fa-solid fa-magnifying-glass db-search-ico"></i>
+            <input id="aptGestSearch" class="db-search-inp" placeholder="Buscar nombre o correo…" oninput="renderAptGest()" autocomplete="off">
+          </div>
+          <button class="cdd-btn" type="button" onclick="aptGestExport()"><i class="fa-solid fa-file-csv"></i> Exportar CSV</button>
+        </div>
+        <div class="apt-addrow">
+          <input id="aptGestEmail" class="lst-add-inp" type="email" placeholder="correo@dominio.com" autocomplete="off" onkeydown="if(event.key==='Enter')aptGestAdd()">
+          <input id="aptGestNombre" class="lst-add-inp" placeholder="Nombre (opcional)" autocomplete="off" onkeydown="if(event.key==='Enter')aptGestAdd()">
+          <button class="lst-add-btn" id="aptGestAddBtn" onclick="aptGestAdd()"><i class="fa-solid fa-plus"></i> Añadir</button>
+          <button class="camp-prev-cancel" id="aptGestCancel" onclick="aptGestCancelEdit()" style="display:none">Cancelar</button>
+        </div>
+        <div class="db-filters" style="border:none;padding:6px 0 10px"><span class="db-count" id="aptGestCount" style="margin-left:0">—</span></div>
+        <div id="aptGestList"></div>
+      </div>
+
+      <!-- Pane: Seguimiento (solo admin) — subir + matriz -->
       <div class="camp-pane" id="aptPaneSeg" style="display:none">
       <div class="apt-actions">
         <div class="apt-card">
@@ -5923,6 +5955,6 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 </div>
 
 <script src="/i18n.js?v=20260724-notes2"></script>
-<script src="/app.js?v=20260731-aptcenter"></script>
+<script src="/app.js?v=20260731-aptgestion"></script>
 </body>
 </html>

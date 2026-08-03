@@ -10717,28 +10717,27 @@ function campSetFrente(f) {
   if (gvv) gvv.style.display = f === 'gvv' ? '' : 'none';
   if (apt) apt.style.display = f === 'apertura' ? '' : 'none';
   if (f === 'gvv') { segMove('campTabsTrack'); return; }
-  // Apertura: Ranking para todos; Seguimiento (subir/matriz) solo admin.
+  // Apertura: Ranking y Tabla para todos; Gestión y Seguimiento solo admin.
   const isAdmin = currentProfile?.role === 'admin';
-  const segTab = document.querySelector('#aptTabsTrack .apt-tab-admin');
-  if (segTab) segTab.style.display = isAdmin ? '' : 'none';
-  if (!isAdmin && aptTab === 'seg') aptTab = 'ranking';
+  document.querySelectorAll('#aptTabsTrack .apt-tab-admin').forEach(t => { t.style.display = isAdmin ? '' : 'none'; });
+  if (!isAdmin && (aptTab === 'seg' || aptTab === 'gestion')) aptTab = 'ranking';
   aptSetTab(aptTab);
 }
 
 function aptSetTab(tab) {
-  // Seguimiento (subir/matriz) es SOLO admin — defensa aunque el tab se muestre.
-  if (tab === 'seg' && currentProfile?.role !== 'admin') tab = 'ranking';
+  // Gestión y Seguimiento son SOLO admin — defensa aunque el tab se muestre.
+  if ((tab === 'seg' || tab === 'gestion') && currentProfile?.role !== 'admin') tab = 'ranking';
   aptTab = tab;
   document.querySelectorAll('#aptTabsTrack .seg-btn').forEach(b => b.classList.toggle('on', b.dataset.apttab === tab));
   segMove('aptTabsTrack');
-  const rk = document.getElementById('aptPaneRanking');
-  const tb = document.getElementById('aptPaneTabla');
-  const sg = document.getElementById('aptPaneSeg');
-  if (rk) rk.style.display = tab === 'ranking' ? '' : 'none';
-  if (tb) tb.style.display = tab === 'tabla' ? '' : 'none';
-  if (sg) sg.style.display = tab === 'seg' ? '' : 'none';
+  const set = (id, on) => { const el = document.getElementById(id); if (el) el.style.display = on ? '' : 'none'; };
+  set('aptPaneRanking', tab === 'ranking');
+  set('aptPaneTabla', tab === 'tabla');
+  set('aptPaneGest', tab === 'gestion');
+  set('aptPaneSeg', tab === 'seg');
   if (tab === 'ranking') loadAperturaRanking();
   else if (tab === 'tabla') loadAperturaTabla();
+  else if (tab === 'gestion') loadAptGest();
   else loadAperturaFrente();
 }
 
@@ -10777,6 +10776,119 @@ function renderAperturaTabla() {
     <td class="ctbl-vistos">${c.ultimo ? escapeHtml(c.ultimo) : '—'}</td>
   </tr>`).join('');
   list.innerHTML = `<div class="cc-tablewrap"><table class="ctbl-table"><thead><tr><th>Nombre</th><th>Correo</th><th>Aperturas</th><th>Último día</th></tr></thead><tbody>${body}</tbody></table></div>`;
+}
+
+/* ── Gestión de contactos de Apertura (solo admin): añadir/editar/quitar/exportar ── */
+let aptGest = null, aptGestEditing = null;
+
+async function loadAptGest() {
+  const list = document.getElementById('aptGestList');
+  if (list && !aptGest) list.innerHTML = '<div class="db-loading"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
+  try {
+    const { data, error } = await sb.from('apertura_contacts').select('email, nombre').order('nombre', { nullsFirst: false });
+    if (error) throw error;
+    aptGest = data || [];
+    renderAptGest();
+  } catch (e) {
+    if (list) list.innerHTML = `<div class="camp-empty-mini">No se pudo cargar: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+function renderAptGest() {
+  if (!aptGest) return;
+  const q = ccStrip(document.getElementById('aptGestSearch')?.value);
+  let rows = aptGest;
+  if (q) rows = rows.filter(c => ccStrip(c.nombre).includes(q) || ccNorm(c.email).includes(q));
+  const cnt = document.getElementById('aptGestCount');
+  if (cnt) cnt.textContent = `${rows.length} de ${aptGest.length} contacto${aptGest.length === 1 ? '' : 's'}`;
+  const list = document.getElementById('aptGestList');
+  if (!list) return;
+  if (!rows.length) { list.innerHTML = `<div class="camp-empty-mini"><i class="fa-solid fa-address-book"></i><p>Sin contactos. Añade el primero arriba.</p></div>`; return; }
+  rows = rows.slice().sort((a, b) => (a.nombre || a.email).localeCompare(b.nombre || b.email, 'es'));
+  const body = rows.map(c => `<tr>
+    <td class="ctbl-nm">${escapeHtml(c.nombre || '—')}</td>
+    <td class="ctbl-em">${escapeHtml(c.email)}</td>
+    <td class="ctbl-acts">
+      <button class="ctbl-act" title="Editar" onclick="aptGestEdit('${jsArg(c.email)}')"><i class="fa-solid fa-pen"></i></button>
+      <button class="ctbl-act del" title="Quitar" onclick="aptGestDelete('${jsArg(c.email)}')"><i class="fa-solid fa-xmark"></i></button>
+    </td>
+  </tr>`).join('');
+  list.innerHTML = `<div class="cc-tablewrap"><table class="ctbl-table"><thead><tr><th>Nombre</th><th>Correo</th><th style="text-align:right">Acciones</th></tr></thead><tbody>${body}</tbody></table></div>`;
+}
+
+async function aptGestAdd() {
+  const emailEl = document.getElementById('aptGestEmail');
+  const nombreEl = document.getElementById('aptGestNombre');
+  const email = ccNorm(emailEl.value);
+  const nombre = nombreEl.value.trim();
+  if (!email || !email.includes('@') || !email.includes('.')) { toast('Escribe un correo válido'); return; }
+  try {
+    if (aptGestEditing) {
+      if (email !== ccNorm(aptGestEditing)) {
+        if (aptGest.some(c => ccNorm(c.email) === email)) { toast('Ese correo ya existe'); return; }
+        const { error: eD } = await sb.from('apertura_contacts').delete().eq('email', aptGestEditing);
+        if (eD) throw eD;
+        const { error: eI } = await sb.from('apertura_contacts').upsert({ email, nombre: nombre || null }, { onConflict: 'email' });
+        if (eI) throw eI;
+      } else {
+        const { error } = await sb.from('apertura_contacts').update({ nombre: nombre || null }).eq('email', aptGestEditing);
+        if (error) throw error;
+      }
+      toast('Contacto actualizado');
+      aptGestCancelEdit();
+    } else {
+      if (aptGest.some(c => ccNorm(c.email) === email)) { toast('Ese correo ya está en Apertura'); return; }
+      const { error } = await sb.from('apertura_contacts').upsert({ email, nombre: nombre || null }, { onConflict: 'email' });
+      if (error) throw error;
+      toast('Contacto añadido');
+      emailEl.value = ''; nombreEl.value = '';
+    }
+    aperturaContacts = null; aptTblRows = null;   // invalidar caches (modal viejo + Tabla)
+    await loadAptGest();
+    emailEl.focus();
+  } catch (e) { toast('Error: ' + e.message); }
+}
+
+function aptGestEdit(email) {
+  const c = aptGest.find(x => ccNorm(x.email) === ccNorm(email)); if (!c) return;
+  aptGestEditing = c.email;
+  document.getElementById('aptGestEmail').value = c.email;
+  document.getElementById('aptGestNombre').value = c.nombre || '';
+  const btn = document.getElementById('aptGestAddBtn'); if (btn) btn.innerHTML = '<i class="fa-solid fa-check"></i> Guardar';
+  const cx = document.getElementById('aptGestCancel'); if (cx) cx.style.display = '';
+  document.getElementById('aptGestNombre').focus();
+}
+function aptGestCancelEdit() {
+  aptGestEditing = null;
+  const em = document.getElementById('aptGestEmail'); if (em) em.value = '';
+  const nm = document.getElementById('aptGestNombre'); if (nm) nm.value = '';
+  const btn = document.getElementById('aptGestAddBtn'); if (btn) btn.innerHTML = '<i class="fa-solid fa-plus"></i> Añadir';
+  const cx = document.getElementById('aptGestCancel'); if (cx) cx.style.display = 'none';
+}
+
+async function aptGestDelete(email) {
+  const ok = await showConfirm('Quitar contacto', `¿Quitar ${email} de la lista de Apertura?`);
+  if (!ok) return;
+  const { error } = await sb.from('apertura_contacts').delete().eq('email', email);
+  if (error) { toast('Error al quitar: ' + error.message); return; }
+  if (aptGestEditing && ccNorm(aptGestEditing) === ccNorm(email)) aptGestCancelEdit();
+  aperturaContacts = null; aptTblRows = null;
+  await loadAptGest();
+  toast('Contacto quitado');
+}
+
+// Exporta TODOS los contactos de Apertura a CSV (no solo lo filtrado).
+async function aptGestExport() {
+  if (!aptGest || !aptGest.length) { toast('No hay contactos para exportar'); return; }
+  const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+  const rows = aptGest.slice().sort((a, b) => (a.nombre || a.email).localeCompare(b.nombre || b.email, 'es'));
+  const lines = ['﻿nombre,correo', ...rows.map(c => `${q(c.nombre || '')},${q(c.email)}`)];
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([lines.join('\r\n')], { type: 'text/csv;charset=utf-8' }));
+  a.download = `apertura_contactos_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  toast(`Exportados ${rows.length} contactos a CSV`);
 }
 
 async function loadAperturaRanking() {
