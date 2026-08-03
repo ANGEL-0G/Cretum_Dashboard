@@ -1689,12 +1689,11 @@ select.camp-f-inp::-ms-expand,select.form-input::-ms-expand{display:none}
 [data-theme="dark"] .sel-mvp .selector-card-name{color:#F89540}
 [data-theme="dark"] .sel-cretum .selector-card-sub{color:rgba(123,168,255,.55)}
 [data-theme="dark"] .sel-mvp .selector-card-sub{color:rgba(248,149,64,.65)}
-[data-theme="dark"] .sel-cretum .selector-card-logo{
-  filter:drop-shadow(0 0 28px rgba(123,168,255,.75)) drop-shadow(0 0 10px rgba(123,168,255,.55));
-}
-[data-theme="dark"] .sel-cretum:hover .selector-card-logo{
-  filter:drop-shadow(0 0 36px rgba(150,190,255,.9)) drop-shadow(0 0 12px rgba(150,190,255,.65));
-}
+/* En oscuro los logos del selector NO llevan glow (se veían extraños) */
+[data-theme="dark"] .sel-cretum .selector-card-logo,
+[data-theme="dark"] .sel-mvp .selector-card-logo,
+[data-theme="dark"] .sel-cretum:hover .selector-card-logo,
+[data-theme="dark"] .sel-mvp:hover .selector-card-logo{filter:none}
 
 @media (max-width:600px){
   .selector-hero{padding:14px 14px 22px}
@@ -5980,6 +5979,6 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 </div>
 
 <script src="/i18n.js?v=20260724-notes2"></script>
-<script src="/app.js?v=20260731-darkrefine"></script>
+<script src="/app.js?v=20260731-selnoglow"></script>
 </body>
 </html>
