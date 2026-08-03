@@ -62,16 +62,18 @@ html,body{overflow-x:clip;max-width:100%}
   --navy:#5d8ff5; --navy-dark:#3b65b0; --navy-mid:#4a76dc; --navy-light:#7ba8ff;
   --navy-pale:rgba(93,143,245,.15); --navy-ghost:rgba(93,143,245,.07);
   --brand-text:#5d8ff5;
-  --white:#151515;
-  --gray-50:#000000; --gray-100:#262626; --gray-200:#333333;
-  --gray-300:#444444; --gray-400:#888888; --gray-500:#aaaaaa;
-  --gray-700:#dddddd; --gray-900:#ffffff;
+  /* Navy-charcoal por capas: fondo(#0c0f16) < superficie(#161b24) < elevado.
+     Texto casi-blanco (no #fff puro) y grises con leve tinte navy = premium. */
+  --white:#161b24;
+  --gray-50:#0c0f16; --gray-100:#242b37; --gray-200:#2f3744;
+  --gray-300:#3c4655; --gray-400:#828b9e; --gray-500:#a4adbe;
+  --gray-700:#d3d8e1; --gray-900:#eceff4;
   --green:#4ade80; --green-bg:rgba(74,222,128,.14);
   --amber:#f5b842; --amber-bg:rgba(245,184,66,.14);
   --red:#e87b6a;   --red-bg:rgba(232,123,106,.14);
   --blue:#5cb3e8;  --blue-bg:rgba(92,179,232,.12);
-  --shadow-sm:0 1px 4px rgba(0,0,0,.6);
-  --shadow-md:0 4px 18px rgba(0,0,0,.7);
+  --shadow-sm:0 1px 3px rgba(0,0,0,.45);
+  --shadow-md:0 10px 30px -8px rgba(0,0,0,.55);
 }
 [data-theme="dark"][data-org="mvp"]{
   --navy:#F89540; --navy-dark:#c9651f; --navy-mid:#ED7824; --navy-light:#fbb27a;
@@ -79,25 +81,25 @@ html,body{overflow-x:clip;max-width:100%}
   --brand-text:#F89540;
 }
 
-[data-theme="dark"] .header{background:#0a0a0a}
-[data-theme="dark"] .login-box{background:#1a1a1a;color:var(--gray-900)}
-[data-theme="dark"] .fi{background:#0a0a0a;color:var(--gray-900);border-color:#2a2a2a}
+[data-theme="dark"] .header{background:#0c1119}
+[data-theme="dark"] .login-box{background:#171d27;color:var(--gray-900)}
+[data-theme="dark"] .fi{background:#0e131c;color:var(--gray-900);border-color:#2a323e}
 [data-theme="dark"] .fi::placeholder{color:var(--gray-400)}
-[data-theme="dark"] .li-prog-bar,[data-theme="dark"] .kb-prog{background:#2a2a2a}
-[data-theme="dark"] .modal-box,[data-theme="dark"] .task-modal-box{background:#1a1a1a}
-[data-theme="dark"] .modal-cancel{background:#2a2a2a;color:var(--gray-700)}
-[data-theme="dark"] .modal-cancel:hover{background:#3a3a3a}
-[data-theme="dark"] .tl-items{border-left-color:#262626}
-[data-theme="dark"] .tl-item::before{border-color:#151515}
+[data-theme="dark"] .li-prog-bar,[data-theme="dark"] .kb-prog{background:#2a323e}
+[data-theme="dark"] .modal-box,[data-theme="dark"] .task-modal-box{background:#1a212c}
+[data-theme="dark"] .modal-cancel{background:#2a323e;color:var(--gray-700)}
+[data-theme="dark"] .modal-cancel:hover{background:#333d4b}
+[data-theme="dark"] .tl-items{border-left-color:#242b37}
+[data-theme="dark"] .tl-item::before{border-color:#161b24}
 [data-theme="dark"] .settings-pop{background:rgba(24,24,27,.78);border-color:rgba(255,255,255,.09);box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 18px 44px -12px rgba(0,0,0,.6),0 6px 14px -8px rgba(0,0,0,.4)}
 [data-theme="dark"] .settings-row:hover{background:rgba(255,255,255,.05)}
 [data-theme="dark"] .settings-logout:hover{background:rgba(232,123,106,.18)}
 [data-theme="dark"] .settings-userhead-av{background:rgba(93,143,245,.18);color:var(--navy-light)}
 [data-theme="dark"][data-org="mvp"] .settings-userhead-av{background:rgba(237,120,36,.18);color:var(--navy-light)}
 [data-theme="dark"] .toggle-track::after{background:#e8eef7}
-[data-theme="dark"] .kb-col{background:#0d0d0d}
-[data-theme="dark"] .kb-col-head{background:#161616}
-[data-theme="dark"] .f-inp,[data-theme="dark"] .f-sel{background:#0a0a0a;color:var(--gray-900);border-color:#2a2a2a}
+[data-theme="dark"] .kb-col{background:#0f141d}
+[data-theme="dark"] .kb-col-head{background:#161d28}
+[data-theme="dark"] .f-inp,[data-theme="dark"] .f-sel{background:#0e131c;color:var(--gray-900);border-color:#2a323e}
 [data-theme="dark"] .f-inp::placeholder{color:var(--gray-400)}
 [data-theme="dark"] .drawer-btn{background:#161616}
 [data-theme="dark"] .drawer-btn:hover{background:#222222}
@@ -5978,6 +5980,6 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 </div>
 
 <script src="/i18n.js?v=20260724-notes2"></script>
-<script src="/app.js?v=20260731-navsolid"></script>
+<script src="/app.js?v=20260731-darkrefine"></script>
 </body>
 </html>
