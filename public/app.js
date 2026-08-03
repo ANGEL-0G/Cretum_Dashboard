@@ -3588,6 +3588,10 @@ function switchView(view, isBack = false) {
   const brandBtn = document.getElementById('headerBrandBtn');
   if (brandBtn) brandBtn.disabled = (view === 'selector');
 
+  // En el selector de empresa no hay navegación: se oculta el menú (hamburguesa).
+  const hb = document.getElementById('hamburgerBtn');
+  if (hb) hb.style.display = (view === 'selector') ? 'none' : '';
+
   updateFab();   // FAB contextual: crear nota / tarea / tarea de grupo según la vista
   closeNav();
 
