@@ -8993,6 +8993,8 @@ const LIVE_TRACKER_COMPANIES = [
   { dbId: 18, rowRe: /neutron|lime/i,             name: 'Lime',   label: 'LIME', displayMult: 1 },
   // Sin posiciones SPV en la DB → su mark vivo viene de la tabla live_marks (cron Finnhub).
   { ticker: 'HAWK', rowRe: /hawkeye/i, name: 'HawkEye 360', label: 'HAWK', displayMult: 1 },
+  { ticker: 'KDK', rowRe: /kodiak/i, name: 'Kodiak', label: 'KDK', displayMult: 1 },
+  { ticker: 'IONQ', rowRe: /ionq/i, name: 'IONQ (Capella)', label: 'IONQ', displayMult: 1 },
 ];
 const _liveMarks = {};        // dbId -> { pps, evB } (en la base de la DB/tracker)
 let _spcxFetchStarted = false;
