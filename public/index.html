@@ -1267,7 +1267,6 @@ select.camp-f-inp::-ms-expand,select.form-input::-ms-expand{display:none}
 .new-task-btn:active{transform:translateY(0) scale(.99);box-shadow:0 1px 3px rgba(26,58,107,.18)}
 .new-task-btn i{font-size:12px}
 
-.task-modal-backdrop.show{backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 .task-modal-box{
   background:var(--white);border-radius:var(--r-xl);
   width:480px;max-width:calc(100% - 28px);
@@ -1279,9 +1278,9 @@ select.camp-f-inp::-ms-expand,select.form-input::-ms-expand{display:none}
   will-change:transform,opacity;
 }
 .task-modal-backdrop.show .task-modal-box{transform:scale(1);opacity:1}
-/* Fondo (dim + desenfoque) acompaña con la misma duración; nada aparece de golpe */
-.task-modal-backdrop{transition:opacity .2s ease,visibility 0s linear .2s,backdrop-filter .2s ease,-webkit-backdrop-filter .2s ease}
-.task-modal-backdrop.show{transition:opacity .2s ease,visibility 0s linear 0s,backdrop-filter .2s ease,-webkit-backdrop-filter .2s ease}
+/* Fondo (solo atenúa; sin desenfoque animado — evita repintar el blur en cada frame) */
+.task-modal-backdrop{transition:opacity .18s ease,visibility 0s linear .18s}
+.task-modal-backdrop.show{transition:opacity .18s ease,visibility 0s linear 0s}
 .task-modal-head{
   display:flex;align-items:center;
   padding:18px 22px 6px;
@@ -2050,7 +2049,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
    DROPBOX — explorador de archivos
 ═══════════════════════════════════════════ */
 .page-dbx{display:none}
-.page-dbx.active{display:block;animation:fadeIn .3s ease}
+.page-dbx.active{display:block;animation:fadeIn .16s ease-out}
 
 .dbx-toolbar{
   display:flex;align-items:center;gap:10px;
@@ -2279,7 +2278,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
    BASE DE DATOS — vista
 ═══════════════════════════════════════════ */
 .page-db{display:none}
-.page-db.active{display:block;animation:fadeIn .3s ease}
+.page-db.active{display:block;animation:fadeIn .16s ease-out}
 
 /* ── MVP FUND TRACKERS ─────────────────────────────────────────── */
 .page-ft{display:none}
@@ -4239,9 +4238,25 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
     <!-- ── FRENTE: Apertura Cretum Diaria ── -->
     <div id="campFrenteApertura" style="display:none">
       <div class="db-toolbar" style="margin-top:14px">
-        <div class="db-title-block"><i class="fa-solid fa-sun"></i> Apertura Cretum Diaria <span class="db-sub" style="font-weight:400;font-size:12px;color:var(--ink-soft,#8893a5)">· seguimiento del correo diario</span></div>
+        <div class="db-title-block"><i class="fa-solid fa-sun"></i> Apertura Cretum Diaria</div>
+        <div class="camp-tabs seg-track" id="aptTabsTrack">
+          <span class="seg-ind" aria-hidden="true"></span>
+          <button class="seg-btn on" data-apttab="ranking" onclick="aptSetTab('ranking')"><i class="fa-solid fa-ranking-star"></i> Ranking</button>
+          <button class="seg-btn apt-tab-admin" data-apttab="seg" onclick="aptSetTab('seg')" style="display:none"><i class="fa-solid fa-sliders"></i> Seguimiento</button>
+        </div>
       </div>
 
+      <!-- Pane: Ranking (todos) -->
+      <div class="camp-pane" id="aptPaneRanking">
+        <div class="camp-rank-head">
+          <div class="camp-rank-title">Quién abre más <span class="camp-rank-sub">— el correo diario de Apertura</span></div>
+          <div class="camp-rank-note" id="aptRankNote"></div>
+        </div>
+        <div id="aptRankList" class="camp-rank-list"></div>
+      </div>
+
+      <!-- Pane: Seguimiento (solo admin) — contactos + subir + matriz -->
+      <div class="camp-pane" id="aptPaneSeg" style="display:none">
       <div class="apt-actions">
         <div class="apt-card">
           <div class="apt-card-ic"><i class="fa-solid fa-address-book"></i></div>
@@ -4275,6 +4290,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
         <div class="camp-rank-title" style="font-size:16px;margin-bottom:12px">Seguimiento diario</div>
         <div id="aptMatrix"></div>
       </div>
+      </div><!-- /#aptPaneSeg -->
     </div>
   </div>
 
@@ -5881,6 +5897,6 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 </div>
 
 <script src="/i18n.js?v=20260724-notes2"></script>
-<script src="/app.js?v=20260731-aptupload"></script>
+<script src="/app.js?v=20260731-aptrank"></script>
 </body>
 </html>

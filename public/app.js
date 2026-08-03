@@ -10707,7 +10707,7 @@ function segMove(track, animate) {
 }
 
 /* ── Split de Campañas: Cartas Mensuales GVV ↔ Apertura Cretum Diaria ── */
-let campFrente = 'gvv';
+let campFrente = 'gvv', aptTab = 'ranking';
 function campSetFrente(f) {
   campFrente = f;
   document.querySelectorAll('#campFrenteTrack .seg-btn').forEach(b => b.classList.toggle('on', b.dataset.frente === f));
@@ -10716,8 +10716,71 @@ function campSetFrente(f) {
   const apt = document.getElementById('campFrenteApertura');
   if (gvv) gvv.style.display = f === 'gvv' ? '' : 'none';
   if (apt) apt.style.display = f === 'apertura' ? '' : 'none';
-  if (f === 'gvv') segMove('campTabsTrack');
+  if (f === 'gvv') { segMove('campTabsTrack'); return; }
+  // Apertura: Ranking para todos; Seguimiento (subir/matriz) solo admin.
+  const isAdmin = currentProfile?.role === 'admin';
+  const segTab = document.querySelector('#aptTabsTrack .apt-tab-admin');
+  if (segTab) segTab.style.display = isAdmin ? '' : 'none';
+  if (!isAdmin && aptTab === 'seg') aptTab = 'ranking';
+  aptSetTab(aptTab);
+}
+
+function aptSetTab(tab) {
+  aptTab = tab;
+  document.querySelectorAll('#aptTabsTrack .seg-btn').forEach(b => b.classList.toggle('on', b.dataset.apttab === tab));
+  segMove('aptTabsTrack');
+  const rk = document.getElementById('aptPaneRanking');
+  const sg = document.getElementById('aptPaneSeg');
+  if (rk) rk.style.display = tab === 'ranking' ? '' : 'none';
+  if (sg) sg.style.display = tab === 'seg' ? '' : 'none';
+  if (tab === 'ranking') loadAperturaRanking();
   else loadAperturaFrente();
+}
+
+async function loadAperturaRanking() {
+  const list = document.getElementById('aptRankList');
+  if (!list) return;
+  list.innerHTML = '<div class="db-loading"><i class="fa-solid fa-spinner fa-spin"></i> Cargando ranking…</div>';
+  try {
+    const { data, error } = await sb.rpc('apertura_ranking');
+    if (error) throw error;
+    renderAperturaRanking(data || []);
+  } catch (e) {
+    console.error('[apertura ranking]', e);
+    list.innerHTML = `<div class="camp-empty-mini">No se pudo cargar el ranking: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+function renderAperturaRanking(rows) {
+  const list = document.getElementById('aptRankList');
+  const note = document.getElementById('aptRankNote');
+  if (!rows.length) {
+    list.innerHTML = `<div class="camp-empty-mini"><i class="fa-solid fa-ranking-star"></i><p>Aún no hay aperturas registradas. Sube el archivo del día en <strong>Seguimiento</strong>.</p></div>`;
+    if (note) note.textContent = '';
+    return;
+  }
+  const maxScore = Math.max(...rows.map(r => r.score), 1);
+  const ultimo = rows.map(r => r.ultimo_dia).filter(Boolean).sort().slice(-1)[0];
+  if (note) note.textContent = ultimo ? `Último día con datos: ${ultimo}` : '';
+  const mov = { up: ['up', '▲'], down: ['down', '▼'], flat: ['flat', '–'] };
+  list.innerHTML = rows.map((r, i) => {
+    const pos = i + 1;
+    const [mc, mg] = mov[r.momentum] || mov.flat;
+    const topCls = pos === 1 ? ' top1' : pos === 2 ? ' top2' : pos === 3 ? ' top3' : '';
+    const pct = Math.round((r.score / maxScore) * 100);
+    return `<div class="camp-rank-row${topCls}">
+      <div class="camp-rank-pos">${pos}</div>
+      <div class="camp-rank-mov ${mc}" title="${r.momentum === 'up' ? 'Subiendo / constante' : r.momentum === 'down' ? 'Bajó / dejó de abrir' : 'Sin cambio'}">${mg}</div>
+      <div class="camp-rank-info">
+        <div class="camp-rank-name">${escapeHtml(r.nombre)}</div>
+        <div class="camp-rank-bar-wrap"><div class="camp-rank-bar" style="width:${pct}%"></div></div>
+      </div>
+      <div class="camp-rank-stat">
+        <div class="camp-rank-score">${r.score}</div>
+        <div class="camp-rank-veces">${r.dias_vistos} ${r.dias_vistos === 1 ? 'día' : 'días'}</div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 async function loadAperturaFrente() {
@@ -10877,10 +10940,8 @@ function campToggleMatrix() {
 async function loadCampaigns() {
   const isAdmin = currentProfile?.role === 'admin';
   const isEditorOrAdmin = isAdmin || currentProfile?.role === 'editor' || currentProfile?.role === 'colaborador';
-  // El split de frentes (GVV / Apertura) es solo-admin (Apertura es tracking admin).
-  const frenteTrack = document.getElementById('campFrenteTrack');
-  if (frenteTrack) frenteTrack.style.display = isAdmin ? '' : 'none';
-  if (!isAdmin && campFrente === 'apertura') campSetFrente('gvv');
+  // El split de frentes (GVV / Apertura) es para todos: el Ranking de Apertura
+  // es público (SECURITY DEFINER); solo el tab de Seguimiento (subir) es admin.
   // Gestión: solo admin. Listas: editores y admin (lectura). Tabla de Contactos: el resto.
   document.querySelectorAll('#pageCampaigns .camp-tab-admin').forEach(t => { t.style.display = isAdmin ? '' : 'none'; });
   document.querySelectorAll('#pageCampaigns .camp-tab-editor').forEach(t => { t.style.display = isEditorOrAdmin ? '' : 'none'; });
