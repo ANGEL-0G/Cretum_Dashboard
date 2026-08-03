@@ -10730,11 +10730,51 @@ function aptSetTab(tab) {
   document.querySelectorAll('#aptTabsTrack .seg-btn').forEach(b => b.classList.toggle('on', b.dataset.apttab === tab));
   segMove('aptTabsTrack');
   const rk = document.getElementById('aptPaneRanking');
+  const tb = document.getElementById('aptPaneTabla');
   const sg = document.getElementById('aptPaneSeg');
   if (rk) rk.style.display = tab === 'ranking' ? '' : 'none';
+  if (tb) tb.style.display = tab === 'tabla' ? '' : 'none';
   if (sg) sg.style.display = tab === 'seg' ? '' : 'none';
   if (tab === 'ranking') loadAperturaRanking();
+  else if (tab === 'tabla') loadAperturaTabla();
   else loadAperturaFrente();
+}
+
+let aptTblRows = null;
+async function loadAperturaTabla() {
+  const list = document.getElementById('aptTblList');
+  if (!list) return;
+  if (aptTblRows) { renderAperturaTabla(); return; }
+  list.innerHTML = '<div class="db-loading"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
+  try {
+    const r = await authedFetch('/api/contacts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'apertura_tabla' }) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || ('Error ' + r.status));
+    aptTblRows = d.contactos || [];
+    renderAperturaTabla();
+  } catch (e) {
+    console.error('[apertura tabla]', e);
+    list.innerHTML = `<div class="camp-empty-mini">No se pudo cargar: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+function renderAperturaTabla() {
+  if (!aptTblRows) return;
+  const q = ccStrip(document.getElementById('aptTblSearch')?.value);
+  let rows = aptTblRows;
+  if (q) rows = rows.filter(c => ccStrip(c.nombre).includes(q) || ccNorm(c.email).includes(q));
+  const cnt = document.getElementById('aptTblCount');
+  if (cnt) cnt.textContent = `${rows.length} de ${aptTblRows.length}`;
+  const list = document.getElementById('aptTblList');
+  if (!rows.length) { list.innerHTML = `<div class="camp-empty-mini"><i class="fa-solid fa-address-book"></i><p>Sin contactos que coincidan.</p></div>`; return; }
+  rows = rows.slice().sort((a, b) => b.dias - a.dias || (a.nombre || a.email).localeCompare(b.nombre || b.email, 'es'));
+  const body = rows.map(c => `<tr>
+    <td class="ctbl-nm">${escapeHtml(c.nombre || '—')}</td>
+    <td class="ctbl-em">${escapeHtml(c.email)}</td>
+    <td style="text-align:center">${c.dias ? `<span class="ctbl-streak">${c.dias}</span>` : '<span class="ctbl-vistos">0</span>'}</td>
+    <td class="ctbl-vistos">${c.ultimo ? escapeHtml(c.ultimo) : '—'}</td>
+  </tr>`).join('');
+  list.innerHTML = `<div class="cc-tablewrap"><table class="ctbl-table"><thead><tr><th>Nombre</th><th>Correo</th><th>Aperturas</th><th>Último día</th></tr></thead><tbody>${body}</tbody></table></div>`;
 }
 
 async function loadAperturaRanking() {
@@ -10899,6 +10939,7 @@ async function aptConfirmUpload() {
     if (error) throw error;
     toast(`Guardado ${fecha} — ${payload.length} contactos`);
     aptCancelUpload();
+    aptTblRows = null;   // que la Tabla de Contactos y el ranking reflejen lo nuevo
     aptMatrixRender();
   } catch (err) {
     console.error('[apertura upsert]', err);

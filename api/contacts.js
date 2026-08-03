@@ -155,6 +155,25 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Acción no reconocida' });
     }
 
+    // Tabla de Contactos de Apertura (para todos): apertura_contacts + engagement
+    // agregado por contacto. apertura_engagement es RLS-admin, aquí se expone
+    // agregado (días abiertos + último día), igual que el ranking que ven todos.
+    if (action === 'apertura_tabla') {
+      const { data: cts, error: ec } = await admin.from('apertura_contacts').select('email, nombre').order('nombre', { nullsFirst: false });
+      if (ec) throw ec;
+      const { data: eng, error: ee } = await admin.from('apertura_engagement').select('email, fecha, nivel');
+      if (ee) throw ee;
+      const byEmail = {};
+      (eng || []).forEach(e => { (byEmail[e.email] ||= []).push(e); });
+      const out = (cts || []).map(c => {
+        const all = byEmail[c.email] || [];
+        const vistos = all.filter(h => h.nivel >= 1);
+        const ultimo = vistos.map(h => h.fecha).sort().slice(-1)[0] || null;
+        return { email: c.email, nombre: c.nombre || '', dias: vistos.length, ultimo, score: all.reduce((s, h) => s + (h.nivel || 0), 0) };
+      });
+      return res.status(200).json({ contactos: out });
+    }
+
     if (action === 'list') {
       const { data: contacts, error } = await admin
         .from('lp_contacts')
