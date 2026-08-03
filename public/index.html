@@ -83,6 +83,7 @@ html,body{overflow-x:clip;max-width:100%}
   --white:#181410; --gray-50:#0d0a07;
   --gray-100:#2f271d; --gray-200:#3d3428; --gray-300:#4e4436;
   --gray-400:#948976; --gray-500:#b3a893; --gray-700:#ded7ca; --gray-900:#f4f0e8;
+  --card:#1f1810;   /* tarjetas camp-* (var(--card,#1a2030)) en cálido */
 }
 /* MVP en oscuro: superficies hardcodeadas en versión cálida (el tema base es navy) */
 [data-theme="dark"][data-org="mvp"] .header{background:#0d0a07}
@@ -99,6 +100,17 @@ html,body{overflow-x:clip;max-width:100%}
 [data-theme="dark"][data-org="mvp"] .kb-col{background:#12100a}
 [data-theme="dark"][data-org="mvp"] .kb-col-head{background:#1a1610}
 [data-theme="dark"][data-org="mvp"] .nav-drawer{background:#181410;border-right-color:rgba(255,255,255,.07)}
+/* MVP oscuro: tablas de Base de Datos (hexes fríos → cálidos) */
+[data-theme="dark"][data-org="mvp"] .db-list-wrap,
+[data-theme="dark"][data-org="mvp"] .db-table th,
+[data-theme="dark"][data-org="mvp"] .db-table tr.db-total-row td,
+[data-theme="dark"][data-org="mvp"] .db-filter-sel{background:#17110b}
+[data-theme="dark"][data-org="mvp"] .db-list-table th{background:#100b06}
+[data-theme="dark"][data-org="mvp"] .db-list-table td{border-color:#29200f}
+[data-theme="dark"][data-org="mvp"] .db-filter-sel.active{background:var(--navy-pale);color:var(--navy-light)}
+/* MVP oscuro: Portal de clientes (tints azules → cálidos) */
+[data-theme="dark"][data-org="mvp"] .pt-sharebar{background:var(--navy-ghost);border-color:var(--navy-pale)}
+[data-theme="dark"][data-org="mvp"] .pt-file-drop:hover{background:var(--navy-ghost)}
 
 [data-theme="dark"] .header{background:#0c1119}
 [data-theme="dark"] .login-box{background:#171d27;color:var(--gray-900)}
