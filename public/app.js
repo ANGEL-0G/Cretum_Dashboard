@@ -1381,12 +1381,31 @@ function toggleNoteCollapse(id) {
 
 // ── Botón flotante + drawer de notas (perpetuo en el dashboard) ──
 // Visible solo con una empresa elegida (no en login ni en el selector).
-function updateNotesFab() {
+// FAB contextual: la acción principal de la vista actual (crear nota / tarea /
+// tarea de grupo). Se oculta donde no hay una acción de "crear" clara.
+function updateFab() {
   const fab = document.getElementById('notesFab');
   if (!fab) return;
   const login = document.getElementById('loginWrap');
   const onLogin = login && login.style.display !== 'none';
-  fab.style.display = (currentOrg && currentView !== 'selector' && !onLogin) ? 'inline-flex' : 'none';
+  let cfg = null;
+  if (currentOrg && currentView !== 'selector' && !onLogin) {
+    if (currentView === 'notes') cfg = { label: 'Nueva nota', icon: 'fa-plus' };
+    else if (currentView === 'tasks') {
+      if (tkScope === 'personal') cfg = { label: 'Nueva tarea', icon: 'fa-plus' };
+      else if (tkScope === 'equipo') cfg = { label: 'Nueva tarea de grupo', icon: 'fa-user-plus' };
+      // 'otros' es solo lectura → sin FAB
+    }
+  }
+  if (!cfg) { fab.style.display = 'none'; return; }
+  const ic = fab.querySelector('i'); if (ic) ic.className = 'fa-solid ' + cfg.icon;
+  const sp = fab.querySelector('span'); if (sp) sp.textContent = cfg.label;
+  fab.title = cfg.label; fab.setAttribute('aria-label', cfg.label);
+  fab.style.display = 'inline-flex';
+}
+function fabAction() {
+  if (currentView === 'notes') ntNewNote();
+  else if (currentView === 'tasks') { if (tkScope === 'equipo') openAssignModal(); else openTaskModal(); }
 }
 function openNotesDrawer() {
   const bd = document.getElementById('notesDrawerBackdrop');
@@ -1698,6 +1717,7 @@ function setScope(s) {
   document.getElementById('togOtros')?.classList.toggle('on', s === 'otros');
   tkMoveSlider();
   render();
+  updateFab();   // el FAB refleja el scope: Nueva tarea / Nueva tarea de grupo
   requestAnimationFrame(tkMoveViewSlider);   // el toggle de vista reaparece en "personal"
 }
 
@@ -3518,7 +3538,7 @@ function switchView(view, isBack = false) {
   const brandBtn = document.getElementById('headerBrandBtn');
   if (brandBtn) brandBtn.disabled = (view === 'selector');
 
-  updateNotesFab();   // botón flotante de notas: visible con empresa elegida
+  updateFab();   // FAB contextual: crear nota / tarea / tarea de grupo según la vista
   closeNav();
 
   if (view === 'db' && !dbLoaded) loadDb();
