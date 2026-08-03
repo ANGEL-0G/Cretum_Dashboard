@@ -1643,6 +1643,22 @@ async function ntNewNote() {
   }
 }
 
+// Convierte la nota abierta en tarea: abre el modal de crear tarea (mismo flujo)
+// prerrellenado con el título y el texto de la nota; el usuario completa el resto.
+function noteToTask() {
+  if (!ntCurrentId) { toast('Abre una nota primero'); return; }
+  const title = (document.getElementById('ntTitle')?.value || '').trim();
+  const bodyEl = document.getElementById('ntBody');
+  const desc = bodyEl ? (bodyEl.innerText || bodyEl.textContent || '').trim() : '';
+  if (!title && !desc) { toast('La nota está vacía'); return; }
+  openTaskModal();                       // reset + modo crear (limpia campos)
+  const nameEl = document.getElementById('fName'); if (nameEl) nameEl.value = title;
+  const descEl = document.getElementById('fDesc'); if (descEl) descEl.value = desc;
+  // Enfoca el primer dato faltante (vencimiento), ganándole al focus interno del modal.
+  setTimeout(() => { (document.getElementById('fDue') || nameEl)?.focus(); }, 110);
+  toast('Completa los datos y crea la tarea');
+}
+
 function ntOnTitle(v) {
   if (!ntCurrentId) return;
   onNoteInput(ntCurrentId, 'title', v);

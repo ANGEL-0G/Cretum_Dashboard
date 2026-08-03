@@ -883,6 +883,8 @@ select.camp-f-inp::-ms-expand,select.form-input::-ms-expand{display:none}
 .nt-empty p{font-size:13.5px;max-width:38ch;margin:0 0 8px}
 .nt-doc{height:100%;display:flex;flex-direction:column;min-height:0}
 .nt-doc-head{display:flex;align-items:center;gap:8px;padding:16px 22px 8px}
+.nt-ico.nt-todo{color:var(--navy)}
+.nt-ico.nt-todo:hover{background:var(--navy-pale,#eaf0fb);color:var(--navy)}
 .nt-title{flex:1;min-width:0;border:0;outline:none;background:none;font-family:var(--font);font-size:22px;font-weight:600;color:var(--gray-900)}
 .nt-title::placeholder{color:var(--gray-300)}
 .nt-color-inp{width:28px;height:28px;padding:0;border:1px solid var(--gray-200);border-radius:8px;background:none;cursor:pointer;flex:0 0 auto}
@@ -5053,6 +5055,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
         <div class="nt-doc-head">
           <input id="ntTitle" class="nt-title" placeholder="Título de la nota" maxlength="140" oninput="ntOnTitle(this.value)">
           <input type="color" id="ntColor" class="nt-color-inp" title="Color de la nota" onchange="ntSetColor(this.value)">
+          <button class="nt-ico nt-todo" title="Añadir al To Do (convertir en tarea)" aria-label="Añadir al To Do" onclick="noteToTask()"><i class="fa-solid fa-list-check"></i></button>
           <button class="nt-ico" title="Compartir con el equipo" aria-label="Compartir" onclick="if(ntCurrentId)shareNote(ntCurrentId)"><i class="fa-solid fa-share-nodes"></i></button>
           <button class="nt-ico danger" title="Eliminar nota" aria-label="Eliminar nota" onclick="if(ntCurrentId)deleteNote(ntCurrentId)"><i class="fa-solid fa-trash"></i></button>
         </div>
@@ -5949,6 +5952,6 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 </div>
 
 <script src="/i18n.js?v=20260724-notes2"></script>
-<script src="/app.js?v=20260731-aptnonote"></script>
+<script src="/app.js?v=20260731-notetotask"></script>
 </body>
 </html>
