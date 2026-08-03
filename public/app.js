@@ -3051,9 +3051,6 @@ const ORG_MODULES = {
     { view: 'ventas', icon: 'fa-chart-line', title: 'Ventas',
       desc: 'Dashboards y análisis de ventas del fondo',
       iconClass: 'home-ico-ventas' },
-    { view: 'usuarios', icon: 'fa-users-gear', title: 'Usuarios',
-      desc: 'Administra cuentas: roles, contraseñas, altas, bajas',
-      iconClass: 'home-ico-users', adminOnly: true },
   ],
   mvp: [
     { view: 'notes', icon: 'fa-book', title: 'Notas',
@@ -3074,9 +3071,6 @@ const ORG_MODULES = {
     { view: 'portal', icon: 'fa-share-nodes', title: 'Portal de clientes',
       desc: 'Sube dashboards de MVP y da acceso a clientes con su propio usuario',
       iconClass: 'home-ico-portal' },
-    { view: 'usuarios', icon: 'fa-users-gear', title: 'Usuarios',
-      desc: 'Administra cuentas: roles, contraseñas, altas, bajas',
-      iconClass: 'home-ico-users', adminOnly: true },
   ],
 };
 
