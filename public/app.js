@@ -2985,21 +2985,12 @@ document.addEventListener('click', (e) => {
 ═══════════════════════════════════════════ */
 let currentView = 'tasks';
 
-let navGlassTimer = null;
 function openNav() {
-  const d = document.getElementById('navDrawer');
-  d.classList.add('open');
+  document.getElementById('navDrawer').classList.add('open');
   document.getElementById('navBackdrop').classList.add('show');
-  // El glass (backdrop-filter) se aplica DESPUÉS del slide: deslizar con blur
-  // recalcula el desenfoque cada frame y se sentía lento. El slide es solo transform.
-  clearTimeout(navGlassTimer);
-  navGlassTimer = setTimeout(() => d.classList.add('glassed'), 300);
 }
 function closeNav() {
-  const d = document.getElementById('navDrawer');
-  clearTimeout(navGlassTimer);
-  d.classList.remove('glassed');   // sin blur antes de cerrar → cierre fluido
-  d.classList.remove('open');
+  document.getElementById('navDrawer').classList.remove('open');
   document.getElementById('navBackdrop').classList.remove('show');
 }
 
