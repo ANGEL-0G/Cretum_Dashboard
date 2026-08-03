@@ -1657,10 +1657,25 @@ function noteToTask() {
   // Ya se usó: apaga el brillo de "nueva función" (para siempre en este navegador).
   try { localStorage.setItem('cretum_note2task_used', '1'); } catch (e) {}
   document.getElementById('ntTodoBtn')?.classList.remove('nt-todo-new');
-  const title = (document.getElementById('ntTitle')?.value || '').trim();
+  const noteTitle = (document.getElementById('ntTitle')?.value || '').trim();
   const bodyEl = document.getElementById('ntBody');
-  const desc = bodyEl ? (bodyEl.innerText || bodyEl.textContent || '').trim() : '';
-  if (!title && !desc) { toast('La nota está vacía'); return; }
+  const body = bodyEl ? (bodyEl.innerText || bodyEl.textContent || '').replace(/ /g, ' ').trim() : '';
+  if (!noteTitle && !body) { toast('La nota está vacía'); return; }
+  // El título de la nota por defecto es la fecha ("31 de julio de 2026"). Si es
+  // fecha (o está vacío), el TÍTULO de la tarea = primer renglón del contenido y
+  // el resto = descripción. Si le pusiste un título real, ese se respeta.
+  const esFecha = !noteTitle || /^\d{1,2}\s+de\s+[a-záéíóúñ.]+\s+de\s+\d{4}$/i.test(noteTitle);
+  let title, desc;
+  if (esFecha) {
+    const lines = body.split('\n');
+    const idx = lines.findIndex(l => l.trim());
+    title = idx >= 0 ? lines[idx].trim() : noteTitle;
+    desc = idx >= 0 ? lines.slice(idx + 1).join('\n').trim() : '';
+  } else {
+    title = noteTitle;
+    desc = body;
+  }
+  title = title.slice(0, 120);
   openTaskModal();                       // reset + modo crear (limpia campos)
   const nameEl = document.getElementById('fName'); if (nameEl) nameEl.value = title;
   const descEl = document.getElementById('fDesc'); if (descEl) descEl.value = desc;
