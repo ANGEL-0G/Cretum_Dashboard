@@ -1594,7 +1594,7 @@ function ntRenderList() {
   let list = notesData.filter(n => (n.folder_id || null) === (currentFolder || null));
   if (q) list = list.filter(n => (n.title || '').toLowerCase().includes(q) || ntPlainPreview(n.content).toLowerCase().includes(q));
   if (!list.length) {
-    el.innerHTML = `<div class="nt-list-empty">${q ? 'Sin coincidencias.' : 'Esta carpeta no tiene notas.<br>Crea una con “Nueva nota”.'}</div>`;
+    el.innerHTML = `<div class="nt-list-empty">${q ? t('Sin coincidencias.') : t('Esta carpeta no tiene notas.<br>Crea una con “Nueva nota”.')}</div>`;
     return;
   }
   el.innerHTML = list.map(n => {
@@ -1604,8 +1604,8 @@ function ntRenderList() {
     return `
       <button class="nt-note${active ? ' on' : ''}" data-id="${n.id}" onclick="ntSelectNote('${n.id}')">
         ${n.color ? `<span class="nt-note-bar" style="background:${n.color}"></span>` : ''}
-        <div class="nt-note-t">${escapeHtml(n.title || 'Sin título')}</div>
-        <div class="nt-note-x">${prev ? escapeHtml(prev) : '<span style="opacity:.6">Vacía</span>'}</div>
+        <div class="nt-note-t">${escapeHtml(n.title || t('Sin título'))}</div>
+        <div class="nt-note-x">${prev ? escapeHtml(prev) : `<span style="opacity:.6">${t('Vacía')}</span>`}</div>
         ${when ? `<div class="nt-note-d">${when}</div>` : ''}
       </button>`;
   }).join('');
