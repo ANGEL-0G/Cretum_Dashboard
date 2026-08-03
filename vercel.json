@@ -62,6 +62,10 @@
       "use": "@vercel/static"
     },
     {
+      "src": "public/logo-mvp-cream.png",
+      "use": "@vercel/static"
+    },
+    {
       "src": "public/chaos-industries.png",
       "use": "@vercel/static"
     },
@@ -265,6 +269,10 @@
     {
       "src": "/logo-mvp.png",
       "dest": "/public/logo-mvp.png"
+    },
+    {
+      "src": "/logo-mvp-cream.png",
+      "dest": "/public/logo-mvp-cream.png"
     },
     {
       "src": "/chaos-industries.png",

@@ -1685,6 +1685,10 @@ select.camp-f-inp::-ms-expand,select.form-input::-ms-expand{display:none}
   width:96px;max-height:64px;object-fit:contain;
   transition:transform .35s cubic-bezier(.34,1.56,.64,1),filter .3s;
 }
+/* Logo alterno por tema: claro por defecto, versión oscura en modo oscuro */
+.selector-card-logo.sel-logo-dark{display:none}
+[data-theme="dark"] .selector-card-logo.sel-logo-light{display:none}
+[data-theme="dark"] .selector-card-logo.sel-logo-dark{display:inline}
 .sel-cretum .selector-card-logo{
   filter:drop-shadow(0 0 24px rgba(61,125,240,.6)) drop-shadow(0 0 8px rgba(61,125,240,.45));
 }
@@ -3480,7 +3484,8 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
         <div class="selector-card-sub">Partners</div>
       </button>
       <button class="selector-card sel-mvp" onclick="selectOrg('mvp')">
-        <img src="/logo-mvp.png" alt="MVP" class="selector-card-logo">
+        <img src="/logo-mvp.png" alt="MVP" class="selector-card-logo sel-logo-light">
+        <img src="/logo-mvp-cream.png" alt="MVP" class="selector-card-logo sel-logo-dark">
         <div class="selector-card-name">MVP</div>
         <div class="selector-card-sub">Data Base</div>
       </button>
@@ -5998,6 +6003,6 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 </div>
 
 <script src="/i18n.js?v=20260724-notes2"></script>
-<script src="/app.js?v=20260731-mvpwarmdark"></script>
+<script src="/app.js?v=20260731-mvplogodark"></script>
 </body>
 </html>
