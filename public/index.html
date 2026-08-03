@@ -1487,6 +1487,20 @@ select.camp-f-inp::-ms-expand,select.form-input::-ms-expand{display:none}
 .settings-row-lbl{font-size:13px;color:var(--gray-700);font-weight:500}
 .settings-row-sub{font-size:11px;color:var(--gray-400);margin-top:2px;line-height:1.4}
 
+/* Preferencias plegables (acordeón) */
+.settings-prefs-toggle{display:flex;align-items:center;gap:10px;width:100%;background:none;border:0;
+  padding:9px 10px;border-radius:var(--r-sm);cursor:pointer;font-family:var(--font);
+  font-size:13px;font-weight:500;color:var(--gray-700);transition:background .15s}
+.settings-prefs-toggle:hover{background:var(--gray-50)}
+.settings-prefs-toggle > span{flex:1;text-align:left}
+.settings-prefs-toggle > i:first-child{width:15px;text-align:center;color:var(--gray-400);font-size:13px}
+.settings-prefs-chev{font-size:11px;color:var(--gray-400);transition:transform .25s cubic-bezier(.4,0,.2,1)}
+.settings-prefs-toggle[aria-expanded="true"] .settings-prefs-chev{transform:rotate(180deg)}
+.settings-prefs-wrap{display:grid;grid-template-rows:0fr;transition:grid-template-rows .28s cubic-bezier(.4,0,.2,1)}
+.settings-prefs-wrap.open{grid-template-rows:1fr}
+.settings-prefs-inner{overflow:hidden;min-height:0}
+@media (prefers-reduced-motion:reduce){.settings-prefs-wrap,.settings-prefs-chev{transition:none}}
+
 /* Toggle switch animado */
 .toggle{position:relative;display:inline-block;width:36px;height:20px;flex-shrink:0}
 .toggle input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:1}
@@ -3403,7 +3417,13 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
       </div>
     </div>
     <div class="settings-sep"></div>
-    <div class="settings-h" data-i18n>Preferencias</div>
+    <button class="settings-prefs-toggle" id="prefsToggle" type="button" onclick="togglePrefs()" aria-expanded="false" aria-controls="prefsWrap">
+      <i class="fa-solid fa-sliders"></i>
+      <span data-i18n>Preferencias</span>
+      <i class="fa-solid fa-chevron-down settings-prefs-chev"></i>
+    </button>
+    <div class="settings-prefs-wrap" id="prefsWrap">
+     <div class="settings-prefs-inner">
     <div class="settings-row">
       <div style="flex:1">
         <div class="settings-row-lbl" data-i18n>Idioma</div>
@@ -3445,7 +3465,9 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
         <span data-i18n>El resumen llega el día y la hora que elijas (hora del centro de México).</span>
       </div>
     </div>
-    <label class="settings-row">
+     </div>
+    </div>
+    <label class="settings-row settings-row-standalone">
       <div style="flex:1">
         <div class="settings-row-lbl" data-i18n>Modo oscuro</div>
         <div class="settings-row-sub" data-i18n>Tema con fondo oscuro y mejor contraste de noche</div>
@@ -3469,6 +3491,14 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
       <div style="flex:1;text-align:left">
         <div class="settings-row-lbl" data-i18n>Verificación en dos pasos (2FA)</div>
         <div class="settings-row-sub" data-i18n>Protege tu cuenta con un código de tu celular</div>
+      </div>
+    </button>
+    <div class="settings-sep" id="usersSep" style="display:none"></div>
+    <button class="settings-action" id="usersBtn" style="display:none" onclick="openUsersFromMenu()">
+      <i class="fa-solid fa-users-gear"></i>
+      <div style="flex:1;text-align:left">
+        <div class="settings-row-lbl" data-i18n>Usuarios</div>
+        <div class="settings-row-sub" data-i18n>Gestiona los miembros del equipo y sus roles</div>
       </div>
     </button>
     <div class="settings-sep" id="roleSwitchSep" style="display:none"></div>
@@ -6021,7 +6051,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   </div>
 </div>
 
-<script src="/i18n.js?v=20260803-notesi18n"></script>
-<script src="/app.js?v=20260731-notesi18n"></script>
+<script src="/i18n.js?v=20260803-profilemenu"></script>
+<script src="/app.js?v=20260803-profilemenu"></script>
 </body>
 </html>

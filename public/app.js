@@ -2761,11 +2761,38 @@ function toggleSettings(e) {
     if (blk) blk.style.display = showSwitch ? '' : 'none';
     if (sep) sep.style.display = showSwitch ? '' : 'none';
     if (showSwitch) applyRoleSwitchUI();
+    // Usuarios: gestión de miembros/roles, solo admin REAL (mismo criterio que "Ver como")
+    const showUsers = roleReal === 'admin';
+    const uBtn = document.getElementById('usersBtn');
+    const uSep = document.getElementById('usersSep');
+    if (uBtn) uBtn.style.display = showUsers ? '' : 'none';
+    if (uSep) uSep.style.display = showUsers ? '' : 'none';
+    // Preferencias siempre inician plegadas al abrir el menú
+    const pw = document.getElementById('prefsWrap');
+    const pt = document.getElementById('prefsToggle');
+    if (pw) pw.classList.remove('open');
+    if (pt) pt.setAttribute('aria-expanded', 'false');
     // Asegurar que el editor de nombre vuelva a estado cerrado al abrir el menú
     cancelEditName();
   }
   pop.classList.toggle('show');
   btn?.classList.toggle('open');
+}
+
+/* Preferencias plegables dentro del menú de perfil */
+function togglePrefs() {
+  const w = document.getElementById('prefsWrap');
+  const t = document.getElementById('prefsToggle');
+  if (!w) return;
+  const open = w.classList.toggle('open');
+  if (t) t.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
+/* Abre la gestión de Usuarios desde el menú de perfil (solo admin) y cierra el pop */
+function openUsersFromMenu() {
+  document.getElementById('settingsPop')?.classList.remove('show');
+  document.getElementById('headerUserBtn')?.classList.remove('open');
+  switchView('usuarios');
 }
 
 /* ── "Ver como" (solo admin real): cambia el rol SOLO en esta sesión del

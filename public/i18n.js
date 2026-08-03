@@ -906,6 +906,10 @@ const EN = {
   'Da acceso a un cliente': 'Give a client access',
   'Consultar datos existentes': 'View existing data',
 
+  // ── Menú de perfil ──
+  'Usuarios': 'Users',
+  'Gestiona los miembros del equipo y sus roles': 'Manage team members and their roles',
+
   // ── Módulo de Notas ──
   'Carpetas': 'Folders',
   'Nueva carpeta': 'New folder',
