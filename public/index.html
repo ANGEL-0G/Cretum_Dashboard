@@ -3854,6 +3854,19 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
     .apt-empty{padding:36px 16px;text-align:center;color:var(--ink-soft,#98a2b3);font-size:13px;border:1px dashed var(--line,#dbe1ea);border-radius:12px}
     .apt-empty i{font-size:24px;display:block;margin-bottom:10px;opacity:.5}
     #aptDrop.drag{border-color:var(--navy);background:var(--navy-ghost,#f5f7fb)}
+    /* Tabla de Contactos de Apertura: compacta y a ancho de lectura (no estirada) */
+    #aptPaneTabla,#aptPaneRanking{max-width:760px}
+    #aptPaneTabla .ctbl-search{max-width:340px}
+    #aptPaneTabla .ctbl-table{font-size:12.5px;table-layout:fixed}
+    #aptPaneTabla .ctbl-table th{padding:8px 10px;font-size:10px}
+    #aptPaneTabla .ctbl-table td{padding:7px 10px}
+    #aptPaneTabla .ctbl-nm{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    #aptPaneTabla .ctbl-em{font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    #aptPaneTabla .ctbl-table th:nth-child(1),#aptPaneTabla .ctbl-table td:nth-child(1){width:34%}
+    #aptPaneTabla .ctbl-table th:nth-child(2),#aptPaneTabla .ctbl-table td:nth-child(2){width:auto}
+    #aptPaneTabla .ctbl-table th:nth-child(3),#aptPaneTabla .ctbl-table td:nth-child(3){width:82px;text-align:center}
+    #aptPaneTabla .ctbl-table th:nth-child(4),#aptPaneTabla .ctbl-table td:nth-child(4){width:96px;white-space:nowrap;font-size:11.5px}
+    #aptPaneTabla .ctbl-streak{padding:1px 8px;font-size:11.5px}
     .lst-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
     .lst-search{flex:1;min-width:200px}
     .lst-summary{display:flex;gap:22px;flex-wrap:wrap;align-items:center;margin-bottom:16px;font-size:13px;color:var(--ink-soft,#667)}
@@ -5910,6 +5923,6 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 </div>
 
 <script src="/i18n.js?v=20260724-notes2"></script>
-<script src="/app.js?v=20260731-anim3"></script>
+<script src="/app.js?v=20260731-apttblcompact"></script>
 </body>
 </html>
