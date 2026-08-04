@@ -494,6 +494,68 @@ function setSyncStatus(s) {
 }
 
 /* ═══════════════════════════════════════════
+   REPORTES — botón flotante en cada sección. Cada reporte se guarda como
+   tarea en el To Do (proyecto "Mejoras del Sistema / Errores"), una copia
+   por cada admin (owner=admin) para que la vean y triajeen en su lista.
+   Nota: el blob de tareas solo lo escriben editor/colaborador/admin; un
+   viewer (solo lectura) no puede persistir → se le avisa.
+═══════════════════════════════════════════ */
+const REPORT_PROJECT = 'Mejoras del Sistema / Errores';
+let reportType = 'Fallo';
+
+function reportPickType(btn) {
+  reportType = btn.dataset.type || 'Fallo';
+  document.querySelectorAll('#reportTypes .report-type').forEach(b => b.classList.toggle('on', b === btn));
+}
+function openReportModal() {
+  reportType = 'Fallo';
+  document.querySelectorAll('#reportTypes .report-type').forEach(b => b.classList.toggle('on', b.dataset.type === 'Fallo'));
+  const ta = document.getElementById('reportText'); if (ta) ta.value = '';
+  document.getElementById('reportModal')?.classList.add('show');
+  setTimeout(() => ta?.focus(), 60);
+}
+function closeReportModal() { document.getElementById('reportModal')?.classList.remove('show'); }
+function reportAdminIds() {
+  return Object.entries(USERS).filter(([uid, u]) => u.role === 'admin' && !u.hidden).map(([uid]) => uid);
+}
+async function submitReport() {
+  const ta = document.getElementById('reportText');
+  const detail = (ta?.value || '').trim();
+  if (!detail) { toast(t('Escribe el detalle del reporte')); ta?.focus(); return; }
+  // Viewers (solo lectura) no pueden escribir el blob de tareas.
+  if (roleReal && roleReal !== 'editor' && roleReal !== 'admin' && roleReal !== 'colaborador') {
+    toast(t('Tu cuenta es de solo lectura; pídele a un editor o admin que registre el reporte')); return;
+  }
+  const admins = reportAdminIds();
+  if (!admins.length) { toast(t('No hay administradores para recibir el reporte')); return; }
+  const btn = document.getElementById('reportSend'); if (btn) btn.disabled = true;
+  try { await loadData(); } catch (e) {}   // refresca el blob para no pisar cambios de otros
+  const section = (document.getElementById('headerBrandText')?.textContent || '').trim() || '—';
+  const reporter = USERS[currentUser]?.nameRaw || currentProfile?.full_name || '—';
+  const d = new Date();
+  const stamp = d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' +
+    d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+  const emoji = { 'Fallo': '🐞', 'Problema': '⚠️', 'Sugerencia': '💡' }[reportType] || '📝';
+  const name = `${emoji} ${reportType}: ${detail.split('\n')[0].slice(0, 60)}`;
+  const desc = `${detail}\n\n— Reportó ${reporter} · sección: ${section} · ${stamp}`;
+  const prio = reportType === 'Fallo' ? 'Alta' : 'Media';
+  const nowIso = d.toISOString();
+  admins.forEach(uid => {
+    state.simple.unshift({
+      id: 'S' + (++tkId), name, desc,
+      due: '', prio, project: REPORT_PROJECT, done: false, status: 'pending',
+      collab: false, remind: null, remindAt: null, remindSent: false,
+      owner: uid, createdAt: nowIso, report: true
+    });
+  });
+  saveData();
+  if (currentView === 'tasks') render();
+  if (btn) btn.disabled = false;
+  closeReportModal();
+  toast(t('¡Gracias! Tu reporte llegó al equipo'));
+}
+
+/* ═══════════════════════════════════════════
    HELPERS
 ═══════════════════════════════════════════ */
 function animateCounter(id, to) {
