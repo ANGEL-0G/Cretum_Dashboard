@@ -1549,6 +1549,7 @@ function ntTodoUpdateShine() {
 
 function openNotesPage() {
   if (!document.getElementById('ntFolders')) return;
+  ntShellEditing(false);             // móvil: al entrar siempre arranca en la lista
   ntTodoUpdateShine();               // brillo "nueva función" solo hasta el primer uso
   if (!notesLoaded) loadNotes();     // al terminar hace renderDrawer → ntRenderAll
   else ntRenderAll();
@@ -1615,7 +1616,12 @@ function ntShowEmpty() {
   const d = document.getElementById('ntDoc'), e = document.getElementById('ntEmpty');
   if (d) d.style.display = 'none';
   if (e) e.style.display = '';
+  ntShellEditing(false);
 }
+/* En móvil el editor entra a pantalla completa (drill-in tipo Notion/Evernote);
+   la clase .nt-editing en el shell alterna la vista lista ↔ editor. */
+function ntShellEditing(on) { document.querySelector('.nt-shell')?.classList.toggle('nt-editing', !!on); }
+function ntMobileBack() { ntShellEditing(false); }
 
 function ntSelectNote(id) {
   const n = notesData.find(x => String(x.id) === String(id));
@@ -1623,6 +1629,7 @@ function ntSelectNote(id) {
   ntCurrentId = n.id;
   document.getElementById('ntEmpty').style.display = 'none';
   document.getElementById('ntDoc').style.display = 'flex';
+  ntShellEditing(true);
   document.getElementById('ntTitle').value = n.title || '';
   document.getElementById('ntColor').value = n.color || '#8b5cf6';
   document.getElementById('ntBody').innerHTML = notesToHtml(n.content);
