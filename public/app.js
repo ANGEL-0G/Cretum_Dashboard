@@ -5991,7 +5991,10 @@ async function exportPDF(cols, rows) {
    positions: [{ seriesName, commitment, dists:[{cash_proceeds,value_in_kind,notes}] }]
 ═══════════════════════════════════════════ */
 const SPX_REINV_IS_26AQP = s => /26A\s*QP/i.test(s || '') && !/closing/i.test(s || '');
-const SPX_REINV_IS_NOTE = nt => /reinver|reinvest/i.test(nt || '');
+// Groq 3a dist (2026-07-09): parte se reinvirtió en la Serie VI-26I QC (Groq 2.0) — mismo patrón que 22F→26A QP.
+const REINV_IS_26I = s => /26I/i.test(s || '');
+const REINV_NOTE_26I = nt => /reinver/i.test(nt || '') && /26I/i.test(nt || '');
+const SPX_REINV_IS_NOTE = nt => /reinver|reinvest/i.test(nt || '') && !/26I/i.test(nt || '');
 // Dado P (reinversión) y Q (commitment 26A QP) de un inversionista → cuánto netear de paid-in y distribuido.
 function nettingFromPQ(P, Q, investorIds) {
   const R = Math.min(P, Q);
@@ -6003,14 +6006,21 @@ function nettingFromPQ(P, Q, investorIds) {
   return { recycledPaidIn, reinvestedDist };
 }
 function computeReinvestNetting(positions, investorIds) {
-  let P = 0, Q = 0, has26 = false;
+  let P = 0, Q = 0, has26 = false, Pg = 0, Qg = 0;
   for (const p of (positions || [])) {
     if (SPX_REINV_IS_26AQP(p.seriesName)) { Q += (+p.commitment || 0); has26 = true; }
-    for (const d of (p.dists || [])) if (SPX_REINV_IS_NOTE(d.notes)) P += ((+d.cash_proceeds || 0) + (+d.value_in_kind || 0));
+    if (REINV_IS_26I(p.seriesName)) Qg += (+p.commitment || 0);
+    for (const d of (p.dists || [])) {
+      const v = (+d.cash_proceeds || 0) + (+d.value_in_kind || 0);
+      if (REINV_NOTE_26I(d.notes)) Pg += v;
+      else if (SPX_REINV_IS_NOTE(d.notes)) P += v;
+    }
   }
   const r = nettingFromPQ(P, Q, investorIds || []);
+  const Rg = Math.min(Pg, Qg);
+  r.recycledPaidIn += Rg; r.reinvestedDist += Rg;
   const ids = new Set((investorIds || []).map(Number));
-  return { ...r, hasReinvestTarget: has26 || ids.has(119) };
+  return { ...r, hasReinvestTarget: has26 || Qg > 0 || ids.has(119) };
 }
 
 // Carga (una vez) el neteo de reinversión por inversionista para vistas agregadas (lista DB, snapshot).
@@ -6021,21 +6031,29 @@ async function loadReinvestNettingMap() {
   const [series, invs, pdistRes] = await Promise.all([
     sbFetchAll('series', 'id,name'),
     sbFetchAll('investments', 'investor_id,series_id,commitment'),
-    sb.from('investment_distributions').select('cash_proceeds,value_in_kind,investments(investor_id)').ilike('notes', '%reinvest%'),
+    sb.from('investment_distributions').select('cash_proceeds,value_in_kind,notes,investments(investor_id)').or('notes.ilike.%reinvest%,notes.ilike.%reinversion%'),
   ]);
   if (pdistRes.error) throw pdistRes.error;
   const s26 = new Set(series.filter(s => SPX_REINV_IS_26AQP(s.name)).map(s => s.id));
-  const Q = {}, P = {};
-  invs.forEach(x => { if (s26.has(x.series_id)) Q[x.investor_id] = (Q[x.investor_id] || 0) + (+x.commitment || 0); });
+  const s26i = new Set(series.filter(s => REINV_IS_26I(s.name)).map(s => s.id));
+  const Q = {}, P = {}, Qg = {}, Pg = {};
+  invs.forEach(x => {
+    if (s26.has(x.series_id)) Q[x.investor_id] = (Q[x.investor_id] || 0) + (+x.commitment || 0);
+    if (s26i.has(x.series_id)) Qg[x.investor_id] = (Qg[x.investor_id] || 0) + (+x.commitment || 0);
+  });
   (pdistRes.data || []).forEach(d => {
     const iid = d.investments?.investor_id; if (iid == null) return;
-    P[iid] = (P[iid] || 0) + ((+d.cash_proceeds || 0) + (+d.value_in_kind || 0));
+    const v = (+d.cash_proceeds || 0) + (+d.value_in_kind || 0);
+    if (REINV_NOTE_26I(d.notes)) Pg[iid] = (Pg[iid] || 0) + v;
+    else P[iid] = (P[iid] || 0) + v;
   });
-  const ids = new Set([...Object.keys(Q), ...Object.keys(P)].map(Number));
+  const ids = new Set([...Object.keys(Q), ...Object.keys(P), ...Object.keys(Qg), ...Object.keys(Pg)].map(Number));
   ids.add(119); ids.add(615);   // Cretum cruzado: garantizar que ambos entren al cálculo
   const byInvestor = {}; let totalRecycled = 0, totalReinvested = 0;
   ids.forEach(id => {
     const net = nettingFromPQ(P[id] || 0, Q[id] || 0, id);
+    const Rg = Math.min(Pg[id] || 0, Qg[id] || 0);   // Groq → 26I QC (mismo dinero)
+    net.recycledPaidIn += Rg; net.reinvestedDist += Rg;
     if (net.recycledPaidIn || net.reinvestedDist) { byInvestor[id] = net; totalRecycled += net.recycledPaidIn; totalReinvested += net.reinvestedDist; }
   });
   _reinvestNettingCache = { byInvestor, totalRecycled, totalReinvested };
