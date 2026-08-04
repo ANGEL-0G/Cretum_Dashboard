@@ -4455,6 +4455,14 @@ window.addEventListener('hashchange', () => {
 
 // Cierra la capa "más encima" (modal, detalle, drawer) si hay alguna abierta.
 // Devuelve true si cerró algo. Es el orden en que "atrás" debe deshacerlas.
+//
+// ⚠️ CONVENCIÓN (obligatoria para TODA funcionalidad nueva, de quien sea):
+// cada modal / overlay / drawer / popover / sub-pantalla / vista a pantalla
+// completa que se agregue DEBE registrarse aquí, para que el gesto o botón
+// "atrás" del teléfono la cierre PRIMERO en vez de salir de la app. El orden
+// de los `if` = orden en que "atrás" deshace las capas (lo más encima primero).
+// Las capas que solo son overlay en móvil se gatean con
+// window.matchMedia('(max-width:860px)').matches (ver el editor de Notas).
 function dismissTopLayer() {
   const q = id => document.getElementById(id);
   // 0) Popovers ligeros del editor de notas (mover a carpeta / enlace)
