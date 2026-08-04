@@ -1721,12 +1721,9 @@ select.camp-f-inp::-ms-expand,select.form-input::-ms-expand{display:none}
 [data-theme="dark"] .selector-card-logo.sel-logo-dark{display:inline}
 /* Cretum en oscuro es el mosaico horizontal: tamaño similar al ícono original */
 .sel-cretum-word{width:auto;max-width:112px;max-height:46px}
-.sel-cretum .selector-card-logo{
-  filter:drop-shadow(0 0 24px rgba(61,125,240,.6)) drop-shadow(0 0 8px rgba(61,125,240,.45));
-}
-.sel-mvp .selector-card-logo{
-  filter:drop-shadow(0 0 22px rgba(237,120,36,.5)) drop-shadow(0 0 6px rgba(237,120,36,.35));
-}
+/* Sin halo en reposo: el glow solo aparece en hover (abajo) */
+.sel-cretum .selector-card-logo,
+.sel-mvp .selector-card-logo{filter:none}
 .selector-card:hover .selector-card-logo{transform:scale(1.1)}
 .sel-cretum:hover .selector-card-logo{filter:drop-shadow(0 0 32px rgba(61,125,240,.75)) drop-shadow(0 0 10px rgba(61,125,240,.55))}
 .sel-mvp:hover .selector-card-logo{filter:drop-shadow(0 0 30px rgba(237,120,36,.65)) drop-shadow(0 0 8px rgba(237,120,36,.45))}
@@ -1744,12 +1741,6 @@ select.camp-f-inp::-ms-expand,select.form-input::-ms-expand{display:none}
 [data-theme="dark"] .sel-mvp .selector-card-name{color:#F89540}
 [data-theme="dark"] .sel-cretum .selector-card-sub{color:rgba(123,168,255,.55)}
 [data-theme="dark"] .sel-mvp .selector-card-sub{color:rgba(248,149,64,.65)}
-/* En oscuro los logos del selector NO llevan glow (se veían extraños) */
-[data-theme="dark"] .sel-cretum .selector-card-logo,
-[data-theme="dark"] .sel-mvp .selector-card-logo,
-[data-theme="dark"] .sel-cretum:hover .selector-card-logo,
-[data-theme="dark"] .sel-mvp:hover .selector-card-logo{filter:none}
-
 @media (max-width:600px){
   .selector-hero{padding:14px 14px 22px}
   .selector-greeting{font-size:20px}
