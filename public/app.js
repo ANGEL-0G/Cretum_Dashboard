@@ -4457,6 +4457,11 @@ window.addEventListener('hashchange', () => {
 // Devuelve true si cerró algo. Es el orden en que "atrás" debe deshacerlas.
 function dismissTopLayer() {
   const q = id => document.getElementById(id);
+  // 0) Popovers ligeros del editor de notas (mover a carpeta / enlace)
+  if (q('ntMovePop') && !q('ntMovePop').hidden) { ntMoveClose(); return true; }
+  if (q('ntLinkPop') && !q('ntLinkPop').hidden) { ntLinkClose(); return true; }
+  // 0b) Menú de perfil (dropdown de la cuenta)
+  if (q('settingsPop')?.classList.contains('show')) { q('settingsPop').classList.remove('show'); q('headerUserBtn')?.classList.remove('open'); return true; }
   // 1) Drawer de navegación
   if (q('navDrawer')?.classList.contains('open')) { closeNav(); return true; }
   // 2) Modales con limpieza propia
@@ -4466,6 +4471,10 @@ function dismissTopLayer() {
   // 3) Cualquier otro modal/overlay visible (campañas, portal, MFA, confirmaciones…)
   const overlays = document.querySelectorAll('.camp-modal-backdrop.show, .modal-backdrop.show, .mvp-snap-modal.show');
   if (overlays.length) { overlays[overlays.length - 1].classList.remove('show'); return true; }
+  // 3b) Picker de módulos del home / drawer de notas (FAB) / vista previa de Dropbox
+  if (q('homePickerBackdrop')?.classList.contains('show')) { closeHomePicker(); return true; }
+  if (q('notesDrawerBackdrop')?.classList.contains('show')) { closeNotesDrawer(); return true; }
+  if (q('dbxPreview')?.classList.contains('show')) { closeDbxPreview(); return true; }
   // 4) Detalle de base de datos
   if (currentView === 'db' && q('dbDetail')?.classList.contains('show')) { closeDetail(); return true; }
   // 5) Detalle de fund tracker → vuelve a la lista de fondos
@@ -4474,6 +4483,11 @@ function dismissTopLayer() {
   if (currentView === 'forms' && q('formsDetail') && q('formsDetail').style.display !== 'none') {
     formsBackHome(); return true;
   }
+  // 6b) Ventas: un dashboard embebido abierto → vuelve al menú de Ventas
+  if (currentView === 'ventas' && q('ventasMenu') && q('ventasMenu').style.display === 'none') { ventasBackHome(); return true; }
+  // 7) Editor de notas a pantalla completa (SOLO móvil): "atrás" vuelve a la lista, no sale de Notas
+  if (window.matchMedia('(max-width:860px)').matches && q('pageNotes')?.classList.contains('active')
+      && document.querySelector('.nt-shell.nt-editing')) { ntMobileBack(); return true; }
   return false;
 }
 
