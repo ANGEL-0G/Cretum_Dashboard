@@ -1683,6 +1683,7 @@ select.camp-f-inp::-ms-expand,select.form-input::-ms-expand{display:none}
 .page-selector{display:none}
 .page-selector.active{display:block;animation:fadeIn .3s ease}
 /* Selector en modo oscuro: fondo totalmente negro (solo esta pantalla) */
+[data-theme="dark"]:has(#pageSelector.active),
 [data-theme="dark"] body:has(#pageSelector.active){background:#000}
 [data-theme="dark"] body:has(#pageSelector.active) .header{background:#000;border-bottom-color:#151515}
 
