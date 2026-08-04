@@ -1697,6 +1697,10 @@ select.camp-f-inp::-ms-expand,select.form-input::-ms-expand{display:none}
 .nav-item-foot{margin:4px 10px 12px;color:var(--gray-500)}
 .nav-item-foot i{color:var(--gray-400)}
 [data-theme="dark"] .nav-sep{background:var(--gray-200)}
+/* "Usuarios" sin duplicar por viewport: móvil (≤768px) → solo en el nav izquierdo;
+   PC (>768px) → solo en el menú de perfil (derecha). Ambos siguen siendo admin-only. */
+@media (min-width:769px){ #navList .nav-item[data-view="usuarios"]{display:none} }
+@media (max-width:768px){ #usersBtn,#usersSep{display:none} }
 
 .nav-footer{padding:14px 18px;border-top:1px solid rgba(15,23,42,.08);text-align:right}
 .nav-close{
