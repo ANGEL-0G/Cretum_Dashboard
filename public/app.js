@@ -1588,6 +1588,25 @@ function ntSelectFolder(id) {
   ntRenderList();
 }
 
+/* HTML de una tarjeta de nota (reusado por la lista y por el alta, sin reconstruir todo) */
+function ntNoteCardHTML(n) {
+  const active = String(n.id) === String(ntCurrentId);
+  const prev = ntPlainPreview(n.content).slice(0, 90);
+  const when = n.updated_at ? fmtCreated(n.updated_at) : '';
+  return `
+      <button class="nt-note${active ? ' on' : ''}" data-id="${n.id}" onclick="ntSelectNote('${n.id}')">
+        ${n.color ? `<span class="nt-note-bar" style="background:${n.color}"></span>` : ''}
+        <div class="nt-note-t">${escapeHtml(n.title || t('Sin título'))}</div>
+        <div class="nt-note-x">${prev ? escapeHtml(prev) : `<span style="opacity:.6">${t('Vacía')}</span>`}</div>
+        ${when ? `<div class="nt-note-d">${when}</div>` : ''}
+      </button>`;
+}
+/* Resalta la nota activa sin reconstruir la lista (evita el parpadeo al seleccionar) */
+function ntHighlightActive() {
+  document.querySelectorAll('#ntNotes .nt-note.on').forEach(b => b.classList.remove('on'));
+  document.querySelector(`#ntNotes .nt-note[data-id="${ntCurrentId}"]`)?.classList.add('on');
+}
+
 function ntRenderList() {
   const el = document.getElementById('ntNotes');
   if (!el) return;
@@ -1598,18 +1617,7 @@ function ntRenderList() {
     el.innerHTML = `<div class="nt-list-empty">${q ? t('Sin coincidencias.') : t('Esta carpeta no tiene notas.<br>Crea una con “Nueva nota”.')}</div>`;
     return;
   }
-  el.innerHTML = list.map(n => {
-    const active = String(n.id) === String(ntCurrentId);
-    const prev = ntPlainPreview(n.content).slice(0, 90);
-    const when = n.updated_at ? fmtCreated(n.updated_at) : '';
-    return `
-      <button class="nt-note${active ? ' on' : ''}" data-id="${n.id}" onclick="ntSelectNote('${n.id}')">
-        ${n.color ? `<span class="nt-note-bar" style="background:${n.color}"></span>` : ''}
-        <div class="nt-note-t">${escapeHtml(n.title || t('Sin título'))}</div>
-        <div class="nt-note-x">${prev ? escapeHtml(prev) : `<span style="opacity:.6">${t('Vacía')}</span>`}</div>
-        ${when ? `<div class="nt-note-d">${when}</div>` : ''}
-      </button>`;
-  }).join('');
+  el.innerHTML = list.map(ntNoteCardHTML).join('');
 }
 
 function ntShowEmpty() {
@@ -1634,7 +1642,7 @@ function ntSelectNote(id) {
   document.getElementById('ntColor').value = n.color || '#8b5cf6';
   document.getElementById('ntBody').innerHTML = notesToHtml(n.content);
   const saved = document.getElementById('ntSaved'); if (saved) saved.textContent = '';
-  ntRenderList();   // resalta la nota activa
+  ntHighlightActive();   // solo cambia el resaltado (sin reconstruir la lista → sin parpadeo)
   setTimeout(() => document.getElementById('ntBody')?.focus(), 30);
 }
 
@@ -1649,6 +1657,15 @@ async function ntNewNote() {
     if (error) throw error;
     notesData.unshift(data);
     notesLoaded = true;
+    // Inserta la tarjeta nueva al inicio SIN reconstruir toda la lista (sin parpadeo)
+    const listEl = document.getElementById('ntNotes');
+    const searching = (document.getElementById('ntSearch')?.value || '').trim();
+    if (listEl && !searching) {
+      listEl.querySelector('.nt-list-empty')?.remove();   // por si la carpeta estaba vacía
+      listEl.insertAdjacentHTML('afterbegin', ntNoteCardHTML(data));
+    } else {
+      ntRenderList();
+    }
     ntSelectNote(data.id);
     setTimeout(() => document.getElementById('ntTitle')?.select(), 60);
   } catch (err) {
@@ -1707,7 +1724,15 @@ function ntOnBody() {
 async function ntSetColor(v) {
   if (!ntCurrentId) return;
   await setNoteColor(ntCurrentId, v);
-  ntRenderList();
+  // Actualiza solo la barra de color de la tarjeta activa (sin reconstruir la lista)
+  const card = document.querySelector(`#ntNotes .nt-note[data-id="${ntCurrentId}"]`);
+  if (card) {
+    let bar = card.querySelector('.nt-note-bar');
+    if (v) {
+      if (!bar) { bar = document.createElement('span'); bar.className = 'nt-note-bar'; card.insertBefore(bar, card.firstChild); }
+      bar.style.background = v;
+    } else if (bar) { bar.remove(); }
+  }
 }
 
 /* Editor rico — contentEditable en el documento principal */
