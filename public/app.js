@@ -1768,7 +1768,7 @@ function tkSlide(toggleSel, sliderId, btnSel) {
   const slider = document.getElementById(sliderId);
   const active = wrap?.querySelector(btnSel + '.on');
   if (!wrap || !slider || !active || !active.offsetWidth) return;   // oculto/sin layout: se reintenta al mostrar
-  slider.style.left = active.offsetLeft + 'px';
+  slider.style.transform = `translateX(${active.offsetLeft}px)`;
   slider.style.width = active.offsetWidth + 'px';
 }
 function tkMoveSlider() { tkSlide('.tk-toggle', 'tkSlider', '.tk-tog-btn'); }
@@ -10927,8 +10927,7 @@ function segMove(track, animate) {
   if (!ind || !on || !on.offsetWidth) return;
   const instant = animate === false || !ind.style.width;   // primera vez o resize → sin animar
   if (instant) ind.style.transition = 'none';
-  ind.style.left = on.offsetLeft + 'px';
-  ind.style.top = on.offsetTop + 'px';
+  ind.style.transform = `translate(${on.offsetLeft}px, ${on.offsetTop}px)`;
   ind.style.width = on.offsetWidth + 'px';
   ind.style.height = on.offsetHeight + 'px';
   if (instant) { void ind.offsetWidth; ind.style.transition = ''; }   // reflow para fijar sin animación
