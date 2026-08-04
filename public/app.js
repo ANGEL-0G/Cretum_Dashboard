@@ -1746,6 +1746,61 @@ function ntLinkClose() {
   const pop = document.getElementById('ntLinkPop'); if (pop) pop.hidden = true;
   document.removeEventListener('click', ntLinkOutside, true);
 }
+/* ── Mover la nota abierta a otra carpeta (botón + popover) ── */
+function ntMoveMenu(ev) {
+  if (!ntCurrentId) { toast('Abre una nota primero'); return; }
+  const note = notesData.find(n => String(n.id) === String(ntCurrentId));
+  const cur = note ? (note.folder_id || null) : null;
+  const pop = document.getElementById('ntMovePop');
+  const list = document.getElementById('ntMoveList');
+  if (!pop || !list) return;
+  const opt = (id, name, color) => {
+    const on = (id || null) === cur;
+    return `<button class="nt-move-opt${on ? ' on' : ''}" onclick="ntMoveTo(${id === null ? 'null' : `'${id}'`})">
+      <span class="nt-move-dot" style="background:${color || 'var(--gray-300)'}"></span>
+      <span class="nt-move-nm">${escapeHtml(name)}</span>
+      ${on ? '<i class="fa-solid fa-check nt-move-check"></i>' : ''}
+    </button>`;
+  };
+  list.innerHTML = opt(null, 'General', 'var(--navy)') +
+    foldersData.map(f => opt(f.id, f.name || 'Carpeta', f.color)).join('');
+  pop.hidden = false;
+  const r = ev.currentTarget.getBoundingClientRect();
+  const w = pop.offsetWidth, h = pop.offsetHeight;
+  let left = r.right - w; if (left < 8) left = 8; if (left + w > innerWidth - 8) left = innerWidth - 8 - w;
+  let top = r.bottom + 6; if (top + h > innerHeight - 8) top = Math.max(8, r.top - h - 6);
+  pop.style.left = left + 'px'; pop.style.top = top + 'px';
+  setTimeout(() => document.addEventListener('click', ntMoveOutside, true), 0);
+}
+function ntMoveOutside(e) {
+  if (e.target.closest && (e.target.closest('#ntMovePop') || e.target.closest('#ntMoveBtn'))) return;
+  ntMoveClose();
+}
+function ntMoveClose() {
+  const pop = document.getElementById('ntMovePop'); if (pop) pop.hidden = true;
+  document.removeEventListener('click', ntMoveOutside, true);
+}
+async function ntMoveTo(folderId) {
+  ntMoveClose();
+  const note = notesData.find(n => String(n.id) === String(ntCurrentId));
+  if (!note) return;
+  const target = folderId || null;
+  if ((note.folder_id || null) === target) return;   // ya está en esa carpeta
+  const prev = note.folder_id || null;
+  note.folder_id = target;                            // update optimista
+  ntRenderAll();
+  try {
+    const { error } = await sb.from('user_notes').update({ folder_id: target }).eq('id', note.id);
+    if (error) throw error;
+    const fname = target ? (foldersData.find(f => f.id === target)?.name || t('Carpeta')) : t('General');
+    toast(t('Nota movida a {f}', { f: fname }));
+  } catch (err) {
+    note.folder_id = prev;                            // revertir si falla
+    ntRenderAll();
+    toast(t('No se pudo mover la nota'));
+  }
+}
+
 function ntApplyLink() {
   let url = (document.getElementById('ntLinkUrl').value || '').trim();
   if (!url) { ntLinkClose(); return; }
