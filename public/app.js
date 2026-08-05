@@ -2054,7 +2054,7 @@ function renderTaskDetail() {
   document.getElementById('tdMeta').innerHTML = chips.join('');
   const statusHost = document.getElementById('tdStatus');
   if (tdKind === 'simple') {
-    statusHost.innerHTML = `<div class="td-label">${t('Estatus')}</div>${simpleStatusControl(tk.id)}`;
+    statusHost.innerHTML = `<div class="td-label">${t('Estatus')}</div>${tdStatusUI(tk)}`;
   } else {
     const p = pct(tk);
     statusHost.innerHTML = `<div class="td-label">${t('Progreso')}</div>
@@ -2069,6 +2069,34 @@ function renderTaskDetail() {
 }
 function tdEditNow() { const id = tdId, kind = tdKind; closeTaskDetail(); openEditTask(id, kind); }
 async function tdDeleteNow() { const id = tdId, kind = tdKind; closeTaskDetail(); await del(id, kind); }
+
+/* Control de estatus del detalle (opción "avanzar + saltos"): un botón grande
+   que avanza al siguiente estado lógico + chips para saltar a cualquiera. */
+const TDS_ADV = {
+  pending:  { to: 'progress', label: 'Marcar en progreso', icon: 'fa-play',        cls: 'prog' },
+  progress: { to: 'done',     label: 'Marcar completo',    icon: 'fa-check',       cls: 'done' },
+  done:     { to: 'progress', label: 'Reabrir tarea',      icon: 'fa-rotate-left', cls: 'reopen' },
+};
+const TDS_GLYPH = { pending: '○', progress: '◐', done: '✓' };
+function tdStatusUI(tk) {
+  const cur = simpleStatus(tk);
+  const adv = TDS_ADV[cur];
+  const chip = st => `<button class="tds-chip st-${st}${st === cur ? ' on' : ''}" onclick="tdSetStatus('${st}')">${TDS_GLYPH[st]} ${escapeHtml(t(TK_STATUS[st]))}</button>`;
+  return `<div class="tds-wrap">
+    <div class="tds-current st-${cur}"><span class="tds-dot">${TDS_GLYPH[cur]}</span> <span>${t('Estado actual')}: <strong>${escapeHtml(t(TK_STATUS[cur]))}</strong></span></div>
+    <button class="tds-advance tds-adv-${adv.cls}" onclick="tdAdvance()"><i class="fa-solid ${adv.icon}"></i> ${t(adv.label)}</button>
+    <div class="tds-jump"><span class="tds-jump-label">${t('o saltar a:')}</span>${chip('pending')}${chip('progress')}${chip('done')}</div>
+  </div>`;
+}
+function tdAdvance() {
+  const tk = tdFind(); if (!tk || tdKind !== 'simple') return;
+  const adv = TDS_ADV[simpleStatus(tk)];
+  if (adv) setSimpleStatus(tdId, adv.to);   // el hook en setSimpleStatus re-renderiza el detalle
+}
+function tdSetStatus(status) {
+  if (tdKind !== 'simple') return;
+  setSimpleStatus(tdId, status);
+}
 
 // Convierte una tarea simple en una con progreso (conserva notas/colaboración/asignación).
 function convertToProgress(id) {

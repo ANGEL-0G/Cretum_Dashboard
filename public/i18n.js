@@ -939,6 +939,12 @@ const EN = {
 
   // ── Detalle de tarea ──
   'Ver detalle': 'View detail',
+  'Estado actual': 'Current status',
+  'o saltar a:': 'or jump to:',
+  'Marcar en progreso': 'Mark in progress',
+  'Marcar completo': 'Mark complete',
+  'Reabrir tarea': 'Reopen task',
+  'Completo': 'Complete',
   'Progreso': 'Progress',
   'Estatus': 'Status',
   'Esta tarea no tiene descripción.': 'This task has no description.',
