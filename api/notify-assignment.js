@@ -15,7 +15,7 @@ import { getSupabaseAdmin } from './_lib/supabase.js';
 import { sendEmail, notifyAdminOfFailure } from './_lib/email.js';
 
 const APP_URL = 'https://cretumdesk.com';
-const ALLOWED_TYPES = new Set(['new_assignment', 'accepted', 'declined']);
+const ALLOWED_TYPES = new Set(['new_assignment', 'accepted', 'declined', 'report_resolved']);
 
 function escapeHtml(s) {
   return String(s || '')
@@ -97,6 +97,22 @@ function buildEmail(type, { actorName, taskName, due }) {
         ${taskCard(taskName)}
         <p style="color:#3d4559;line-height:1.6;margin:0 0 16px;font-size:13px">
           Ya está en su lista de pendientes. Puedes seguir su progreso desde el dashboard.
+        </p>
+        ${ctaButton('Abrir CRETUM →', APP_URL)}
+      `),
+    };
+  }
+
+  if (type === 'report_resolved') {
+    return {
+      subject: `Tu reporte fue resuelto — ${taskName}`,
+      html: wrapTemplate('REPORTE RESUELTO', `${safeActor} resolvió tu reporte`, `
+        <p style="color:#3d4559;line-height:1.6;margin:0 0 16px;font-size:14px">
+          <strong style="color:#1a3a6b">${safeActor}</strong> marcó como <strong>resuelto</strong> el reporte que enviaste:
+        </p>
+        ${taskCard(taskName)}
+        <p style="color:#3d4559;line-height:1.6;margin:0 0 16px;font-size:13px">
+          Échale un ojo para confirmar que quedó bien. Si sigue fallando, mándanos otro reporte con el botón de la esquina inferior izquierda.
         </p>
         ${ctaButton('Abrir CRETUM →', APP_URL)}
       `),

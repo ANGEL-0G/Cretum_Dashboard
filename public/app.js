@@ -536,8 +536,9 @@ async function submitReport() {
   const stamp = d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' +
     d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
   const emoji = { 'Fallo': '🐞', 'Problema': '⚠️', 'Sugerencia': '💡' }[reportType] || '📝';
-  const name = `${emoji} ${reportType}: ${detail.split('\n')[0].slice(0, 60)}`;
-  const desc = `${detail}\n\n— Reportó ${reporter} · sección: ${section} · ${stamp}`;
+  // El TÍTULO es la sección (para ubicar/replicar) y la DESCRIPCIÓN es el detalle.
+  const name = `${emoji} ${section}`;
+  const desc = `${detail}\n\n(${reportType}) — Reportó ${reporter} · ${stamp}`;
   const prio = reportType === 'Fallo' ? 'Alta' : 'Media';
   const nowIso = d.toISOString();
   admins.forEach(uid => {
@@ -545,7 +546,8 @@ async function submitReport() {
       id: 'S' + (++tkId), name, desc,
       due: '', prio, project: REPORT_PROJECT, done: false, status: 'pending',
       collab: false, remind: null, remindAt: null, remindSent: false,
-      owner: uid, createdAt: nowIso, report: true
+      owner: uid, createdAt: nowIso,
+      report: true, reportBy: currentUser   // para avisar a quien reportó cuando se resuelva
     });
   });
   saveData();
@@ -2015,6 +2017,11 @@ function setSimpleStatus(id, status) {
   const msg = { pending: 'Marcada como pendiente', progress: 'En progreso', done: 'Tarea completada ✓' }[status];
   if (msg) toast(msg);
   tkToggleAnim = { id, becameDone: status === 'done' };
+  // Reporte resuelto → avisa por email a quien lo reportó (una sola vez, y no a uno mismo)
+  if (t.report && t.reportBy && status === 'done' && !t.reportNotified && t.reportBy !== currentUser) {
+    t.reportNotified = true;
+    notifyAssignment({ type: 'report_resolved', recipientUserId: t.reportBy, taskName: t.name });
+  }
   scheduleSave();
   render();
 }
