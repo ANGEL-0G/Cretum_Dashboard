@@ -937,6 +937,12 @@ const EN = {
   'Nota movida a {f}': 'Note moved to {f}',
   'No se pudo mover la nota': "Couldn't move the note",
 
+  // ── Detalle de tarea ──
+  'Ver detalle': 'View detail',
+  'Progreso': 'Progress',
+  'Estatus': 'Status',
+  'Esta tarea no tiene descripción.': 'This task has no description.',
+
   // ── Reportes (botón flotante) ──
   'Reportar': 'Report',
   'Reportar un problema, fallo o sugerencia': 'Report a problem, bug or suggestion',

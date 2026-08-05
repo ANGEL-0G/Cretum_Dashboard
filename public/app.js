@@ -709,7 +709,7 @@ function tkRow(t, i) {
     <div class="li-wrap">
     <div class="list-item ${done ? 'done-item' : ''}${enter}" data-tid="${t.id}" data-kind="simple" ${delay}>
       ${simpleStatusControl(t.id)}
-      <div class="li-name">${escapeHtml(t.name)}</div>
+      <div class="li-name tk-open" onclick="openTaskDetail('${t.id}','simple')" title="Ver detalle">${escapeHtml(t.name)}</div>
       <div class="li-meta">
         ${t.createdAt ? `<span class="li-created" title="${createdTitle(t.createdAt)}"><i class="fa-regular fa-clock"></i> ${fmtCreated(t.createdAt)}</span>` : ''}
         ${t.due ? `<span class="li-due ${od ? 'od' : ''}">${fmtD(t.due)}</span>` : ''}
@@ -726,7 +726,7 @@ function tkRow(t, i) {
     <div class="list-item ${done ? 'done-item' : ''}${enter}" data-tid="${t.id}" data-kind="progress" ${delay}>
       <div class="li-chk ${done ? 'on' : ''}">✓</div>
       <div class="li-body" style="flex:1;min-width:0">
-        <div class="li-name ${done ? 'struck' : ''}">${escapeHtml(t.name)}</div>
+        <div class="li-name tk-open ${done ? 'struck' : ''}" onclick="openTaskDetail('${t.id}','progress')" title="Ver detalle">${escapeHtml(t.name)}</div>
         <div class="li-prog">
           <div class="li-prog-bar"><div class="li-prog-fill" style="width:${p}%"></div></div>
           <span>${t.done}/${t.total} ${escapeHtml(t.unit)} · ${p}%</span>
@@ -2022,9 +2022,53 @@ function setSimpleStatus(id, status) {
     t.reportNotified = true;
     notifyAssignment({ type: 'report_resolved', recipientUserId: t.reportBy, taskName: t.name });
   }
+  // Si el panel de detalle está abierto sobre esta tarea, refresca su estatus.
+  if (document.getElementById('taskDetailModal')?.classList.contains('show') && String(tdId) === String(id)) renderTaskDetail();
   scheduleSave();
   render();
 }
+
+/* ═══════════════════════════════════════════
+   DETALLE DE TAREA — al tocar el nombre, panel grande para leer la
+   descripción completa y actuar (estatus, editar, eliminar, cerrar).
+═══════════════════════════════════════════ */
+let tdId = null, tdKind = null;
+function tdFind() { return (tdKind === 'progress' ? state.progress : state.simple).find(x => String(x.id) === String(tdId)); }
+function openTaskDetail(id, kind) {
+  tdId = id; tdKind = kind;
+  if (!tdFind()) return;
+  renderTaskDetail();
+  document.getElementById('taskDetailModal')?.classList.add('show');
+}
+function closeTaskDetail() { document.getElementById('taskDetailModal')?.classList.remove('show'); tdId = null; }
+function renderTaskDetail() {
+  const tk = tdFind();
+  if (!tk) { closeTaskDetail(); return; }
+  document.getElementById('tdTitle').textContent = tk.name || t('Sin título');
+  const chips = [];
+  if (tk.project) chips.push(`<span class="td-chip"><i class="fa-solid fa-folder"></i> ${escapeHtml(tk.project)}</span>`);
+  if (tk.due) chips.push(`<span class="td-chip${isOD(tk.due) && !isDone(tk) ? ' od' : ''}"><i class="fa-regular fa-calendar"></i> ${fmtD(tk.due)}</span>`);
+  if (tk.prio) chips.push(`<span class="td-chip ${prioC(tk.prio)}"><i class="fa-solid fa-flag"></i> ${escapeHtml(tk.prio)}</span>`);
+  if (tk.collab) chips.push(`<span class="td-chip"><i class="fa-solid fa-users"></i> ${t('Colaborativa')}</span>`);
+  if (tk.createdAt) chips.push(`<span class="td-chip" title="${createdTitle(tk.createdAt)}"><i class="fa-regular fa-clock"></i> ${fmtCreated(tk.createdAt)}</span>`);
+  document.getElementById('tdMeta').innerHTML = chips.join('');
+  const statusHost = document.getElementById('tdStatus');
+  if (tdKind === 'simple') {
+    statusHost.innerHTML = `<div class="td-label">${t('Estatus')}</div>${simpleStatusControl(tk.id)}`;
+  } else {
+    const p = pct(tk);
+    statusHost.innerHTML = `<div class="td-label">${t('Progreso')}</div>
+      <div class="td-prog"><div class="td-prog-bar"><div class="td-prog-fill" style="width:${p}%"></div></div><span>${tk.done}/${tk.total} ${escapeHtml(tk.unit || '')} · ${p}%</span></div>`;
+  }
+  const body = (tk.desc || '').trim(), notes = (tk.notes || '').trim();
+  let html = '';
+  if (body) html += `<div class="td-desc-body">${escapeHtml(body).replace(/\n/g, '<br>')}</div>`;
+  if (notes) html += `<div class="td-label" style="margin-top:14px">${t('Notas')}</div><div class="td-desc-body">${escapeHtml(notes).replace(/\n/g, '<br>')}</div>`;
+  if (!body && !notes) html = `<div class="td-empty">${t('Esta tarea no tiene descripción.')}</div>`;
+  document.getElementById('tdDesc').innerHTML = html;
+}
+function tdEditNow() { const id = tdId, kind = tdKind; closeTaskDetail(); openEditTask(id, kind); }
+async function tdDeleteNow() { const id = tdId, kind = tdKind; closeTaskDetail(); await del(id, kind); }
 
 // Convierte una tarea simple en una con progreso (conserva notas/colaboración/asignación).
 function convertToProgress(id) {
