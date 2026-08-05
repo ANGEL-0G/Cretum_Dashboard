@@ -1485,37 +1485,12 @@ body:has(.modal-backdrop.show,.camp-modal-backdrop.show,.home-picker-backdrop.sh
 .td-btn-edit:hover{background:var(--navy);color:#fff}
 .td-btn-del{background:var(--red-bg,rgba(224,49,49,.12));color:var(--red)}
 .td-btn-del:hover{background:var(--red);color:#fff}
-/* Control de estatus del detalle: botón de avance + chips de salto */
-.tds-wrap{display:flex;flex-direction:column;gap:10px}
-.tds-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.tds-current{display:inline-flex;align-items:center;gap:9px;font-size:13px;color:var(--gray-600);animation:tdsPop .22s cubic-bezier(.23,1,.32,1)}
-.tds-current strong{color:var(--gray-900)}
-.tds-dot{width:22px;height:22px;flex:0 0 auto;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
-.tds-current.st-pending .tds-dot{background:var(--gray-100);color:var(--gray-500)}
-.tds-current.st-progress .tds-dot{background:rgba(200,138,4,.16);color:#c88a04}
-.tds-current.st-done .tds-dot{background:rgba(22,163,74,.16);color:#16a34a}
-.tds-advance{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:9px 15px;border:0;border-radius:10px;flex:0 0 auto;
-  font-family:var(--font);font-size:13px;font-weight:600;color:#fff;cursor:pointer;
-  transition:transform .12s cubic-bezier(.23,1,.32,1),filter .15s,background .25s}
-.tds-advance i{font-size:12px}
-.tds-advance:hover{filter:brightness(1.07)}
-.tds-advance:active{transform:scale(.98)}
-.tds-adv-prog{background:#c88a04}
-.tds-adv-done{background:#16a34a}
-.tds-adv-reopen{background:var(--gray-200);color:var(--gray-700)}
-.tds-jump{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.tds-jump-label{font-size:11.5px;color:var(--gray-400);margin-right:2px}
-.tds-chip{display:inline-flex;align-items:center;gap:5px;padding:6px 11px;border:1px solid var(--gray-200);background:var(--white);
-  border-radius:999px;font-family:var(--font);font-size:12px;font-weight:500;color:var(--gray-500);cursor:pointer;
-  transition:border-color .15s,background .15s,color .15s,transform .1s}
-.tds-chip:hover{border-color:var(--gray-300);color:var(--gray-700)}
-.tds-chip:active{transform:scale(.96)}
-.tds-chip.on{cursor:default}
-.tds-chip.on.st-pending{background:var(--gray-100);border-color:var(--gray-300);color:var(--gray-700)}
-.tds-chip.on.st-progress{background:rgba(200,138,4,.15);border-color:#e0b020;color:#a9760a}
-.tds-chip.on.st-done{background:rgba(22,163,74,.13);border-color:#16a34a;color:#159a45}
-@keyframes tdsPop{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
-@media (prefers-reduced-motion:reduce){.tds-current{animation:none}.tds-advance,.tds-chip{transition:none}}
+/* Estatus del detalle: píldora segmentada (como las tablas), color por estado */
+.tds-seg{width:100%}
+.tds-seg .seg-btn{flex:1}
+.tds-seg[data-st="pending"] .seg-ind{background:var(--gray-400)}
+.tds-seg[data-st="progress"] .seg-ind{background:#c88a04}
+.tds-seg[data-st="done"] .seg-ind{background:#16a34a}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 
@@ -6288,6 +6263,6 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 </div>
 
 <script src="/i18n.js?v=20260805-statusui"></script>
-<script src="/app.js?v=20260805-statusui2"></script>
+<script src="/app.js?v=20260805-statusseg"></script>
 </body>
 </html>

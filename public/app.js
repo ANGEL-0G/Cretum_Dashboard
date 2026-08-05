@@ -2023,7 +2023,7 @@ function setSimpleStatus(id, status) {
     notifyAssignment({ type: 'report_resolved', recipientUserId: t.reportBy, taskName: t.name });
   }
   // Si el panel de detalle está abierto sobre esta tarea, refresca su estatus.
-  if (document.getElementById('taskDetailModal')?.classList.contains('show') && String(tdId) === String(id)) renderTaskDetail();
+  if (document.getElementById('taskDetailModal')?.classList.contains('show') && String(tdId) === String(id)) tdSyncSeg();
   scheduleSave();
   render();
 }
@@ -2066,38 +2066,33 @@ function renderTaskDetail() {
   if (notes) html += `<div class="td-label" style="margin-top:14px">${t('Notas')}</div><div class="td-desc-body">${escapeHtml(notes).replace(/\n/g, '<br>')}</div>`;
   if (!body && !notes) html = `<div class="td-empty">${t('Esta tarea no tiene descripción.')}</div>`;
   document.getElementById('tdDesc').innerHTML = html;
+  // Posiciona el indicador de la píldora de estatus (instantáneo al abrir)
+  requestAnimationFrame(() => { const s = document.getElementById('tdSeg'); if (s) segMove(s, false); });
 }
 function tdEditNow() { const id = tdId, kind = tdKind; closeTaskDetail(); openEditTask(id, kind); }
 async function tdDeleteNow() { const id = tdId, kind = tdKind; closeTaskDetail(); await del(id, kind); }
 
 /* Control de estatus del detalle (opción "avanzar + saltos"): un botón grande
    que avanza al siguiente estado lógico + chips para saltar a cualquiera. */
-const TDS_ADV = {
-  pending:  { to: 'progress', label: 'Marcar en progreso', icon: 'fa-play',        cls: 'prog' },
-  progress: { to: 'done',     label: 'Marcar completo',    icon: 'fa-check',       cls: 'done' },
-  done:     { to: 'progress', label: 'Reabrir tarea',      icon: 'fa-rotate-left', cls: 'reopen' },
-};
 const TDS_GLYPH = { pending: '○', progress: '◐', done: '✓' };
+// Estatus como píldora segmentada (misma de las tablas), coloreada por estado.
 function tdStatusUI(tk) {
   const cur = simpleStatus(tk);
-  const adv = TDS_ADV[cur];
-  const chip = st => `<button class="tds-chip st-${st}${st === cur ? ' on' : ''}" onclick="tdSetStatus('${st}')">${TDS_GLYPH[st]} ${escapeHtml(t(TK_STATUS[st]))}</button>`;
-  return `<div class="tds-wrap">
-    <div class="tds-top">
-      <div class="tds-current st-${cur}"><span class="tds-dot">${TDS_GLYPH[cur]}</span> <span>${t('Estado actual')}: <strong>${escapeHtml(t(TK_STATUS[cur]))}</strong></span></div>
-      <button class="tds-advance tds-adv-${adv.cls}" onclick="tdAdvance()"><i class="fa-solid ${adv.icon}"></i> ${t(adv.label)}</button>
-    </div>
-    <div class="tds-jump"><span class="tds-jump-label">${t('o saltar a:')}</span>${chip('pending')}${chip('progress')}${chip('done')}</div>
-  </div>`;
-}
-function tdAdvance() {
-  const tk = tdFind(); if (!tk || tdKind !== 'simple') return;
-  const adv = TDS_ADV[simpleStatus(tk)];
-  if (adv) setSimpleStatus(tdId, adv.to);   // el hook en setSimpleStatus re-renderiza el detalle
+  const btn = st => `<button class="seg-btn${st === cur ? ' on' : ''}" data-st="${st}" onclick="tdSetStatus('${st}')">${TDS_GLYPH[st]} ${escapeHtml(t(TK_STATUS[st]))}</button>`;
+  return `<div class="seg-track tds-seg" id="tdSeg" data-st="${cur}"><div class="seg-ind"></div>${btn('pending')}${btn('progress')}${btn('done')}</div>`;
 }
 function tdSetStatus(status) {
   if (tdKind !== 'simple') return;
-  setSimpleStatus(tdId, status);
+  setSimpleStatus(tdId, status);   // el hook llama a tdSyncSeg() (mueve el indicador)
+}
+// Refresca el indicador de la píldora sin reconstruir (para que deslice al cambiar).
+function tdSyncSeg() {
+  const seg = document.getElementById('tdSeg'); if (!seg) return;
+  const tk = tdFind(); if (!tk) return;
+  const cur = simpleStatus(tk);
+  seg.setAttribute('data-st', cur);
+  seg.querySelectorAll('.seg-btn').forEach(b => b.classList.toggle('on', b.dataset.st === cur));
+  segMove(seg, true);
 }
 
 // Convierte una tarea simple en una con progreso (conserva notas/colaboración/asignación).
