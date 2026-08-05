@@ -1538,8 +1538,34 @@ async function saveNote(id) {
     n.updated_at = nowIso;
     setMark('Guardado');
     setTimeout(() => setMark(''), 1500);
+    return true;
   } catch (err) {
     setMark('Error al guardar');
+    return false;
+  }
+}
+
+/* Botón "Guardar" del editor de notas: fuerza el guardado ya y da una
+   confirmación visual clara (aunque igual autoguarda por debounce). */
+async function ntSaveNow() {
+  if (!ntCurrentId) { toast(t('Abre una nota primero')); return; }
+  clearTimeout(noteSaveTimers[ntCurrentId]);
+  const btn = document.getElementById('ntSaveBtn');
+  const ic = btn?.querySelector('i'), sp = btn?.querySelector('span');
+  if (btn) btn.disabled = true;
+  const ok = await saveNote(ntCurrentId);
+  if (btn) btn.disabled = false;
+  if (ok && btn) {
+    btn.classList.add('ok');
+    if (ic) ic.className = 'fa-solid fa-check';
+    if (sp) sp.textContent = t('Guardado');
+    setTimeout(() => {
+      btn.classList.remove('ok');
+      if (ic) ic.className = 'fa-solid fa-floppy-disk';
+      if (sp) sp.textContent = t('Guardar');
+    }, 1600);
+  } else if (!ok) {
+    toast(t('No se pudo guardar'));
   }
 }
 

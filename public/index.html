@@ -988,8 +988,14 @@ body:has(.modal-backdrop.show,.camp-modal-backdrop.show,.home-picker-backdrop.sh
 .nt-body blockquote{border-left:3px solid var(--gray-200);margin:.5em 0;padding:.2em 0 .2em 14px;color:var(--gray-500)}
 .nt-body ul,.nt-body ol{padding-left:1.4em;margin:.4em 0}
 .nt-body a{color:var(--navy);text-decoration:underline}
-.nt-doc-foot{padding:6px 22px 12px;min-height:22px}
-.nt-saved{font-size:11.5px;color:var(--gray-400)}
+.nt-doc-foot{padding:8px 22px 14px;min-height:22px;display:flex;align-items:center;gap:12px}
+.nt-saved{font-size:11.5px;color:var(--gray-400);margin-left:auto}
+.nt-save-btn{display:inline-flex;align-items:center;gap:7px;padding:8px 15px;border:1px solid var(--gray-200);background:var(--white);color:var(--gray-700);
+  border-radius:999px;font-family:var(--font);font-size:12.5px;font-weight:600;cursor:pointer;transition:background .15s,border-color .15s,color .15s,transform .1s}
+.nt-save-btn:hover{border-color:var(--navy-light);color:var(--navy);background:var(--navy-pale)}
+.nt-save-btn:active{transform:scale(.97)}
+.nt-save-btn:disabled{opacity:.6;cursor:default}
+.nt-save-btn.ok{background:rgba(22,163,74,.14);border-color:#16a34a;color:#16a34a}
 .nt-linkpop{width:280px}
 /* Popover "Mover a carpeta" */
 .nt-movepop{width:230px;padding:6px}
@@ -5376,7 +5382,10 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
         <div class="nt-body-wrap">
           <div id="ntBody" class="nt-body" contenteditable="true" spellcheck="true" oninput="ntOnBody()"></div>
         </div>
-        <div class="nt-doc-foot"><span id="ntSaved" class="nt-saved"></span></div>
+        <div class="nt-doc-foot">
+          <button class="nt-save-btn" id="ntSaveBtn" onclick="ntSaveNow()" title="Guardar la nota"><i class="fa-solid fa-floppy-disk"></i> <span data-i18n>Guardar</span></button>
+          <span id="ntSaved" class="nt-saved"></span>
+        </div>
       </div>
     </section>
   </div>
@@ -6286,6 +6295,6 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 </div>
 
 <script src="/i18n.js?v=20260805-statusui"></script>
-<script src="/app.js?v=20260805-etimg"></script>
+<script src="/app.js?v=20260805-notesave"></script>
 </body>
 </html>
