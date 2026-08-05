@@ -2083,8 +2083,10 @@ function tdStatusUI(tk) {
   const adv = TDS_ADV[cur];
   const chip = st => `<button class="tds-chip st-${st}${st === cur ? ' on' : ''}" onclick="tdSetStatus('${st}')">${TDS_GLYPH[st]} ${escapeHtml(t(TK_STATUS[st]))}</button>`;
   return `<div class="tds-wrap">
-    <div class="tds-current st-${cur}"><span class="tds-dot">${TDS_GLYPH[cur]}</span> <span>${t('Estado actual')}: <strong>${escapeHtml(t(TK_STATUS[cur]))}</strong></span></div>
-    <button class="tds-advance tds-adv-${adv.cls}" onclick="tdAdvance()"><i class="fa-solid ${adv.icon}"></i> ${t(adv.label)}</button>
+    <div class="tds-top">
+      <div class="tds-current st-${cur}"><span class="tds-dot">${TDS_GLYPH[cur]}</span> <span>${t('Estado actual')}: <strong>${escapeHtml(t(TK_STATUS[cur]))}</strong></span></div>
+      <button class="tds-advance tds-adv-${adv.cls}" onclick="tdAdvance()"><i class="fa-solid ${adv.icon}"></i> ${t(adv.label)}</button>
+    </div>
     <div class="tds-jump"><span class="tds-jump-label">${t('o saltar a:')}</span>${chip('pending')}${chip('progress')}${chip('done')}</div>
   </div>`;
 }
