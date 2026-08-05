@@ -4196,6 +4196,7 @@ function etOpenEditor(t) {
 }
 function etCloseEditor() {
   etClosePops();
+  etHideImgBar();
   document.getElementById('etEditor').hidden = true;
   etEditingId = null;
 }
@@ -4213,7 +4214,16 @@ function etSanitize(html) {
 }
 function etSetCanvasHtml(html) {
   const fr = etCanvasEl();
-  fr.onload = () => { try { fr.contentDocument.designMode = 'on'; } catch (e) {} };
+  fr.onload = () => {
+    try {
+      const doc = fr.contentDocument;
+      doc.designMode = 'on';
+      // Clic en una imagen → mini-barra para editarla; clic fuera / scroll → cerrar
+      doc.addEventListener('click', etCanvasClick, true);
+      doc.addEventListener('scroll', etHideImgBar, true);
+      fr.contentWindow.addEventListener('scroll', etHideImgBar, true);
+    } catch (e) {}
+  };
   fr.srcdoc = etSanitize(html) || '<p></p>';
 }
 function etGetHtml() {
@@ -4231,6 +4241,7 @@ function etApplyModeUI() {
   b.querySelector('i').className = etCodeMode ? 'fa-solid fa-eye' : 'fa-solid fa-code';
 }
 function etToggleMode() {
+  etHideImgBar();
   if (!etCodeMode) {
     document.getElementById('etCode').value = etGetHtml();   // WYSIWYG → código
     etCodeMode = true; etApplyModeUI();
@@ -4285,6 +4296,98 @@ function etApplyLink() {
   if (!/^(https?:|mailto:)/i.test(url)) url = 'https://' + url;
   etExecOnSaved('createLink', url);
 }
+
+/* ── Imágenes / gráficas dentro del editor ──
+   Insertar una imagen nueva, y al hacer clic en una imagen existente aparece
+   una mini-barra para reemplazarla, redimensionarla, alinearla o borrarla.
+   La selección se dibuja con una caja aparte (en el padre) para NO tocar el
+   HTML de la plantilla. */
+let etSelImg = null;         // <img> seleccionada dentro del iframe
+let etImgAction = 'insert';  // 'insert' | 'replace'
+
+function etCanvasClick(e) {
+  const el = e.target;
+  if (el && el.tagName === 'IMG') etSelectImg(el);
+  else etHideImgBar();
+}
+function etSelectImg(img) {
+  etSelImg = img;
+  etPositionImgUI(img);
+}
+function etPositionImgUI(img) {
+  const bar = document.getElementById('etImgBar');
+  const box = document.getElementById('etImgSelBox');
+  const fr = etCanvasEl();
+  if (!bar || !box || !fr) return;
+  const fRect = fr.getBoundingClientRect();
+  const iRect = img.getBoundingClientRect();   // relativo al viewport del iframe
+  const top = fRect.top + iRect.top, left = fRect.left + iRect.left;
+  box.hidden = false;
+  box.style.top = top + 'px'; box.style.left = left + 'px';
+  box.style.width = iRect.width + 'px'; box.style.height = iRect.height + 'px';
+  bar.hidden = false;
+  const barTop = Math.max(8, top - bar.offsetHeight - 8);
+  const barLeft = Math.min(left, window.innerWidth - bar.offsetWidth - 8);
+  bar.style.top = barTop + 'px'; bar.style.left = Math.max(8, barLeft) + 'px';
+}
+function etHideImgBar() {
+  const bar = document.getElementById('etImgBar'); if (bar) bar.hidden = true;
+  const box = document.getElementById('etImgSelBox'); if (box) box.hidden = true;
+  etSelImg = null;
+}
+function etInsertImage() {
+  if (etCodeMode) { toast('Cambia a vista normal para insertar imágenes'); return; }
+  etImgAction = 'insert';
+  const inp = document.getElementById('etImgFile'); inp.value = ''; inp.click();
+}
+function etImgReplace() {
+  if (!etSelImg) return;
+  etImgAction = 'replace';
+  const inp = document.getElementById('etImgFile'); inp.value = ''; inp.click();
+}
+function etOnImgFile(ev) {
+  const f = ev.target.files && ev.target.files[0];
+  ev.target.value = '';
+  if (!f) return;
+  if (!/^image\//.test(f.type)) { toast('Elige un archivo de imagen'); return; }
+  if (f.size > 3 * 1024 * 1024) { toast('La imagen pesa más de 3 MB — usa una más ligera'); return; }
+  const rd = new FileReader();
+  rd.onload = () => {
+    const url = rd.result;
+    const fr = etCanvasEl(); const doc = fr.contentDocument;
+    if (etImgAction === 'replace' && etSelImg) {
+      etSelImg.src = url;
+      etPositionImgUI(etSelImg);
+    } else {
+      const img = doc.createElement('img');
+      img.src = url; img.style.maxWidth = '100%'; img.style.height = 'auto';
+      const sel = doc.getSelection();
+      if (sel && sel.rangeCount && doc.body.contains(sel.anchorNode)) {
+        const r = sel.getRangeAt(0); r.deleteContents(); r.insertNode(img);
+        r.setStartAfter(img); r.collapse(true); sel.removeAllRanges(); sel.addRange(r);
+      } else { doc.body.appendChild(img); }
+      etHideImgBar();
+    }
+  };
+  rd.readAsDataURL(f);
+}
+function etImgSize(dir) {
+  if (!etSelImg) return;
+  const fr = etCanvasEl();
+  const bodyW = fr.contentDocument.body.clientWidth || 600;
+  let cur = Math.round(etSelImg.getBoundingClientRect().width / bodyW * 100 / 5) * 5;
+  const next = Math.max(10, Math.min(100, cur + dir * 10));
+  etSelImg.style.width = next + '%'; etSelImg.style.height = 'auto'; etSelImg.style.maxWidth = '100%';
+  etPositionImgUI(etSelImg);
+}
+function etImgAlign(a) {
+  if (!etSelImg) return;
+  etSelImg.style.display = 'block';
+  etSelImg.style.marginLeft = a === 'left' ? '0' : 'auto';
+  etSelImg.style.marginRight = a === 'right' ? '0' : 'auto';
+  etPositionImgUI(etSelImg);
+}
+function etImgDelete() { if (etSelImg) { etSelImg.remove(); etHideImgBar(); } }
 
 /* ── Importar archivo ── */
 function etOnFile(ev) {
