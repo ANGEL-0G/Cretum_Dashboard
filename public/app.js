@@ -934,7 +934,7 @@ function buildKanban() {
             ${p !== null ? `
               <div class="kb-prog-label">${t.done}/${t.total} ${escapeHtml(t.unit)}</div>
               <div class="kb-prog"><div class="kb-prog-fill ${done ? 'complete' : ''}" style="width:${p}%"></div></div>` : ''}
-            <div class="kb-card-name ${done ? 'struck' : ''}">${escapeHtml(t.name)}</div>
+            <div class="kb-card-name tk-open ${done ? 'struck' : ''}" onclick="openTaskDetail('${t.id}','${t.kind}')" title="Ver detalle">${escapeHtml(t.name)}</div>
             <div class="kb-card-foot">
               ${t.createdAt ? `<span class="li-created" title="${createdTitle(t.createdAt)}"><i class="fa-regular fa-clock"></i> ${fmtCreated(t.createdAt)}</span>` : ''}
               ${t.due ? `<span class="kb-due ${od ? 'od' : ''}"><i class="fa-regular fa-calendar" style="font-size:10px"></i> ${fmtD(t.due)}</span>` : ''}
@@ -993,7 +993,7 @@ function buildTimeline() {
             ? `<div class="li-chk ${done ? 'on' : ''}" onclick="toggle('${t.id}','simple')">✓</div>`
             : ''}
           <div style="flex:1;min-width:0">
-            <div class="tl-name ${done ? 'struck' : ''}">${escapeHtml(t.name)}</div>
+            <div class="tl-name tk-open ${done ? 'struck' : ''}" onclick="openTaskDetail('${t.id}','${t.kind}')" title="Ver detalle">${escapeHtml(t.name)}</div>
             ${p !== null ? `
               <div style="margin-top:5px">
                 <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--gray-400);margin-bottom:2px">
