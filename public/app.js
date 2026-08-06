@@ -3872,6 +3872,109 @@ function closeMvpSnapshot() {
   if (m) m.style.display = 'none';
 }
 
+// Panel admin "Control de precios": por empresa directa activa, pps/valuación
+// vigentes + de dónde vienen (fuente de verdad = data/valuation_rules.yaml →
+// tabla Supabase valuation_rules, publicada por tools/sync_valuation_rules.py).
+const PC_MECH_CHIP = {
+  market_live: 'green',
+  caplight_live: 'orange',
+  cas_quarterly: 'orange',
+  tracker_mvp: 'blue',
+  manual_rounds: 'gray',
+  residual_guide: 'purple',
+  at_cost: 'gray',
+  pending_rule: 'red',
+  closed: 'gray',
+};
+
+function pcTimeAgo(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d)) return '—';
+  const mins = Math.round((Date.now() - d.getTime()) / 60000);
+  if (mins < 1) return 'hace un momento';
+  if (mins < 60) return `hace ${mins} min`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `hace ${hrs} h`;
+  const days = Math.round(hrs / 24);
+  if (days < 7) return `hace ${days} d`;
+  return d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
+}
+
+async function _renderPriceCtl() {
+  const FONDOS_SERIES = [20, 73, 91, 94];
+  const [companies, posRes, rules] = await Promise.all([
+    sbFetchAll('companies', 'id,name'),
+    sb.from('investments')
+      .select('company_id,current_ev_pps,current_ev_b,updated_at,series_id')
+      .is('distributed_at', null)
+      .neq('company_id', 10),
+    sbFetchAll('valuation_rules', 'company_id,name,mechanism,source_label,detail,dictada,synced_at'),
+  ]);
+  if (posRes.error) throw posRes.error;
+  const positions = posRes.data || [];
+
+  const compById = Object.fromEntries(companies.map(c => [c.id, c.name]));
+  const ruleById = Object.fromEntries(rules.map(r => [r.company_id, r]));
+
+  const byCo = {};
+  positions.forEach(p => {
+    if (FONDOS_SERIES.includes(p.series_id)) return;
+    const g = byCo[p.company_id] || (byCo[p.company_id] = { pps: null, val: null, updated: null, n: 0 });
+    g.n += 1;
+    if (p.updated_at && (!g.updated || p.updated_at > g.updated)) g.updated = p.updated_at;
+    if (p.current_ev_pps != null) g.pps = p.current_ev_pps;
+    if (p.current_ev_b != null) g.val = p.current_ev_b;
+  });
+
+  const cards = Object.keys(byCo).map(cid => {
+    const g = byCo[cid];
+    const rule = ruleById[cid] || {};
+    const name = rule.name || compById[cid] || `Empresa ${cid}`;
+    const mech = rule.mechanism || 'pending_rule';
+    return { cid, name, mech, sourceLabel: rule.source_label || 'Sin regla', detail: rule.detail, ...g };
+  }).filter(c => c.mech !== 'closed').sort((a, b) => a.name.localeCompare(b.name, 'es'));
+
+  if (!cards.length) return '<div class="home-kpis-err">Sin posiciones directas activas.</div>';
+
+  const chip = c => `<span class="price-ctl-chip price-ctl-chip-${PC_MECH_CHIP[c.mech] || 'gray'}">${escapeHtml(c.sourceLabel)}</span>`;
+
+  return `
+    <div class="price-ctl-note">Empresas directas activas · fuente del pps/valuación por empresa (gobernado por valuation_rules.yaml).</div>
+    <div class="price-ctl-grid">
+      ${cards.map(c => `
+        <div class="price-ctl-card" title="${escapeHtml(c.detail || '')}">
+          <div class="price-ctl-head">
+            <div class="price-ctl-name">${escapeHtml(c.name)}</div>
+            ${chip(c)}
+          </div>
+          <div class="price-ctl-vals">
+            <div class="price-ctl-valbox"><span class="price-ctl-vl">PPS actual</span><span class="price-ctl-vv">${c.pps != null ? '$' + Number(c.pps).toLocaleString('en-US', { maximumFractionDigits: 2 }) : '—'}</span></div>
+            <div class="price-ctl-valbox"><span class="price-ctl-vl">Valuación</span><span class="price-ctl-vv price-ctl-vv-now">${c.val != null ? fmtBil(c.val) : '—'}</span></div>
+          </div>
+          <div class="price-ctl-meta"><span>Actualizado: ${pcTimeAgo(c.updated)}</span><span>${c.n} posición${c.n === 1 ? '' : 'es'}</span></div>
+        </div>
+      `).join('')}
+    </div>`;
+}
+
+async function openPriceCtl() {
+  const modal = document.getElementById('priceCtlModal');
+  const body = document.getElementById('priceCtlBody');
+  if (!modal || !body) return;
+  modal.style.display = '';
+  body.innerHTML = '<div class="home-kpis-load">Cargando…</div>';
+  try {
+    body.innerHTML = await _renderPriceCtl();
+  } catch (e) {
+    body.innerHTML = `<div class="home-kpis-err">No se pudo cargar: ${escapeHtml(e.message || 'error')}</div>`;
+  }
+}
+function closePriceCtl() {
+  const m = document.getElementById('priceCtlModal');
+  if (m) m.style.display = 'none';
+}
+
 function renderNavList() {
   const list = document.getElementById('navList');
   if (!list) return;
@@ -6142,6 +6245,8 @@ function renderDbList() {
   document.getElementById('dbDetail').classList.remove('show');
   const snapBtn = document.getElementById('dbSnapBtn');
   if (snapBtn) snapBtn.style.display = currentOrg === 'mvp' ? '' : 'none';
+  const priceCtlBtn = document.getElementById('dbPriceCtlBtn');
+  if (priceCtlBtn) priceCtlBtn.style.display = (currentOrg === 'mvp' && currentProfile?.role === 'admin') ? '' : 'none';
 
   const anyFilter = !!(q || companyIds.length || seriesIds.length || titulars.length);
   document.getElementById('dbClear').style.display = anyFilter ? '' : 'none';
