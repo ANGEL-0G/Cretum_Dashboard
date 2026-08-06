@@ -3886,6 +3886,21 @@ const PC_MECH_CHIP = {
   pending_rule: 'red',
   closed: 'gray',
 };
+// Orden de secciones: manual primero (lo que dicta Eugenio/MVP a mano), luego
+// tracker/CAS (fuente MVP recurrente), luego lo automático de mercado, y al
+// final lo que aun no tiene regla (para que salte a la vista, sin ser lo primero).
+const PC_MECH_ORDER = ['manual_rounds', 'tracker_mvp', 'cas_quarterly', 'residual_guide',
+  'caplight_live', 'market_live', 'at_cost', 'pending_rule'];
+const PC_MECH_SECTION = {
+  manual_rounds: 'Manual (rondas oficiales)',
+  tracker_mvp: 'Tracker MVP',
+  cas_quarterly: 'CAS trimestral',
+  residual_guide: 'Residual (guía MVP)',
+  caplight_live: 'Caplight (mercado secundario)',
+  market_live: 'Mercado público en vivo',
+  at_cost: 'A costo',
+  pending_rule: 'Sin regla',
+};
 
 function pcTimeAgo(iso) {
   if (!iso) return '—';
@@ -3933,29 +3948,39 @@ async function _renderPriceCtl() {
     const name = rule.name || compById[cid] || `Empresa ${cid}`;
     const mech = rule.mechanism || 'pending_rule';
     return { cid, name, mech, sourceLabel: rule.source_label || 'Sin regla', detail: rule.detail, ...g };
-  }).filter(c => c.mech !== 'closed').sort((a, b) => a.name.localeCompare(b.name, 'es'));
+  }).filter(c => c.mech !== 'closed');
 
   if (!cards.length) return '<div class="home-kpis-err">Sin posiciones directas activas.</div>';
 
   const chip = c => `<span class="price-ctl-chip price-ctl-chip-${PC_MECH_CHIP[c.mech] || 'gray'}">${escapeHtml(c.sourceLabel)}</span>`;
+  const card = c => `
+    <div class="price-ctl-card" title="${escapeHtml(c.detail || '')}">
+      <div class="price-ctl-head">
+        <div class="price-ctl-name">${escapeHtml(c.name)}</div>
+        ${chip(c)}
+      </div>
+      <div class="price-ctl-vals">
+        <div class="price-ctl-valbox"><span class="price-ctl-vl">PPS actual</span><span class="price-ctl-vv">${c.pps != null ? '$' + Number(c.pps).toLocaleString('en-US', { maximumFractionDigits: 2 }) : '—'}</span></div>
+        <div class="price-ctl-valbox"><span class="price-ctl-vl">Valuación</span><span class="price-ctl-vv price-ctl-vv-now">${c.val != null ? fmtBil(c.val) : '—'}</span></div>
+      </div>
+      <div class="price-ctl-meta"><span>Actualizado: ${pcTimeAgo(c.updated)}</span><span>${c.n} posición${c.n === 1 ? '' : 'es'}</span></div>
+    </div>`;
+
+  const groups = PC_MECH_ORDER.map(mech => ({
+    mech,
+    items: cards.filter(c => c.mech === mech).sort((a, b) => a.name.localeCompare(b.name, 'es')),
+  })).filter(g => g.items.length);
+  // Cualquier mechanism nuevo que no esté en PC_MECH_ORDER cae al final, no se pierde.
+  const known = new Set(PC_MECH_ORDER);
+  const rest = cards.filter(c => !known.has(c.mech)).sort((a, b) => a.name.localeCompare(b.name, 'es'));
+  if (rest.length) groups.push({ mech: null, items: rest, label: 'Otros' });
 
   return `
     <div class="price-ctl-note">Empresas directas activas · fuente del pps/valuación por empresa (gobernado por valuation_rules.yaml).</div>
-    <div class="price-ctl-grid">
-      ${cards.map(c => `
-        <div class="price-ctl-card" title="${escapeHtml(c.detail || '')}">
-          <div class="price-ctl-head">
-            <div class="price-ctl-name">${escapeHtml(c.name)}</div>
-            ${chip(c)}
-          </div>
-          <div class="price-ctl-vals">
-            <div class="price-ctl-valbox"><span class="price-ctl-vl">PPS actual</span><span class="price-ctl-vv">${c.pps != null ? '$' + Number(c.pps).toLocaleString('en-US', { maximumFractionDigits: 2 }) : '—'}</span></div>
-            <div class="price-ctl-valbox"><span class="price-ctl-vl">Valuación</span><span class="price-ctl-vv price-ctl-vv-now">${c.val != null ? fmtBil(c.val) : '—'}</span></div>
-          </div>
-          <div class="price-ctl-meta"><span>Actualizado: ${pcTimeAgo(c.updated)}</span><span>${c.n} posición${c.n === 1 ? '' : 'es'}</span></div>
-        </div>
-      `).join('')}
-    </div>`;
+    ${groups.map(g => `
+      <div class="snap-sec-h">${escapeHtml(g.label || PC_MECH_SECTION[g.mech] || g.mech)} · ${g.items.length}</div>
+      <div class="price-ctl-grid">${g.items.map(card).join('')}</div>
+    `).join('')}`;
 }
 
 async function openPriceCtl() {
