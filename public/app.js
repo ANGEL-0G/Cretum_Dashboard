@@ -7,8 +7,10 @@ let currentProfile = null;       // { full_name, initials, role }
 let roleReal = null;             // rol REAL del usuario (el toggle "Ver como" muta currentProfile.role solo en memoria)
 let USERS = {};                  // map UUID → { name, initials, role }
 let state = { simple: [], progress: [], assigned: [], invites: [] };
-let tkView = (() => { try { const v = localStorage.getItem('tkView'); return ['lista', 'kanban', 'timeline', 'proyectos'].includes(v) ? v : 'kanban'; } catch { return 'kanban'; } })();
+let tkView = (() => { try { const v = localStorage.getItem('tkView'); return ['lista', 'kanban', 'timeline'].includes(v) ? v : 'kanban'; } catch { return 'kanban'; } })();
 let tkScope = 'personal';
+// Filtro de carpeta/proyecto (panel lateral). null = Todos · '__none__' = Sin proyecto · else nombre del proyecto.
+let tkProjectFilter = (() => { try { return localStorage.getItem('tkProject') || null; } catch { return null; } })();
 let tkType = 'simple';
 let tkId = Date.now();
 let notesData = [];              // blocs de notas personales (user_notes)
@@ -658,6 +660,9 @@ function render() {
   const isEquipo = tkScope === 'equipo';
   const isOtros  = tkScope === 'otros';
   document.getElementById('viewToggle').style.display = (isEquipo || isOtros) ? 'none' : 'flex';
+  // El panel de carpetas/proyectos solo aplica a "Mis tareas" (Equipo/Otros tienen su propio render).
+  const projPanel = document.getElementById('tkProjects');
+  if (projPanel) projPanel.style.display = (isEquipo || isOtros) ? 'none' : '';
   // En "Equipo" se asigna vía openAssignModal (botón propio en renderEquipo);
   // "Otros miembros" es solo lectura.
   // El botón "Nueva tarea" personal solo aplica en scope personal.
@@ -669,11 +674,14 @@ function render() {
 
   maybeOfferClearCompleted();   // ofrece limpieza mensual de completadas
 
+  tkValidateProjectFilter();    // si el proyecto filtrado ya no existe, vuelve a "Todos"
+  renderTkProjects();           // panel lateral / chips de carpetas
+  syncClearBtn();               // botón "Vaciar" del toolbar (todas las vistas)
+
   syncViewButtons();
   const c = document.getElementById('viewContainer');
   if (tkView === 'lista')         c.innerHTML = buildLista();
   else if (tkView === 'kanban')   c.innerHTML = buildKanban();
-  else if (tkView === 'proyectos') c.innerHTML = buildProyectos();
   else                            c.innerHTML = buildTimeline();
 
   // Si una tarea recién completada aterrizó en "Completadas" colapsado, pulsa
@@ -762,7 +770,6 @@ function tkCompletedSection(done) {
       <button class="tk-done-toggle" onclick="tkToggleDone(this)">
         <i class="fa-solid fa-chevron-right tk-done-chev"></i> Completadas <span class="tk-group-n">${done.length}</span>
       </button>
-      <button class="tk-done-clear" onclick="clearCompleted()" title="Eliminar las completadas"><i class="fa-solid fa-broom"></i> Vaciar</button>
     </div>
     <div class="tk-done-body" style="display:${tkDoneOpen ? '' : 'none'}"><div class="tk-rows">${done.map(tkRow).join('')}</div></div>
   </div>`;
@@ -770,7 +777,7 @@ function tkCompletedSection(done) {
 
 /* ── LISTA — activas agrupadas por horizonte temporal ── */
 function buildLista() {
-  const all = myTasks();
+  const all = tkVisibleTasks();
   if (!all.length) return '<div class="tk-empty"><i class="fa-regular fa-square-check"></i><p>Sin tareas. Crea la primera con <strong>Nueva tarea</strong>.</p></div>';
   const active = all.filter(t => !isDone(t)).sort(taskSort);
   const done = all.filter(isDone);
@@ -803,42 +810,76 @@ function buildLista() {
   return html;
 }
 
-/* ── PROYECTOS — activas agrupadas por proyecto (cada proyecto, sus tareas) ── */
+/* ── CARPETAS / PROYECTOS (panel lateral en PC · chips en móvil) ──
+   Reemplaza la antigua "Vista por proyecto": ahora el proyecto es un FILTRO
+   que se aplica a cualquier vista (Lista/Kanban/Timeline), no una vista aparte. */
 function tkProject(t) { return (t.project || '').trim(); }
-function buildProyectos() {
-  const all = myTasks();
-  if (!all.length) return '<div class="tk-empty"><i class="fa-regular fa-folder-open"></i><p>Sin tareas. Crea una y asígnale un <strong>proyecto</strong>.</p></div>';
-  const active = all.filter(t => !isDone(t));
-  const done = all.filter(isDone);
 
-  const byProj = new Map();
-  active.forEach(t => {
-    const key = tkProject(t) || '__none__';
-    if (!byProj.has(key)) byProj.set(key, []);
-    byProj.get(key).push(t);
-  });
-  // Proyectos nombrados primero (alfabético), "Sin proyecto" al final
-  const keys = [...byProj.keys()].sort((a, b) =>
-    a === '__none__' ? 1 : b === '__none__' ? -1 : a.localeCompare(b, 'es'));
+// Tareas visibles = ámbito actual (myTasks) filtradas por la carpeta elegida.
+function tkVisibleTasks() {
+  const ts = myTasks();
+  if (tkProjectFilter === '__none__') return ts.filter(t => !tkProject(t));
+  if (tkProjectFilter)                return ts.filter(t => tkProject(t) === tkProjectFilter);
+  return ts;
+}
 
-  let html = '<div class="tk-list">';
-  if (!active.length) {
-    html += '<div class="tk-empty mini"><i class="fa-regular fa-circle-check"></i><p>¡Todo al día! No tienes tareas activas.</p></div>';
-  } else {
-    html += keys.map(key => {
-      const tasks = byProj.get(key).sort(taskSort);
-      const isNone = key === '__none__';
-      const label = isNone ? 'Sin proyecto' : key;
-      const ico = isNone ? 'fa-folder' : 'fa-folder-open';
-      return `<div class="tk-group">
-        <div class="tk-group-label${isNone ? ' tk-proj-none' : ''}"><i class="fa-solid ${ico} tk-proj-ico"></i> ${escapeHtml(label)} <span class="tk-group-n">${tasks.length}</span></div>
-        <div class="tk-rows">${tasks.map(tkRow).join('')}</div>
-      </div>`;
-    }).join('');
+// Carpetas del ámbito actual con sus conteos, para pintar el panel.
+function tkFolders() {
+  const ts = myTasks();
+  const counts = new Map();
+  let none = 0;
+  ts.forEach(t => { const p = tkProject(t); if (p) counts.set(p, (counts.get(p) || 0) + 1); else none++; });
+  const names = [...counts.keys()].sort((a, b) => a.localeCompare(b, 'es'))
+    .map(n => ({ key: n, label: n, count: counts.get(n) }));
+  return { total: ts.length, names, none };
+}
+
+// Si el proyecto filtrado ya no existe en el ámbito actual, vuelve a "Todos".
+function tkValidateProjectFilter() {
+  const ts = myTasks();
+  if (tkProjectFilter === '__none__') {
+    if (!ts.some(t => !tkProject(t))) tkProjectFilter = null;
+  } else if (tkProjectFilter) {
+    if (!ts.some(t => tkProject(t) === tkProjectFilter)) tkProjectFilter = null;
   }
-  html += tkCompletedSection(done);
-  html += '</div>';
-  return html;
+}
+
+function tkSetProject(v) {
+  tkProjectFilter = (v === '__all__') ? null : v;
+  try { localStorage.setItem('tkProject', tkProjectFilter || ''); } catch {}
+  render();
+}
+
+// Pinta el panel de carpetas (columna fija en PC, fila de chips deslizable en móvil).
+function renderTkProjects() {
+  const el = document.getElementById('tkProjects');
+  if (!el) return;
+  const f = tkFolders();
+  const rows = [{ k: '__all__', ico: 'fa-layer-group', label: 'Todos', n: f.total, on: tkProjectFilter === null }];
+  f.names.forEach(p => rows.push({ k: p.key, ico: 'fa-folder', label: p.label, n: p.count, on: tkProjectFilter === p.key }));
+  if (f.none) rows.push({ k: '__none__', ico: 'fa-folder-open', label: 'Sin proyecto', n: f.none, on: tkProjectFilter === '__none__' });
+
+  el.innerHTML = rows.map(r =>
+    `<button class="tk-proj-item${r.on ? ' on' : ''}" data-proj="${escapeAttr(r.k)}" title="${escapeAttr(r.label)}">
+      <i class="fa-solid ${r.ico}"></i>
+      <span class="tk-proj-name">${escapeHtml(r.label)}</span>
+      <span class="tk-proj-count">${r.n}</span>
+    </button>`).join('');
+  el.querySelectorAll('.tk-proj-item').forEach(btn =>
+    btn.addEventListener('click', () => tkSetProject(btn.dataset.proj)));
+  // En móvil (chips) deja a la vista la carpeta activa.
+  const on = el.querySelector('.tk-proj-item.on');
+  if (on && window.matchMedia('(max-width:860px)').matches) on.scrollIntoView({ block: 'nearest', inline: 'center' });
+}
+
+// Botón "Vaciar completadas" del toolbar: visible en TODAS las vistas si hay completadas.
+function syncClearBtn() {
+  const b = document.getElementById('tkClearAllBtn');
+  if (!b) return;
+  const n = tkVisibleTasks().filter(isDone).length;   // coincide con lo que se ve (carpeta + ámbito)
+  b.style.display = n ? 'inline-flex' : 'none';
+  const c = b.querySelector('.tk-clear-n');
+  if (c) c.textContent = n;
 }
 
 // Despliega/colapsa la sección de completadas
@@ -869,6 +910,23 @@ function clearCompleted() {
   render();
   toast(`${n} completada${n === 1 ? '' : 's'} eliminada${n === 1 ? '' : 's'}`);
 }
+// Vacía SOLO las completadas visibles (respeta la carpeta y el ámbito activos), para
+// que coincida con lo que se ve en pantalla. Es la acción del botón del toolbar.
+function clearCompletedVisible() {
+  const vis = tkVisibleTasks().filter(isDone);
+  const n = vis.length;
+  if (!n) { toast('No hay tareas completadas para vaciar'); return; }
+  const scope = (tkProjectFilter && tkProjectFilter !== '__none__') ? ` de "${tkProjectFilter}"`
+              : tkProjectFilter === '__none__' ? ' sin proyecto' : '';
+  if (!confirm(`¿Vaciar ${n} tarea${n === 1 ? '' : 's'} completada${n === 1 ? '' : 's'}${scope}? Esto las elimina y no se puede deshacer.`)) return;
+  const ids = new Set(vis.map(t => t.id));
+  state.simple = state.simple.filter(t => !ids.has(t.id));
+  state.progress = state.progress.filter(t => !ids.has(t.id));
+  try { localStorage.setItem('tkClearPromptAt', String(Date.now())); } catch {}
+  scheduleSave();
+  render();
+  toast(`${n} completada${n === 1 ? '' : 's'} eliminada${n === 1 ? '' : 's'}`);
+}
 function snoozeClearPrompt() {
   try { localStorage.setItem('tkClearPromptAt', String(Date.now())); } catch {}
   const b = document.getElementById('tkClearBanner'); if (b) b.style.display = 'none';
@@ -894,7 +952,7 @@ function maybeOfferClearCompleted() {
 
 /* ── KANBAN ── */
 function buildKanban() {
-  const tasks = myTasks();
+  const tasks = tkVisibleTasks();
   if (!tasks.length) return '<div style="padding:32px;text-align:center;color:var(--gray-400)">Sin tareas</div>';
   const cols = [
     { key: 'pending',  label: 'Pendiente',   dot: 'var(--gray-300)', tasks: [] },
@@ -964,7 +1022,7 @@ function buildKanban() {
 
 /* ── TIMELINE ── */
 function buildTimeline() {
-  const tasks = myTasks().filter(t => !isDone(t));   // la línea de tiempo es para lo que falta; las completadas se dejan de lado
+  const tasks = tkVisibleTasks().filter(t => !isDone(t));   // la línea de tiempo es para lo que falta; las completadas se dejan de lado
   if (!tasks.length) return '<div class="tk-empty"><i class="fa-regular fa-circle-check"></i><p>Sin tareas pendientes. ¡Buen trabajo!</p></div>';
   const todayStr = new Date().toISOString().slice(0, 10);
   const grouped = {};

@@ -466,6 +466,59 @@ select.camp-f-inp::-ms-expand,select.form-input::-ms-expand{display:none}
 .tk-view-opt:hover{background:var(--gray-50)}
 .tk-view-opt.on{background:var(--navy-ghost);color:var(--navy);font-weight:500}
 .tk-view-opt.on i{color:var(--navy)}
+
+/* ── To Do: botón Vaciar (toolbar, todas las vistas) ── */
+.tk-clear-btn{
+  display:none;align-items:center;gap:6px;
+  background:none;border:1px solid var(--gray-200);color:var(--gray-600);
+  padding:8px 12px;border-radius:var(--r-md);cursor:pointer;
+  font-family:var(--font);font-size:13px;
+  transition:background .12s,border-color .12s,color .12s;
+}
+.tk-clear-btn:hover{background:var(--red-ghost,rgba(220,38,38,.08));border-color:var(--red,#dc2626);color:var(--red,#dc2626)}
+.tk-clear-btn .tk-clear-n{
+  font-size:11px;font-variant-numeric:tabular-nums;
+  background:var(--gray-100);color:var(--gray-600);padding:1px 7px;border-radius:10px;
+}
+.tk-clear-btn:hover .tk-clear-n{background:var(--red,#dc2626);color:#fff}
+
+/* ── To Do: panel lateral de carpetas/proyectos (PC) · chips (móvil) ── */
+.tk-body{display:flex;gap:16px;align-items:flex-start}
+.tk-main{flex:1;min-width:0}
+.tk-projects{
+  flex:0 0 196px;width:196px;align-self:flex-start;
+  position:sticky;top:8px;
+  display:flex;flex-direction:column;gap:2px;
+  max-height:calc(100vh - 150px);overflow-y:auto;padding-right:2px;
+}
+.tk-proj-item{
+  display:flex;align-items:center;gap:9px;width:100%;
+  padding:8px 10px;border:none;background:none;cursor:pointer;
+  border-radius:var(--r-md);font-family:var(--font);font-size:13px;
+  color:var(--gray-600);text-align:left;transition:background .12s,color .12s;
+}
+.tk-proj-item i{width:15px;flex:none;text-align:center;color:var(--gray-400);font-size:13px}
+.tk-proj-item:hover{background:var(--gray-50)}
+.tk-proj-item.on{background:var(--navy-ghost);color:var(--navy);font-weight:500}
+.tk-proj-item.on i{color:var(--navy)}
+.tk-proj-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tk-proj-count{
+  flex:none;font-size:11px;font-variant-numeric:tabular-nums;
+  color:var(--gray-400);background:var(--gray-100);padding:1px 7px;border-radius:10px;
+}
+.tk-proj-item.on .tk-proj-count{background:var(--navy);color:#fff}
+
+@media (max-width:860px){
+  .tk-body{flex-direction:column;gap:10px}
+  .tk-projects{
+    flex:none;width:auto;position:static;max-height:none;
+    flex-direction:row;overflow-x:auto;overflow-y:hidden;gap:6px;
+    padding:0 0 4px;-webkit-overflow-scrolling:touch;scrollbar-width:none;
+  }
+  .tk-projects::-webkit-scrollbar{display:none}
+  .tk-proj-item{width:auto;flex:0 0 auto;white-space:nowrap;border:1px solid var(--gray-200);padding:7px 12px}
+  .tk-proj-name{max-width:130px}
+}
 .tk-notes-btn.active{background:var(--navy);border-color:var(--navy);color:#fff}
 .tk-notes-btn.active i{color:#fff}
 @media (prefers-reduced-motion:reduce){.tk-view-menu,.tk-view-pick-btn .tk-view-chev{transition:none}}
@@ -3846,6 +3899,9 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
         <i class="fa-solid fa-plus"></i> Nueva tarea
       </button>
       <div class="tk-view-toggle" id="viewToggle">
+        <button class="tk-clear-btn" id="tkClearAllBtn" style="display:none" onclick="clearCompletedVisible()" title="Eliminar tareas completadas">
+          <i class="fa-solid fa-broom"></i> <span>Vaciar</span> <span class="tk-clear-n">0</span>
+        </button>
         <div class="tk-view-picker">
           <button class="tk-view-pick-btn" id="viewPickBtn" onclick="toggleViewMenu(event)" aria-haspopup="true" aria-expanded="false" title="Elegir tipo de vista">
             <i class="fa-solid fa-table-columns tk-view-lead"></i>
@@ -3856,7 +3912,6 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
             <button class="tk-view-opt" data-view="lista" role="menuitem" onclick="pickView('lista')"><i class="fa-solid fa-list"></i> Lista</button>
             <button class="tk-view-opt" data-view="kanban" role="menuitem" onclick="pickView('kanban')"><i class="fa-solid fa-table-columns"></i> Kanban</button>
             <button class="tk-view-opt" data-view="timeline" role="menuitem" onclick="pickView('timeline')"><i class="fa-solid fa-timeline"></i> Timeline</button>
-            <button class="tk-view-opt" data-view="proyectos" role="menuitem" onclick="pickView('proyectos')"><i class="fa-solid fa-layer-group"></i> Por proyecto</button>
           </div>
         </div>
       </div>
@@ -3875,8 +3930,13 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
     <!-- Invites -->
     <div id="invitesEl"></div>
 
-    <!-- View container -->
-    <div id="viewContainer"></div>
+    <!-- Carpetas de proyecto (panel lateral en PC · chips deslizables en móvil) + vista -->
+    <div class="tk-body">
+      <aside class="tk-projects" id="tkProjects"></aside>
+      <div class="tk-main">
+        <div id="viewContainer"></div>
+      </div>
+    </div>
 
   </div>
 
@@ -6344,6 +6404,6 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 </div>
 
 <script src="/i18n.js?v=20260805-statusui"></script>
-<script src="/app.js?v=20260807-pdfmobile"></script>
+<script src="/app.js?v=20260807-todofolders"></script>
 </body>
 </html>
