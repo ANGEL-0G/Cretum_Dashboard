@@ -14103,6 +14103,20 @@ function campTemplateOpen() {
     document.getElementById('campTplAnio').value = String(d.getFullYear());
   }
   document.getElementById('campTplModal').classList.add('show');
+  campTemplatePreviewCurrent();
+}
+// Vista previa del modal = lo que está PUBLICADO (Campaña Actual), para que
+// coincida con lo que ve el equipo, incluyendo ediciones del "Editor completo".
+// Si aún no hay campaña publicada, cae a la plantilla que arma la forma.
+async function campTemplatePreviewCurrent() {
+  try {
+    const { data } = await sb.from('campaign_current').select('html').eq('id', 1).maybeSingle();
+    if (data && data.html && data.html.trim()) {
+      document.getElementById('campTplFrame').srcdoc =
+        `<!doctype html><html><head><meta charset="utf-8"></head><body style="margin:0">${data.html}</body></html>`;
+      return;
+    }
+  } catch (e) { /* sin conexión → cae al template de la forma */ }
   campTemplateRender();
 }
 // Cerrar NO guarda: solo Copiar HTML / Descargar publican la Campaña Actual
