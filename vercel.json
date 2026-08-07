@@ -293,7 +293,7 @@
     {
       "src": "/carta",
       "status": 307,
-      "headers": { "Location": "https://ygmiwiaycfeyjpgormou.supabase.co/storage/v1/object/public/cartas/carta-actual.pdf" }
+      "headers": { "Location": "https://ygmiwiaycfeyjpgormou.supabase.co/storage/v1/object/public/cartas/Carta%20Mensual%20GVV%20Cretum%20Partners.pdf" }
     },
     {
       "src": "/docs/(.*)",

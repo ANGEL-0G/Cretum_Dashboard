@@ -12224,6 +12224,9 @@ async function campCartaOpen() {
    una URL pública fija (cretumdesk.com/carta) sin pedir login, y rápido.
    Guarda dos copias: "carta-actual.pdf" (la que sirve el enlace fijo) y una
    copia por mes para archivo (borrable por año). Reusa la ruta de Dropbox. */
+// Nombre del archivo público (lo ve el cliente en la pestaña/descarga → debe verse pro).
+// OJO: si cambias esto, actualiza también la ruta /carta en vercel.json (URL-encoded).
+const CARTA_PUBLIC_NAME = 'Carta Mensual GVV Cretum Partners.pdf';
 async function campResolveCartaFile() {
   if (campCartaFile) return campCartaFile;
   const y = new Date().getFullYear();
@@ -12253,7 +12256,7 @@ async function campPublishCartaToDesk() {
     if (!r.ok) throw new Error('No se pudo descargar de Dropbox (HTTP ' + r.status + ')');
     const blob = await r.blob();
     // Enlace fijo (lo que sirve cretumdesk.com/carta) — cache corto para que se vea el cambio pronto
-    const up = await sb.storage.from('cartas').upload('carta-actual.pdf', blob,
+    const up = await sb.storage.from('cartas').upload(CARTA_PUBLIC_NAME, blob,
       { contentType: 'application/pdf', upsert: true, cacheControl: '60' });
     if (up.error) throw up.error;
     // Copia de archivo por mes (borrable por año)
