@@ -9183,6 +9183,62 @@ document.getElementById('dbxSearchInput')?.addEventListener('input', (e) => {
 });
 
 // ── PREVIEW ──
+
+// Los navegadores móviles (iOS Safari, Android) NO renderizan un PDF dentro de
+// un <iframe>: sale en blanco. Para esos casos dibujamos el PDF con PDF.js sobre
+// <canvas>. En escritorio dejamos el iframe nativo (trae zoom/búsqueda/imprimir).
+function dbxIsMobile(){
+  return window.matchMedia('(max-width:860px)').matches
+      || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+}
+
+// Carga perezosa de PDF.js desde CDN (igual patrón que Supabase). Solo baja el
+// ~1 MB de la librería la primera vez que alguien previsualiza un PDF en móvil.
+let _pdfjsPromise = null;
+function loadPdfJs(){
+  if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  if (_pdfjsPromise) return _pdfjsPromise;
+  const V = '3.11.174';
+  _pdfjsPromise = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${V}/build/pdf.min.js`;
+    s.onload = () => {
+      try {
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+          `https://cdn.jsdelivr.net/npm/pdfjs-dist@${V}/build/pdf.worker.min.js`;
+        resolve(window.pdfjsLib);
+      } catch (e) { reject(e); }
+    };
+    s.onerror = () => { _pdfjsPromise = null; reject(new Error('No se pudo cargar el visor de PDF')); };
+    document.head.appendChild(s);
+  });
+  return _pdfjsPromise;
+}
+
+// Dibuja todas las páginas del PDF (ArrayBuffer) en el cuerpo del modal.
+async function dbxRenderPdf(body, arrayBuffer){
+  const pdfjsLib = await loadPdfJs();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const scroll = document.createElement('div');
+  scroll.className = 'dbx-pdf-scroll';
+  body.innerHTML = '';
+  body.appendChild(scroll);
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const cw = Math.min((scroll.clientWidth || body.clientWidth || 800), 820);
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const page = await pdf.getPage(p);
+    const base = page.getViewport({ scale: 1 });
+    const vp = page.getViewport({ scale: (cw / base.width) * dpr });
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.floor(vp.width);
+    canvas.height = Math.floor(vp.height);
+    canvas.style.width = cw + 'px';
+    canvas.style.height = Math.floor(cw * base.height / base.width) + 'px';
+    scroll.appendChild(canvas);
+    await page.render({ canvasContext: canvas.getContext('2d', { alpha: false }), viewport: vp }).promise;
+  }
+}
+
 async function openDbxPreview(entry){
   const modal = document.getElementById('dbxPreview');
   const body = document.getElementById('dbxPreviewBody');
@@ -9226,19 +9282,27 @@ async function openDbxPreview(entry){
       const r = await authedFetch('/api/dropbox?action=download&path=' + encodeURIComponent(entry.path));
       if (!r.ok) throw new Error('No se pudo cargar el PDF');
       const buf = await r.arrayBuffer();
-      const blob = new Blob([buf], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      dbxPreviewUrls.push(url);
-      body.innerHTML = `<iframe src="${url}#toolbar=1" allow="fullscreen"></iframe>`;
+      if (dbxIsMobile()) {
+        await dbxRenderPdf(body, buf);            // móvil: canvas (el iframe sale en blanco)
+      } else {
+        const url = URL.createObjectURL(new Blob([buf], { type: 'application/pdf' }));
+        dbxPreviewUrls.push(url);
+        body.innerHTML = `<iframe src="${url}#toolbar=1" allow="fullscreen"></iframe>`;
+      }
     }
     else if (OFFICE_PREVIEWABLE.has(ext)) {
-      // Pide a Dropbox un preview en PDF (binario) y lo mostramos en iframe
+      // Pide a Dropbox un preview en PDF (binario). En escritorio va en iframe;
+      // en móvil lo dibujamos con PDF.js (el iframe no renderiza PDFs ahí).
       const r = await authedFetch('/api/dropbox?action=preview&path=' + encodeURIComponent(entry.path));
       if (!r.ok) throw new Error('Vista previa no disponible');
       const blob = await r.blob();
-      const url = URL.createObjectURL(blob);
-      dbxPreviewUrls.push(url);
-      body.innerHTML = `<iframe src="${url}#toolbar=1" allow="fullscreen"></iframe>`;
+      if (dbxIsMobile()) {
+        await dbxRenderPdf(body, await blob.arrayBuffer());
+      } else {
+        const url = URL.createObjectURL(blob);
+        dbxPreviewUrls.push(url);
+        body.innerHTML = `<iframe src="${url}#toolbar=1" allow="fullscreen"></iframe>`;
+      }
     }
     else {
       // Sin vista previa
