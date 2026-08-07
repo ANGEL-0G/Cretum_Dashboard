@@ -12219,6 +12219,57 @@ async function campCartaOpen() {
   }
 }
 
+/* ── Publicar la carta en el desk (Supabase Storage, bucket público "cartas") ──
+   Copia la última carta autorizada de Dropbox a Storage para que se abra por
+   una URL pública fija (cretumdesk.com/carta) sin pedir login, y rápido.
+   Guarda dos copias: "carta-actual.pdf" (la que sirve el enlace fijo) y una
+   copia por mes para archivo (borrable por año). Reusa la ruta de Dropbox. */
+async function campResolveCartaFile() {
+  if (campCartaFile) return campCartaFile;
+  const y = new Date().getFullYear();
+  let entries = await campCartaList(`${CARTA_DBX_DIR}/${y}`);
+  if (!entries.some(e => e.type === 'file')) entries = await campCartaList(`${CARTA_DBX_DIR}/${y - 1}`);
+  const files = entries.filter(e => e.type === 'file');
+  if (!files.length) return null;
+  files.sort((a, b) => String(b.modified || '').localeCompare(String(a.modified || '')));
+  campCartaFile = files[0];
+  return campCartaFile;
+}
+function cartaArchName(f) {
+  const label = campCartaMes(f);                    // p.ej. "Julio 2026"
+  const parts = String(label).split(' ');
+  const mi = MESES_ES.findIndex(m => m.toLowerCase() === (parts[0] || '').toLowerCase());
+  const anio = parts[1] || String(new Date().getFullYear());
+  const mm = mi >= 0 ? String(mi + 1).padStart(2, '0') : '00';
+  return `carta-${anio}-${mm}.pdf`;
+}
+async function campPublishCartaToDesk() {
+  if (roleReal !== 'admin') { toast('Solo un administrador puede publicar la carta'); return; }
+  toast('Buscando la última carta en Dropbox…');
+  const f = await campResolveCartaFile();
+  if (!f) { toast('No encontré ninguna carta en la carpeta de Dropbox'); return; }
+  try {
+    const r = await authedFetch('/api/dropbox?action=download&path=' + encodeURIComponent(f.path));
+    if (!r.ok) throw new Error('No se pudo descargar de Dropbox (HTTP ' + r.status + ')');
+    const blob = await r.blob();
+    // Enlace fijo (lo que sirve cretumdesk.com/carta) — cache corto para que se vea el cambio pronto
+    const up = await sb.storage.from('cartas').upload('carta-actual.pdf', blob,
+      { contentType: 'application/pdf', upsert: true, cacheControl: '60' });
+    if (up.error) throw up.error;
+    // Copia de archivo por mes (borrable por año)
+    await sb.storage.from('cartas').upload(cartaArchName(f), blob,
+      { contentType: 'application/pdf', upsert: true, cacheControl: '3600' });
+    toast('Carta publicada — cretumdesk.com/carta');
+    // Deja el enlace fijo puesto en la campaña (no cambia mes a mes)
+    const linkInp = document.getElementById('campTplLink');
+    if (linkInp) { linkInp.value = 'https://cretumdesk.com/carta'; if (typeof campTemplateRender === 'function') campTemplateRender(); }
+  } catch (err) {
+    console.error('[publicarCarta]', err);
+    const falta = /bucket|not found|does not exist|row-level|violat/i.test(err.message || '');
+    toast('No se pudo publicar' + (falta ? ': falta crear el bucket "cartas" (corre el SQL)' : ': ' + (err.message || 'error')));
+  }
+}
+
 /* ── Detalle de interacción por LP (feedback para el vendedor) ── */
 // Desde el ranking: usa el historial que trae campaign_ranking() (sin email).
 function campLpOpen(i) {

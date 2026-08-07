@@ -291,6 +291,11 @@
       "dest": "/public/gvv-detalle.html"
     },
     {
+      "src": "/carta",
+      "status": 307,
+      "headers": { "Location": "https://ygmiwiaycfeyjpgormou.supabase.co/storage/v1/object/public/cartas/carta-actual.pdf" }
+    },
+    {
       "src": "/docs/(.*)",
       "dest": "/public/docs/$1"
     },
