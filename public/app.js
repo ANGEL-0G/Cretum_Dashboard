@@ -12221,7 +12221,7 @@ async function campCartaOpen() {
 
 /* ── Publicar la carta en el desk (Supabase Storage, bucket público "cartas") ──
    Copia la última carta autorizada de Dropbox a Storage para que se abra por
-   una URL pública fija (cretumdesk.com/gvv.pdf) sin pedir login, y rápido.
+   una URL pública fija (cretumdesk.com/gvv) sin pedir login, y rápido.
    Guarda dos copias: "carta-actual.pdf" (la que sirve el enlace fijo) y una
    copia por mes para archivo (borrable por año). Reusa la ruta de Dropbox. */
 // Nombre del archivo público (lo ve el cliente en la pestaña/descarga → debe verse pro).
@@ -12262,7 +12262,7 @@ async function campStoreCartaBlob(blob, archName) {
   if (archName) await sb.storage.from('cartas').upload(archName, blob,
     { contentType: 'application/pdf', upsert: true, cacheControl: '3600' });  // copia de archivo (borrable por año)
   const linkInp = document.getElementById('campTplLink');
-  if (linkInp) { linkInp.value = 'https://cretumdesk.com/gvv.pdf'; if (typeof campTemplateRender === 'function') campTemplateRender(); }
+  if (linkInp) { linkInp.value = 'https://cretumdesk.com/gvv'; if (typeof campTemplateRender === 'function') campTemplateRender(); }
 }
 function campCartaErr(err) {
   console.error('[publicarCarta]', err);
@@ -12279,7 +12279,7 @@ async function campPublishCartaToDesk() {
     const r = await authedFetch('/api/dropbox?action=download&path=' + encodeURIComponent(f.path));
     if (!r.ok) throw new Error('No se pudo descargar de Dropbox (HTTP ' + r.status + ')');
     await campStoreCartaBlob(await r.blob(), cartaArchName(f));
-    toast('Carta publicada — cretumdesk.com/gvv.pdf');
+    toast('Carta publicada — cretumdesk.com/gvv');
   } catch (err) { campCartaErr(err); }
 }
 // Opción B: subir un PDF desde la computadora (no tiene que estar en Dropbox).
@@ -12293,7 +12293,7 @@ async function campUploadCartaFile(input) {
   toast('Publicando carta…');
   try {
     await campStoreCartaBlob(file, cartaArchNameFromForm());
-    toast('Carta publicada — cretumdesk.com/gvv.pdf');
+    toast('Carta publicada — cretumdesk.com/gvv');
   } catch (err) { campCartaErr(err); }
 }
 
