@@ -746,6 +746,8 @@ select.camp-f-inp::-ms-expand,select.form-input::-ms-expand{display:none}
 .et-ebar{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--white);border-bottom:1px solid var(--gray-200);flex-shrink:0}
 .et-etitle{flex:1;min-width:0;border:1px solid transparent;border-radius:var(--r-md);padding:8px 11px;font-family:var(--font);font-size:15px;font-weight:600;color:var(--gray-900);background:transparent;outline:none;transition:background .15s,border-color .15s}
 .et-etitle:hover{background:var(--gray-50)}
+.et-mode-label{flex:1;min-width:0;display:flex;align-items:center;gap:8px;font-family:var(--font);font-size:15px;font-weight:600;color:var(--navy);padding:8px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.et-mode-label i{color:var(--navy)}
 .et-etitle:focus{background:var(--gray-50);border-color:var(--navy)}
 .et-ebar-r{display:flex;align-items:center;gap:7px;flex-shrink:0}
 .et-ebtn{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;padding:8px 13px;border-radius:var(--r-md);border:1px solid var(--gray-200);background:var(--white);color:var(--gray-700);cursor:pointer;font-family:var(--font);transition:color .15s,border-color .15s,background .15s,transform .12s var(--et-ease)}
@@ -4911,8 +4913,9 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
           <div class="camp-tpl-actions">
             <button class="btn-primary" type="button" onclick="campTemplateCopy()"><i class="fa-solid fa-copy"></i> Copiar HTML</button>
             <button class="cdd-btn" type="button" onclick="campTemplateDownload()"><i class="fa-solid fa-download"></i> Descargar .html</button>
+            <button class="cdd-btn" type="button" onclick="etOpenCampaign()" title="Editar el correo con el editor completo (texto, imágenes, código)"><i class="fa-solid fa-pen-ruler"></i> Editor completo</button>
           </div>
-          <div class="camp-tpl-hint">Verde si + / rojo si − (automático). Los <code>{!Nombre}</code> son el campo de Yesware, no los toques. Deja un % vacío si quieres ese espacio en blanco.</div>
+          <div class="camp-tpl-hint">Verde si + / rojo si − (automático). Los <code>{!Nombre}</code> son el campo de Yesware, no los toques. Deja un % vacío si quieres ese espacio en blanco.<br><b>Editor completo</b>: abre el mismo editor de Ventas cargado con esta plantilla; al guardar se publica como la Campaña Actual.</div>
         </div>
         <div class="camp-tpl-preview">
           <div class="camp-tpl-prev-lbl">Vista previa</div>
@@ -5804,6 +5807,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   <div class="et-ebar">
     <button class="et-ebtn ghost" onclick="etCloseEditor()" title="Volver a la biblioteca" aria-label="Volver"><i class="fa-solid fa-arrow-left"></i></button>
     <input id="etTitle" class="et-etitle" maxlength="120" autocomplete="off" placeholder="Nombre de la plantilla">
+    <span id="etModeLabel" class="et-mode-label" hidden><i class="fa-solid fa-bullhorn"></i> Campaña mensual — al guardar se publica</span>
     <div class="et-ebar-r">
       <button class="et-ebtn" id="etModeBtn" onclick="etToggleMode()" title="Alternar vista de código"><i class="fa-solid fa-code"></i><span class="et-ebtn-tx">Código</span></button>
       <button class="et-ebtn" onclick="etCopyCurrent()" title="Copiar para Outlook/Gmail"><i class="fa-solid fa-copy"></i><span class="et-ebtn-tx">Copiar</span></button>
@@ -6404,6 +6408,6 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 </div>
 
 <script src="/i18n.js?v=20260805-statusui"></script>
-<script src="/app.js?v=20260807-todofolders"></script>
+<script src="/app.js?v=20260807-campeditor"></script>
 </body>
 </html>

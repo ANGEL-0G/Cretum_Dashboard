@@ -4260,6 +4260,7 @@ function openUmamiNewTab() {
 ═══════════════════════════════════════════════════════════════════════════ */
 let etData = [];
 let etEditingId = null;       // id en edición (null = nueva)
+let etCampaignMode = false;   // true = el editor edita la Campaña Actual, no una plantilla de Ventas
 let etCodeMode = false;       // true = editando HTML crudo; false = WYSIWYG
 let etSavedRange = null;      // selección preservada al abrir popover de color/enlace
 const ET_VERSION_DAYS = 14;
@@ -4396,9 +4397,13 @@ function etBlankTemplate() {
 function etNew() { etOpenEditor(null); }
 function etEdit(id) { const t = etData.find(x => x.id === id); if (t) etOpenEditor(t); }
 function etOpenEditor(t) {
+  etCampaignMode = false;
   etEditingId = t ? t.id : null;
   etCodeMode = false;
   const html = t ? (t.html || '') : etBlankTemplate();
+  // Modo plantilla: campo de nombre visible, etiqueta de campaña oculta
+  document.getElementById('etTitle').hidden = false;
+  document.getElementById('etModeLabel').hidden = true;
   document.getElementById('etTitle').value = t ? (t.title || '') : '';
   document.getElementById('etCode').value = html;
   etApplyModeUI();   // deriva la visibilidad del hint desde el estado
@@ -4406,11 +4411,31 @@ function etOpenEditor(t) {
   document.getElementById('etEditor').hidden = false;
   setTimeout(() => document.getElementById(t ? 'etCanvas' : 'etTitle').focus(), 140);
 }
+
+// Abre el MISMO editor de Ventas para la campaña mensual, precargado con la
+// plantilla actual (la que arma la forma de variables). Al guardar publica la
+// Campaña Actual en vez de crear una plantilla en la biblioteca de Ventas.
+function etOpenCampaign() {
+  etCampaignMode = true;
+  etEditingId = null;
+  etCodeMode = false;
+  const html = (typeof campTemplateHtml === 'function') ? campTemplateHtml() : etBlankTemplate();
+  // Modo campaña: sin campo de nombre; muestra etiqueta de contexto
+  document.getElementById('etTitle').hidden = true;
+  document.getElementById('etModeLabel').hidden = false;
+  document.getElementById('etCode').value = html;
+  etApplyModeUI();
+  etSetCanvasHtml(html);
+  document.getElementById('etEditor').hidden = false;
+  setTimeout(() => document.getElementById('etCanvas').focus(), 140);
+}
+
 function etCloseEditor() {
   etClosePops();
   etHideImgBar();
   document.getElementById('etEditor').hidden = true;
   etEditingId = null;
+  etCampaignMode = false;
 }
 function etCanvasEl() { return document.getElementById('etCanvas'); }
 // El canvas editable NO va en sandbox (designMode/execCommand deben funcionar),
@@ -4671,6 +4696,7 @@ function etWireDrop() {
 
 /* ── Guardar / eliminar / duplicar ── */
 async function etSave() {
+  if (etCampaignMode) return etSaveCampaign();
   const title = (document.getElementById('etTitle').value || '').trim();
   const html = etGetHtml();
   if (!title) { toast('Ponle un nombre a la plantilla'); document.getElementById('etTitle').focus(); return; }
@@ -4700,6 +4726,28 @@ async function etSave() {
   } catch (err) {
     const falta = /relation|does not exist|schema cache|column/i.test(err.message || '');
     toast('No se pudo guardar' + (falta ? ': falta la migración de BD' : ''));
+  }
+}
+// Guarda lo editado como Campaña Actual (lo que ven los no-admin). Conserva el
+// mes/params existentes; solo reemplaza el HTML publicado. No toca la biblioteca
+// de plantillas de Ventas ni crea versiones.
+async function etSaveCampaign() {
+  if (currentProfile?.role !== 'admin') { toast('Solo un administrador puede publicar la campaña'); return; }
+  const html = etGetHtml();
+  if (!html.trim()) { toast('La campaña está vacía'); return; }
+  try {
+    const { data: cur } = await sb.from('campaign_current').select('mes, params').eq('id', 1).maybeSingle();
+    const { error } = await sb.from('campaign_current').upsert(
+      { id: 1, html, mes: cur?.mes || null, params: cur?.params || null, updated_at: new Date().toISOString() },
+      { onConflict: 'id' });
+    if (error) throw error;
+    campCurrentParams = cur?.params || campCurrentParams;
+    toast('Campaña publicada para el equipo');
+    etCloseEditor();
+    if (typeof loadCampActual === 'function') loadCampActual();
+  } catch (err) {
+    console.error('[etSaveCampaign]', err);
+    toast('No se pudo publicar la campaña');
   }
 }
 async function etPruneVersions(id) {
@@ -4954,6 +5002,9 @@ function dismissTopLayer() {
   if (q('taskModal')?.classList.contains('show'))   { closeTaskModal();   return true; }
   if (q('assignModal')?.classList.contains('show')) { closeAssignModal(); return true; }
   if (q('confirmModal')?.classList.contains('show')) { closeConfirm(false); return true; }  // = cancelar (resuelve la promesa)
+  // 2b) Editor de correo (Ventas / campaña) — overlay a pantalla completa; se cierra
+  //     antes que el modal de campaña que puede quedar debajo.
+  if (q('etEditor') && !q('etEditor').hidden) { etCloseEditor(); return true; }
   // 3) Cualquier otro modal/overlay visible (campañas, portal, MFA, confirmaciones…)
   const overlays = document.querySelectorAll('.camp-modal-backdrop.show, .modal-backdrop.show, .mvp-snap-modal.show');
   if (overlays.length) { overlays[overlays.length - 1].classList.remove('show'); return true; }
