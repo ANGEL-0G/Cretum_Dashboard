@@ -3380,6 +3380,9 @@ const ORG_MODULES = {
     { view: 'portal', icon: 'fa-share-nodes', title: 'Portal de clientes',
       desc: 'Sube dashboards de MVP y da acceso a clientes con su propio usuario',
       iconClass: 'home-ico-portal' },
+    { view: 'ventas', icon: 'fa-chart-line', title: 'Ventas',
+      desc: 'Plantillas de correos de MVP: crea, edita y copia listas para enviar',
+      iconClass: 'home-ico-ventas' },
   ],
 };
 
@@ -3404,6 +3407,7 @@ const ORG_NAV = {
     { view: 'fundraising',  icon: 'fa-hand-holding-dollar', label: 'Fund Rising Tracker' },
     { view: 'reports',      icon: 'fa-chart-pie',     label: 'Reportes' },
     { view: 'portal',       icon: 'fa-share-nodes',   label: 'Portal de clientes' },
+    { view: 'ventas',       icon: 'fa-chart-line',    label: 'Ventas' },
     { view: 'usuarios',     icon: 'fa-users-gear',    label: 'Usuarios', adminOnly: true },
   ],
 };
@@ -4216,6 +4220,10 @@ function ventasBackHome() {
   if (umami) umami.style.display = 'none';
   if (plant) plant.style.display = 'none';
   if (page) page.classList.remove('gvv-full');
+  // GVV Dashboard y Web Analytics son de Cretum → ocultos en MVP (solo ve Plantillas).
+  const cretumOnly = currentOrg === 'cretum';
+  document.querySelectorAll('#ventasMenu .ventas-cretum-only')
+    .forEach(el => { el.style.display = cretumOnly ? '' : 'none'; });
 }
 // Embebe el GVV Dashboard (archivo estático servido por cretumdesk).
 // Carga lazy: el iframe (~1.3 MB) no se baja hasta que le piquen.
@@ -4280,6 +4288,7 @@ async function loadEmailTemplates() {
   try {
     const { data, error } = await sb.from('email_templates')
       .select('id,title,html,created_by,updated_by,created_at,updated_at')
+      .eq('org', currentOrg || 'cretum')   // plantillas separadas por organización (MVP ≠ Cretum)
       .order('updated_at', { ascending: false });
     if (error) throw error;
     etData = data || [];
@@ -4674,7 +4683,7 @@ async function etImportFiles(fileList) {
     try {
       const html = await etReadFile(f);
       const { error } = await sb.from('email_templates')
-        .insert({ title: f.name.replace(/\.html?$/i, ''), html, created_by: currentUser, updated_by: currentUser });
+        .insert({ title: f.name.replace(/\.html?$/i, ''), html, org: currentOrg || 'cretum', created_by: currentUser, updated_by: currentUser });
       if (!error) ok++;
     } catch (e) { /* sigue con los demás */ }
   }
@@ -4724,7 +4733,7 @@ async function etSave() {
       toast('Plantilla guardada');
     } else {
       const { error } = await sb.from('email_templates')
-        .insert({ title, html, created_by: currentUser, updated_by: currentUser });
+        .insert({ title, html, org: currentOrg || 'cretum', created_by: currentUser, updated_by: currentUser });
       if (error) throw error;
       toast('Plantilla creada');
     }
@@ -4768,7 +4777,7 @@ async function etDuplicate(id) {
   if (!t) return;
   try {
     const { error } = await sb.from('email_templates')
-      .insert({ title: (t.title || 'Plantilla') + ' (copia)', html: t.html || '', created_by: currentUser, updated_by: currentUser });
+      .insert({ title: (t.title || 'Plantilla') + ' (copia)', html: t.html || '', org: currentOrg || 'cretum', created_by: currentUser, updated_by: currentUser });
     if (error) throw error;
     toast('Plantilla duplicada');
     loadEmailTemplates();
