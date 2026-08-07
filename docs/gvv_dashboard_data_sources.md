@@ -85,8 +85,17 @@ mes reportado (julio = índice 6, 0-based), nunca el mes calendario en que se co
   sección si cambió, igual que se hizo hoy (se dejó intacta a propósito, no es un olvido).
 
 ### Materiales descargables (botones "Presentación" / "Última carta mensual")
-- **Presentación** → SOLO cambia el link, a los 2 PDF de `Marketing/Presentaciones GVV/`
-  (español e inglés — hoy quedan como 2 botones separados, no 1). No afecta ningún número.
+- **Presentación** → SOLO cambia el link, al PDF (español) de `Marketing/Presentaciones GVV/`.
+  No afecta ningún número. **⚠ GOTCHA (descubierto 2026-08-07):** el nombre del archivo
+  ("Cretum GVV Julio 2026 Español.pdf") indica el mes en que se DISTRIBUYE la presentación,
+  NO el mes de los datos que trae adentro — la de "Julio" fue creada el 07-jul con el cierre
+  de JUNIO (julio ni había terminado). El script `update_gvv_dashboard.py` por eso NUNCA
+  confía en el nombre: abre el PDF y compara su propio "YTD 20XX X%" (página de resumen de
+  desempeño) contra el YTD oficial de la carta del mes que se está publicando; si no coincide
+  (tolerancia 0.15pp), NO toca el link ya publicado — mejor dejar el anterior que enlazar algo
+  desactualizado con un nombre que aparenta estar al día. Caso real: julio quedó sin
+  presentación nueva (la única candidata en Dropbox traía YTD 8.41%, la carta de julio decía
+  9.07%) — el link se quedó en la presentación de junio (misma que ya estaba).
 - **Última carta mensual** → SOLO cambia el link, al PDF de `Marketing/Carta Mensual/<año>/`.
   Se sirve desde `cretumdesk.com/docs/...` (mismo repo, Vercel) — NO desde cretumpartners.com
   (ese dominio depende de FTP manual desde la Mac, evitarlo mientras no haya ese acceso aquí).
