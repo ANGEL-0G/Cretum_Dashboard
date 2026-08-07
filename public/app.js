@@ -12254,12 +12254,42 @@ function cartaArchNameFromForm() {
   const mm = (mi >= 0 && mi <= 11) ? String(mi + 1).padStart(2, '0') : '00';
   return `carta-${anio}-${mm}.pdf`;
 }
+// Carga perezosa de pdf-lib (CDN, como pdf.js) para poder escribir el título del PDF.
+let _pdfLibPromise = null;
+function loadPdfLib() {
+  if (window.PDFLib) return Promise.resolve(window.PDFLib);
+  if (_pdfLibPromise) return _pdfLibPromise;
+  _pdfLibPromise = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js';
+    s.onload = () => window.PDFLib ? resolve(window.PDFLib) : reject(new Error('pdf-lib no cargó'));
+    s.onerror = () => { _pdfLibPromise = null; reject(new Error('No se pudo cargar pdf-lib')); };
+    document.head.appendChild(s);
+  });
+  return _pdfLibPromise;
+}
+// Escribe el título DENTRO del PDF → la pestaña del navegador muestra ese nombre
+// (en vez de "gvv" que sale del nombre de la ruta). Si algo falla, sube el original.
+async function cartaWithTitle(blob) {
+  try {
+    const { PDFDocument } = await loadPdfLib();
+    const doc = await PDFDocument.load(new Uint8Array(await blob.arrayBuffer()), { updateMetadata: false });
+    doc.setTitle('GVV Monthly Report');   // ← título de la pestaña del navegador
+    doc.setAuthor('Cretum Partners');
+    doc.setSubject('Carta Mensual GVV');
+    return new Blob([await doc.save()], { type: 'application/pdf' });
+  } catch (e) {
+    console.warn('[carta] no se pudo escribir el título del PDF, subo el original:', e);
+    return blob;
+  }
+}
 // Sube el PDF a Storage: enlace fijo (CARTA_PUBLIC_NAME) + copia de archivo por mes.
 async function campStoreCartaBlob(blob, archName) {
-  const up = await sb.storage.from('cartas').upload(CARTA_PUBLIC_NAME, blob,
+  const pdf = await cartaWithTitle(blob);   // le pone título para que la pestaña no diga "gvv"
+  const up = await sb.storage.from('cartas').upload(CARTA_PUBLIC_NAME, pdf,
     { contentType: 'application/pdf', upsert: true, cacheControl: '60' });   // cache corto → el cambio se ve pronto
   if (up.error) throw up.error;
-  if (archName) await sb.storage.from('cartas').upload(archName, blob,
+  if (archName) await sb.storage.from('cartas').upload(archName, pdf,
     { contentType: 'application/pdf', upsert: true, cacheControl: '3600' });  // copia de archivo (borrable por año)
   const linkInp = document.getElementById('campTplLink');
   if (linkInp) { linkInp.value = 'https://cretumdesk.com/gvv'; if (typeof campTemplateRender === 'function') campTemplateRender(); }

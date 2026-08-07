@@ -293,12 +293,12 @@
     {
       "src": "/gvv",
       "dest": "https://ygmiwiaycfeyjpgormou.supabase.co/storage/v1/object/public/cartas/Carta%20Mensual%20GVV%20Cretum%20Partners.pdf",
-      "headers": { "Content-Disposition": "inline; filename=\"Carta Mensual GVV Cretum Partners.pdf\"" }
+      "headers": { "Content-Disposition": "inline; filename=\"Carta Mensual GVV.pdf\"" }
     },
     {
       "src": "/carta",
       "dest": "https://ygmiwiaycfeyjpgormou.supabase.co/storage/v1/object/public/cartas/Carta%20Mensual%20GVV%20Cretum%20Partners.pdf",
-      "headers": { "Content-Disposition": "inline; filename=\"Carta Mensual GVV Cretum Partners.pdf\"" }
+      "headers": { "Content-Disposition": "inline; filename=\"Carta Mensual GVV.pdf\"" }
     },
     {
       "src": "/docs/(.*)",
