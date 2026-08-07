@@ -4415,11 +4415,18 @@ function etOpenEditor(t) {
 // Abre el MISMO editor de Ventas para la campaña mensual, precargado con la
 // plantilla actual (la que arma la forma de variables). Al guardar publica la
 // Campaña Actual en vez de crear una plantilla en la biblioteca de Ventas.
-function etOpenCampaign() {
+async function etOpenCampaign() {
   etCampaignMode = true;
   etEditingId = null;
   etCodeMode = false;
-  const html = (typeof campTemplateHtml === 'function') ? campTemplateHtml() : etBlankTemplate();
+  // Arranca de lo YA publicado (campaign_current) para no perder ediciones previas;
+  // si aún no hay campaña publicada, usa la plantilla que arma la forma de variables.
+  let html = '';
+  try {
+    const { data } = await sb.from('campaign_current').select('html').eq('id', 1).maybeSingle();
+    html = (data && data.html) || '';
+  } catch (e) { /* sin conexión → cae al template de la forma */ }
+  if (!html.trim()) html = (typeof campTemplateHtml === 'function') ? campTemplateHtml() : etBlankTemplate();
   // Modo campaña: sin campo de nombre; muestra etiqueta de contexto
   document.getElementById('etTitle').hidden = true;
   document.getElementById('etModeLabel').hidden = false;
@@ -4732,22 +4739,22 @@ async function etSave() {
 // mes/params existentes; solo reemplaza el HTML publicado. No toca la biblioteca
 // de plantillas de Ventas ni crea versiones.
 async function etSaveCampaign() {
-  if (currentProfile?.role !== 'admin') { toast('Solo un administrador puede publicar la campaña'); return; }
+  if (roleReal !== 'admin') { toast('Solo un administrador puede publicar la campaña'); return; }
   const html = etGetHtml();
   if (!html.trim()) { toast('La campaña está vacía'); return; }
   try {
+    // Conserva mes/params existentes; solo reemplaza el HTML publicado.
     const { data: cur } = await sb.from('campaign_current').select('mes, params').eq('id', 1).maybeSingle();
     const { error } = await sb.from('campaign_current').upsert(
-      { id: 1, html, mes: cur?.mes || null, params: cur?.params || null, updated_at: new Date().toISOString() },
+      { id: 1, html, mes: (cur && cur.mes) || null, params: (cur && cur.params) || null, updated_at: new Date().toISOString() },
       { onConflict: 'id' });
     if (error) throw error;
-    campCurrentParams = cur?.params || campCurrentParams;
     toast('Campaña publicada para el equipo');
     etCloseEditor();
     if (typeof loadCampActual === 'function') loadCampActual();
   } catch (err) {
     console.error('[etSaveCampaign]', err);
-    toast('No se pudo publicar la campaña');
+    toast('No se pudo publicar: ' + (err.message || 'error de guardado'));
   }
 }
 async function etPruneVersions(id) {
