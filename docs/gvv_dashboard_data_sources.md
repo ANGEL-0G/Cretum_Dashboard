@@ -91,6 +91,22 @@ mes reportado (julio = índice 6, 0-based), nunca el mes calendario en que se co
   Se sirve desde `cretumdesk.com/docs/...` (mismo repo, Vercel) — NO desde cretumpartners.com
   (ese dominio depende de FTP manual desde la Mac, evitarlo mientras no haya ese acceso aquí).
 
+## Automatización (activa desde 2026-08-07)
+`tools/update_gvv_dashboard.py` en el repo `cretum-reports` (Mac Mini) corre cada hora
+(`com.cretum.gvv-dashboard-sync`, `~/srv/ops/gvv_dashboard_sync.sh`, log en
+`~/srv/logs/gvv_dashboard_sync.log`). Jala los 3 documentos directo de las carpetas de
+Dropbox de Kevin/el equipo (login con `CRETUMDESK_EMAIL`/`PASSWORD`, password grant de
+Supabase -> Bearer JWT -> `/api/dropbox`, NO requiere sesión de navegador ni credenciales
+propias de Dropbox). Estado en `_state/gvv_dashboard_sync.json` (últimos `modified` vistos
+por documento, para no reprocesar lo mismo). Backup del HTML anterior en
+`_state/gvv_backup_<timestamp>.html` antes de cada escritura.
+
+Publica solo (commit + push) si el AUM calculado cuadra contra el escalar del Excel
+(tolerancia 0.5%) Y el rendimiento mensual del Excel coincide con el de la carta
+(tolerancia 0.05 pp) — si cualquiera de las 2 no cuadra, PARA sin publicar y avisa por
+Telegram. Si publica, también avisa por Telegram con el resumen (altas/bajas, AUM, rendimiento).
+Validado end-to-end contra el cierre real de julio 2026 (mismos números que la corrida manual).
+
 ## Resumen de la corrida de hoy (julio 2026, 2026-08-06)
 - TRACK jul = 0.61 (carta y Excel coinciden) · TRACKNET jul = 0.35 (Excel).
 - cagr5 14.76 / oneYr 36.83 (carta, oficiales) · cum5y 99.05 (derivado).
