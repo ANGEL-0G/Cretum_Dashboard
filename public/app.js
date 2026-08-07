@@ -12246,6 +12246,30 @@ function cartaArchName(f) {
   const mm = mi >= 0 ? String(mi + 1).padStart(2, '0') : '00';
   return `carta-${anio}-${mm}.pdf`;
 }
+// Nombre de la copia de archivo a partir del mes elegido en la forma del modal.
+function cartaArchNameFromForm() {
+  const mi = +(document.getElementById('campTplMes') ? document.getElementById('campTplMes').value : NaN);
+  const anio = (document.getElementById('campTplAnio') ? document.getElementById('campTplAnio').value : '').trim()
+             || String(new Date().getFullYear());
+  const mm = (mi >= 0 && mi <= 11) ? String(mi + 1).padStart(2, '0') : '00';
+  return `carta-${anio}-${mm}.pdf`;
+}
+// Sube el PDF a Storage: enlace fijo (CARTA_PUBLIC_NAME) + copia de archivo por mes.
+async function campStoreCartaBlob(blob, archName) {
+  const up = await sb.storage.from('cartas').upload(CARTA_PUBLIC_NAME, blob,
+    { contentType: 'application/pdf', upsert: true, cacheControl: '60' });   // cache corto → el cambio se ve pronto
+  if (up.error) throw up.error;
+  if (archName) await sb.storage.from('cartas').upload(archName, blob,
+    { contentType: 'application/pdf', upsert: true, cacheControl: '3600' });  // copia de archivo (borrable por año)
+  const linkInp = document.getElementById('campTplLink');
+  if (linkInp) { linkInp.value = 'https://cretumdesk.com/carta'; if (typeof campTemplateRender === 'function') campTemplateRender(); }
+}
+function campCartaErr(err) {
+  console.error('[publicarCarta]', err);
+  const falta = /bucket|not found|does not exist|row-level|violat/i.test(err.message || '');
+  toast('No se pudo publicar' + (falta ? ': falta crear el bucket "cartas" (corre el SQL)' : ': ' + (err.message || 'error')));
+}
+// Opción A: publicar la última carta autorizada que está en Dropbox.
 async function campPublishCartaToDesk() {
   if (roleReal !== 'admin') { toast('Solo un administrador puede publicar la carta'); return; }
   toast('Buscando la última carta en Dropbox…');
@@ -12254,23 +12278,23 @@ async function campPublishCartaToDesk() {
   try {
     const r = await authedFetch('/api/dropbox?action=download&path=' + encodeURIComponent(f.path));
     if (!r.ok) throw new Error('No se pudo descargar de Dropbox (HTTP ' + r.status + ')');
-    const blob = await r.blob();
-    // Enlace fijo (lo que sirve cretumdesk.com/carta) — cache corto para que se vea el cambio pronto
-    const up = await sb.storage.from('cartas').upload(CARTA_PUBLIC_NAME, blob,
-      { contentType: 'application/pdf', upsert: true, cacheControl: '60' });
-    if (up.error) throw up.error;
-    // Copia de archivo por mes (borrable por año)
-    await sb.storage.from('cartas').upload(cartaArchName(f), blob,
-      { contentType: 'application/pdf', upsert: true, cacheControl: '3600' });
+    await campStoreCartaBlob(await r.blob(), cartaArchName(f));
     toast('Carta publicada — cretumdesk.com/carta');
-    // Deja el enlace fijo puesto en la campaña (no cambia mes a mes)
-    const linkInp = document.getElementById('campTplLink');
-    if (linkInp) { linkInp.value = 'https://cretumdesk.com/carta'; if (typeof campTemplateRender === 'function') campTemplateRender(); }
-  } catch (err) {
-    console.error('[publicarCarta]', err);
-    const falta = /bucket|not found|does not exist|row-level|violat/i.test(err.message || '');
-    toast('No se pudo publicar' + (falta ? ': falta crear el bucket "cartas" (corre el SQL)' : ': ' + (err.message || 'error')));
-  }
+  } catch (err) { campCartaErr(err); }
+}
+// Opción B: subir un PDF desde la computadora (no tiene que estar en Dropbox).
+async function campUploadCartaFile(input) {
+  if (roleReal !== 'admin') { toast('Solo un administrador puede publicar la carta'); return; }
+  const file = input.files && input.files[0];
+  input.value = '';   // permite re-subir el mismo archivo después
+  if (!file) return;
+  if (file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name)) { toast('Sube un archivo PDF'); return; }
+  if (file.size > 25 * 1024 * 1024) { toast('El PDF pesa demasiado (máx. 25 MB)'); return; }
+  toast('Publicando carta…');
+  try {
+    await campStoreCartaBlob(file, cartaArchNameFromForm());
+    toast('Carta publicada — cretumdesk.com/carta');
+  } catch (err) { campCartaErr(err); }
 }
 
 /* ── Detalle de interacción por LP (feedback para el vendedor) ── */
