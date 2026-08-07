@@ -14209,6 +14209,14 @@ function campPctColor(v) {
   if (!Number.isFinite(num)) return '#17436b';
   return num < 0 ? '#c0392b' : num > 0 ? '#28a745' : '#17436b';
 }
+// El % del MES va en azul navy (marca) en vez de verde; rojo si es negativo.
+function campPctColorMensual(v) {
+  const t = String(v).trim();
+  if (!t) return '#17436b';
+  const num = parseFloat(t.replace(/[%+\s]/g, '').replace(',', '.'));
+  if (!Number.isFinite(num)) return '#17436b';
+  return num < 0 ? '#c0392b' : '#17436b';   // navy en positivo/cero, rojo en negativo
+}
 // Formatea "+7.27" → "+7.27%"; vacío → "" (deja el espacio en blanco)
 function campPctFmt(v) {
   const t = String(v).trim();
@@ -14225,7 +14233,7 @@ function campTemplateHtml() {
     '{{MES_ANIO}}': `${mes} ${anio}`.trim(),
     '{{MES_UPPER}}': mes.toUpperCase(),
     '{{ANIO}}': anio,
-    '{{MENSUAL_COLOR}}': campPctColor(mensual),
+    '{{MENSUAL_COLOR}}': campPctColorMensual(mensual),
     '{{MENSUAL}}': campPctFmt(mensual),
     '{{ACUM_COLOR}}': campPctColor(acum),
     '{{ACUM}}': campPctFmt(acum),
@@ -14241,7 +14249,7 @@ function campTemplateRender() {
 }
 // Guarda la plantilla actual como "Campaña Actual" (lo que ven los no-admin)
 async function campSaveCurrent() {
-  if (currentProfile?.role !== 'admin') return;
+  if (roleReal !== 'admin') return false;
   const mesIdx = +document.getElementById('campTplMes').value;
   const mes  = MESES_ES[mesIdx] || '';
   const anio = document.getElementById('campTplAnio').value.trim();
@@ -14253,11 +14261,21 @@ async function campSaveCurrent() {
     link: document.getElementById('campTplLink').value.trim(),
   };
   try {
-    await sb.from('campaign_current').upsert(
+    const { error } = await sb.from('campaign_current').upsert(
       { id: 1, html: campTemplateHtml(), mes: `${mes} ${anio}`.trim(), params, updated_at: new Date().toISOString() },
       { onConflict: 'id' });
+    if (error) throw error;
     campCurrentParams = params;
-  } catch (e) { console.error('[campSaveCurrent]', e); }
+    return true;
+  } catch (e) { console.error('[campSaveCurrent]', e); return false; }
+}
+// Botón "Guardar" de la forma rápida → publica como Campaña Actual (último que
+// se guarde = versión definitiva, igual que el "Guardar" del editor completo).
+async function campSaveCurrentSave() {
+  if (roleReal !== 'admin') { toast('Solo un administrador puede publicar la campaña'); return; }
+  const ok = await campSaveCurrent();
+  toast(ok ? 'Guardado — es la versión publicada del equipo' : 'No se pudo guardar');
+  if (ok && typeof loadCampActual === 'function') loadCampActual();
 }
 function campTemplateCopy() {
   const html = campTemplateHtml();
