@@ -4909,16 +4909,16 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
           <input id="campTplMensual" class="camp-f-inp" placeholder="+7.27" oninput="campTemplateRender()">
           <label class="camp-f-lbl">% acumulado del año</label>
           <input id="campTplAcum" class="camp-f-inp" placeholder="+1.02" oninput="campTemplateRender()">
-          <label class="camp-f-lbl">Link al informe <span class="camp-opt">fijo: cretumdesk.com/carta</span></label>
-          <input id="campTplLink" class="camp-f-inp" placeholder="https://cretumdesk.com/carta" oninput="campTemplateRender()">
-          <button class="cdd-btn camp-carta-pub" type="button" onclick="campPublishCartaToDesk()" title="Toma la última carta autorizada de tu carpeta de Dropbox y la publica en cretumdesk.com/carta"><i class="fa-solid fa-cloud-arrow-up"></i> Publicar la última de Dropbox</button>
-          <label class="cdd-btn camp-carta-pub" title="Sube un PDF desde tu computadora y publícalo en cretumdesk.com/carta"><i class="fa-solid fa-file-arrow-up"></i> Subir un PDF de mi PC<input type="file" accept="application/pdf,.pdf" hidden onchange="campUploadCartaFile(this)"></label>
+          <label class="camp-f-lbl">Link al informe <span class="camp-opt">fijo: cretumdesk.com/gvv.pdf</span></label>
+          <input id="campTplLink" class="camp-f-inp" placeholder="https://cretumdesk.com/gvv.pdf" oninput="campTemplateRender()">
+          <button class="cdd-btn camp-carta-pub" type="button" onclick="campPublishCartaToDesk()" title="Toma la última carta autorizada de tu carpeta de Dropbox y la publica en cretumdesk.com/gvv.pdf"><i class="fa-solid fa-cloud-arrow-up"></i> Publicar la última de Dropbox</button>
+          <label class="cdd-btn camp-carta-pub" title="Sube un PDF desde tu computadora y publícalo en cretumdesk.com/gvv.pdf"><i class="fa-solid fa-file-arrow-up"></i> Subir un PDF de mi PC<input type="file" accept="application/pdf,.pdf" hidden onchange="campUploadCartaFile(this)"></label>
           <div class="camp-tpl-actions">
             <button class="btn-primary" type="button" onclick="campTemplateCopy()"><i class="fa-solid fa-copy"></i> Copiar HTML</button>
             <button class="cdd-btn" type="button" onclick="campTemplateDownload()"><i class="fa-solid fa-download"></i> Descargar .html</button>
             <button class="cdd-btn" type="button" onclick="etOpenCampaign()" title="Editar el correo con el editor completo (texto, imágenes, código)"><i class="fa-solid fa-pen-ruler"></i> Editor completo</button>
           </div>
-          <div class="camp-tpl-hint">Verde si + / rojo si − (automático). Los <code>{!Nombre}</code> son el campo de Yesware, no los toques. Deja un % vacío si quieres ese espacio en blanco.<br><b>Editor completo</b>: abre el mismo editor de Ventas cargado con esta plantilla; al guardar se publica como la Campaña Actual.<br>Publica la carta en tu dominio: <b>desde Dropbox</b> (la última autorizada) o <b>subiendo un PDF</b> de tu PC. El enlace <code>cretumdesk.com/carta</code> es fijo (no cambia cada mes) y abre al instante sin pedir login.</div>
+          <div class="camp-tpl-hint">Verde si + / rojo si − (automático). Los <code>{!Nombre}</code> son el campo de Yesware, no los toques. Deja un % vacío si quieres ese espacio en blanco.<br><b>Editor completo</b>: abre el mismo editor de Ventas cargado con esta plantilla; al guardar se publica como la Campaña Actual.<br>Publica la carta en tu dominio: <b>desde Dropbox</b> (la última autorizada) o <b>subiendo un PDF</b> de tu PC. El enlace <code>cretumdesk.com/gvv.pdf</code> es fijo (no cambia cada mes) y abre al instante sin pedir login.</div>
         </div>
         <div class="camp-tpl-preview">
           <div class="camp-tpl-prev-lbl">Vista previa</div>
@@ -6411,6 +6411,6 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 </div>
 
 <script src="/i18n.js?v=20260805-statusui"></script>
-<script src="/app.js?v=20260807-cartaupload"></script>
+<script src="/app.js?v=20260807-cartapdf"></script>
 </body>
 </html>
