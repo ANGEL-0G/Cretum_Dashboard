@@ -1,3 +1,10 @@
+> ⚠ **DIRECTIVA 2026-08-08 (Eugenio): TODOS los datos salen EXCLUSIVAMENTE del Excel**
+> ("Actualización Info GVV Dashboard.xlsx"). Los KPIs (MTD/YTD/AUM/CAGR5/acumulados,
+> brutos y netos) ahora se leen de la hoja **General** (secciones GROSS y NET) — ya NO
+> de la carta ni de fórmulas de anclaje. La carta mensual y la presentación son
+> ÚNICAMENTE descargables (links). Checks del robot = consistencia interna del Excel;
+> si el archivo se contradice: avisa por Telegram y ESPERA sin publicar.
+
 # GVV Dashboard — de dónde sale cada dato (mapa fuente → campo)
 
 Referencia para la actualización mensual del `public/gvv-detalle.html` (bundle standalone,
