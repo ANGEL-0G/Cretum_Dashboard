@@ -4384,6 +4384,18 @@ function etCopyViaSelection(html) {
 }
 function etCopy(id) { const t = etData.find(x => x.id === id); if (t) etCopyHtml(t.html || ''); }
 function etCopyCurrent() { etCopyHtml(etGetHtml()); }
+/* ── Descargar la plantilla como archivo .html (para pasarla/editarla fuera) ── */
+function etDownload(id) {
+  const t = etData.find(x => x.id === id);
+  if (!t) return;
+  const name = (t.title || 'plantilla').replace(/[^a-z0-9]+/gi, '_');
+  downloadBlob(new Blob([t.html || ''], { type: 'text/html;charset=utf-8;' }), name + '.html');
+}
+function etDownloadCurrent() {
+  const title = document.getElementById('etTitle') ? document.getElementById('etTitle').value : '';
+  const name = (title || 'plantilla').replace(/[^a-z0-9]+/gi, '_');
+  downloadBlob(new Blob([etGetHtml() || ''], { type: 'text/html;charset=utf-8;' }), name + '.html');
+}
 
 /* ── Popovers (menú ⋯ / color / enlace), fixed para no recortarse ── */
 function etClosePops() {
@@ -4412,6 +4424,7 @@ function etMenu(id, btn) {
     <button class="et-mi" onclick="etClosePops();etEdit('${id}')"><i class="fa-solid fa-pen"></i> Editar</button>
     <button class="et-mi" onclick="etClosePops();etCopy('${id}')"><i class="fa-solid fa-copy"></i> Copiar</button>
     <button class="et-mi" onclick="etClosePops();etDuplicate('${id}')"><i class="fa-solid fa-clone"></i> Duplicar</button>
+    <button class="et-mi" onclick="etClosePops();etDownload('${id}')"><i class="fa-solid fa-download"></i> Descargar .html</button>
     <button class="et-mi" onclick="etClosePops();etVersionsOpen('${id}')"><i class="fa-solid fa-clock-rotate-left"></i> Historial</button>
     <button class="et-mi danger" onclick="etClosePops();etDeleteById('${id}')"><i class="fa-solid fa-trash"></i> Eliminar</button>`;
   etPositionPop(pop, btn);
@@ -4421,6 +4434,7 @@ function etEditorMenu(ev) {
   const pop = document.getElementById('etPop');
   pop.innerHTML = `
     <button class="et-mi" onclick="etClosePops();etToggleMode()"><i class="fa-solid fa-code"></i> ${etCodeMode ? 'Vista normal' : 'Ver / pegar código'}</button>
+    <button class="et-mi" onclick="etClosePops();etDownloadCurrent()"><i class="fa-solid fa-download"></i> Descargar .html</button>
     ${etEditingId ? `<button class="et-mi" onclick="etClosePops();etVersionsOpen('${etEditingId}')"><i class="fa-solid fa-clock-rotate-left"></i> Historial de versiones</button>` : ''}
     ${etEditingId ? `<button class="et-mi danger" onclick="etClosePops();etDeleteCurrent()"><i class="fa-solid fa-trash"></i> Eliminar plantilla</button>` : ''}`;
   etPositionPop(pop, ev.currentTarget);
