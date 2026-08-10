@@ -4337,9 +4337,15 @@ function etRenderGrid() {
   });
 }
 
-/* ── Copiar como HTML enriquecido (pega con formato en Outlook/Gmail) ── */
+/* ── Copiar como HTML enriquecido (pega con formato en Outlook/Gmail) ──
+   En teléfonos, navigator.clipboard.write suele fallar (permisos/gesto), así que
+   primero intentamos selección + execCommand (síncrono, respeta el toque y es lo
+   más compatible en iOS/Android) y dejamos la API moderna como respaldo. */
 async function etCopyHtml(html) {
   html = html || '';
+  // 1) Selección + execCommand — lo más confiable en móvil (copia con formato).
+  if (etCopyViaSelection(html)) { toast('Copiada — pégala en Outlook o Gmail'); return; }
+  // 2) API moderna con HTML enriquecido (escritorio).
   try {
     if (navigator.clipboard && window.ClipboardItem) {
       await navigator.clipboard.write([new ClipboardItem({
@@ -4349,11 +4355,32 @@ async function etCopyHtml(html) {
       toast('Copiada — pégala en Outlook o Gmail');
       return;
     }
-    throw new Error('no-clipboarditem');
-  } catch (e) {
-    try { await navigator.clipboard.writeText(html); toast('Copiada como código'); }
-    catch (_) { toast('No se pudo copiar'); }
-  }
+  } catch (e) { /* sigue al último recurso */ }
+  // 3) Último recurso: texto plano.
+  try { await navigator.clipboard.writeText(html); toast('Copiada como código'); return; } catch (_) {}
+  toast('No se pudo copiar');
+}
+// Copia HTML enriquecido seleccionando un contenedor editable oculto + execCommand.
+// Es el método que sí funciona en teléfonos, donde la API async del portapapeles falla.
+function etCopyViaSelection(html) {
+  try {
+    const div = document.createElement('div');
+    div.contentEditable = 'true';
+    div.setAttribute('aria-hidden', 'true');
+    // Off-screen pero "presente" (iOS ignora los display:none / left:-9999px al copiar).
+    div.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;pointer-events:none;overflow:hidden;white-space:pre-wrap';
+    div.innerHTML = html;
+    document.body.appendChild(div);
+    const sel = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(div);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    const ok = document.execCommand('copy');
+    sel.removeAllRanges();
+    div.remove();
+    return ok;
+  } catch (e) { return false; }
 }
 function etCopy(id) { const t = etData.find(x => x.id === id); if (t) etCopyHtml(t.html || ''); }
 function etCopyCurrent() { etCopyHtml(etGetHtml()); }
