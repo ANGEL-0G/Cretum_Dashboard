@@ -713,6 +713,15 @@ select.camp-f-inp::-ms-expand,select.form-input::-ms-expand{display:none}
 .et-card-status i{font-size:10px}
 .et-card-status.ok{color:#16a34a;background:rgba(22,163,74,.10)}
 .et-card-status.warn{color:#c2410c;background:rgba(234,88,12,.12)}
+/* Progreso circular al optimizar imágenes */
+.et-upload-ovl{position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,.55);backdrop-filter:blur(3px)}
+.et-upload-card{background:var(--white,#fff);border-radius:16px;padding:30px 40px;text-align:center;box-shadow:0 16px 48px rgba(0,0,0,.28)}
+.et-upload-ringwrap{position:relative;width:120px;height:120px;margin:0 auto}
+.et-upload-ring{width:120px;height:120px;transform:rotate(-90deg)}
+.et-ring-bg{fill:none;stroke:var(--gray-200,#e5e7eb);stroke-width:9}
+.et-ring-fg{fill:none;stroke:var(--navy,#1a3a6b);stroke-width:9;stroke-linecap:round;stroke-dasharray:326.7;stroke-dashoffset:326.7;transition:stroke-dashoffset .3s ease}
+.et-upload-pct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:600;color:var(--navy,#1a3a6b);font-variant-numeric:tabular-nums}
+.et-upload-lbl{margin-top:16px;font-size:13px;color:var(--gray-600,#555)}
 .et-card-foot{display:flex;gap:8px;padding:12px 14px;align-items:center}
 .et-copy{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:7px;font-size:13px;font-weight:600;padding:9px 12px;border-radius:var(--r-md);border:0;background:var(--navy);color:#fff;cursor:pointer;font-family:var(--font);transition:filter .15s,transform .12s var(--et-ease)}
 .et-copy:hover{filter:brightness(1.08)}
@@ -5811,6 +5820,15 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 </div>
 
 <!-- Editor de plantilla a pantalla completa (edición WYSIWYG directa) -->
+<div class="et-upload-ovl" id="etUploadOverlay" hidden>
+  <div class="et-upload-card">
+    <div class="et-upload-ringwrap">
+      <svg class="et-upload-ring" viewBox="0 0 120 120"><circle class="et-ring-bg" cx="60" cy="60" r="52"></circle><circle class="et-ring-fg" id="etRingFg" cx="60" cy="60" r="52"></circle></svg>
+      <div class="et-upload-pct" id="etUploadPct">0%</div>
+    </div>
+    <div class="et-upload-lbl" id="etUploadLbl">Subiendo imágenes…</div>
+  </div>
+</div>
 <div class="et-editor" id="etEditor" hidden>
   <div class="et-ebar">
     <button class="et-ebtn ghost" onclick="etCloseEditor()" title="Volver a la biblioteca" aria-label="Volver"><i class="fa-solid fa-arrow-left"></i></button>
@@ -6416,6 +6434,6 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 </div>
 
 <script src="/i18n.js?v=20260805-statusui"></script>
-<script src="/app.js?v=20260807-etoptstatus"></script>
+<script src="/app.js?v=20260807-etuploadring"></script>
 </body>
 </html>

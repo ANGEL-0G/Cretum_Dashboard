@@ -4407,7 +4407,7 @@ async function etHostImages() {
   const html = etGetHtml();
   const uniq = [...new Set((html.match(/data:image\/[a-z]+;base64,[A-Za-z0-9+\/=]+/g) || []))];
   if (!uniq.length) { toast('✓ Las imágenes ya están optimizadas (hospedadas en el servidor)'); return; }
-  toast('Subiendo ' + uniq.length + ' imágenes…');
+  etUploadProgress(0, uniq.length);
   let out = html, done = 0;
   try {
     for (const dataUri of uniq) {
@@ -4424,16 +4424,31 @@ async function etHostImages() {
       if (up.error) throw up.error;
       out = out.split(dataUri).join(sb.storage.from('correos-img').getPublicUrl(name).data.publicUrl);
       done++;
+      etUploadProgress(done, uniq.length);
     }
     document.getElementById('etCode').value = out;
     if (!etCodeMode) etSetCanvasHtml(out);
-    toast(done + ' imágenes subidas — ahora dale Guardar');
+    etUploadDone();
+    toast('✓ ' + done + ' imágenes subidas — ahora dale Guardar');
   } catch (err) {
     console.error('[etHostImages]', err);
+    etUploadHide();
     const falta = /bucket|not found|does not exist|row-level|violat/i.test(err.message || '');
     toast('No se pudo subir' + (falta ? ': falta crear el bucket "correos-img" (corre el SQL)' : ': ' + (err.message || 'error')));
   }
 }
+// Indicador circular de progreso de subida (0–100%).
+function etUploadProgress(done, total) {
+  const ov = document.getElementById('etUploadOverlay'); if (!ov) return;
+  ov.hidden = false;
+  const pct = total ? Math.round(done / total * 100) : 0;
+  const fg = document.getElementById('etRingFg');
+  if (fg) fg.style.strokeDashoffset = String(326.7 * (1 - pct / 100));
+  const p = document.getElementById('etUploadPct'); if (p) p.textContent = pct + '%';
+  const l = document.getElementById('etUploadLbl'); if (l) l.textContent = `Subiendo imágenes… ${done}/${total}`;
+}
+function etUploadHide() { const ov = document.getElementById('etUploadOverlay'); if (ov) ov.hidden = true; }
+function etUploadDone() { const l = document.getElementById('etUploadLbl'); if (l) l.textContent = '¡Listo!'; setTimeout(etUploadHide, 700); }
 
 /* ── Popovers (menú ⋯ / color / enlace), fixed para no recortarse ── */
 function etClosePops() {
