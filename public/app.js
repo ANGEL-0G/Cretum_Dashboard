@@ -4419,8 +4419,11 @@ async function etHostImages() {
       const hashBuf = await crypto.subtle.digest('SHA-256', bytes);
       const hash = [...new Uint8Array(hashBuf)].slice(0, 10).map(b => b.toString(16).padStart(2, '0')).join('');
       const name = `img-${hash}.${ext}`;
-      const up = await sb.storage.from('correos-img').upload(name, new Blob([bytes], { type: mime }),
-        { contentType: mime, upsert: true, cacheControl: '31536000' });
+      const up = await Promise.race([
+        sb.storage.from('correos-img').upload(name, new Blob([bytes], { type: mime }),
+          { contentType: mime, upsert: true, cacheControl: '31536000' }),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('la subida no respondió (revisa el bucket, la conexión o un bloqueador)')), 30000)),
+      ]);
       if (up.error) throw up.error;
       out = out.split(dataUri).join(sb.storage.from('correos-img').getPublicUrl(name).data.publicUrl);
       done++;
