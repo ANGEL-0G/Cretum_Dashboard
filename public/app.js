@@ -4396,6 +4396,40 @@ function etDownloadCurrent() {
   const name = (title || 'plantilla').replace(/[^a-z0-9]+/gi, '_');
   downloadBlob(new Blob([etGetHtml() || ''], { type: 'text/html;charset=utf-8;' }), name + '.html');
 }
+/* ── Optimizar imágenes: sube las imágenes base64 al servidor (Storage) y cambia
+   los `data:image...` por URLs https. Necesario porque Gmail NO muestra base64.
+   Nombre por hash → misma imagen = misma URL (no duplica; sirve mes a mes). ── */
+async function etHostImages() {
+  const html = etGetHtml();
+  const uniq = [...new Set((html.match(/data:image\/[a-z]+;base64,[A-Za-z0-9+\/=]+/g) || []))];
+  if (!uniq.length) { toast('No hay imágenes base64 que subir (quizá ya están en URL)'); return; }
+  toast('Subiendo ' + uniq.length + ' imágenes…');
+  let out = html, done = 0;
+  try {
+    for (const dataUri of uniq) {
+      const m = dataUri.match(/data:image\/([a-z]+);base64,([A-Za-z0-9+\/=]+)/);
+      const mime = 'image/' + m[1], ext = m[1] === 'jpeg' ? 'jpg' : m[1];
+      const bin = atob(m[2]);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      const hashBuf = await crypto.subtle.digest('SHA-256', bytes);
+      const hash = [...new Uint8Array(hashBuf)].slice(0, 10).map(b => b.toString(16).padStart(2, '0')).join('');
+      const name = `img-${hash}.${ext}`;
+      const up = await sb.storage.from('correos-img').upload(name, new Blob([bytes], { type: mime }),
+        { contentType: mime, upsert: true, cacheControl: '31536000' });
+      if (up.error) throw up.error;
+      out = out.split(dataUri).join(sb.storage.from('correos-img').getPublicUrl(name).data.publicUrl);
+      done++;
+    }
+    document.getElementById('etCode').value = out;
+    if (!etCodeMode) etSetCanvasHtml(out);
+    toast(done + ' imágenes subidas — ahora dale Guardar');
+  } catch (err) {
+    console.error('[etHostImages]', err);
+    const falta = /bucket|not found|does not exist|row-level|violat/i.test(err.message || '');
+    toast('No se pudo subir' + (falta ? ': falta crear el bucket "correos-img" (corre el SQL)' : ': ' + (err.message || 'error')));
+  }
+}
 
 /* ── Popovers (menú ⋯ / color / enlace), fixed para no recortarse ── */
 function etClosePops() {
@@ -4434,6 +4468,7 @@ function etEditorMenu(ev) {
   const pop = document.getElementById('etPop');
   pop.innerHTML = `
     <button class="et-mi" onclick="etClosePops();etToggleMode()"><i class="fa-solid fa-code"></i> ${etCodeMode ? 'Vista normal' : 'Ver / pegar código'}</button>
+    <button class="et-mi" onclick="etClosePops();etHostImages()"><i class="fa-solid fa-cloud-arrow-up"></i> Optimizar imágenes (subir al servidor)</button>
     <button class="et-mi" onclick="etClosePops();etDownloadCurrent()"><i class="fa-solid fa-download"></i> Descargar .html</button>
     ${etEditingId ? `<button class="et-mi" onclick="etClosePops();etVersionsOpen('${etEditingId}')"><i class="fa-solid fa-clock-rotate-left"></i> Historial de versiones</button>` : ''}
     ${etEditingId ? `<button class="et-mi danger" onclick="etClosePops();etDeleteCurrent()"><i class="fa-solid fa-trash"></i> Eliminar plantilla</button>` : ''}`;
