@@ -714,7 +714,8 @@ select.camp-f-inp::-ms-expand,select.form-input::-ms-expand{display:none}
 .et-card-status.ok{color:#16a34a;background:rgba(22,163,74,.10)}
 .et-card-status.warn{color:#c2410c;background:rgba(234,88,12,.12)}
 /* Progreso circular al optimizar imágenes */
-.et-upload-ovl{position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,.55);backdrop-filter:blur(3px)}
+.et-upload-ovl{position:fixed;inset:0;z-index:500;align-items:center;justify-content:center;background:rgba(15,23,42,.55);backdrop-filter:blur(3px)}
+.et-upload-ovl:not([hidden]){display:flex}
 .et-upload-card{background:var(--white,#fff);border-radius:16px;padding:30px 40px;text-align:center;box-shadow:0 16px 48px rgba(0,0,0,.28)}
 .et-upload-ringwrap{position:relative;width:120px;height:120px;margin:0 auto}
 .et-upload-ring{width:120px;height:120px;transform:rotate(-90deg)}
@@ -6434,6 +6435,6 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 </div>
 
 <script src="/i18n.js?v=20260805-statusui"></script>
-<script src="/app.js?v=20260807-etuploadto"></script>
+<script src="/app.js?v=20260807-ovlfix"></script>
 </body>
 </html>
