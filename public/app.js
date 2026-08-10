@@ -4315,6 +4315,7 @@ function etRenderGrid() {
   grid.innerHTML = etData.map(t => {
     const who = USERS[t.updated_by]?.name || USERS[t.created_by]?.name || '';
     const when = t.updated_at ? fmtCreated(t.updated_at) : '';
+    const hasB64 = /data:image\/[a-z]+;base64,/.test(t.html || '');
     return `
     <div class="et-card">
       <div class="et-card-prev" onclick="etEdit('${t.id}')" title="Abrir para editar">
@@ -4324,6 +4325,9 @@ function etRenderGrid() {
       <div class="et-card-body">
         <div class="et-card-title">${escapeHtml(t.title || 'Plantilla')}</div>
         <div class="et-card-meta">Actualizada ${when}${who ? ' · ' + escapeHtml(who) : ''}</div>
+        <div class="et-card-status ${hasB64 ? 'warn' : 'ok'}" title="${hasB64 ? 'Tiene imágenes incrustadas (base64): pésadas y no se ven en Gmail. Ábrela → ⋯ Optimizar imágenes.' : 'Las imágenes están hospedadas (URL): se ven en Gmail/Outlook y el correo es liviano.'}">
+          <i class="fa-solid ${hasB64 ? 'fa-triangle-exclamation' : 'fa-circle-check'}"></i> ${hasB64 ? 'Imágenes sin optimizar' : 'Imágenes optimizadas'}
+        </div>
       </div>
       <div class="et-card-foot">
         <button class="et-copy" onclick="etCopy('${t.id}')"><i class="fa-solid fa-copy"></i> Copiar</button>
@@ -4402,7 +4406,7 @@ function etDownloadCurrent() {
 async function etHostImages() {
   const html = etGetHtml();
   const uniq = [...new Set((html.match(/data:image\/[a-z]+;base64,[A-Za-z0-9+\/=]+/g) || []))];
-  if (!uniq.length) { toast('No hay imágenes base64 que subir (quizá ya están en URL)'); return; }
+  if (!uniq.length) { toast('✓ Las imágenes ya están optimizadas (hospedadas en el servidor)'); return; }
   toast('Subiendo ' + uniq.length + ' imágenes…');
   let out = html, done = 0;
   try {
