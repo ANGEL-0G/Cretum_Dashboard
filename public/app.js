@@ -4342,14 +4342,12 @@ function etRenderGrid() {
 }
 
 /* ── Copiar como HTML enriquecido (pega con formato en Outlook/Gmail) ──
-   En teléfonos, navigator.clipboard.write suele fallar (permisos/gesto), así que
-   primero intentamos selección + execCommand (síncrono, respeta el toque y es lo
-   más compatible en iOS/Android) y dejamos la API moderna como respaldo. */
+   IMPORTANTE: se copia el HTML CRUDO (no una selección renderizada), porque copiar
+   un <div> renderizado hace que el navegador "normalice" el HTML → formatos raros
+   al pegar. Ambos métodos ponen exactamente el mismo string en el portapapeles. */
 async function etCopyHtml(html) {
   html = html || '';
-  // 1) Selección + execCommand — lo más confiable en móvil (copia con formato).
-  if (etCopyViaSelection(html)) { toast('Copiada — pégala en Outlook o Gmail'); return; }
-  // 2) API moderna con HTML enriquecido (escritorio).
+  // 1) API moderna — HTML crudo como text/html (limpio, exacto). Ideal en escritorio.
   try {
     if (navigator.clipboard && window.ClipboardItem) {
       await navigator.clipboard.write([new ClipboardItem({
@@ -4359,32 +4357,37 @@ async function etCopyHtml(html) {
       toast('Copiada — pégala en Outlook o Gmail');
       return;
     }
-  } catch (e) { /* sigue al último recurso */ }
+  } catch (e) { /* sigue al fallback (móvil) */ }
+  // 2) Fallback (móvil): evento copy + execCommand, poniendo el HTML CRUDO (no el render).
+  if (etCopyRawViaEvent(html)) { toast('Copiada — pégala en Outlook o Gmail'); return; }
   // 3) Último recurso: texto plano.
   try { await navigator.clipboard.writeText(html); toast('Copiada como código'); return; } catch (_) {}
   toast('No se pudo copiar');
 }
-// Copia HTML enriquecido seleccionando un contenedor editable oculto + execCommand.
-// Es el método que sí funciona en teléfonos, donde la API async del portapapeles falla.
-function etCopyViaSelection(html) {
+// Copia el HTML CRUDO vía el evento 'copy' (síncrono → funciona en móvil y respeta el
+// gesto del toque). El textarea oculto solo sirve para disparar execCommand; el handler
+// sobreescribe el portapapeles con el string exacto (sin que el navegador lo altere).
+function etCopyRawViaEvent(html) {
+  let ok = false;
+  const handler = (e) => {
+    e.clipboardData.setData('text/html', html);
+    e.clipboardData.setData('text/plain', html);
+    e.preventDefault();
+    ok = true;
+  };
   try {
-    const div = document.createElement('div');
-    div.contentEditable = 'true';
-    div.setAttribute('aria-hidden', 'true');
-    // Off-screen pero "presente" (iOS ignora los display:none / left:-9999px al copiar).
-    div.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;pointer-events:none;overflow:hidden;white-space:pre-wrap';
-    div.innerHTML = html;
-    document.body.appendChild(div);
-    const sel = window.getSelection();
-    const range = document.createRange();
-    range.selectNodeContents(div);
-    sel.removeAllRanges();
-    sel.addRange(range);
-    const ok = document.execCommand('copy');
-    sel.removeAllRanges();
-    div.remove();
-    return ok;
-  } catch (e) { return false; }
+    document.addEventListener('copy', handler, true);
+    const ta = document.createElement('textarea');
+    ta.value = html;
+    ta.setAttribute('aria-hidden', 'true');
+    ta.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  } catch (e) { ok = false; }
+  document.removeEventListener('copy', handler, true);
+  return ok;
 }
 function etCopy(id) { const t = etData.find(x => x.id === id); if (t) etCopyHtml(t.html || ''); }
 function etCopyCurrent() { etCopyHtml(etGetHtml()); }
