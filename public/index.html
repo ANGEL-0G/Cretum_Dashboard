@@ -608,6 +608,13 @@ select.camp-f-inp::-ms-expand,select.form-input::-ms-expand{display:none}
 .lp-m{background:var(--amber-bg);color:var(--amber)}
 .lp-b{background:var(--green-bg);color:var(--green)}
 .li-tag{font-size:10px;padding:2px 8px;border-radius:10px;background:var(--navy-pale);color:var(--navy)}
+/* Estado de un reporte (tomado / resuelto / sin tomar) — visible en tarjetas y detalle */
+.rep-badge{font-size:10px;padding:2px 8px;border-radius:10px;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;font-weight:500}
+.rep-badge i{font-size:10px}
+.rep-badge.new{background:var(--gray-100);color:var(--gray-500)}
+.rep-badge.wip{background:var(--amber-bg);color:var(--amber)}
+.rep-badge.ok{background:var(--green-bg);color:var(--green)}
+.td-report-badge{margin-top:8px}
 /* Mini label de fecha de creación (informativa, discreta) */
 .li-created{font-size:10px;color:var(--gray-400);display:inline-flex;align-items:center;gap:3px;white-space:nowrap}
 .li-created i{font-size:9px}
@@ -6435,6 +6442,6 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 </div>
 
 <script src="/i18n.js?v=20260805-statusui"></script>
-<script src="/app.js?v=20260807-copyraw"></script>
+<script src="/app.js?v=20260811-reportes"></script>
 </body>
 </html>

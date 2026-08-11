@@ -543,13 +543,19 @@ async function submitReport() {
   const desc = `${detail}\n\n(${reportType}) — Reportó ${reporter} · ${stamp}`;
   const prio = reportType === 'Fallo' ? 'Alta' : 'Media';
   const nowIso = d.toISOString();
+  // reportId común a TODAS las copias (una por admin) → así "tomar"/"resolver" se
+  // propaga entre ellas y nadie ve pendiente lo que otro ya atendió.
+  const reportId = 'RPT' + Date.now();
   admins.forEach(uid => {
     state.simple.unshift({
       id: 'S' + (++tkId), name, desc,
       due: '', prio, project: REPORT_PROJECT, done: false, status: 'pending',
       collab: false, remind: null, remindAt: null, remindSent: false,
       owner: uid, createdAt: nowIso,
-      report: true, reportBy: currentUser   // para avisar a quien reportó cuando se resuelva
+      report: true, reportBy: currentUser,   // para avisar a quien reportó cuando se resuelva
+      reportId,                              // vincula las copias del mismo reporte
+      claimedBy: null, claimedByName: null, claimedAt: null,   // quién lo tomó (en proceso)
+      resolvedBy: null, resolvedByName: null, resolvedAt: null // quién lo resolvió
     });
   });
   saveData();
@@ -557,6 +563,74 @@ async function submitReport() {
   if (btn) btn.disabled = false;
   closeReportModal();
   toast(t('¡Gracias! Tu reporte llegó al equipo'));
+}
+
+/* ── Reportes como mini-tablero: tomar / resolver con atribución ──
+   Cada reporte vive como N copias (una por admin). Estos helpers mantienen las
+   copias sincronizadas: al tomar o resolver, TODAS reflejan el mismo estado y se
+   registra quién y cuándo. Solo un admin puede mover un reporte. */
+function reportStamp(d) {
+  return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }) + ' ' +
+         d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+}
+// Todas las copias del mismo reporte. Usa reportId; para reportes viejos (sin id)
+// cae a emparejar por nombre + quién reportó + fecha de creación (idénticos entre copias).
+function reportGroupOf(t) {
+  return state.simple.filter(x => x.report && (
+    t.reportId ? x.reportId === t.reportId
+               : (x.name === t.name && x.reportBy === t.reportBy && x.createdAt === t.createdAt)
+  ));
+}
+// Quita la línea de "Resuelta por…" para no acumularla al reabrir/re-resolver.
+function stripReportResolLine(desc) {
+  return (desc || '').replace(/\n+✅ Resuelta por [^\n]*$/, '');
+}
+// Propaga el estatus a todo el grupo + atribución. status: 'progress'(tomar) / 'done'(resolver) / 'pending'(reabrir).
+function reportSetGroupStatus(t, status) {
+  const me = USERS[currentUser]?.nameRaw || currentProfile?.full_name || '—';
+  const now = new Date(), iso = now.toISOString(), stamp = reportStamp(now);
+  const group = reportGroupOf(t);
+  group.forEach(c => {
+    c.status = status;
+    c.done = status === 'done';
+    c.desc = stripReportResolLine(c.desc);
+    if (status === 'progress') {
+      c.claimedBy = currentUser; c.claimedByName = me; c.claimedAt = iso;
+      c.resolvedBy = null; c.resolvedByName = null; c.resolvedAt = null;
+    } else if (status === 'done') {
+      c.resolvedBy = currentUser; c.resolvedByName = me; c.resolvedAt = iso;
+      c.desc = (c.desc || '') + `\n\n✅ Resuelta por ${me} · ${stamp}`;
+    } else { // pending → reabrir
+      c.claimedBy = null; c.claimedByName = null; c.claimedAt = null;
+      c.resolvedBy = null; c.resolvedByName = null; c.resolvedAt = null;
+    }
+  });
+  toast(status === 'progress' ? 'Tomaste el reporte — el equipo lo verá "En proceso"'
+      : status === 'done' ? 'Reporte resuelto ✓' : 'Reporte reabierto');
+  tkToggleAnim = { id: t.id, becameDone: status === 'done' };
+  // Aviso por correo a quien reportó: una sola vez por grupo, nunca a uno mismo.
+  if (status === 'done' && t.reportBy && t.reportBy !== currentUser && !group.some(c => c.reportNotified)) {
+    group.forEach(c => c.reportNotified = true);
+    notifyAssignment({ type: 'report_resolved', recipientUserId: t.reportBy, taskName: t.name });
+  }
+  if (document.getElementById('taskDetailModal')?.classList.contains('show') && String(tdId) === String(t.id)) renderTaskDetail();
+  scheduleSave();
+  render();
+}
+// Badge de estado del reporte (para tarjetas y detalle).
+function reportBadge(t) {
+  if (!t || !t.report) return '';
+  if (t.resolvedByName || (simpleStatus(t) === 'done' && t.resolvedBy)) {
+    const nm = escapeHtml(t.resolvedByName || 'el equipo');
+    const when = t.resolvedAt ? ' · ' + reportStamp(new Date(t.resolvedAt)) : '';
+    return `<span class="rep-badge ok" title="Resuelto"><i class="fa-solid fa-circle-check"></i> Resuelta por ${nm}${when}</span>`;
+  }
+  if (t.claimedBy) {
+    const nm = escapeHtml(t.claimedByName || 'alguien');
+    const mine = t.claimedBy === currentUser;
+    return `<span class="rep-badge wip" title="En proceso"><i class="fa-solid fa-user-clock"></i> ${mine ? 'La estás resolviendo tú' : nm + ' la está resolviendo'}</span>`;
+  }
+  return `<span class="rep-badge new" title="Sin tomar"><i class="fa-regular fa-hand"></i> Sin tomar</span>`;
 }
 
 /* ═══════════════════════════════════════════
@@ -723,6 +797,7 @@ function tkRow(t, i) {
         ${t.due ? `<span class="li-due ${od ? 'od' : ''}">${fmtD(t.due)}</span>` : ''}
         <span class="li-prio ${prioC(t.prio)}">${t.prio}</span>
         ${t.collab ? '<span class="li-tag">Colaborativa</span>' : ''}
+        ${reportBadge(t)}
         ${taskNoteIndicator(t)}
       </div>
       <button class="li-edit" onclick="openEditTask('${t.id}','simple')" title="Editar tarea"><i class="fa-solid fa-pen"></i></button>
@@ -997,6 +1072,7 @@ function buildKanban() {
               ${t.createdAt ? `<span class="li-created" title="${createdTitle(t.createdAt)}"><i class="fa-regular fa-clock"></i> ${fmtCreated(t.createdAt)}</span>` : ''}
               ${t.due ? `<span class="kb-due ${od ? 'od' : ''}"><i class="fa-regular fa-calendar" style="font-size:10px"></i> ${fmtD(t.due)}</span>` : ''}
               <span class="kb-prio ${prioC(t.prio)}">${t.prio}</span>
+              ${reportBadge(t)}
               ${taskNoteIndicator(t)}
               ${t.kind === 'simple'
                 ? `<span style="margin-left:auto">${simpleStatusControl(t.id)}</span>`
@@ -2096,6 +2172,13 @@ function setSimpleStatus(id, status) {
   if (!t) return;
   const prev = simpleStatus(t);
   if (prev === status) return;
+  // Reportes: mini-tablero de incidencias. Solo un admin los mueve, y el cambio se
+  // PROPAGA a todas las copias (una por admin) con atribución de quién y cuándo.
+  if (t.report) {
+    if (roleReal !== 'admin') { toast('Solo un admin puede tomar o resolver un reporte'); return; }
+    reportSetGroupStatus(t, status);
+    return;
+  }
   t.status = status;
   t.done = status === 'done';
   const msg = { pending: 'Marcada como pendiente', progress: 'En progreso', done: 'Tarea completada ✓' }[status];
@@ -2138,7 +2221,8 @@ function renderTaskDetail() {
   document.getElementById('tdMeta').innerHTML = chips.join('');
   const statusHost = document.getElementById('tdStatus');
   if (tdKind === 'simple') {
-    statusHost.innerHTML = `<div class="td-label">${t('Estatus')}</div>${tdStatusUI(tk)}`;
+    const rb = tk.report ? `<div class="td-report-badge">${reportBadge(tk)}</div>` : '';
+    statusHost.innerHTML = `<div class="td-label">${t('Estatus')}</div>${tdStatusUI(tk)}${rb}`;
   } else {
     const p = pct(tk);
     statusHost.innerHTML = `<div class="td-label">${t('Progreso')}</div>
@@ -4347,6 +4431,11 @@ function etRenderGrid() {
    al pegar. Ambos métodos ponen exactamente el mismo string en el portapapeles. */
 async function etCopyHtml(html) {
   html = html || '';
+  // Las plantillas con imágenes incrustadas (base64) pueden pesar cientos de KB. El
+  // portapapeles del navegador MÓVIL tiene un tope: si se pasa, el copiado enriquecido
+  // falla en silencio (el evento 'copy' corre pero el sistema descarta el contenido → al
+  // pegar sale vacío). Lo detectamos para NO reportar un "Copiada" falso.
+  const heavy = html.length > 600000 && /data:image\/[a-z]+;base64,/.test(html);
   // 1) API moderna — HTML crudo como text/html (limpio, exacto). Ideal en escritorio.
   try {
     if (navigator.clipboard && window.ClipboardItem) {
@@ -4358,6 +4447,12 @@ async function etCopyHtml(html) {
       return;
     }
   } catch (e) { /* sigue al fallback (móvil) */ }
+  // Si llegamos aquí en una plantilla pesada, es un móvil y su portapapeles no la aguanta:
+  // en vez de fingir éxito, guiamos a optimizar (aloja las imágenes como enlaces → ~20 KB).
+  if (heavy) {
+    toast('Muy pesada para el teléfono — abre la plantilla, toca "Optimizar imágenes", Guarda y vuelve a copiar');
+    return;
+  }
   // 2) Fallback (móvil): evento copy + execCommand, poniendo el HTML CRUDO (no el render).
   if (etCopyRawViaEvent(html)) { toast('Copiada — pégala en Outlook o Gmail'); return; }
   // 3) Último recurso: texto plano.
