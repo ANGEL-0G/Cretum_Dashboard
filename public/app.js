@@ -5100,7 +5100,9 @@ function downloadGvvHtml() {
 
 // Copia al portapapeles el link público del GVV en cretumpartners.com.
 function copyGvvPartnersLink(btn) {
-  const url = 'https://cretumpartners.com/gvv-detalle.html';
+  // ?v=<hora> salta el cache de navegador de 10 anios del hosting de cretumpartners
+  const _d = new Date(), _p = (n) => String(n).padStart(2, '0');
+  const url = 'https://cretumpartners.com/gvv-detalle.html?v=' + _d.getFullYear() + _p(_d.getMonth() + 1) + _p(_d.getDate()) + _p(_d.getHours());
   const ok = () => {
     toast('Link de cretumpartners copiado');
     if (btn) { const o = btn.innerHTML; btn.innerHTML = '<i class="fa-solid fa-check"></i> Copiado'; setTimeout(() => { btn.innerHTML = o; }, 1600); }
