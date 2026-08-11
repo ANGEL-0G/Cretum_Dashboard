@@ -1,0 +1,176 @@
+<!doctype html><html><head><meta charset="utf-8"><title>draft estructura</title>
+<style>body{margin:0;background:#f6f8fb;font-family:Inter,-apple-system,sans-serif}</style>
+</head><body>
+
+<!-- ══════════ SECCION ESTRUCTURA DEL FONDO (draft) ══════════ -->
+<section id="estructura" style="max-width:1280px;margin:0 auto;padding:46px 30px 40px">
+<style>
+  #estructura .est-canvas{position:relative;width:1040px;height:620px;margin:26px auto 0}
+  #estructura .est-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  #estructura .est-card{position:absolute;border-radius:14px;box-shadow:0 6px 22px rgba(13,39,66,.10);
+    transition:transform .35s ease, box-shadow .35s ease; background:#fff; text-align:center;
+    animation:estUp .7s cubic-bezier(.2,.7,.3,1) both}
+  #estructura .est-card:hover{transform:translateY(-5px);box-shadow:0 14px 34px rgba(13,39,66,.20)}
+  #estructura .est-tag{position:absolute;padding:5px 12px;border-radius:999px;font-size:10.5px;
+    font-weight:600;letter-spacing:.04em;white-space:nowrap;box-shadow:0 3px 10px rgba(13,39,66,.12);
+    animation:estUp .7s .45s both}
+  #estructura .est-tag.dark{background:#12395f;color:#dbe8f5}
+  #estructura .est-tag.lite{background:#b9c9de;color:#0d2742}
+  @keyframes estUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  #estructura svg .wire{fill:none;stroke:#0d2742;stroke-width:2.6;stroke-linecap:round;
+    stroke-dasharray:1200;stroke-dashoffset:1200;animation:estDraw 1.6s .25s ease forwards}
+  @keyframes estDraw{to{stroke-dashoffset:0}}
+  #estructura svg .pulse{fill:#7fb2dd}
+  #estructura .est-provs{display:flex;flex-wrap:wrap;gap:16px 22px;align-items:center;justify-content:space-between;
+    border:1.5px dashed #b9c9de;border-radius:12px;padding:16px 24px;margin-top:34px;background:#fff}
+  #estructura .est-provs img{transition:transform .3s}
+  #estructura .est-provs img:hover{transform:scale(1.08)}
+  #estructura .est-mobile{display:none}
+  #estructura .est-m-card{position:relative;border-radius:14px;background:#fff;text-align:center;
+    padding:16px 14px;box-shadow:0 6px 22px rgba(13,39,66,.10);animation:estUp .7s both}
+  #estructura .est-m-link{display:flex;justify-content:center;align-items:center;height:52px;position:relative}
+  #estructura .est-m-link::before{content:"";position:absolute;top:0;bottom:0;left:50%;width:2.5px;
+    background:#0d2742;transform:translateX(-50%)}
+  #estructura .est-m-link .est-tag{position:relative;animation:none}
+  @media (max-width: 880px){
+    #estructura .est-wrap{display:none}
+    #estructura .est-mobile{display:block;max-width:420px;margin:26px auto 0}
+    #estructura .est-provs{justify-content:center;gap:18px 26px}
+  }
+</style>
+
+<h3 style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#16457a;margin:0 0 6px">Estructura</h3>
+<div style="font-family:'Playfair Display',Georgia,serif;font-size:30px;color:#0d2742">Estructura del Fondo</div>
+<p style="color:#5a6b82;font-size:14px;max-width:760px;margin:8px 0 0">Gobernanza institucional: custodio global, administrador independiente y auditoría externa.</p>
+
+<div class="est-wrap"><div class="est-canvas">
+  <svg viewBox="0 0 1040 640" style="position:absolute;inset:0;width:100%;height:100%">
+    <!-- investor -> fondo (transferencia) -->
+    <path class="wire" d="M 500 88 L 500 250"/>
+    <!-- GP -> fondo (gestion) -->
+    <path class="wire" d="M 800 108 L 800 200 L 654 268"/>
+    <!-- NAV -> investor (estados de cuenta) -->
+    <path class="wire" d="M 428 62 C 240 62 142 130 142 235"/>
+    <!-- NAV -> tax (abajo) -->
+    <path class="wire" d="M 142 420 L 142 555 L 400 555"/>
+    <!-- fondo -> tax -->
+    <path class="wire" d="M 523 430 L 523 520"/>
+    <!-- fondo -> deloitte -->
+    <path class="wire" d="M 654 400 L 850 498"/>
+    <!-- brokers -->
+    <path class="wire" d="M 255 345 L 278 345"/>
+    <path class="wire" d="M 374 345 L 392 345"/>
+    <path class="wire" d="M 654 345 L 672 345"/>
+    <path class="wire" d="M 768 345 L 800 345 L 800 200"/>
+    <!-- pulsos animados -->
+    <circle class="pulse" r="5"><animateMotion dur="3s" repeatCount="indefinite" path="M 500 88 L 500 250"/></circle>
+    <circle class="pulse" r="5"><animateMotion dur="4s" repeatCount="indefinite" path="M 800 108 L 800 200 L 654 268"/></circle>
+    <circle class="pulse" r="5"><animateMotion dur="4.5s" repeatCount="indefinite" path="M 142 235 C 142 130 240 62 428 62"/></circle>
+  </svg>
+
+  <!-- INVESTOR -->
+  <div class="est-card" style="left:430px;top:30px;width:140px;padding:16px 10px;background:#12395f;color:#fff;
+       clip-path:polygon(12% 0,88% 0,100% 50%,88% 100%,12% 100%,0 50%);border-radius:0">
+    <div style="font-family:Georgia,serif;font-style:italic;font-size:15px;letter-spacing:.06em">INVERSIONISTA</div>
+  </div>
+
+  <!-- CRETUM GP -->
+  <div class="est-card" style="left:690px;top:8px;width:220px;padding:14px 16px">
+    <div style="font-family:Georgia,serif;font-size:19px;letter-spacing:.24em;color:#16457a">CRETUM</div>
+    <div style="font-size:8px;letter-spacing:.5em;color:#7fb2dd;margin-top:-2px">PARTNERS</div>
+    <div style="font-size:11px;color:#0d2742;margin-top:8px;font-weight:600">Cretum Advisory LLC — Delaware (USA)</div>
+    <div style="font-size:10.5px;color:#5a6b82">General Partner</div>
+  </div>
+
+  <!-- NAV admin (octagono) -->
+  <div class="est-card" style="left:30px;top:235px;width:225px;padding:20px 14px;background:#b9c9de;border-radius:0;
+       clip-path:polygon(15% 0,85% 0,100% 18%,100% 82%,85% 100%,15% 100%,0 82%,0 18%)">
+    <img src="{{nav}}" alt="NAV" style="height:52px">
+    <div style="font-family:Georgia,serif;font-style:italic;font-size:16px;color:#0d2742;margin-top:10px">Investment Statement</div>
+    <div style="font-size:11px;color:#33475e;font-style:italic">Preparado por NAV Consulting</div>
+  </div>
+
+  <!-- FONDO central -->
+  <div class="est-card" style="left:392px;top:250px;width:262px;padding:20px 20px;background:linear-gradient(160deg,#5c7fa3,#49688c);color:#eaf1f8">
+    <img src="{{bny}}" alt="BNY Mellon" style="height:46px;background:#fff;border-radius:8px;padding:6px 14px;box-shadow:0 2px 10px rgba(0,0,0,.15)">
+    <div style="font-size:10.5px;color:#cdddef;margin-top:4px">(Custodio USA)</div>
+    <div style="font-family:Georgia,serif;font-style:italic;font-size:14.5px;margin-top:10px">Cretum Partners GVV Fund, LP</div>
+    <div style="font-size:11px;color:#cdddef">Ontario, Canadá</div>
+    <div style="border-top:1px solid rgba(255,255,255,.25);margin-top:10px;padding-top:8px;font-size:11.5px;font-style:italic">Inversiones y efectivo</div>
+  </div>
+
+  <!-- brokers -->
+  <div class="est-card" style="left:278px;top:308px;width:96px;padding:13px 6px">
+    <div style="font-size:12.5px;font-weight:600;color:#0d2742">Executing<br>Brokers</div>
+  </div>
+  <div class="est-card" style="left:672px;top:308px;width:96px;padding:13px 6px">
+    <div style="font-size:12.5px;font-weight:600;color:#0d2742">Executing<br>Brokers</div>
+  </div>
+
+  <!-- NAV tax -->
+  <div class="est-card" style="left:400px;top:520px;width:240px;padding:14px 14px;background:#12395f;color:#dbe8f5">
+    <div style="font-family:Georgia,serif;font-style:italic;font-size:13.5px">NAV Consulting</div>
+    <div style="font-size:11px;color:#9db8d4">Tax Advisor and Accountant</div>
+  </div>
+
+  <!-- Deloitte -->
+  <div class="est-card" style="left:790px;top:498px;width:190px;padding:16px 14px;background:#5c7fa3">
+    <img src="{{deloitte}}" alt="Deloitte" style="height:38px;background:#fff;border-radius:8px;padding:6px 14px;box-shadow:0 2px 10px rgba(0,0,0,.15)">
+    <div style="font-size:11px;color:#eaf1f8;margin-top:6px;font-weight:600">Tax Advisor &amp; services</div>
+  </div>
+
+  <!-- etiquetas de flujo -->
+  <div class="est-tag lite" style="left:512px;top:152px">Transferencia de fondos</div>
+  <div class="est-tag lite" style="left:706px;top:152px">Gestión de inversiones y supervisión</div>
+  <div class="est-tag dark" style="left:118px;top:92px">Estados de cuenta</div>
+</div></div>
+
+<!-- VERSION MOVIL: flujo vertical -->
+<div class="est-mobile">
+  <div class="est-m-card" style="background:#12395f;color:#fff;width:200px;margin:0 auto;
+       clip-path:polygon(10% 0,90% 0,100% 50%,90% 100%,10% 100%,0 50%);border-radius:0">
+    <div style="font-family:Georgia,serif;font-style:italic;font-size:14px;letter-spacing:.06em">INVERSIONISTA</div>
+  </div>
+  <div class="est-m-link"><span class="est-tag lite">Transferencia de fondos</span></div>
+  <div class="est-m-card" style="background:linear-gradient(160deg,#5c7fa3,#49688c);color:#eaf1f8">
+    <img src="{{bny}}" alt="BNY Mellon" style="height:32px;background:#fff;border-radius:6px;padding:3px 9px">
+    <div style="font-size:10px;color:#cdddef;margin-top:4px">(Custodio USA)</div>
+    <div style="font-family:Georgia,serif;font-style:italic;font-size:14px;margin-top:8px">Cretum Partners GVV Fund, LP</div>
+    <div style="font-size:10.5px;color:#cdddef">Ontario, Canadá</div>
+    <div style="border-top:1px solid rgba(255,255,255,.25);margin-top:9px;padding-top:7px;font-size:11px;font-style:italic">Inversiones y efectivo</div>
+  </div>
+  <div class="est-m-link"><span class="est-tag lite">Gestión de inversiones y supervisión</span></div>
+  <div class="est-m-card">
+    <div style="font-family:Georgia,serif;font-size:17px;letter-spacing:.22em;color:#16457a">CRETUM</div>
+    <div style="font-size:7.5px;letter-spacing:.5em;color:#7fb2dd;margin-top:-2px">PARTNERS</div>
+    <div style="font-size:10.5px;color:#0d2742;margin-top:7px;font-weight:600">Cretum Advisory LLC — Delaware (USA)</div>
+    <div style="font-size:10px;color:#5a6b82">General Partner</div>
+  </div>
+  <div class="est-m-link"><span class="est-tag dark">Estados de cuenta</span></div>
+  <div class="est-m-card" style="background:#b9c9de">
+    <img src="{{nav}}" alt="NAV" style="height:42px">
+    <div style="font-family:Georgia,serif;font-style:italic;font-size:14px;color:#0d2742;margin-top:8px">Investment Statement</div>
+    <div style="font-size:10.5px;color:#33475e;font-style:italic">Preparado por NAV Consulting</div>
+  </div>
+  <div class="est-m-link"></div>
+  <div style="display:flex;gap:12px">
+    <div class="est-m-card" style="flex:1;padding:13px 8px">
+      <div style="font-size:12px;font-weight:600;color:#0d2742">Executing<br>Brokers</div>
+    </div>
+    <div class="est-m-card" style="flex:1.6;background:#12395f;color:#dbe8f5;padding:13px 10px">
+      <div style="font-family:Georgia,serif;font-style:italic;font-size:12.5px">NAV Consulting</div>
+      <div style="font-size:10px;color:#9db8d4">Tax Advisor and Accountant</div>
+    </div>
+  </div>
+  <div class="est-m-link"></div>
+  <div class="est-m-card" style="background:#5c7fa3">
+    <img src="{{deloitte}}" alt="Deloitte" style="height:30px;background:#fff;border-radius:6px;padding:4px 10px">
+    <div style="font-size:10.5px;color:#eaf1f8;margin-top:6px;font-weight:600">Tax Advisor &amp; services</div>
+  </div>
+</div>
+
+<!-- PROVEEDORES -->
+<div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#5a6b82;margin-top:26px">Proveedores</div>
+<div class="est-provs"><img src="{{bloomberg}}" alt="Bloomberg" style="height:22px"><img src="{{visor}}" alt="Visor Financiero" style="height:36px"><img src="{{valmer}}" alt="Valmer" style="height:26px"><img src="{{rga}}" alt="RGA Consulting" style="height:36px"><img src="{{manhattan}}" alt="Manhattan Venture Partners" style="height:32px"><img src="{{morganstanley}}" alt="Morgan Stanley" style="height:22px"><img src="{{ubs}}" alt="UBS" style="height:26px"><img src="{{goldman}}" alt="Goldman Sachs" style="height:30px"><img src="{{capitaleconomics}}" alt="Capital Economics" style="height:30px"></div>
+</section>
+</body></html>
