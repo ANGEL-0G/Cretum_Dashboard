@@ -52,9 +52,27 @@ const commits = raw ? raw.split('\n').map(l => {
   return { hash, author, date, subject, who: bucket(author), module: moduleOf(subject) };
 }) : [];
 
+// Iconos SVG propios (línea, currentColor) — sin emojis ni dependencias.
+const ICONS = {
+  flag: `<path d="M6 21V4h11l-2.5 3L17 10H6"/>`,
+  check: `<rect x="3.5" y="3.5" width="17" height="17" rx="4.5"/><path d="M8 12.3l2.6 2.6L16.2 9"/>`,
+  mail: `<rect x="3" y="5.5" width="18" height="13" rx="2.6"/><path d="M4.2 7.5 12 12.8 19.8 7.5"/>`,
+  letter: `<rect x="4.5" y="3" width="15" height="18" rx="2.4"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4.5"/>`,
+  pencil: `<path d="M4 20.5h4L19.3 9.2l-4-4L4 16.5z"/><path d="M14 6.5l4 4"/>`,
+  folder: `<path d="M3.5 7.4A1.6 1.6 0 0 1 5.1 5.8h3.6l2 2.4h7.2a1.6 1.6 0 0 1 1.6 1.6v7.8a1.6 1.6 0 0 1-1.6 1.6H5.1a1.6 1.6 0 0 1-1.6-1.6z"/>`,
+  bars: `<path d="M6 20.5v-6M12 20.5V8M18 20.5v-9"/>`,
+  layout: `<rect x="3.5" y="4" width="17" height="16" rx="3.2"/><path d="M3.5 9.4h17M9.2 9.4V20"/>`,
+  dots: `<g fill="currentColor" stroke="none"><circle cx="6" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="18" cy="12" r="1.5"/></g>`,
+  calendar: `<rect x="3.5" y="5.2" width="17" height="15.3" rx="2.6"/><path d="M3.5 9.6h17M8 3.4v3.6M16 3.4v3.6"/>`,
+  clock: `<circle cx="12" cy="12" r="8.4"/><path d="M12 7.4V12l3.1 2"/>`,
+  globe: `<circle cx="12" cy="12" r="8.4"/><path d="M3.6 12h16.8M12 3.6c2.6 2.3 2.6 14.5 0 16.8M12 3.6c-2.6 2.3-2.6 14.5 0 16.8"/>`,
+};
+function ICON(name, cls = '') {
+  return `<svg class="ic${cls ? ' ' + cls : ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ICONS.dots}</svg>`;
+}
 const MOD_ICON = {
-  'Reportes': '⚑', 'To Do': '✓', 'Ventas · Plantillas': '✉', 'Campañas · Carta': '⚡',
-  'Notas': '📓', 'Dropbox': '🗂', 'GVV · Datos': '📊', 'Plataforma': '⌂', 'Otros': '•',
+  'Reportes': 'flag', 'To Do': 'check', 'Ventas · Plantillas': 'mail', 'Campañas · Carta': 'letter',
+  'Notas': 'pencil', 'Dropbox': 'folder', 'GVV · Datos': 'bars', 'Plataforma': 'layout', 'Otros': 'dots',
 };
 const WHO = {
   angel: { label: 'Angel · producto', cls: 'angel' },
@@ -105,7 +123,7 @@ const moduleCards = modulesSorted.map(([mod, list]) => {
     `<li>${shortSubject(c.subject)} <span class="lh">${esc(c.hash)}</span></li>`).join('');
   return `<article class="card rise" data-owner="${[...new Set(list.map(c => c.who))].join(' ')}">
     <div class="card-top">
-      <span class="card-icon">${MOD_ICON[mod] || '•'}</span>
+      <span class="card-icon">${ICON(MOD_ICON[mod] || 'dots')}</span>
       <h3>${esc(mod)}</h3>
       ${whoTags}
       <span class="commits">${list.length} commit${list.length === 1 ? '' : 's'}</span>
@@ -142,7 +160,7 @@ const html = `<!DOCTYPE html>
 <title>Avances en el desk · Cretum</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='1' y='1' width='30' height='30' rx='7' fill='%231A3A6B'/><g fill='%23fff'><rect x='7.4' y='17' width='4.2' height='8' rx='1.4'/><rect x='13.9' y='11.5' width='4.2' height='13.5' rx='1.4'/><rect x='20.4' y='7.5' width='4.2' height='17.5' rx='1.4'/></g></svg>">
 <style>
 ${STYLE()}
 </style>
@@ -154,9 +172,9 @@ ${STYLE()}
     <h1>Qué se movió esta semana en Cretum Desk</h1>
     <p class="lede">Generado automáticamente desde los commits de la semana. Agrupado por módulo y por quién lo llevó.</p>
     <div class="meta-row">
-      <span class="tag">📅 Periodo <b>${esc(range)}</b></span>
-      <span class="tag">🗓️ Cadencia <b>viernes</b></span>
-      <span class="tag">🌿 <b>cretumdesk.com</b></span>
+      <span class="tag">${ICON('calendar', 'ti')} Periodo <b>${esc(range)}</b></span>
+      <span class="tag">${ICON('clock', 'ti')} Cadencia <b>viernes</b></span>
+      <span class="tag">${ICON('globe', 'ti')} <b>cretumdesk.com</b></span>
     </div>
     <div class="stats">${statTiles}</div>
     <div class="distrib">
@@ -303,7 +321,10 @@ function STYLE() {
   .card:hover{transform:translateY(-2px);border-color:var(--navy-pale)}
   .card-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px}
   .card-top h3{font-size:18px;font-weight:650;letter-spacing:-.015em;margin:0}
-  .card-icon{width:34px;height:34px;border-radius:10px;background:var(--navy-pale);color:var(--navy);display:grid;place-items:center;font-size:16px;flex:0 0 auto}
+  .card-icon{width:34px;height:34px;border-radius:10px;background:var(--navy-pale);color:var(--navy);display:grid;place-items:center;flex:0 0 auto}
+  .ic{width:18px;height:18px;display:block}
+  .ic.ti{width:13px;height:13px}
+  .tag .ic{opacity:.85}
   .who{font-size:11.5px;font-weight:600;padding:3px 9px 3px 7px;border-radius:999px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
   .who.angel{background:var(--navy-pale);color:var(--navy-2)} .who.eug{background:var(--eug-bg);color:var(--eug)} .who.auto{background:var(--auto-bg);color:var(--auto)}
   .who .swatch{border-radius:50%}
