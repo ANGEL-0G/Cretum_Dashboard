@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Avances en el desk · Cretum</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+<style>
+
+  :root{
+    --bg:#F5F8FC; --surface:#FFFFFF; --surface-2:#EEF3FA; --raise:0 1px 2px rgba(18,30,54,.05),0 6px 20px rgba(18,30,54,.05);
+    --ink:#17202E; --ink-soft:#525E72; --ink-mute:#8894A6;
+    --line:#E2E9F2; --line-soft:#EDF1F7;
+    --navy:#1A3A6B; --navy-2:#2E5BA3; --navy-pale:#E9F0FA;
+    --green:#2E9C68; --green-bg:#E4F3EB; --amber:#B9782A; --amber-bg:#F6ECDA;
+    --eug:#177E86; --eug-bg:#E1F1F1; --auto:#5C6B82; --auto-bg:#EAEEF4;
+    --focus:#2E5BA3; --maxw:860px;
+  }
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+    --bg:#0D1421; --surface:#141D2F; --surface-2:#1A2540; --raise:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.28);
+    --ink:#E7ECF5; --ink-soft:#A7B3C7; --ink-mute:#6E7B91; --line:#26324A; --line-soft:#1E2939;
+    --navy:#79A2E4; --navy-2:#9CBDF0; --navy-pale:#1B2A47;
+    --green:#4FC088; --green-bg:rgba(79,192,136,.15); --amber:#E0A250; --amber-bg:rgba(224,162,80,.15);
+    --eug:#4FBEC6; --eug-bg:rgba(79,190,198,.15); --auto:#93A2BB; --auto-bg:rgba(147,162,187,.15); --focus:#9CBDF0;
+  }}
+  *{box-sizing:border-box} html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.6;letter-spacing:-.006em;-webkit-font-smoothing:antialiased}
+  .mono,.lh{font-family:ui-monospace,"SF Mono","Cascadia Code","JetBrains Mono",Menlo,Consolas,monospace}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 22px}
+  :focus-visible{outline:2px solid var(--focus);outline-offset:3px;border-radius:6px}
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .rise{animation:rise .55s cubic-bezier(.22,1,.36,1) both}
+  @media (prefers-reduced-motion:reduce){.rise{animation:none}}
+  header{padding:54px 0 30px;border-bottom:1px solid var(--line)}
+  .eyebrow{font-family:ui-monospace,monospace;font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--navy-2);display:flex;align-items:center;gap:9px;margin:0 0 18px}
+  .eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--navy-2);box-shadow:0 0 0 4px var(--navy-pale)}
+  h1{font-size:clamp(30px,5.6vw,46px);line-height:1.05;letter-spacing:-.03em;font-weight:700;margin:0 0 16px;text-wrap:balance}
+  .lede{font-size:clamp(16px,2.3vw,18.5px);color:var(--ink-soft);max-width:60ch;margin:0;text-wrap:pretty}
+  .meta-row{display:flex;flex-wrap:wrap;gap:8px 10px;margin-top:22px}
+  .tag{font-size:12.5px;font-weight:500;padding:5px 11px;border-radius:999px;background:var(--surface-2);color:var(--ink-soft);border:1px solid var(--line);display:inline-flex;align-items:center;gap:6px}
+  .tag b{color:var(--ink);font-weight:600}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:26px 0 6px}
+  @media (max-width:640px){.stats{grid-template-columns:repeat(2,1fr)}}
+  .stat{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 16px 14px;box-shadow:var(--raise)}
+  .stat .n{font-size:30px;font-weight:700;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums}
+  .stat .k{font-size:12.5px;color:var(--ink-mute);margin-top:7px;display:flex;align-items:center;gap:6px}
+  .swatch{width:9px;height:9px;border-radius:3px;flex:0 0 auto}
+  .sw-navy{background:var(--navy)} .sw-eug{background:var(--eug)} .sw-auto{background:var(--auto)}
+  .distrib{margin:20px 0 4px}
+  .distrib .bar{display:flex;height:16px;border-radius:8px;overflow:hidden;border:1px solid var(--line);background:var(--surface-2)}
+  .distrib .seg{height:100%;width:0;transition:width 1.1s cubic-bezier(.22,1,.36,1)}
+  @media (prefers-reduced-motion:reduce){.distrib .seg{transition:none}}
+  .seg-navy{background:var(--navy)} .seg-auto{background:var(--auto)} .seg-eug{background:var(--eug)}
+  .distrib .cap{font-size:12.5px;color:var(--ink-mute);margin-top:9px}
+  section{padding:38px 0}
+  .sec-head{display:flex;align-items:baseline;gap:12px;margin:0 0 20px}
+  .sec-head h2{font-size:22px;font-weight:700;letter-spacing:-.02em;margin:0}
+  .sec-head .num{font-family:ui-monospace,monospace;font-size:12.5px;color:var(--ink-mute);letter-spacing:.06em;padding-top:3px}
+  .sec-note{color:var(--ink-soft);margin:-8px 0 20px;font-size:15px;max-width:64ch}
+  .filter{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px}
+  .fbtn{font-size:13.5px;font-weight:500;padding:7px 14px;border-radius:999px;cursor:pointer;background:var(--surface);border:1px solid var(--line);color:var(--ink-soft);display:inline-flex;align-items:center;gap:7px;transition:border-color .15s,color .15s,background .15s}
+  .fbtn:hover{border-color:var(--navy-2);color:var(--ink)}
+  .fbtn[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:#fff}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .fbtn[aria-pressed="true"]{color:#0D1421}}
+  .cards{display:flex;flex-direction:column;gap:14px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px 22px;box-shadow:var(--raise);transition:transform .18s ease,border-color .18s ease}
+  .card.is-hidden{display:none}
+  .card:hover{transform:translateY(-2px);border-color:var(--navy-pale)}
+  .card-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+  .card-top h3{font-size:18px;font-weight:650;letter-spacing:-.015em;margin:0}
+  .card-icon{width:34px;height:34px;border-radius:10px;background:var(--navy-pale);color:var(--navy);display:grid;place-items:center;font-size:16px;flex:0 0 auto}
+  .who{font-size:11.5px;font-weight:600;padding:3px 9px 3px 7px;border-radius:999px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+  .who.angel{background:var(--navy-pale);color:var(--navy-2)} .who.eug{background:var(--eug-bg);color:var(--eug)} .who.auto{background:var(--auto-bg);color:var(--auto)}
+  .who .swatch{border-radius:50%}
+  .card .commits{margin-left:auto;font-family:ui-monospace,monospace;font-size:12px;color:var(--ink-mute);white-space:nowrap}
+  .card ul{margin:12px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:9px}
+  .card li{position:relative;padding-left:22px;color:var(--ink-soft);font-size:14.5px;line-height:1.55}
+  .card li::before{content:"";position:absolute;left:4px;top:9px;width:7px;height:7px;border-radius:2px;background:var(--navy);opacity:.55}
+  .card li .lh{font-size:11px;color:var(--ink-mute);margin-left:4px}
+  .duo{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media (max-width:720px){.duo{grid-template-columns:1fr}}
+  .panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:var(--raise)}
+  .panel h3{margin:0 0 4px;font-size:17px;font-weight:650;letter-spacing:-.01em;display:flex;align-items:center}
+  .panel .sub{color:var(--ink-mute);font-size:13px;margin:0 0 16px}
+  .commit-list{display:flex;flex-direction:column;gap:8px}
+  .cl{display:flex;gap:11px;align-items:baseline;font-size:14px;color:var(--ink-soft)}
+  .cl .h{font-family:ui-monospace,monospace;font-size:11.5px;flex:0 0 auto;padding-top:1px}
+  .flow{display:flex;flex-direction:column}
+  .step{display:flex;gap:14px;position:relative;padding-bottom:18px}
+  .step:last-child{padding-bottom:0}
+  .step .rail{display:flex;flex-direction:column;align-items:center;flex:0 0 auto}
+  .step .node{width:28px;height:28px;border-radius:50%;background:var(--navy-pale);color:var(--navy);display:grid;place-items:center;font-size:12px;font-weight:700;font-family:ui-monospace,monospace;z-index:1}
+  .step .line{width:2px;flex:1;background:var(--line);margin:3px 0 -3px}
+  .step:last-child .line{display:none}
+  .step .body{padding-top:2px}
+  .step .body b{display:block;font-size:15px;color:var(--ink);font-weight:600}
+  .step .body span{font-size:13.5px;color:var(--ink-soft)}
+  details.log{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--raise);overflow:hidden}
+  details.log summary{cursor:pointer;padding:16px 20px;font-weight:600;font-size:15px;list-style:none;display:flex;align-items:center;gap:10px}
+  details.log summary::-webkit-details-marker{display:none}
+  details.log summary .caret{transition:transform .2s ease;color:var(--ink-mute)}
+  details.log[open] summary .caret{transform:rotate(90deg)}
+  details.log summary .count{margin-left:auto;font-family:ui-monospace,monospace;font-size:12px;color:var(--ink-mute)}
+  .logbody{padding:4px 20px 18px;border-top:1px solid var(--line-soft)}
+  .day{margin-top:16px}
+  .day-h{font-family:ui-monospace,monospace;font-size:12px;letter-spacing:.05em;color:var(--ink-mute);text-transform:uppercase;margin:0 0 8px;padding-top:8px;border-top:1px dashed var(--line)}
+  .day:first-child .day-h{border-top:none;padding-top:0}
+  .lrow{display:flex;gap:10px;align-items:baseline;padding:4px 0;font-size:13.5px;color:var(--ink-soft);line-height:1.45}
+  .lrow .lw{width:8px;height:8px;border-radius:2px;flex:0 0 auto;position:relative;top:4px}
+  footer{border-top:1px solid var(--line);padding:30px 0 60px;color:var(--ink-mute);font-size:13px;margin-top:20px}
+  footer .wrap{display:flex;flex-wrap:wrap;gap:6px 14px;justify-content:space-between;align-items:center}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap rise">
+    <p class="eyebrow"><span class="dot"></span> Blog semanal · Avances en el desk</p>
+    <h1>Qué se movió esta semana en Cretum Desk</h1>
+    <p class="lede">Generado automáticamente desde los commits de la semana. Agrupado por módulo y por quién lo llevó.</p>
+    <div class="meta-row">
+      <span class="tag">📅 Periodo <b>4 ago 2026 – 11 ago 2026</b></span>
+      <span class="tag">🗓️ Cadencia <b>viernes</b></span>
+      <span class="tag">🌿 <b>cretumdesk.com</b></span>
+    </div>
+    <div class="stats"><div class="stat"><div class="n">74</div><div class="k">commits en la semana</div></div><div class="stat"><div class="n">45</div><div class="k"><span class="swatch sw-navy"></span>Angel · producto</div></div><div class="stat"><div class="n">17</div><div class="k"><span class="swatch sw-auto"></span>Automatización GVV</div></div><div class="stat"><div class="n">12</div><div class="k"><span class="swatch sw-eug"></span>Eugenio</div></div></div>
+    <div class="distrib">
+      <div class="bar" id="bar">
+        <div class="seg seg-navy" data-w="60.8" title="Angel · 45"></div>
+        <div class="seg seg-auto" data-w="23.0" title="Automatización · 17"></div>
+        <div class="seg seg-eug" data-w="16.2" title="Eugenio · 12"></div>
+      </div>
+      <div class="cap">Distribución de commits · 9 módulos tocados · 7 días activos</div>
+    </div>
+  </div>
+</header>
+<main>
+
+  <section><div class="wrap">
+    <div class="sec-head"><span class="num">01</span><h2>Lo que se movió, por módulo</h2></div>
+    <div class="filter" role="group" aria-label="Filtrar por autor">
+      <button class="fbtn" data-filter="all" aria-pressed="true">Todos</button>
+      <button class="fbtn" data-filter="angel" aria-pressed="false"><span class="swatch sw-navy"></span> Angel</button>
+      <button class="fbtn" data-filter="eug" aria-pressed="false"><span class="swatch sw-eug"></span> Eugenio</button>
+      <button class="fbtn" data-filter="auto" aria-pressed="false"><span class="swatch sw-auto"></span> Automatización</button>
+    </div>
+    <div class="cards" id="cards"><article class="card rise" data-owner="auto eug">
+    <div class="card-top">
+      <span class="card-icon">📊</span>
+      <h3>GVV · Datos</h3>
+      <span class="who auto"><span class="swatch sw-auto"></span>Automatización</span><span class="who eug"><span class="swatch sw-eug"></span>Eugenio</span>
+      <span class="commits">27 commits</span>
+    </div>
+    <ul><li>cierre automatico Julio 2026 <span class="lh">0d6fb04</span></li><li>version movil (flujo vertical apilado &lt;=880px) + logos limpios unificados <span class="lh">8bebfb6</span></li><li>actualizar estrategias al Reporte RGA Consulting 2026-07-31 (+Equity ETF, +Greenfield) <span class="lh">eda8007</span></li><li>fix logo Deloitte (respetar alfa original del webp) <span class="lh">60debd3</span></li><li>logo Deloitte limpio (transparente, chip blanco) <span class="lh">d4b0b75</span></li><li>logo BNY Mellon limpio (transparente, chip blanco) en vez del recorte borroso <span class="lh">912846f</span></li><li>proveedores a color (sin grayscale, hover scale) <span class="lh">6636dcb</span></li><li>proveedores con espaciado uniforme (logos con trim + fondo transparente + alturas balanceadas + space-between) <span class="lh">ced83a4</span></li><li>seccion Estructura del Fondo (diagrama animado) <span class="lh">59272c3</span></li><li>cierre automatico Julio 2026 <span class="lh">492db3c</span></li><li>skin in the game 76% -&gt; 61% (numero + textos es/en) <span class="lh">7acbc89</span></li><li>cierre automatico Julio 2026 <span class="lh">ff28a52</span></li><li>logo de Saronic en privados (pvlogo-saronic) <span class="lh">006719a</span></li><li>cierre automatico Julio 2026 <span class="lh">c9d5c16</span></li><li>YTD hero desde celda Excel (M.ytd/ytdNet en METRICS) <span class="lh">926046b</span></li><li>cierre automatico Julio 2026 <span class="lh">1277fb4</span></li><li>directiva solo-Excel 2026-08-08 <span class="lh">21b9cc9</span></li><li>gotcha de la presentacion GVV (nombre = mes de distribucion, no de datos) <span class="lh">89c3c57</span></li><li>revierte link de presentacion (la de &quot;Julio 2026&quot; trae datos de junio) <span class="lh">d68ff8f</span></li><li>documenta la automatizacion del dashboard GVV (activa) <span class="lh">cca356c</span></li><li>cierre automatico Julio 2026 <span class="lh">0880533</span></li><li>mapa fuente-a-campo del dashboard GVV (Excel / carta / presentación) <span class="lh">9da1d73</span></li><li>link de la carta mensual a cretumdesk.com (julio), sin depender de FTP <span class="lh">d1ed39f</span></li><li>cierre de julio 2026 (rendimiento + composición del portafolio) <span class="lh">8db15eb</span></li><li>agrupa por fuente (manual primero) en vez de lista plana <span class="lh">62959c0</span></li><li>Panel admin &quot;Control de precios&quot;: botón + modal en Base de Datos <span class="lh">ce0dd4b</span></li><li>fechas reales del doc oficial (directos 6-ago / fondos 9-sep / dia180 8-dic / ext 2-feb-2027), dos anclas <span class="lh">377e578</span></li></ul>
+  </article>
+<article class="card rise" data-owner="angel">
+    <div class="card-top">
+      <span class="card-icon">⚡</span>
+      <h3>Campañas · Carta</h3>
+      <span class="who angel"><span class="swatch sw-navy"></span>Angel</span>
+      <span class="commits">11 commits</span>
+    </div>
+    <ul><li>título pro del PDF de la carta (pestaña &quot;GVV Monthly Report&quot;) <span class="lh">1017e0b</span></li><li>enlace de la carta en /gvv (sin extensión) — arregla caída a login <span class="lh">34a38ac</span></li><li>% del mes en navy + botón Guardar en la forma rápida <span class="lh">0fc3b16</span></li><li>enlace público de la carta como /gvv.pdf (evita filtros de adblock) <span class="lh">7e7047e</span></li><li>servir /carta como proxy first-party (evita ERR_BLOCKED_BY_CLIENT) <span class="lh">a7bf151</span></li><li>subir la carta desde la PC (además de Dropbox) <span class="lh">8d8a183</span></li><li>nombre pro del PDF público de la carta <span class="lh">377fd0c</span></li><li>publicar la carta mensual en el desk (enlace público fijo) <span class="lh">4c72a6c</span></li><li>el modal &quot;Plantilla del correo&quot; muestra la campaña publicada <span class="lh">65354d6</span></li><li>el editor completo ahora carga y conserva lo publicado <span class="lh">75f580e</span></li><li>editar la campaña mensual con el editor de correo de Ventas <span class="lh">41caeee</span></li></ul>
+  </article>
+<article class="card rise" data-owner="angel">
+    <div class="card-top">
+      <span class="card-icon">✉</span>
+      <h3>Ventas · Plantillas</h3>
+      <span class="who angel"><span class="swatch sw-navy"></span>Angel</span>
+      <span class="commits">10 commits</span>
+    </div>
+    <ul><li>copiar plantilla sin manglear el formato <span class="lh">ec4273b</span></li><li>fix overlay de progreso siempre visible (hidden anulado por display:flex) <span class="lh">123adac</span></li><li>timeout en la subida de imágenes (evita quedarse colgado en 0%) <span class="lh">5ad04ce</span></li><li>círculo de progreso al optimizar imágenes <span class="lh">99a7365</span></li><li>indicador de estado de imágenes en las plantillas <span class="lh">2028e11</span></li><li>&quot;Optimizar imágenes&quot; — sube base64 al servidor (Gmail no muestra base64) <span class="lh">2cb592a</span></li><li>botón &quot;Descargar .html&quot; en plantillas (biblioteca y editor) <span class="lh">c1e5b44</span></li><li>copiar plantilla funciona en móvil (selección + execCommand) <span class="lh">555dbb5</span></li><li>Ventas en MVP + plantillas separadas por organización <span class="lh">98e2823</span></li><li>Editor de plantillas (Ventas): insertar y editar imágenes/gráficas <span class="lh">b327917</span></li></ul>
+  </article>
+<article class="card rise" data-owner="angel">
+    <div class="card-top">
+      <span class="card-icon">⌂</span>
+      <h3>Plataforma</h3>
+      <span class="who angel"><span class="swatch sw-navy"></span>Angel</span>
+      <span class="commits">7 commits</span>
+    </div>
+    <ul><li>móvil solo en nav izquierdo, PC solo en menú de perfil <span class="lh">6a8cbc8</span></li><li>Documentar la convención de &#39;atrás&#39; en el código (arriba de dismissTopLayer) <span class="lh">a7c6b11</span></li><li>cerrar cada pantalla/capa antes de salir de la app <span class="lh">addc1c1</span></li><li>homogenizar íconos de módulos al acento de la empresa <span class="lh">cf5c509</span></li><li>animaciones (emil + impeccable audit) <span class="lh">276fa9d</span></li><li>naranja plano (sin degradado) <span class="lh">824c272</span></li><li>naranja más vivo (#ed7824 en el degradado) <span class="lh">0baacc9</span></li></ul>
+  </article>
+<article class="card rise" data-owner="eug angel">
+    <div class="card-top">
+      <span class="card-icon">•</span>
+      <h3>Otros</h3>
+      <span class="who eug"><span class="swatch sw-eug"></span>Eugenio</span><span class="who angel"><span class="swatch sw-navy"></span>Angel</span>
+      <span class="commits">6 commits</span>
+    </div>
+    <ul><li>Herramientas de la seccion Estructura (draft+injector+logos) para futuras ediciones <span class="lh">0ca81db</span></li><li>Botón de reporte flotante en cada sección → tarea en To Do de admins <span class="lh">6948568</span></li><li>hover de logos más crujiente (emil-design-eng) <span class="lh">36343fd</span></li><li>logos sin halo permanente, glow solo en hover <span class="lh">a5d71f5</span></li><li>negro completo (la franja azulada de abajo era el &lt;html&gt; <span class="lh">8b4ba0d</span></li><li>Neteo reinversiones generalizado: Groq 3a dist -&gt; Serie VI-26I QC (mismo patron 22F-&gt;26A QP) <span class="lh">5d38e5f</span></li></ul>
+  </article>
+<article class="card rise" data-owner="angel">
+    <div class="card-top">
+      <span class="card-icon">✓</span>
+      <h3>To Do</h3>
+      <span class="who angel"><span class="swatch sw-navy"></span>Angel</span>
+      <span class="commits">6 commits</span>
+    </div>
+    <ul><li>panel de carpetas por proyecto + Vaciar en todas las vistas <span class="lh">da0ba21</span></li><li>estatus como píldora segmentada (como las tablas) con color por estado <span class="lh">b5926f7</span></li><li>botón de avance compacto (ya no full-width) <span class="lh">631d8b2</span></li><li>rediseño del estatus (botón de avance + saltos) <span class="lh">c9a5057</span></li><li>abrir también desde Kanban y Timeline (no solo Lista) <span class="lh">9582b62</span></li><li>panel de detalle al tocar el nombre (leer descripción + actuar) <span class="lh">09c557c</span></li></ul>
+  </article>
+<article class="card rise" data-owner="angel">
+    <div class="card-top">
+      <span class="card-icon">📓</span>
+      <h3>Notas</h3>
+      <span class="who angel"><span class="swatch sw-navy"></span>Angel</span>
+      <span class="commits">4 commits</span>
+    </div>
+    <ul><li>botón &quot;Guardar&quot; con confirmación visual (además del autoguardado) <span class="lh">f894e16</span></li><li>quitar el parpadeo al seleccionar/crear/colorear (updates quirúrgicos) <span class="lh">04ea6a4</span></li><li>mover una nota a otra carpeta con un botón <span class="lh">2cb4218</span></li><li>rediseño drill-in tipo Notion/Evernote <span class="lh">d288e32</span></li></ul>
+  </article>
+<article class="card rise" data-owner="angel">
+    <div class="card-top">
+      <span class="card-icon">⚑</span>
+      <h3>Reportes</h3>
+      <span class="who angel"><span class="swatch sw-navy"></span>Angel</span>
+      <span class="commits">2 commits</span>
+    </div>
+    <ul><li>mini-tablero con tomar/resolver y atribución <span class="lh">0788a39</span></li><li>título = la sección + aviso al reportero cuando se resuelve <span class="lh">96aea87</span></li></ul>
+  </article>
+<article class="card rise" data-owner="angel">
+    <div class="card-top">
+      <span class="card-icon">🗂</span>
+      <h3>Dropbox</h3>
+      <span class="who angel"><span class="swatch sw-navy"></span>Angel</span>
+      <span class="commits">1 commit</span>
+    </div>
+    <ul><li>previsualizar PDFs en móvil con PDF.js <span class="lh">37c8d5f</span></li></ul>
+  </article></div>
+  </div></section>
+
+  <section><div class="wrap">
+    <div class="sec-head"><span class="num">02</span><h2>Qué hizo cada quien</h2></div>
+    <div class="duo"><div class="panel">
+    <h3><span class="swatch sw-navy" style="display:inline-block;margin-right:8px"></span>Angel · producto</h3>
+    <p class="sub">45 commits esta semana</p>
+    <div class="commit-list"><div class="cl"><span class="h" style="color:var(--navy-2)">0788a39</span><span>mini-tablero con tomar/resolver y atribución</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">ec4273b</span><span>copiar plantilla sin manglear el formato</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">123adac</span><span>fix overlay de progreso siempre visible (hidden anulado por display:flex)</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">5ad04ce</span><span>timeout en la subida de imágenes (evita quedarse colgado en 0%)</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">99a7365</span><span>círculo de progreso al optimizar imágenes</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">2028e11</span><span>indicador de estado de imágenes en las plantillas</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">2cb592a</span><span>&quot;Optimizar imágenes&quot; — sube base64 al servidor (Gmail no muestra base64)</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">c1e5b44</span><span>botón &quot;Descargar .html&quot; en plantillas (biblioteca y editor)</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">555dbb5</span><span>copiar plantilla funciona en móvil (selección + execCommand)</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">98e2823</span><span>Ventas en MVP + plantillas separadas por organización</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">1017e0b</span><span>título pro del PDF de la carta (pestaña &quot;GVV Monthly Report&quot;)</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">34a38ac</span><span>enlace de la carta en /gvv (sin extensión) — arregla caída a login</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">0fc3b16</span><span>% del mes en navy + botón Guardar en la forma rápida</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">7e7047e</span><span>enlace público de la carta como /gvv.pdf (evita filtros de adblock)</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">a7bf151</span><span>servir /carta como proxy first-party (evita ERR_BLOCKED_BY_CLIENT)</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">8d8a183</span><span>subir la carta desde la PC (además de Dropbox)</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">377fd0c</span><span>nombre pro del PDF público de la carta</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">4c72a6c</span><span>publicar la carta mensual en el desk (enlace público fijo)</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">65354d6</span><span>el modal &quot;Plantilla del correo&quot; muestra la campaña publicada</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">75f580e</span><span>el editor completo ahora carga y conserva lo publicado</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">41caeee</span><span>editar la campaña mensual con el editor de correo de Ventas</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">da0ba21</span><span>panel de carpetas por proyecto + Vaciar en todas las vistas</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">37c8d5f</span><span>previsualizar PDFs en móvil con PDF.js</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">f894e16</span><span>botón &quot;Guardar&quot; con confirmación visual (además del autoguardado)</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">b327917</span><span>Editor de plantillas (Ventas): insertar y editar imágenes/gráficas</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">b5926f7</span><span>estatus como píldora segmentada (como las tablas) con color por estado</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">631d8b2</span><span>botón de avance compacto (ya no full-width)</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">c9a5057</span><span>rediseño del estatus (botón de avance + saltos)</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">9582b62</span><span>abrir también desde Kanban y Timeline (no solo Lista)</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">09c557c</span><span>panel de detalle al tocar el nombre (leer descripción + actuar)</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">96aea87</span><span>título = la sección + aviso al reportero cuando se resuelve</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">6948568</span><span>Botón de reporte flotante en cada sección → tarea en To Do de admins</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">04ea6a4</span><span>quitar el parpadeo al seleccionar/crear/colorear (updates quirúrgicos)</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">6a8cbc8</span><span>móvil solo en nav izquierdo, PC solo en menú de perfil</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">a7c6b11</span><span>Documentar la convención de &#39;atrás&#39; en el código (arriba de dismissTopLayer)</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">addc1c1</span><span>cerrar cada pantalla/capa antes de salir de la app</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">2cb4218</span><span>mover una nota a otra carpeta con un botón</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">cf5c509</span><span>homogenizar íconos de módulos al acento de la empresa</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">d288e32</span><span>rediseño drill-in tipo Notion/Evernote</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">276fa9d</span><span>animaciones (emil + impeccable audit)</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">36343fd</span><span>hover de logos más crujiente (emil-design-eng)</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">a5d71f5</span><span>logos sin halo permanente, glow solo en hover</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">824c272</span><span>naranja plano (sin degradado)</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">0baacc9</span><span>naranja más vivo (#ed7824 en el degradado)</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">8b4ba0d</span><span>negro completo (la franja azulada de abajo era el &lt;html&gt;</span></div></div>
+  </div>
+<div class="panel">
+    <h3><span class="swatch sw-auto" style="display:inline-block;margin-right:8px"></span>Automatización</h3>
+    <p class="sub">17 commits esta semana</p>
+    <div class="commit-list"><div class="cl"><span class="h" style="color:var(--auto)">0d6fb04</span><span>cierre automatico Julio 2026</span></div><div class="cl"><span class="h" style="color:var(--auto)">492db3c</span><span>cierre automatico Julio 2026</span></div><div class="cl"><span class="h" style="color:var(--auto)">7acbc89</span><span>skin in the game 76% -&gt; 61% (numero + textos es/en)</span></div><div class="cl"><span class="h" style="color:var(--auto)">ff28a52</span><span>cierre automatico Julio 2026</span></div><div class="cl"><span class="h" style="color:var(--auto)">c9d5c16</span><span>cierre automatico Julio 2026</span></div><div class="cl"><span class="h" style="color:var(--auto)">926046b</span><span>YTD hero desde celda Excel (M.ytd/ytdNet en METRICS)</span></div><div class="cl"><span class="h" style="color:var(--auto)">1277fb4</span><span>cierre automatico Julio 2026</span></div><div class="cl"><span class="h" style="color:var(--auto)">21b9cc9</span><span>directiva solo-Excel 2026-08-08</span></div><div class="cl"><span class="h" style="color:var(--auto)">89c3c57</span><span>gotcha de la presentacion GVV (nombre = mes de distribucion, no de datos)</span></div><div class="cl"><span class="h" style="color:var(--auto)">d68ff8f</span><span>revierte link de presentacion (la de &quot;Julio 2026&quot; trae datos de junio)</span></div><div class="cl"><span class="h" style="color:var(--auto)">cca356c</span><span>documenta la automatizacion del dashboard GVV (activa)</span></div><div class="cl"><span class="h" style="color:var(--auto)">0880533</span><span>cierre automatico Julio 2026</span></div><div class="cl"><span class="h" style="color:var(--auto)">9da1d73</span><span>mapa fuente-a-campo del dashboard GVV (Excel / carta / presentación)</span></div><div class="cl"><span class="h" style="color:var(--auto)">d1ed39f</span><span>link de la carta mensual a cretumdesk.com (julio), sin depender de FTP</span></div><div class="cl"><span class="h" style="color:var(--auto)">8db15eb</span><span>cierre de julio 2026 (rendimiento + composición del portafolio)</span></div><div class="cl"><span class="h" style="color:var(--auto)">62959c0</span><span>agrupa por fuente (manual primero) en vez de lista plana</span></div><div class="cl"><span class="h" style="color:var(--auto)">ce0dd4b</span><span>Panel admin &quot;Control de precios&quot;: botón + modal en Base de Datos</span></div></div>
+  </div>
+<div class="panel">
+    <h3><span class="swatch sw-eug" style="display:inline-block;margin-right:8px"></span>Eugenio</h3>
+    <p class="sub">12 commits esta semana</p>
+    <div class="commit-list"><div class="cl"><span class="h" style="color:var(--eug)">0ca81db</span><span>Herramientas de la seccion Estructura (draft+injector+logos) para futuras ediciones</span></div><div class="cl"><span class="h" style="color:var(--eug)">8bebfb6</span><span>version movil (flujo vertical apilado &lt;=880px) + logos limpios unificados</span></div><div class="cl"><span class="h" style="color:var(--eug)">eda8007</span><span>actualizar estrategias al Reporte RGA Consulting 2026-07-31 (+Equity ETF, +Greenfield)</span></div><div class="cl"><span class="h" style="color:var(--eug)">60debd3</span><span>fix logo Deloitte (respetar alfa original del webp)</span></div><div class="cl"><span class="h" style="color:var(--eug)">d4b0b75</span><span>logo Deloitte limpio (transparente, chip blanco)</span></div><div class="cl"><span class="h" style="color:var(--eug)">912846f</span><span>logo BNY Mellon limpio (transparente, chip blanco) en vez del recorte borroso</span></div><div class="cl"><span class="h" style="color:var(--eug)">6636dcb</span><span>proveedores a color (sin grayscale, hover scale)</span></div><div class="cl"><span class="h" style="color:var(--eug)">ced83a4</span><span>proveedores con espaciado uniforme (logos con trim + fondo transparente + alturas balanceadas + space-between)</span></div><div class="cl"><span class="h" style="color:var(--eug)">59272c3</span><span>seccion Estructura del Fondo (diagrama animado)</span></div><div class="cl"><span class="h" style="color:var(--eug)">006719a</span><span>logo de Saronic en privados (pvlogo-saronic)</span></div><div class="cl"><span class="h" style="color:var(--eug)">377e578</span><span>fechas reales del doc oficial (directos 6-ago / fondos 9-sep / dia180 8-dic / ext 2-feb-2027), dos anclas</span></div><div class="cl"><span class="h" style="color:var(--eug)">5d38e5f</span><span>Neteo reinversiones generalizado: Groq 3a dist -&gt; Serie VI-26I QC (mismo patron 22F-&gt;26A QP)</span></div></div>
+  </div></div>
+  </div></section>
+
+  <section><div class="wrap">
+    <div class="sec-head"><span class="num">03</span><h2>Cómo se trabaja</h2></div>
+    <div class="panel">
+      <div class="flow">
+        <div class="step"><div class="rail"><div class="node">1</div><div class="line"></div></div><div class="body"><b>Necesidad</b><span>Sale de una petición, un reporte del equipo o un pendiente.</span></div></div>
+        <div class="step"><div class="rail"><div class="node">2</div><div class="line"></div></div><div class="body"><b>Construir + revisar</b><span>Se arma, se valida y se muestra antes de tocar producción.</span></div></div>
+        <div class="step"><div class="rail"><div class="node">3</div><div class="line"></div></div><div class="body"><b>Aprobación</b><span>Nada se despliega sin visto bueno.</span></div></div>
+        <div class="step"><div class="rail"><div class="node">4</div><div class="line"></div></div><div class="body"><b>Deploy</b><span>Push a <span class="mono">main</span> → Vercel despliega solo → <span class="mono">cretumdesk.com</span>.</span></div></div>
+      </div>
+    </div>
+  </div></section>
+
+  <section><div class="wrap">
+    <div class="sec-head"><span class="num">04</span><h2>Registro de GitHub</h2></div>
+    <details class="log">
+      <summary><span class="caret">▸</span> Ver los 74 commits de la semana <span class="count">4 ago 2026 – 11 ago 2026</span></summary>
+      <div class="logbody">
+  <div class="day"><p class="day-h">11 ago · 2 commits</p>
+    <div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">0788a39</span><span>Reportes: mini-tablero con tomar/resolver y atribución</span></div><div class="lrow"><span class="lw" style="background:var(--auto)"></span><span class="lh">0d6fb04</span><span>GVV dashboard: cierre automatico Julio 2026</span></div>
+  </div>
+  <div class="day"><p class="day-h">10 ago · 20 commits</p>
+    <div class="lrow"><span class="lw" style="background:var(--eug)"></span><span class="lh">0ca81db</span><span>Herramientas de la seccion Estructura (draft+injector+logos) para futuras ediciones</span></div><div class="lrow"><span class="lw" style="background:var(--eug)"></span><span class="lh">8bebfb6</span><span>GVV estructura: version movil (flujo vertical apilado &lt;=880px) + logos limpios unificados</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">ec4273b</span><span>Ventas: copiar plantilla sin manglear el formato</span></div><div class="lrow"><span class="lw" style="background:var(--eug)"></span><span class="lh">eda8007</span><span>GVV RGA: actualizar estrategias al Reporte RGA Consulting 2026-07-31 (+Equity ETF, +Greenfield)</span></div><div class="lrow"><span class="lw" style="background:var(--eug)"></span><span class="lh">60debd3</span><span>GVV estructura: fix logo Deloitte (respetar alfa original del webp)</span></div><div class="lrow"><span class="lw" style="background:var(--eug)"></span><span class="lh">d4b0b75</span><span>GVV estructura: logo Deloitte limpio (transparente, chip blanco)</span></div><div class="lrow"><span class="lw" style="background:var(--eug)"></span><span class="lh">912846f</span><span>GVV estructura: logo BNY Mellon limpio (transparente, chip blanco) en vez del recorte borroso</span></div><div class="lrow"><span class="lw" style="background:var(--eug)"></span><span class="lh">6636dcb</span><span>GVV estructura: proveedores a color (sin grayscale, hover scale)</span></div><div class="lrow"><span class="lw" style="background:var(--eug)"></span><span class="lh">ced83a4</span><span>GVV estructura: proveedores con espaciado uniforme (logos con trim + fondo transparente + alturas balanceadas + space-between)</span></div><div class="lrow"><span class="lw" style="background:var(--eug)"></span><span class="lh">59272c3</span><span>GVV dashboard: seccion Estructura del Fondo (diagrama animado)</span></div><div class="lrow"><span class="lw" style="background:var(--auto)"></span><span class="lh">492db3c</span><span>GVV dashboard: cierre automatico Julio 2026</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">123adac</span><span>Ventas: fix overlay de progreso siempre visible (hidden anulado por display:flex)</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">5ad04ce</span><span>Ventas: timeout en la subida de imágenes (evita quedarse colgado en 0%)</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">99a7365</span><span>Ventas: círculo de progreso al optimizar imágenes</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">2028e11</span><span>Ventas: indicador de estado de imágenes en las plantillas</span></div><div class="lrow"><span class="lw" style="background:var(--auto)"></span><span class="lh">7acbc89</span><span>GVV: skin in the game 76% -&gt; 61% (numero + textos es/en)</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">2cb592a</span><span>Ventas: &quot;Optimizar imágenes&quot; — sube base64 al servidor (Gmail no muestra base64)</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">c1e5b44</span><span>Ventas: botón &quot;Descargar .html&quot; en plantillas (biblioteca y editor)</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">555dbb5</span><span>Ventas: copiar plantilla funciona en móvil (selección + execCommand)</span></div><div class="lrow"><span class="lw" style="background:var(--auto)"></span><span class="lh">ff28a52</span><span>GVV dashboard: cierre automatico Julio 2026</span></div>
+  </div>
+  <div class="day"><p class="day-h">8 ago · 4 commits</p>
+    <div class="lrow"><span class="lw" style="background:var(--eug)"></span><span class="lh">006719a</span><span>GVV: logo de Saronic en privados (pvlogo-saronic)</span></div><div class="lrow"><span class="lw" style="background:var(--auto)"></span><span class="lh">c9d5c16</span><span>GVV dashboard: cierre automatico Julio 2026</span></div><div class="lrow"><span class="lw" style="background:var(--auto)"></span><span class="lh">926046b</span><span>GVV bundle: YTD hero desde celda Excel (M.ytd/ytdNet en METRICS)</span></div><div class="lrow"><span class="lw" style="background:var(--auto)"></span><span class="lh">1277fb4</span><span>GVV dashboard: cierre automatico Julio 2026</span></div>
+  </div>
+  <div class="day"><p class="day-h">7 ago · 19 commits</p>
+    <div class="lrow"><span class="lw" style="background:var(--auto)"></span><span class="lh">21b9cc9</span><span>GVV data sources: directiva solo-Excel 2026-08-08</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">98e2823</span><span>Ventas en MVP + plantillas separadas por organización</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">1017e0b</span><span>Campañas: título pro del PDF de la carta (pestaña &quot;GVV Monthly Report&quot;)</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">34a38ac</span><span>Campañas: enlace de la carta en /gvv (sin extensión) — arregla caída a login</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">0fc3b16</span><span>Campañas: % del mes en navy + botón Guardar en la forma rápida</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">7e7047e</span><span>Campañas: enlace público de la carta como /gvv.pdf (evita filtros de adblock)</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">a7bf151</span><span>Campañas: servir /carta como proxy first-party (evita ERR_BLOCKED_BY_CLIENT)</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">8d8a183</span><span>Campañas: subir la carta desde la PC (además de Dropbox)</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">377fd0c</span><span>Campañas: nombre pro del PDF público de la carta</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">4c72a6c</span><span>Campañas: publicar la carta mensual en el desk (enlace público fijo)</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">65354d6</span><span>Campañas: el modal &quot;Plantilla del correo&quot; muestra la campaña publicada</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">75f580e</span><span>Campañas: el editor completo ahora carga y conserva lo publicado</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">41caeee</span><span>Campañas: editar la campaña mensual con el editor de correo de Ventas</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">da0ba21</span><span>To Do: panel de carpetas por proyecto + Vaciar en todas las vistas</span></div><div class="lrow"><span class="lw" style="background:var(--auto)"></span><span class="lh">89c3c57</span><span>Docs: gotcha de la presentacion GVV (nombre = mes de distribucion, no de datos)</span></div><div class="lrow"><span class="lw" style="background:var(--auto)"></span><span class="lh">d68ff8f</span><span>GVV dashboard: revierte link de presentacion (la de &quot;Julio 2026&quot; trae datos de junio)</span></div><div class="lrow"><span class="lw" style="background:var(--auto)"></span><span class="lh">cca356c</span><span>Docs: documenta la automatizacion del dashboard GVV (activa)</span></div><div class="lrow"><span class="lw" style="background:var(--auto)"></span><span class="lh">0880533</span><span>GVV dashboard: cierre automatico Julio 2026</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">37c8d5f</span><span>Dropbox: previsualizar PDFs en móvil con PDF.js</span></div>
+  </div>
+  <div class="day"><p class="day-h">6 ago · 5 commits</p>
+    <div class="lrow"><span class="lw" style="background:var(--auto)"></span><span class="lh">9da1d73</span><span>Docs: mapa fuente-a-campo del dashboard GVV (Excel / carta / presentación)</span></div><div class="lrow"><span class="lw" style="background:var(--auto)"></span><span class="lh">d1ed39f</span><span>GVV dashboard: link de la carta mensual a cretumdesk.com (julio), sin depender de FTP</span></div><div class="lrow"><span class="lw" style="background:var(--auto)"></span><span class="lh">8db15eb</span><span>GVV dashboard: cierre de julio 2026 (rendimiento + composición del portafolio)</span></div><div class="lrow"><span class="lw" style="background:var(--auto)"></span><span class="lh">62959c0</span><span>Control de precios: agrupa por fuente (manual primero) en vez de lista plana</span></div><div class="lrow"><span class="lw" style="background:var(--auto)"></span><span class="lh">ce0dd4b</span><span>Panel admin &quot;Control de precios&quot;: botón + modal en Base de Datos</span></div>
+  </div>
+  <div class="day"><p class="day-h">5 ago · 9 commits</p>
+    <div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">f894e16</span><span>Notas: botón &quot;Guardar&quot; con confirmación visual (además del autoguardado)</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">b327917</span><span>Editor de plantillas (Ventas): insertar y editar imágenes/gráficas</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">b5926f7</span><span>Detalle: estatus como píldora segmentada (como las tablas) con color por estado</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">631d8b2</span><span>Detalle: botón de avance compacto (ya no full-width)</span></div><div class="lrow"><span class="lw" style="background:var(--eug)"></span><span class="lh">377e578</span><span>Lock-up SpaceX: fechas reales del doc oficial (directos 6-ago / fondos 9-sep / dia180 8-dic / ext 2-feb-2027), dos anclas</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">c9a5057</span><span>Detalle de tarea: rediseño del estatus (botón de avance + saltos)</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">9582b62</span><span>Detalle de tarea: abrir también desde Kanban y Timeline (no solo Lista)</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">09c557c</span><span>Tareas: panel de detalle al tocar el nombre (leer descripción + actuar)</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">96aea87</span><span>Reporte: título = la sección + aviso al reportero cuando se resuelve</span></div>
+  </div>
+  <div class="day"><p class="day-h">4 ago · 15 commits</p>
+    <div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">6948568</span><span>Botón de reporte flotante en cada sección → tarea en To Do de admins</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">04ea6a4</span><span>Notas: quitar el parpadeo al seleccionar/crear/colorear (updates quirúrgicos)</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">6a8cbc8</span><span>Usuarios sin duplicar: móvil solo en nav izquierdo, PC solo en menú de perfil</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">a7c6b11</span><span>Documentar la convención de &#39;atrás&#39; en el código (arriba de dismissTopLayer)</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">addc1c1</span><span>Atrás del teléfono: cerrar cada pantalla/capa antes de salir de la app</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">2cb4218</span><span>Notas: mover una nota a otra carpeta con un botón</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">cf5c509</span><span>Home: homogenizar íconos de módulos al acento de la empresa</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">d288e32</span><span>Notas en móvil: rediseño drill-in tipo Notion/Evernote</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">276fa9d</span><span>Optimización móvil: animaciones (emil + impeccable audit)</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">36343fd</span><span>Selector: hover de logos más crujiente (emil-design-eng)</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">a5d71f5</span><span>Selector: logos sin halo permanente, glow solo en hover</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">824c272</span><span>Home hero MVP oscuro: naranja plano (sin degradado)</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">0baacc9</span><span>Home hero MVP oscuro: naranja más vivo (#ed7824 en el degradado)</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">8b4ba0d</span><span>Selector oscuro: negro completo (la franja azulada de abajo era el &lt;html&gt;</span></div><div class="lrow"><span class="lw" style="background:var(--eug)"></span><span class="lh">5d38e5f</span><span>Neteo reinversiones generalizado: Groq 3a dist -&gt; Serie VI-26I QC (mismo patron 22F-&gt;26A QP)</span></div>
+  </div></div>
+    </details>
+  </div></section>
+
+</main>
+<footer>
+  <div class="wrap">
+    <span>Blog semanal · <b style="color:var(--ink-soft)">Cretum Desk</b></span>
+    <span class="mono">Generado 12 ago 2026 · automático los viernes</span>
+  </div>
+</footer>
+<script>
+(function(){
+  "use strict";
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function fillBar(){ document.querySelectorAll('#bar .seg').forEach(function(s){ s.style.width = s.getAttribute('data-w') + '%'; }); }
+  if (reduce) fillBar(); else requestAnimationFrame(function(){ setTimeout(fillBar, 120); });
+  var cards = Array.prototype.slice.call(document.querySelectorAll('#cards .card'));
+  document.querySelectorAll('.fbtn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var f = btn.getAttribute('data-filter');
+      document.querySelectorAll('.fbtn').forEach(function(b){ b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'); });
+      cards.forEach(function(c){
+        var owners = (c.getAttribute('data-owner') || '').split(' ');
+        c.classList.toggle('is-hidden', !(f === 'all' || owners.indexOf(f) !== -1));
+      });
+    });
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+name: Blog semanal (Avances en el desk)
+
+# Cada viernes regenera public/blog-semanal.html a partir de los commits de la
+# semana (git log) y lo commitea a main → Vercel lo publica en cretumdesk.com/blog.
+# Sin costo (repo público) y sin gastar función de Vercel (es estático).
+
+on:
+  schedule:
+    - cron: '0 15 * * 5'      # viernes 15:00 UTC = 9:00 CDMX
+  workflow_dispatch: {}        # permite dispararlo a mano desde Actions
+
+concurrency:
+  group: weekly-report
+  cancel-in-progress: false
+
+permissions:
+  contents: write              # para commitear el HTML regenerado
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (con historial para leer git log)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Generar el blog semanal
+        run: node scripts/gen-weekly-report.mjs
+        env:
+          REPORT_DAYS: 7
+
+      - name: Commit si cambió
+        run: |
+          git config user.name  "Blog semanal"
+          git config user.email "actions@users.noreply.github.com"
+          if git diff --quiet -- public/blog-semanal.html; then
+            echo "Sin cambios en el blog — nada que commitear."
+          else
+            git add public/blog-semanal.html
+            git commit -m "Blog semanal: avances de la semana (auto)"
+            git push
+          fi

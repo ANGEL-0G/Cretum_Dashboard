@@ -134,6 +134,10 @@
       "use": "@vercel/static"
     },
     {
+      "src": "public/blog-semanal.html",
+      "use": "@vercel/static"
+    },
+    {
       "src": "public/docs/*.pdf",
       "use": "@vercel/static"
     },
@@ -289,6 +293,10 @@
     {
       "src": "/gvv-detalle.html",
       "dest": "/public/gvv-detalle.html"
+    },
+    {
+      "src": "/blog",
+      "dest": "/public/blog-semanal.html"
     },
     {
       "src": "/gvv",
