@@ -149,8 +149,8 @@ const legend = ['angel', 'auto', 'eug'].map(w =>
 const moduleCards = modulesSorted.map(([mod, list], idx) => {
   const owners = [...new Set(list.map(c => c.who))];
   const whoTags = owners.map(w => `<span class="who ${w}"><span class="swatch sw-${WHO[w].sw}"></span>${esc(WHO[w].short)}</span>`).join('');
-  const items = list.map(c => `<li>${shortSubject(c.subject)} <span class="lh">${esc(c.hash)}</span></li>`).join('');
-  return `<article class="card reveal" data-owner="${owners.join(' ')}" style="--d:${Math.min(idx, 8) * 55}ms">
+  const items = list.map((c, li) => `<li style="--li:${Math.min(li, 12)}">${shortSubject(c.subject)} <span class="lh">${esc(c.hash)}</span></li>`).join('');
+  return `<article class="card reveal" data-owner="${owners.join(' ')}">
     <div class="card-top">
       <span class="card-icon">${ICON(MOD_ICON[mod] || 'dots')}</span>
       <div class="card-h"><h3>${esc(mod)}</h3><div class="card-who">${whoTags}</div></div>
@@ -163,7 +163,7 @@ const moduleCards = modulesSorted.map(([mod, list], idx) => {
 
 const personBlocks = ['angel', 'auto', 'eug'].filter(w => byWho[w].length).map(w => {
   const list = byWho[w];
-  const items = list.slice(0, 6).map(c => `<div class="cl"><span class="h">${esc(c.hash)}</span><span>${shortSubject(c.subject)}</span></div>`).join('');
+  const items = list.slice(0, 6).map((c, ci) => `<div class="cl" style="--li:${ci}"><span class="h">${esc(c.hash)}</span><span>${shortSubject(c.subject)}</span></div>`).join('');
   const more = list.length > 6 ? `<div class="pmore">+${list.length - 6} más</div>` : '';
   return `<div class="prow reveal">
     <div class="phead"><span class="swatch sw-${WHO[w].sw}"></span><span class="pname">${esc(WHO[w].label)}</span><span class="pcount">${list.length}</span></div>
@@ -174,7 +174,7 @@ const personBlocks = ['angel', 'auto', 'eug'].filter(w => byWho[w].length).map(w
 
 const logDays = dayKeys.map(day => `
   <div class="day"><p class="day-h">${fmtDay(day)} · ${byDay[day].length} commits</p>
-    ${byDay[day].map(c => `<div class="lrow"><span class="lw sw-${WHO[c.who].sw}"></span><span class="lh">${esc(c.hash)}</span><span>${esc(c.subject)}</span></div>`).join('')}
+    ${byDay[day].map((c, ri) => `<div class="lrow" style="--li:${Math.min(ri, 14)}"><span class="lw sw-${WHO[c.who].sw}"></span><span class="lh">${esc(c.hash)}</span><span>${esc(c.subject)}</span></div>`).join('')}
   </div>`).join('');
 
 const emptyState = `<section class="wrap"><div class="empty reveal">
@@ -222,8 +222,7 @@ const body = total === 0 ? emptyState : `
     <div class="filter" role="group" aria-label="Filtrar por autor">
       <button class="fbtn" data-filter="all" aria-pressed="true">Todos</button>
       <button class="fbtn" data-filter="angel" aria-pressed="false"><span class="swatch sw-navy"></span> Angel</button>
-      <button class="fbtn" data-filter="eug" aria-pressed="false"><span class="swatch sw-eug"></span> Eugenio</button>
-      <button class="fbtn" data-filter="auto" aria-pressed="false"><span class="swatch sw-auto"></span> Automatización</button>
+      <button class="fbtn" data-filter="eug auto" aria-pressed="false"><span class="swatch sw-eug"></span><span class="swatch sw-auto" style="margin-left:-4px"></span> Eugenio + Automatización</button>
     </div>
     <div class="cards" id="cards">${moduleCards}</div>
   </section>
@@ -256,15 +255,15 @@ ${STYLE()}
 <div class="progress" id="progress" aria-hidden="true"></div>
 <header>
   <div class="wrap">
-    <p class="eyebrow"><span class="pulse"></span> Blog semanal · Avances en el desk</p>
+    <p class="eyebrow reveal" style="--d:40ms"><span class="pulse"></span> Blog semanal · Avances en el desk</p>
     <h1 class="type" data-type="load">El pulso de la semana en Cretum&nbsp;Desk</h1>
-    <p class="lede">Lo que se construyó estos días, sacado de los commits y ordenado por módulo y por quién lo llevó. Se regenera solo cada viernes.</p>
-    <div class="meta-row">
+    <p class="lede reveal" style="--d:180ms">Lo que se construyó estos días, sacado de los commits y ordenado por módulo y por quién lo llevó. Se regenera solo cada viernes.</p>
+    <div class="meta-row reveal" style="--d:280ms">
       <span class="tag">${ICON('calendar', 'ti')} <b>${esc(range)}</b></span>
       <span class="tag">${ICON('clock', 'ti')} Cada <b>viernes</b></span>
       <span class="tag">${ICON('globe', 'ti')} <b>cretumdesk.com</b></span>
     </div>
-    <div class="hstats">
+    <div class="hstats reveal" style="--d:360ms">
       <div class="hstat"><div class="n" data-count="${total}">0</div><div class="k">commits</div></div>
       <div class="hstat"><div class="n" data-count="${counts.angel}">0</div><div class="k"><span class="swatch sw-navy"></span>Angel</div></div>
       <div class="hstat"><div class="n" data-count="${counts.auto}">0</div><div class="k"><span class="swatch sw-auto"></span>Automatización</div></div>
@@ -349,7 +348,7 @@ const SUMMARY = ${JSON.stringify(summaryText)};
   var titles = [].slice.call(document.querySelectorAll('.type'));
   if (reduce) { /* sin animación: se quedan como están */ }
   else {
-    titles.filter(function(t){ return t.getAttribute('data-type') === 'load'; }).forEach(typeTitle);
+    titles.filter(function(t){ return t.getAttribute('data-type') === 'load'; }).forEach(function(t){ setTimeout(function(){ typeTitle(t); }, 200); });
     var scrollT = titles.filter(function(t){ return t.getAttribute('data-type') !== 'load'; });
     if ('IntersectionObserver' in window) {
       var tio = new IntersectionObserver(function(es){ es.forEach(function(e){ if (e.isIntersecting){ typeTitle(e.target); tio.unobserve(e.target); } }); }, { rootMargin: '0px 0px -12% 0px' });
@@ -378,10 +377,11 @@ const SUMMARY = ${JSON.stringify(summaryText)};
   var cards = [].slice.call(document.querySelectorAll('#cards .card'));
   document.querySelectorAll('.fbtn').forEach(function(btn){
     btn.addEventListener('click', function(){
-      var f = btn.getAttribute('data-filter');
+      var f = btn.getAttribute('data-filter'), toks = f.split(' ');
       document.querySelectorAll('.fbtn').forEach(function(b){ b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'); });
       cards.forEach(function(c){
-        var show = f === 'all' || (c.getAttribute('data-owner') || '').split(' ').indexOf(f) !== -1;
+        var owners = (c.getAttribute('data-owner') || '').split(' ');
+        var show = f === 'all' || toks.some(function(t){ return owners.indexOf(t) !== -1; });
         if (show){ c.hidden = false; requestAnimationFrame(function(){ c.classList.remove('out'); }); }
         else { c.classList.add('out'); setTimeout(function(){ if (c.classList.contains('out')) c.hidden = true; }, reduce ? 0 : 200); }
       });
@@ -471,6 +471,10 @@ function STYLE() {
   .reveal.pre{opacity:0;transform:translateY(14px)}
   .reveal.in{opacity:1;transform:none;transition:opacity .55s var(--ease-out),transform .55s var(--ease-out);transition-delay:var(--d,0ms)}
   @media (prefers-reduced-motion:reduce){.reveal.pre{opacity:1;transform:none}}
+  /* Composición tipo Notion: los ítems de un bloque "se escriben" en cascada */
+  .reveal.pre li,.reveal.pre .lrow,.reveal.pre .cl{opacity:0;transform:translateY(6px)}
+  .reveal.in li,.reveal.in .lrow,.reveal.in .cl{opacity:1;transform:none;transition:opacity .4s var(--ease-out),transform .4s var(--ease-out);transition-delay:calc(var(--li,0) * 28ms)}
+  @media (prefers-reduced-motion:reduce){.reveal.pre li,.reveal.pre .lrow,.reveal.pre .cl{opacity:1;transform:none}}
 
   /* Typewriter de títulos: teclea en mono (código) → selecciona → formatea a Outfit */
   .type{--sel:var(--navy-pale);--sel-ink:var(--navy-2)}
