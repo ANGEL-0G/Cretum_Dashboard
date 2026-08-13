@@ -127,6 +127,35 @@ const weekDays = [];
 }
 const maxDay = Math.max(1, ...weekDays.map(d => d.count));
 
+// Historial ~13 semanas: heatmap estilo GitHub + tendencia semanal por módulo.
+const HEAT_WEEKS = 13;
+const histRaw = execSync(
+  `git log --since="${HEAT_WEEKS * 7 + 7} days ago" --no-merges --date=short --pretty=format:"%ad${US}%s"`,
+  { cwd: ROOT, encoding: 'utf8' }
+).trim();
+const hist = histRaw ? histRaw.split('\n').map(l => { const [d, s] = l.split(US); return { date: d, module: moduleOf(s) }; }) : [];
+const histByDate = {};
+hist.forEach(h => { histByDate[h.date] = (histByDate[h.date] || 0) + 1; });
+
+const ONE_DAY = 86400000;
+const gridEnd = new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00');
+const gridStart = new Date(gridEnd);
+gridStart.setDate(gridEnd.getDate() - (HEAT_WEEKS * 7 - 1));
+gridStart.setDate(gridStart.getDate() - ((gridStart.getDay() + 6) % 7)); // atrás hasta lunes
+const heatCells = [];
+for (let d = new Date(gridStart); d <= gridEnd; d.setDate(d.getDate() + 1)) {
+  const iso = d.toISOString().slice(0, 10);
+  heatCells.push({ iso, count: histByDate[iso] || 0 });
+}
+const heatMax = Math.max(1, ...heatCells.map(c => c.count));
+const NWEEKS = Math.ceil(heatCells.length / 7);
+function heatLevel(n) { if (!n) return 0; const r = n / heatMax; return r > .75 ? 4 : r > .5 ? 3 : r > .25 ? 2 : 1; }
+function weekIdx(iso) { const dd = (new Date(iso + 'T00:00:00') - gridStart) / ONE_DAY; return dd < 0 ? -1 : Math.floor(dd / 7); }
+
+// Tendencia semanal por módulo (para sparklines).
+const modWeekly = {};
+hist.forEach(h => { const wi = weekIdx(h.date); if (wi < 0 || wi >= NWEEKS) return; (modWeekly[h.module] ||= Array(NWEEKS).fill(0))[wi]++; });
+
 // Resumen en texto plano (para el botón "Copiar resumen").
 const summaryText = [
   `Blog semanal · Cretum Desk (${range})`,
@@ -146,6 +175,35 @@ const chartCols = weekDays.map((d, i) => `
 const legend = ['angel', 'auto', 'eug'].map(w =>
   `<span class="lg"><span class="swatch sw-${WHO[w].sw}"></span>${esc(WHO[w].short)} <b>${counts[w]}</b></span>`).join('');
 
+// Dona de reparto por persona (SVG, arcos por proporción).
+function donutSvg() {
+  const r = 40, C = 2 * Math.PI * r, cx = 52, cy = 52, sw = 15;
+  const segs = [['navy', counts.angel], ['auto', counts.auto], ['eug', counts.eug]].filter(s => s[1] > 0);
+  let off = 0;
+  const arcs = segs.map(([k, v]) => {
+    const len = v / total * C;
+    const a = `<circle class="a-${k}" cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke-width="${sw}" stroke-dasharray="${len.toFixed(2)} ${(C - len).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}"/>`;
+    off += len; return a;
+  }).join('');
+  return `<svg class="donut" viewBox="0 0 104 104" role="img" aria-label="Reparto de commits por persona">
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--surface-2)" stroke-width="${sw}"/>
+    <g transform="rotate(-90 ${cx} ${cy})">${arcs}</g>
+    <text x="${cx}" y="${cy - 1}" class="don-n">${total}</text>
+    <text x="${cx}" y="${cy + 14}" class="don-k">commits</text>
+  </svg>`;
+}
+// Sparkline (área + línea) de la tendencia semanal de un módulo.
+function sparkSvg(vals) {
+  const w = 108, h = 26, n = vals.length, mx = Math.max(1, ...vals);
+  if (n < 2) return '';
+  const pts = vals.map((v, i) => [i / (n - 1) * w, h - 2 - v / mx * (h - 5)]);
+  const line = pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ');
+  const area = `M0 ${h} ` + pts.map(p => `L${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ') + ` L${w} ${h} Z`;
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><path class="spark-a" d="${area}"/><path class="spark-l" d="${line}"/></svg>`;
+}
+const heatGrid = heatCells.map(c =>
+  `<span class="hc h${heatLevel(c.count)}" title="${fmtDay(c.iso)} · ${c.count} commit${c.count === 1 ? '' : 's'}"></span>`).join('');
+
 const moduleCards = modulesSorted.map(([mod, list], idx) => {
   const owners = [...new Set(list.map(c => c.who))];
   const whoTags = owners.map(w => `<span class="who ${w}"><span class="swatch sw-${WHO[w].sw}"></span>${esc(WHO[w].short)}</span>`).join('');
@@ -156,7 +214,7 @@ const moduleCards = modulesSorted.map(([mod, list], idx) => {
       <div class="card-h"><h3>${esc(mod)}</h3><div class="card-who">${whoTags}</div></div>
       <span class="card-n">${list.length}<span>commit${list.length === 1 ? '' : 's'}</span></span>
     </div>
-    <div class="mshare"><div class="mshare-fill" style="--s:${(list.length / maxMod).toFixed(3)}"></div></div>
+    ${sparkSvg(modWeekly[mod] || Array(NWEEKS).fill(0))}
     <ul>${items}</ul>
   </article>`;
 }).join('\n');
@@ -197,6 +255,10 @@ const body = total === 0 ? emptyState : `
     </div>
   </nav>
 
+  <!-- TENTATIVO (futuro, opcional): bloque "Destacado de la semana" con imagen.
+       Un admin subiría 1 captura + texto (p. ej. a Supabase Storage, bucket público)
+       y aquí se insertaría SOLO si existe; si no, no aparece. Así el resto sigue
+       auto-generado desde git y este bloque queda como toque manual opcional. -->
   <section id="resumen" class="wrap sec">
     <div class="sec-head"><h2 class="type">Resumen de la semana</h2><span class="sec-meta">${range}</span></div>
     <div class="summary reveal">
@@ -205,15 +267,16 @@ const body = total === 0 ? emptyState : `
         <div class="chart" id="chart" role="img" aria-label="Commits por día de la semana">${chartCols}</div>
       </div>
       <div class="dist-card">
-        <div class="chart-lbl">Reparto de ${total} commits</div>
-        <div class="bar" id="bar">
-          <div class="seg seg-navy" style="--w:${(counts.angel / total * 100).toFixed(1)}%" title="Angel · ${counts.angel}"></div>
-          <div class="seg seg-auto" style="--w:${(counts.auto / total * 100).toFixed(1)}%" title="Automatización · ${counts.auto}"></div>
-          <div class="seg seg-eug" style="--w:${(counts.eug / total * 100).toFixed(1)}%" title="Eugenio · ${counts.eug}"></div>
-        </div>
+        <div class="chart-lbl">Reparto por persona</div>
+        <div class="donut-wrap">${donutSvg()}</div>
         <div class="legend">${legend}</div>
         <div class="dist-note">${modulesSorted.length} módulos tocados · ${dayKeys.length} días activos</div>
       </div>
+    </div>
+    <div class="heat-card reveal">
+      <div class="heat-top"><div class="chart-lbl">Actividad de las últimas ${HEAT_WEEKS} semanas</div>
+        <div class="heat-legend"><span>Menos</span><span class="hc h0"></span><span class="hc h1"></span><span class="hc h2"></span><span class="hc h3"></span><span class="hc h4"></span><span>Más</span></div></div>
+      <div class="heat-scroll"><div class="heat" role="img" aria-label="Mapa de calor de commits por día (últimas ${HEAT_WEEKS} semanas)">${heatGrid}</div></div>
     </div>
   </section>
 
@@ -547,6 +610,31 @@ function STYLE() {
   .legend{display:flex;flex-wrap:wrap;gap:8px 16px}
   .lg{font-size:12.5px;color:var(--ink-soft);display:inline-flex;align-items:center;gap:6px} .lg b{color:var(--ink);font-variant-numeric:tabular-nums}
   .dist-note{margin-top:auto;padding-top:14px;font-size:12px;color:var(--ink-mute)}
+  /* Dona de reparto */
+  .donut-wrap{display:flex;justify-content:center;padding:4px 0 12px}
+  .donut{width:132px;height:132px}
+  .donut circle[class^="a-"]{transform-origin:center;animation:donIn .8s var(--ease-out) both}
+  @keyframes donIn{from{opacity:0}to{opacity:1}}
+  @media (prefers-reduced-motion:reduce){.donut circle[class^="a-"]{animation:none}}
+  .a-navy{stroke:var(--navy)} .a-auto{stroke:var(--auto)} .a-eug{stroke:var(--eug)}
+  .don-n{text-anchor:middle;font-family:var(--mono);font-size:23px;font-weight:600;fill:var(--ink)}
+  .don-k{text-anchor:middle;font-size:9px;fill:var(--ink-mute);letter-spacing:.05em;text-transform:uppercase}
+  /* Heatmap estilo GitHub */
+  .heat-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:var(--raise);margin-top:16px}
+  .heat-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+  .heat-scroll{overflow-x:auto;padding-bottom:2px}
+  .heat{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,15px);grid-auto-columns:15px;gap:3px;width:max-content}
+  .hc{border-radius:3px;background:var(--surface-2)}
+  .hc.h1{background:color-mix(in srgb,var(--navy) 26%,var(--surface-2))}
+  .hc.h2{background:color-mix(in srgb,var(--navy) 48%,var(--surface-2))}
+  .hc.h3{background:color-mix(in srgb,var(--navy) 72%,var(--surface-2))}
+  .hc.h4{background:var(--navy)}
+  .heat-legend{display:flex;align-items:center;gap:4px;font-size:11.5px;color:var(--ink-mute)}
+  .heat-legend .hc{width:12px;height:12px}
+  /* Sparkline por módulo */
+  .spark{width:100%;height:26px;display:block;margin:14px 0 2px}
+  .spark-a{fill:var(--navy);opacity:.1}
+  .spark-l{fill:none;stroke:var(--navy);stroke-width:1.6;opacity:.5;vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round}
 
   /* Filtro */
   .filter{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 20px}
