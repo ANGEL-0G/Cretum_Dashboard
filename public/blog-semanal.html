@@ -6,292 +6,505 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='1' y='1' width='30' height='30' rx='7' fill='%231A3A6B'/><g fill='%23fff'><rect x='7.4' y='17' width='4.2' height='8' rx='1.4'/><rect x='13.9' y='11.5' width='4.2' height='13.5' rx='1.4'/><rect x='20.4' y='7.5' width='4.2' height='17.5' rx='1.4'/></g></svg>">
+<script>try{var r=document.documentElement,t=localStorage.getItem('blog-theme');if(t==='light'||t==='dark')r.setAttribute('data-theme',t);r.setAttribute('data-eff',r.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'));}catch(e){}</script>
 <style>
 
+  /* Fuentes de marca (mismo dominio, sin CSP): Outfit + Geist Mono */
+  @font-face{font-family:'Outfit';src:url('/fonts/Outfit-Regular.ttf') format('truetype');font-weight:400;font-display:swap}
+  @font-face{font-family:'Outfit';src:url('/fonts/Outfit-Bold.ttf') format('truetype');font-weight:700;font-display:swap}
+  @font-face{font-family:'Geist Mono';src:url('/fonts/GeistMono-Regular.ttf') format('truetype');font-weight:400;font-display:swap}
   :root{
-    --bg:#F5F8FC; --surface:#FFFFFF; --surface-2:#EEF3FA; --raise:0 1px 2px rgba(18,30,54,.05),0 6px 20px rgba(18,30,54,.05);
-    --ink:#17202E; --ink-soft:#525E72; --ink-mute:#8894A6;
-    --line:#E2E9F2; --line-soft:#EDF1F7;
-    --navy:#1A3A6B; --navy-2:#2E5BA3; --navy-pale:#E9F0FA;
-    --green:#2E9C68; --green-bg:#E4F3EB; --amber:#B9782A; --amber-bg:#F6ECDA;
-    --eug:#177E86; --eug-bg:#E1F1F1; --auto:#5C6B82; --auto-bg:#EAEEF4;
-    --focus:#2E5BA3; --maxw:860px;
+    --font:'Outfit',system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:'Geist Mono',ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --bg:#F4F7FB; --surface:#FFFFFF; --surface-2:#EDF2F9; --raise:0 1px 2px rgba(18,30,54,.05),0 8px 24px rgba(18,30,54,.06);
+    --ink:#161F2E; --ink-soft:#4F5B6E; --ink-mute:#7C889A;
+    --line:#E1E8F1; --line-soft:#EEF2F8;
+    --navy:#1A3A6B; --navy-2:#2E5BA3; --navy-pale:#E7EFFA;
+    --green:#2E9C68; --amber:#B9782A;
+    --eug:#137A82; --eug-bg:#DEF0F0; --auto:#586A85; --auto-bg:#E7EBF2;
+    --focus:#2E5BA3;
+    --ease-out:cubic-bezier(.23,1,.32,1); --ease-io:cubic-bezier(.77,0,.175,1);
+    --maxw:920px; --z-prog:60; --z-nav:50; --z-toast:70;
   }
+  /* Oscuro: por sistema (salvo elección explícita de claro) + por toggle. */
   @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-    --bg:#0D1421; --surface:#141D2F; --surface-2:#1A2540; --raise:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.28);
-    --ink:#E7ECF5; --ink-soft:#A7B3C7; --ink-mute:#6E7B91; --line:#26324A; --line-soft:#1E2939;
-    --navy:#79A2E4; --navy-2:#9CBDF0; --navy-pale:#1B2A47;
-    --green:#4FC088; --green-bg:rgba(79,192,136,.15); --amber:#E0A250; --amber-bg:rgba(224,162,80,.15);
-    --eug:#4FBEC6; --eug-bg:rgba(79,190,198,.15); --auto:#93A2BB; --auto-bg:rgba(147,162,187,.15); --focus:#9CBDF0;
+    --bg:#0C121E; --surface:#141D2E; --surface-2:#1A2740; --raise:0 1px 2px rgba(0,0,0,.34),0 10px 28px rgba(0,0,0,.3);
+    --ink:#E8EDF6; --ink-soft:#A8B4C8; --ink-mute:#6C7994;
+    --line:#25324A; --line-soft:#1C273A;
+    --navy:#7BA4E6; --navy-2:#9DBEF1; --navy-pale:#1A2A47;
+    --green:#4FC088; --amber:#E0A250;
+    --eug:#4FBEC6; --eug-bg:rgba(79,190,198,.15); --auto:#94A3BC; --auto-bg:rgba(148,163,188,.15);
+    --focus:#9DBEF1;
   }}
-  *{box-sizing:border-box} html{-webkit-text-size-adjust:100%}
-  body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.6;letter-spacing:-.006em;-webkit-font-smoothing:antialiased}
-  .mono,.lh{font-family:ui-monospace,"SF Mono","Cascadia Code","JetBrains Mono",Menlo,Consolas,monospace}
+  :root[data-theme="dark"]{
+    --bg:#0C121E; --surface:#141D2E; --surface-2:#1A2740; --raise:0 1px 2px rgba(0,0,0,.34),0 10px 28px rgba(0,0,0,.3);
+    --ink:#E8EDF6; --ink-soft:#A8B4C8; --ink-mute:#6C7994;
+    --line:#25324A; --line-soft:#1C273A;
+    --navy:#7BA4E6; --navy-2:#9DBEF1; --navy-pale:#1A2A47;
+    --green:#4FC088; --amber:#E0A250;
+    --eug:#4FBEC6; --eug-bg:rgba(79,190,198,.15); --auto:#94A3BC; --auto-bg:rgba(148,163,188,.15);
+    --focus:#9DBEF1;
+  }
+  *{box-sizing:border-box} html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.6;letter-spacing:-.006em;-webkit-font-smoothing:antialiased}
+  .mono,.lh,.h{font-family:var(--mono)}
   .wrap{max-width:var(--maxw);margin:0 auto;padding:0 22px}
-  :focus-visible{outline:2px solid var(--focus);outline-offset:3px;border-radius:6px}
-  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-  .rise{animation:rise .55s cubic-bezier(.22,1,.36,1) both}
-  @media (prefers-reduced-motion:reduce){.rise{animation:none}}
-  header{padding:54px 0 30px;border-bottom:1px solid var(--line)}
-  .eyebrow{font-family:ui-monospace,monospace;font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--navy-2);display:flex;align-items:center;gap:9px;margin:0 0 18px}
-  .eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--navy-2);box-shadow:0 0 0 4px var(--navy-pale)}
-  h1{font-size:clamp(30px,5.6vw,46px);line-height:1.05;letter-spacing:-.03em;font-weight:700;margin:0 0 16px;text-wrap:balance}
-  .lede{font-size:clamp(16px,2.3vw,18.5px);color:var(--ink-soft);max-width:60ch;margin:0;text-wrap:pretty}
+  :focus-visible{outline:2px solid var(--focus);outline-offset:3px;border-radius:8px}
+  .swatch{width:9px;height:9px;border-radius:3px;flex:0 0 auto;display:inline-block}
+  .sw-navy{background:var(--navy)} .sw-eug{background:var(--eug)} .sw-auto{background:var(--auto)}
+  .ic{width:18px;height:18px;display:block;flex:0 0 auto} .ic.ti{width:13px;height:13px}
+
+  /* Progreso de scroll */
+  .progress{position:fixed;top:0;left:0;right:0;height:2.5px;background:var(--navy);transform:scaleX(0);transform-origin:left;z-index:var(--z-prog);will-change:transform}
+
+  /* Reveal (default visible; JS aplica pre→in) */
+  .reveal.pre{opacity:0;transform:translateY(14px)}
+  .reveal.in{opacity:1;transform:none;transition:opacity .55s var(--ease-out),transform .55s var(--ease-out);transition-delay:var(--d,0ms)}
+  @media (prefers-reduced-motion:reduce){.reveal.pre{opacity:1;transform:none}}
+
+  /* Header */
+  header{padding:56px 0 26px}
+  .eyebrow{font-family:var(--mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--navy-2);display:flex;align-items:center;gap:9px;margin:0 0 18px}
+  .pulse{width:8px;height:8px;border-radius:50%;background:var(--navy-2);position:relative}
+  .pulse::after{content:"";position:absolute;inset:0;border-radius:50%;background:var(--navy-2);animation:pulse 2.4s var(--ease-out) infinite}
+  @keyframes pulse{0%{transform:scale(1);opacity:.6}70%,100%{transform:scale(3);opacity:0}}
+  @media (prefers-reduced-motion:reduce){.pulse::after{animation:none}}
+  h1{font-size:clamp(31px,5.8vw,50px);line-height:1.04;letter-spacing:-.032em;font-weight:700;margin:0 0 16px;text-wrap:balance}
+  .lede{font-size:clamp(16px,2.2vw,18.5px);color:var(--ink-soft);max-width:62ch;margin:0;text-wrap:pretty}
   .meta-row{display:flex;flex-wrap:wrap;gap:8px 10px;margin-top:22px}
   .tag{font-size:12.5px;font-weight:500;padding:5px 11px;border-radius:999px;background:var(--surface-2);color:var(--ink-soft);border:1px solid var(--line);display:inline-flex;align-items:center;gap:6px}
-  .tag b{color:var(--ink);font-weight:600}
-  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:26px 0 6px}
-  @media (max-width:640px){.stats{grid-template-columns:repeat(2,1fr)}}
-  .stat{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 16px 14px;box-shadow:var(--raise)}
-  .stat .n{font-size:30px;font-weight:700;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums}
-  .stat .k{font-size:12.5px;color:var(--ink-mute);margin-top:7px;display:flex;align-items:center;gap:6px}
-  .swatch{width:9px;height:9px;border-radius:3px;flex:0 0 auto}
-  .sw-navy{background:var(--navy)} .sw-eug{background:var(--eug)} .sw-auto{background:var(--auto)}
-  .distrib{margin:20px 0 4px}
-  .distrib .bar{display:flex;height:16px;border-radius:8px;overflow:hidden;border:1px solid var(--line);background:var(--surface-2)}
-  .distrib .seg{height:100%;width:0;transition:width 1.1s cubic-bezier(.22,1,.36,1)}
-  @media (prefers-reduced-motion:reduce){.distrib .seg{transition:none}}
+  .tag .ic{opacity:.8} .tag b{color:var(--ink);font-weight:600}
+  .hstats{display:flex;flex-wrap:wrap;gap:10px 28px;margin-top:30px;padding:20px 0 4px;border-top:1px solid var(--line)}
+  .hstat .n{font-size:clamp(28px,4vw,38px);font-weight:700;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums}
+  .hstat .k{font-size:12.5px;color:var(--ink-mute);margin-top:7px;display:flex;align-items:center;gap:6px}
+
+  /* Nav sticky + scroll-spy */
+  .snav{position:sticky;top:0;z-index:var(--z-nav);background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:saturate(1.4) blur(10px);-webkit-backdrop-filter:saturate(1.4) blur(10px);border-bottom:1px solid var(--line);margin-top:14px}
+  .snav-in{display:flex;align-items:center;justify-content:space-between;height:52px;gap:12px}
+  .snav-links{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none} .snav-links::-webkit-scrollbar{display:none}
+  .snav-links a{font-size:13.5px;font-weight:500;color:var(--ink-soft);text-decoration:none;padding:7px 12px;border-radius:8px;white-space:nowrap;transition:color .16s var(--ease-out),background .16s var(--ease-out)}
+  .snav-links a:hover{color:var(--ink);background:var(--surface-2)}
+  .snav-links a.on{color:var(--navy-2);background:var(--navy-pale);font-weight:600}
+  .snav-act{display:flex;gap:8px;flex:0 0 auto}
+  .iconbtn{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:500;color:var(--ink-soft);background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:7px 11px;cursor:pointer;transition:transform .16s var(--ease-out),border-color .16s var(--ease-out),color .16s var(--ease-out)}
+  @media (hover:hover){.iconbtn:hover{border-color:var(--navy-2);color:var(--ink)}}
+  .iconbtn:active{transform:scale(.96)} .iconbtn .ic{width:15px;height:15px}
+  .iconbtn.only-ic{padding:7px} .only-ic span{display:none}
+  .ic-sun{display:none} :root[data-eff="dark"] .ic-moon{display:none} :root[data-eff="dark"] .ic-sun{display:block}
+
+  /* Secciones */
+  .sec{padding:40px 22px}
+  .sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:0 0 22px;flex-wrap:wrap}
+  .sec-head h2{font-size:clamp(20px,3vw,25px);font-weight:700;letter-spacing:-.022em;margin:0}
+  .sec-meta{font-family:var(--mono);font-size:12.5px;color:var(--ink-mute)}
+
+  /* Resumen: gráfica + reparto */
+  .summary{display:grid;grid-template-columns:1.4fr 1fr;gap:16px}
+  @media (max-width:720px){.summary{grid-template-columns:1fr}}
+  .chart-card,.dist-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:var(--raise)}
+  .chart-lbl{font-size:12px;font-weight:600;letter-spacing:.02em;color:var(--ink-mute);margin-bottom:16px}
+  .chart{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;align-items:end;height:150px}
+  .acol{display:flex;flex-direction:column;align-items:center;gap:7px;height:100%}
+  .aval{font-family:var(--mono);font-size:11px;color:var(--ink-mute);height:14px;font-variant-numeric:tabular-nums}
+  .abar{flex:1;width:100%;display:flex;align-items:flex-end;justify-content:center}
+  .afill{width:66%;max-width:26px;min-height:4px;height:var(--h);background:var(--navy);border-radius:5px 5px 3px 3px;opacity:.32;transform:scaleY(1);transform-origin:bottom}
+  .afill.peak{opacity:1} .afill.zero{background:var(--ink-mute);opacity:.18;min-height:4px}
+  .reveal.pre .afill{transform:scaleY(0)}
+  .reveal.in .afill{transform:scaleY(1);transition:transform .6s var(--ease-out);transition-delay:calc(var(--i) * 55ms)}
+  .adow{font-size:11px;color:var(--ink-mute);font-weight:600;display:flex;flex-direction:column;align-items:center;line-height:1.2}
+  .adow .adate{font-family:var(--mono);font-size:9.5px;font-weight:400;opacity:.7}
+  .dist-card{display:flex;flex-direction:column}
+  .bar{display:flex;height:16px;border-radius:8px;overflow:hidden;border:1px solid var(--line);background:var(--surface-2);margin-bottom:14px}
+  .seg{height:100%;width:0}
+  .reveal.in .seg{width:var(--w);transition:width 1s var(--ease-out) .1s}
+  @media (prefers-reduced-motion:reduce){.reveal.in .seg{transition:none;width:var(--w)}}
   .seg-navy{background:var(--navy)} .seg-auto{background:var(--auto)} .seg-eug{background:var(--eug)}
-  .distrib .cap{font-size:12.5px;color:var(--ink-mute);margin-top:9px}
-  section{padding:38px 0}
-  .sec-head{display:flex;align-items:baseline;gap:12px;margin:0 0 20px}
-  .sec-head h2{font-size:22px;font-weight:700;letter-spacing:-.02em;margin:0}
-  .sec-head .num{font-family:ui-monospace,monospace;font-size:12.5px;color:var(--ink-mute);letter-spacing:.06em;padding-top:3px}
-  .sec-note{color:var(--ink-soft);margin:-8px 0 20px;font-size:15px;max-width:64ch}
-  .filter{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px}
-  .fbtn{font-size:13.5px;font-weight:500;padding:7px 14px;border-radius:999px;cursor:pointer;background:var(--surface);border:1px solid var(--line);color:var(--ink-soft);display:inline-flex;align-items:center;gap:7px;transition:border-color .15s,color .15s,background .15s}
-  .fbtn:hover{border-color:var(--navy-2);color:var(--ink)}
+  .legend{display:flex;flex-wrap:wrap;gap:8px 16px}
+  .lg{font-size:12.5px;color:var(--ink-soft);display:inline-flex;align-items:center;gap:6px} .lg b{color:var(--ink);font-variant-numeric:tabular-nums}
+  .dist-note{margin-top:auto;padding-top:14px;font-size:12px;color:var(--ink-mute)}
+
+  /* Filtro */
+  .filter{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 20px}
+  .fbtn{font-size:13.5px;font-weight:500;padding:7px 14px;border-radius:999px;cursor:pointer;background:var(--surface);border:1px solid var(--line);color:var(--ink-soft);display:inline-flex;align-items:center;gap:7px;transition:transform .16s var(--ease-out),border-color .16s var(--ease-out),color .16s var(--ease-out),background .16s var(--ease-out)}
+  @media (hover:hover){.fbtn:hover{border-color:var(--navy-2);color:var(--ink)}}
+  .fbtn:active{transform:scale(.96)}
   .fbtn[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:#fff}
-  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .fbtn[aria-pressed="true"]{color:#0D1421}}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .fbtn[aria-pressed="true"]{color:#0C121E}}
+  :root[data-theme="dark"] .fbtn[aria-pressed="true"]{color:#0C121E}
+
+  /* Tarjetas de módulo */
   .cards{display:flex;flex-direction:column;gap:14px}
-  .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px 22px;box-shadow:var(--raise);transition:transform .18s ease,border-color .18s ease}
-  .card.is-hidden{display:none}
-  .card:hover{transform:translateY(-2px);border-color:var(--navy-pale)}
-  .card-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px}
-  .card-top h3{font-size:18px;font-weight:650;letter-spacing:-.015em;margin:0}
-  .card-icon{width:34px;height:34px;border-radius:10px;background:var(--navy-pale);color:var(--navy);display:grid;place-items:center;flex:0 0 auto}
-  .ic{width:18px;height:18px;display:block}
-  .ic.ti{width:13px;height:13px}
-  .tag .ic{opacity:.85}
-  .who{font-size:11.5px;font-weight:600;padding:3px 9px 3px 7px;border-radius:999px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px 22px;box-shadow:var(--raise);transition:opacity .2s var(--ease-out),transform .22s var(--ease-out),border-color .22s var(--ease-out)}
+  .card[hidden]{display:none}
+  .card.out{opacity:0;transform:scale(.97)}
+  @media (hover:hover){.card:hover{transform:translateY(-3px);border-color:var(--navy-pale)}}
+  .card-top{display:flex;align-items:center;gap:13px}
+  .card-icon{width:38px;height:38px;border-radius:11px;background:var(--navy-pale);color:var(--navy);display:grid;place-items:center;flex:0 0 auto}
+  .card-h{flex:1;min-width:0} .card-h h3{font-size:17.5px;font-weight:650;letter-spacing:-.015em;margin:0}
+  .card-who{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px}
+  .who{font-size:11px;font-weight:600;padding:2px 8px 2px 6px;border-radius:999px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
   .who.angel{background:var(--navy-pale);color:var(--navy-2)} .who.eug{background:var(--eug-bg);color:var(--eug)} .who.auto{background:var(--auto-bg);color:var(--auto)}
   .who .swatch{border-radius:50%}
-  .card .commits{margin-left:auto;font-family:ui-monospace,monospace;font-size:12px;color:var(--ink-mute);white-space:nowrap}
+  .card-n{font-family:var(--mono);font-size:26px;font-weight:600;color:var(--ink);line-height:1;text-align:right;font-variant-numeric:tabular-nums}
+  .card-n span{display:block;font-size:10.5px;font-weight:400;color:var(--ink-mute);letter-spacing:.02em;margin-top:3px}
+  .mshare{height:3px;background:var(--line-soft);border-radius:2px;margin:15px 0 2px;overflow:hidden}
+  .mshare-fill{height:100%;background:var(--navy);opacity:.55;border-radius:2px;transform:scaleX(var(--s));transform-origin:left}
+  .reveal.pre .mshare-fill{transform:scaleX(0)}
+  .reveal.in .mshare-fill{transform:scaleX(var(--s));transition:transform .7s var(--ease-out) .1s}
   .card ul{margin:12px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:9px}
-  .card li{position:relative;padding-left:22px;color:var(--ink-soft);font-size:14.5px;line-height:1.55}
-  .card li::before{content:"";position:absolute;left:4px;top:9px;width:7px;height:7px;border-radius:2px;background:var(--navy);opacity:.55}
+  .card li{position:relative;padding-left:20px;color:var(--ink-soft);font-size:14.5px;line-height:1.55}
+  .card li::before{content:"";position:absolute;left:3px;top:9px;width:6px;height:6px;border-radius:2px;background:var(--navy);opacity:.5}
   .card li .lh{font-size:11px;color:var(--ink-mute);margin-left:4px}
-  .duo{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-  @media (max-width:720px){.duo{grid-template-columns:1fr}}
-  .panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:var(--raise)}
-  .panel h3{margin:0 0 4px;font-size:17px;font-weight:650;letter-spacing:-.01em;display:flex;align-items:center}
-  .panel .sub{color:var(--ink-mute);font-size:13px;margin:0 0 16px}
-  .commit-list{display:flex;flex-direction:column;gap:8px}
+
+  /* Personas */
+  .ppl{display:flex;flex-direction:column;gap:14px}
+  .prow{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 20px;box-shadow:var(--raise)}
+  .phead{display:flex;align-items:center;gap:9px;margin-bottom:11px}
+  .phead .swatch{width:11px;height:11px;border-radius:50%}
+  .pname{font-size:15px;font-weight:600;flex:1} .pcount{font-family:var(--mono);font-size:16px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+  .pbar{height:7px;background:var(--surface-2);border-radius:4px;overflow:hidden;margin-bottom:15px}
+  .pbar-fill{height:100%;border-radius:4px;transform:scaleX(var(--s));transform-origin:left}
+  .reveal.pre .pbar-fill{transform:scaleX(0)}
+  .reveal.in .pbar-fill{transform:scaleX(var(--s));transition:transform .8s var(--ease-out) .12s}
+  .fill-angel{background:var(--navy)} .fill-auto{background:var(--auto)} .fill-eug{background:var(--eug)}
+  .pcommits{display:flex;flex-direction:column;gap:8px}
   .cl{display:flex;gap:11px;align-items:baseline;font-size:14px;color:var(--ink-soft)}
-  .cl .h{font-family:ui-monospace,monospace;font-size:11.5px;flex:0 0 auto;padding-top:1px}
-  .flow{display:flex;flex-direction:column}
-  .step{display:flex;gap:14px;position:relative;padding-bottom:18px}
-  .step:last-child{padding-bottom:0}
-  .step .rail{display:flex;flex-direction:column;align-items:center;flex:0 0 auto}
-  .step .node{width:28px;height:28px;border-radius:50%;background:var(--navy-pale);color:var(--navy);display:grid;place-items:center;font-size:12px;font-weight:700;font-family:ui-monospace,monospace;z-index:1}
-  .step .line{width:2px;flex:1;background:var(--line);margin:3px 0 -3px}
-  .step:last-child .line{display:none}
-  .step .body{padding-top:2px}
-  .step .body b{display:block;font-size:15px;color:var(--ink);font-weight:600}
-  .step .body span{font-size:13.5px;color:var(--ink-soft)}
-  details.log{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--raise);overflow:hidden}
-  details.log summary{cursor:pointer;padding:16px 20px;font-weight:600;font-size:15px;list-style:none;display:flex;align-items:center;gap:10px}
-  details.log summary::-webkit-details-marker{display:none}
-  details.log summary .caret{transition:transform .2s ease;color:var(--ink-mute)}
-  details.log[open] summary .caret{transform:rotate(90deg)}
-  details.log summary .count{margin-left:auto;font-family:ui-monospace,monospace;font-size:12px;color:var(--ink-mute)}
-  .logbody{padding:4px 20px 18px;border-top:1px solid var(--line-soft)}
-  .day{margin-top:16px}
-  .day-h{font-family:ui-monospace,monospace;font-size:12px;letter-spacing:.05em;color:var(--ink-mute);text-transform:uppercase;margin:0 0 8px;padding-top:8px;border-top:1px dashed var(--line)}
-  .day:first-child .day-h{border-top:none;padding-top:0}
+  .cl .h{font-size:11.5px;color:var(--ink-mute);flex:0 0 auto;padding-top:1px}
+  .pmore{font-size:12.5px;color:var(--ink-mute);padding-top:2px}
+
+  /* Registro + buscador */
+  .search{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:0 14px;margin-bottom:14px;box-shadow:var(--raise);transition:border-color .16s var(--ease-out)}
+  .search:focus-within{border-color:var(--navy-2)}
+  .search .ic-s{color:var(--ink-mute);width:17px;height:17px}
+  .search input{flex:1;border:0;background:none;outline:none;color:var(--ink);font:inherit;font-size:14.5px;padding:13px 0}
+  .search input::placeholder{color:var(--ink-mute)}
+  .logbody{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--raise);padding:6px 20px 16px}
+  .day{margin-top:14px}
+  .day-h{font-family:var(--mono);font-size:12px;letter-spacing:.05em;color:var(--ink-mute);text-transform:uppercase;margin:0 0 8px;padding-top:12px;border-top:1px dashed var(--line)}
+  .day:first-child .day-h{border-top:none;padding-top:4px}
   .lrow{display:flex;gap:10px;align-items:baseline;padding:4px 0;font-size:13.5px;color:var(--ink-soft);line-height:1.45}
   .lrow .lw{width:8px;height:8px;border-radius:2px;flex:0 0 auto;position:relative;top:4px}
-  footer{border-top:1px solid var(--line);padding:30px 0 60px;color:var(--ink-mute);font-size:13px;margin-top:20px}
-  footer .wrap{display:flex;flex-wrap:wrap;gap:6px 14px;justify-content:space-between;align-items:center}
+  .lrow .lh{font-size:11px;color:var(--ink-mute);flex:0 0 auto}
+
+  .empty{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:48px 22px;text-align:center;box-shadow:var(--raise);margin-top:20px}
+  .empty h3{margin:0 0 8px;font-size:19px} .empty p{margin:0;color:var(--ink-mute)}
+
+  footer{border-top:1px solid var(--line);padding:28px 0 60px;color:var(--ink-mute);font-size:13px;margin-top:24px}
+  footer .wrap{display:flex;flex-wrap:wrap;gap:6px 14px;justify-content:space-between;align-items:center} footer b{color:var(--ink-soft)}
+
+  /* Toast */
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(14px);background:var(--ink);color:var(--bg);font-size:13.5px;font-weight:500;padding:11px 18px;border-radius:11px;box-shadow:0 10px 30px rgba(0,0,0,.25);opacity:0;pointer-events:none;z-index:var(--z-toast);transition:opacity .22s var(--ease-out),transform .22s var(--ease-out)}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
 </head>
 <body>
+<div class="progress" id="progress" aria-hidden="true"></div>
 <header>
-  <div class="wrap rise">
-    <p class="eyebrow"><span class="dot"></span> Blog semanal · Avances en el desk</p>
-    <h1>Qué se movió esta semana en Cretum Desk</h1>
-    <p class="lede">Generado automáticamente desde los commits de la semana. Agrupado por módulo y por quién lo llevó.</p>
+  <div class="wrap">
+    <p class="eyebrow"><span class="pulse"></span> Blog semanal · Avances en el desk</p>
+    <h1>El pulso de la semana en Cretum&nbsp;Desk</h1>
+    <p class="lede">Lo que se construyó estos días, sacado de los commits y ordenado por módulo y por quién lo llevó. Se regenera solo cada viernes.</p>
     <div class="meta-row">
-      <span class="tag"><svg class="ic ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5.2" width="17" height="15.3" rx="2.6"/><path d="M3.5 9.6h17M8 3.4v3.6M16 3.4v3.6"/></svg> Periodo <b>6 ago 2026 – 12 ago 2026</b></span>
-      <span class="tag"><svg class="ic ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.4"/><path d="M12 7.4V12l3.1 2"/></svg> Cadencia <b>viernes</b></span>
+      <span class="tag"><svg class="ic ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5.2" width="17" height="15.3" rx="2.6"/><path d="M3.5 9.6h17M8 3.4v3.6M16 3.4v3.6"/></svg> <b>6 ago 2026 – 12 ago 2026</b></span>
+      <span class="tag"><svg class="ic ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.4"/><path d="M12 7.4V12l3.1 2"/></svg> Cada <b>viernes</b></span>
       <span class="tag"><svg class="ic ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.4"/><path d="M3.6 12h16.8M12 3.6c2.6 2.3 2.6 14.5 0 16.8M12 3.6c-2.6 2.3-2.6 14.5 0 16.8"/></svg> <b>cretumdesk.com</b></span>
     </div>
-    <div class="stats"><div class="stat"><div class="n">61</div><div class="k">commits en la semana</div></div><div class="stat"><div class="n">24</div><div class="k"><span class="swatch sw-navy"></span>Angel · producto</div></div><div class="stat"><div class="n">21</div><div class="k"><span class="swatch sw-auto"></span>Automatización GVV</div></div><div class="stat"><div class="n">16</div><div class="k"><span class="swatch sw-eug"></span>Eugenio</div></div></div>
-    <div class="distrib">
-      <div class="bar" id="bar">
-        <div class="seg seg-navy" data-w="39.3" title="Angel · 24"></div>
-        <div class="seg seg-auto" data-w="34.4" title="Automatización · 21"></div>
-        <div class="seg seg-eug" data-w="26.2" title="Eugenio · 16"></div>
-      </div>
-      <div class="cap">Distribución de commits · 7 módulos tocados · 6 días activos</div>
+    <div class="hstats">
+      <div class="hstat"><div class="n" data-count="60">0</div><div class="k">commits</div></div>
+      <div class="hstat"><div class="n" data-count="25">0</div><div class="k"><span class="swatch sw-navy"></span>Angel</div></div>
+      <div class="hstat"><div class="n" data-count="19">0</div><div class="k"><span class="swatch sw-auto"></span>Automatización</div></div>
+      <div class="hstat"><div class="n" data-count="16">0</div><div class="k"><span class="swatch sw-eug"></span>Eugenio</div></div>
     </div>
   </div>
 </header>
 <main>
 
-  <section><div class="wrap">
-    <div class="sec-head"><span class="num">01</span><h2>Lo que se movió, por módulo</h2></div>
+  <nav class="snav" id="snav">
+    <div class="wrap snav-in">
+      <div class="snav-links">
+        <a href="#resumen" class="on">Resumen</a>
+        <a href="#modulos">Módulos</a>
+        <a href="#personas">Personas</a>
+        <a href="#registro">Registro</a>
+      </div>
+      <div class="snav-act">
+        <button class="iconbtn" id="copyBtn" title="Copiar resumen"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8.5" y="8.5" width="11" height="11" rx="2.5"/><path d="M15.5 8.5V6A2 2 0 0 0 13.5 4h-7A2 2 0 0 0 4.5 6v7a2 2 0 0 0 2 2H8.5"/></svg><span>Copiar</span></button>
+        <button class="iconbtn only-ic" id="themeBtn" title="Cambiar tema" aria-label="Cambiar tema"><svg class="ic ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.4A8 8 0 1 1 9.6 4 6.5 6.5 0 0 0 20 14.4z"/></svg><svg class="ic ic-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.3M12 19.1v2.3M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M2.6 12h2.3M19.1 12h2.3M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"/></svg></button>
+      </div>
+    </div>
+  </nav>
+
+  <section id="resumen" class="wrap sec">
+    <div class="sec-head"><h2>Resumen de la semana</h2><span class="sec-meta">6 ago 2026 – 12 ago 2026</span></div>
+    <div class="summary reveal">
+      <div class="chart-card">
+        <div class="chart-lbl">Actividad por día</div>
+        <div class="chart" id="chart" role="img" aria-label="Commits por día de la semana">
+  <div class="acol" style="--i:0">
+    <div class="aval">3</div>
+    <div class="abar"><div class="afill" style="--h:15.0%" title="J 6 ago · 3 commits"></div></div>
+    <div class="adow">J<span class="adate">6</span></div>
+  </div>
+  <div class="acol" style="--i:1">
+    <div class="aval">19</div>
+    <div class="abar"><div class="afill" style="--h:95.0%" title="V 7 ago · 19 commits"></div></div>
+    <div class="adow">V<span class="adate">7</span></div>
+  </div>
+  <div class="acol" style="--i:2">
+    <div class="aval">4</div>
+    <div class="abar"><div class="afill" style="--h:20.0%" title="S 8 ago · 4 commits"></div></div>
+    <div class="adow">S<span class="adate">8</span></div>
+  </div>
+  <div class="acol" style="--i:3">
+    <div class="aval"></div>
+    <div class="abar"><div class="afill zero" style="--h:0.0%" title="D 9 ago · 0 commits"></div></div>
+    <div class="adow">D<span class="adate">9</span></div>
+  </div>
+  <div class="acol" style="--i:4">
+    <div class="aval">20</div>
+    <div class="abar"><div class="afill peak" style="--h:100.0%" title="L 10 ago · 20 commits"></div></div>
+    <div class="adow">L<span class="adate">10</span></div>
+  </div>
+  <div class="acol" style="--i:5">
+    <div class="aval">6</div>
+    <div class="abar"><div class="afill" style="--h:30.0%" title="M 11 ago · 6 commits"></div></div>
+    <div class="adow">M<span class="adate">11</span></div>
+  </div>
+  <div class="acol" style="--i:6">
+    <div class="aval">8</div>
+    <div class="abar"><div class="afill" style="--h:40.0%" title="M 12 ago · 8 commits"></div></div>
+    <div class="adow">M<span class="adate">12</span></div>
+  </div></div>
+      </div>
+      <div class="dist-card">
+        <div class="chart-lbl">Reparto de 60 commits</div>
+        <div class="bar" id="bar">
+          <div class="seg seg-navy" style="--w:41.7%" title="Angel · 25"></div>
+          <div class="seg seg-auto" style="--w:31.7%" title="Automatización · 19"></div>
+          <div class="seg seg-eug" style="--w:26.7%" title="Eugenio · 16"></div>
+        </div>
+        <div class="legend"><span class="lg"><span class="swatch sw-navy"></span>Angel <b>25</b></span><span class="lg"><span class="swatch sw-auto"></span>Automatización <b>19</b></span><span class="lg"><span class="swatch sw-eug"></span>Eugenio <b>16</b></span></div>
+        <div class="dist-note">8 módulos tocados · 6 días activos</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="modulos" class="wrap sec">
+    <div class="sec-head"><h2>Lo que se movió, por módulo</h2></div>
     <div class="filter" role="group" aria-label="Filtrar por autor">
       <button class="fbtn" data-filter="all" aria-pressed="true">Todos</button>
       <button class="fbtn" data-filter="angel" aria-pressed="false"><span class="swatch sw-navy"></span> Angel</button>
       <button class="fbtn" data-filter="eug" aria-pressed="false"><span class="swatch sw-eug"></span> Eugenio</button>
       <button class="fbtn" data-filter="auto" aria-pressed="false"><span class="swatch sw-auto"></span> Automatización</button>
     </div>
-    <div class="cards" id="cards"><article class="card rise" data-owner="auto eug">
+    <div class="cards" id="cards"><article class="card reveal" data-owner="auto eug" style="--d:0ms">
     <div class="card-top">
       <span class="card-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 20.5v-6M12 20.5V8M18 20.5v-9"/></svg></span>
-      <h3>GVV · Datos</h3>
-      <span class="who auto"><span class="swatch sw-auto"></span>Automatización</span><span class="who eug"><span class="swatch sw-eug"></span>Eugenio</span>
-      <span class="commits">35 commits</span>
+      <div class="card-h"><h3>GVV · Datos</h3><div class="card-who"><span class="who auto"><span class="swatch sw-auto"></span>Automatización</span><span class="who eug"><span class="swatch sw-eug"></span>Eugenio</span></div></div>
+      <span class="card-n">33<span>commits</span></span>
     </div>
-    <ul><li>cierre automatico Julio 2026 <span class="lh">22ede4b</span></li><li>cierre automatico Julio 2026 <span class="lh">4809fc0</span></li><li>cierre automatico Julio 2026 <span class="lh">1b01cc9</span></li><li>cierre automatico Julio 2026 <span class="lh">5d8f427</span></li><li>cierre automatico Julio 2026 <span class="lh">e78e0d2</span></li><li>fix Asset Allocation 116% -&gt; 100% (doble conteo fila Cash renombrada por Kevin) <span class="lh">9568ec9</span></li><li>cierre automatico Julio 2026 <span class="lh">c342927</span></li><li>cierre automatico Julio 2026 <span class="lh">76da3cf</span></li><li>autobust de cache en cretumpartners (redirect a ?v=&lt;hora&gt; — el hosting cachea .html 10 anios en navegador) <span class="lh">6fb0fb1</span></li><li>cierre automatico Julio 2026 <span class="lh">0d6fb04</span></li><li>version movil (flujo vertical apilado &lt;=880px) + logos limpios unificados <span class="lh">8bebfb6</span></li><li>actualizar estrategias al Reporte RGA Consulting 2026-07-31 (+Equity ETF, +Greenfield) <span class="lh">eda8007</span></li><li>fix logo Deloitte (respetar alfa original del webp) <span class="lh">60debd3</span></li><li>logo Deloitte limpio (transparente, chip blanco) <span class="lh">d4b0b75</span></li><li>logo BNY Mellon limpio (transparente, chip blanco) en vez del recorte borroso <span class="lh">912846f</span></li><li>proveedores a color (sin grayscale, hover scale) <span class="lh">6636dcb</span></li><li>proveedores con espaciado uniforme (logos con trim + fondo transparente + alturas balanceadas + space-between) <span class="lh">ced83a4</span></li><li>seccion Estructura del Fondo (diagrama animado) <span class="lh">59272c3</span></li><li>cierre automatico Julio 2026 <span class="lh">492db3c</span></li><li>skin in the game 76% -&gt; 61% (numero + textos es/en) <span class="lh">7acbc89</span></li><li>cierre automatico Julio 2026 <span class="lh">ff28a52</span></li><li>logo de Saronic en privados (pvlogo-saronic) <span class="lh">006719a</span></li><li>cierre automatico Julio 2026 <span class="lh">c9d5c16</span></li><li>YTD hero desde celda Excel (M.ytd/ytdNet en METRICS) <span class="lh">926046b</span></li><li>cierre automatico Julio 2026 <span class="lh">1277fb4</span></li><li>directiva solo-Excel 2026-08-08 <span class="lh">21b9cc9</span></li><li>gotcha de la presentacion GVV (nombre = mes de distribucion, no de datos) <span class="lh">89c3c57</span></li><li>revierte link de presentacion (la de &quot;Julio 2026&quot; trae datos de junio) <span class="lh">d68ff8f</span></li><li>documenta la automatizacion del dashboard GVV (activa) <span class="lh">cca356c</span></li><li>cierre automatico Julio 2026 <span class="lh">0880533</span></li><li>mapa fuente-a-campo del dashboard GVV (Excel / carta / presentación) <span class="lh">9da1d73</span></li><li>link de la carta mensual a cretumdesk.com (julio), sin depender de FTP <span class="lh">d1ed39f</span></li><li>cierre de julio 2026 (rendimiento + composición del portafolio) <span class="lh">8db15eb</span></li><li>agrupa por fuente (manual primero) en vez de lista plana <span class="lh">62959c0</span></li><li>Panel admin &quot;Control de precios&quot;: botón + modal en Base de Datos <span class="lh">ce0dd4b</span></li></ul>
+    <div class="mshare"><div class="mshare-fill" style="--s:1.000"></div></div>
+    <ul><li>cierre automatico Julio 2026 <span class="lh">22ede4b</span></li><li>cierre automatico Julio 2026 <span class="lh">4809fc0</span></li><li>cierre automatico Julio 2026 <span class="lh">1b01cc9</span></li><li>cierre automatico Julio 2026 <span class="lh">5d8f427</span></li><li>cierre automatico Julio 2026 <span class="lh">e78e0d2</span></li><li>fix Asset Allocation 116% -&gt; 100% (doble conteo fila Cash renombrada por Kevin) <span class="lh">9568ec9</span></li><li>cierre automatico Julio 2026 <span class="lh">c342927</span></li><li>cierre automatico Julio 2026 <span class="lh">76da3cf</span></li><li>autobust de cache en cretumpartners (redirect a ?v=&lt;hora&gt; — el hosting cachea .html 10 anios en navegador) <span class="lh">6fb0fb1</span></li><li>cierre automatico Julio 2026 <span class="lh">0d6fb04</span></li><li>version movil (flujo vertical apilado &lt;=880px) + logos limpios unificados <span class="lh">8bebfb6</span></li><li>actualizar estrategias al Reporte RGA Consulting 2026-07-31 (+Equity ETF, +Greenfield) <span class="lh">eda8007</span></li><li>fix logo Deloitte (respetar alfa original del webp) <span class="lh">60debd3</span></li><li>logo Deloitte limpio (transparente, chip blanco) <span class="lh">d4b0b75</span></li><li>logo BNY Mellon limpio (transparente, chip blanco) en vez del recorte borroso <span class="lh">912846f</span></li><li>proveedores a color (sin grayscale, hover scale) <span class="lh">6636dcb</span></li><li>proveedores con espaciado uniforme (logos con trim + fondo transparente + alturas balanceadas + space-between) <span class="lh">ced83a4</span></li><li>seccion Estructura del Fondo (diagrama animado) <span class="lh">59272c3</span></li><li>cierre automatico Julio 2026 <span class="lh">492db3c</span></li><li>skin in the game 76% -&gt; 61% (numero + textos es/en) <span class="lh">7acbc89</span></li><li>cierre automatico Julio 2026 <span class="lh">ff28a52</span></li><li>logo de Saronic en privados (pvlogo-saronic) <span class="lh">006719a</span></li><li>cierre automatico Julio 2026 <span class="lh">c9d5c16</span></li><li>YTD hero desde celda Excel (M.ytd/ytdNet en METRICS) <span class="lh">926046b</span></li><li>cierre automatico Julio 2026 <span class="lh">1277fb4</span></li><li>directiva solo-Excel 2026-08-08 <span class="lh">21b9cc9</span></li><li>gotcha de la presentacion GVV (nombre = mes de distribucion, no de datos) <span class="lh">89c3c57</span></li><li>revierte link de presentacion (la de &quot;Julio 2026&quot; trae datos de junio) <span class="lh">d68ff8f</span></li><li>documenta la automatizacion del dashboard GVV (activa) <span class="lh">cca356c</span></li><li>cierre automatico Julio 2026 <span class="lh">0880533</span></li><li>mapa fuente-a-campo del dashboard GVV (Excel / carta / presentación) <span class="lh">9da1d73</span></li><li>link de la carta mensual a cretumdesk.com (julio), sin depender de FTP <span class="lh">d1ed39f</span></li><li>cierre de julio 2026 (rendimiento + composición del portafolio) <span class="lh">8db15eb</span></li></ul>
   </article>
-<article class="card rise" data-owner="angel">
+<article class="card reveal" data-owner="angel" style="--d:55ms">
     <div class="card-top">
       <span class="card-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.5" y="3" width="15" height="18" rx="2.4"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4.5"/></svg></span>
-      <h3>Campañas · Carta</h3>
-      <span class="who angel"><span class="swatch sw-navy"></span>Angel</span>
-      <span class="commits">11 commits</span>
+      <div class="card-h"><h3>Campañas · Carta</h3><div class="card-who"><span class="who angel"><span class="swatch sw-navy"></span>Angel</span></div></div>
+      <span class="card-n">11<span>commits</span></span>
     </div>
+    <div class="mshare"><div class="mshare-fill" style="--s:0.333"></div></div>
     <ul><li>título pro del PDF de la carta (pestaña &quot;GVV Monthly Report&quot;) <span class="lh">1017e0b</span></li><li>enlace de la carta en /gvv (sin extensión) — arregla caída a login <span class="lh">34a38ac</span></li><li>% del mes en navy + botón Guardar en la forma rápida <span class="lh">0fc3b16</span></li><li>enlace público de la carta como /gvv.pdf (evita filtros de adblock) <span class="lh">7e7047e</span></li><li>servir /carta como proxy first-party (evita ERR_BLOCKED_BY_CLIENT) <span class="lh">a7bf151</span></li><li>subir la carta desde la PC (además de Dropbox) <span class="lh">8d8a183</span></li><li>nombre pro del PDF público de la carta <span class="lh">377fd0c</span></li><li>publicar la carta mensual en el desk (enlace público fijo) <span class="lh">4c72a6c</span></li><li>el modal &quot;Plantilla del correo&quot; muestra la campaña publicada <span class="lh">65354d6</span></li><li>el editor completo ahora carga y conserva lo publicado <span class="lh">75f580e</span></li><li>editar la campaña mensual con el editor de correo de Ventas <span class="lh">41caeee</span></li></ul>
   </article>
-<article class="card rise" data-owner="angel">
+<article class="card reveal" data-owner="angel" style="--d:110ms">
     <div class="card-top">
       <span class="card-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2.6"/><path d="M4.2 7.5 12 12.8 19.8 7.5"/></svg></span>
-      <h3>Ventas · Plantillas</h3>
-      <span class="who angel"><span class="swatch sw-navy"></span>Angel</span>
-      <span class="commits">9 commits</span>
+      <div class="card-h"><h3>Ventas · Plantillas</h3><div class="card-who"><span class="who angel"><span class="swatch sw-navy"></span>Angel</span></div></div>
+      <span class="card-n">9<span>commits</span></span>
     </div>
+    <div class="mshare"><div class="mshare-fill" style="--s:0.273"></div></div>
     <ul><li>copiar plantilla sin manglear el formato <span class="lh">ec4273b</span></li><li>fix overlay de progreso siempre visible (hidden anulado por display:flex) <span class="lh">123adac</span></li><li>timeout en la subida de imágenes (evita quedarse colgado en 0%) <span class="lh">5ad04ce</span></li><li>círculo de progreso al optimizar imágenes <span class="lh">99a7365</span></li><li>indicador de estado de imágenes en las plantillas <span class="lh">2028e11</span></li><li>&quot;Optimizar imágenes&quot; — sube base64 al servidor (Gmail no muestra base64) <span class="lh">2cb592a</span></li><li>botón &quot;Descargar .html&quot; en plantillas (biblioteca y editor) <span class="lh">c1e5b44</span></li><li>copiar plantilla funciona en móvil (selección + execCommand) <span class="lh">555dbb5</span></li><li>Ventas en MVP + plantillas separadas por organización <span class="lh">98e2823</span></li></ul>
   </article>
-<article class="card rise" data-owner="angel eug">
+<article class="card reveal" data-owner="angel" style="--d:165ms">
+    <div class="card-top">
+      <span class="card-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4" width="17" height="16" rx="3.2"/><path d="M3.5 9.4h17M9.2 9.4V20"/></svg></span>
+      <div class="card-h"><h3>Plataforma</h3><div class="card-who"><span class="who angel"><span class="swatch sw-navy"></span>Angel</span></div></div>
+      <span class="card-n">2<span>commits</span></span>
+    </div>
+    <div class="mshare"><div class="mshare-fill" style="--s:0.061"></div></div>
+    <ul><li>iconos SVG propios en vez de emojis <span class="lh">fd94202</span></li><li>avances en el desk (botón header + generador automático) <span class="lh">1521dac</span></li></ul>
+  </article>
+<article class="card reveal" data-owner="eug" style="--d:220ms">
     <div class="card-top">
       <span class="card-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="currentColor" stroke="none"><circle cx="6" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="18" cy="12" r="1.5"/></g></svg></span>
-      <h3>Otros</h3>
-      <span class="who angel"><span class="swatch sw-navy"></span>Angel</span><span class="who eug"><span class="swatch sw-eug"></span>Eugenio</span>
-      <span class="commits">3 commits</span>
+      <div class="card-h"><h3>Otros</h3><div class="card-who"><span class="who eug"><span class="swatch sw-eug"></span>Eugenio</span></div></div>
+      <span class="card-n">2<span>commits</span></span>
     </div>
-    <ul><li>avances en el desk (botón header + generador automático) <span class="lh">1521dac</span></li><li>&#39;Copiar link cretumpartners&#39; copia URL versionada por hora (salta cache de navegador del hosting) <span class="lh">498ae17</span></li><li>Herramientas de la seccion Estructura (draft+injector+logos) para futuras ediciones <span class="lh">0ca81db</span></li></ul>
+    <div class="mshare"><div class="mshare-fill" style="--s:0.061"></div></div>
+    <ul><li>&#39;Copiar link cretumpartners&#39; copia URL versionada por hora (salta cache de navegador del hosting) <span class="lh">498ae17</span></li><li>Herramientas de la seccion Estructura (draft+injector+logos) para futuras ediciones <span class="lh">0ca81db</span></li></ul>
   </article>
-<article class="card rise" data-owner="angel">
+<article class="card reveal" data-owner="angel" style="--d:275ms">
     <div class="card-top">
       <span class="card-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 21V4h11l-2.5 3L17 10H6"/></svg></span>
-      <h3>Reportes</h3>
-      <span class="who angel"><span class="swatch sw-navy"></span>Angel</span>
-      <span class="commits">1 commit</span>
+      <div class="card-h"><h3>Reportes</h3><div class="card-who"><span class="who angel"><span class="swatch sw-navy"></span>Angel</span></div></div>
+      <span class="card-n">1<span>commit</span></span>
     </div>
+    <div class="mshare"><div class="mshare-fill" style="--s:0.030"></div></div>
     <ul><li>mini-tablero con tomar/resolver y atribución <span class="lh">0788a39</span></li></ul>
   </article>
-<article class="card rise" data-owner="angel">
+<article class="card reveal" data-owner="angel" style="--d:330ms">
     <div class="card-top">
       <span class="card-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4.5"/><path d="M8 12.3l2.6 2.6L16.2 9"/></svg></span>
-      <h3>To Do</h3>
-      <span class="who angel"><span class="swatch sw-navy"></span>Angel</span>
-      <span class="commits">1 commit</span>
+      <div class="card-h"><h3>To Do</h3><div class="card-who"><span class="who angel"><span class="swatch sw-navy"></span>Angel</span></div></div>
+      <span class="card-n">1<span>commit</span></span>
     </div>
+    <div class="mshare"><div class="mshare-fill" style="--s:0.030"></div></div>
     <ul><li>panel de carpetas por proyecto + Vaciar en todas las vistas <span class="lh">da0ba21</span></li></ul>
   </article>
-<article class="card rise" data-owner="angel">
+<article class="card reveal" data-owner="angel" style="--d:385ms">
     <div class="card-top">
       <span class="card-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 7.4A1.6 1.6 0 0 1 5.1 5.8h3.6l2 2.4h7.2a1.6 1.6 0 0 1 1.6 1.6v7.8a1.6 1.6 0 0 1-1.6 1.6H5.1a1.6 1.6 0 0 1-1.6-1.6z"/></svg></span>
-      <h3>Dropbox</h3>
-      <span class="who angel"><span class="swatch sw-navy"></span>Angel</span>
-      <span class="commits">1 commit</span>
+      <div class="card-h"><h3>Dropbox</h3><div class="card-who"><span class="who angel"><span class="swatch sw-navy"></span>Angel</span></div></div>
+      <span class="card-n">1<span>commit</span></span>
     </div>
+    <div class="mshare"><div class="mshare-fill" style="--s:0.030"></div></div>
     <ul><li>previsualizar PDFs en móvil con PDF.js <span class="lh">37c8d5f</span></li></ul>
   </article></div>
-  </div></section>
+  </section>
 
-  <section><div class="wrap">
-    <div class="sec-head"><span class="num">02</span><h2>Qué hizo cada quien</h2></div>
-    <div class="duo"><div class="panel">
-    <h3><span class="swatch sw-navy" style="display:inline-block;margin-right:8px"></span>Angel · producto</h3>
-    <p class="sub">24 commits esta semana</p>
-    <div class="commit-list"><div class="cl"><span class="h" style="color:var(--navy-2)">1521dac</span><span>avances en el desk (botón header + generador automático)</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">0788a39</span><span>mini-tablero con tomar/resolver y atribución</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">ec4273b</span><span>copiar plantilla sin manglear el formato</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">123adac</span><span>fix overlay de progreso siempre visible (hidden anulado por display:flex)</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">5ad04ce</span><span>timeout en la subida de imágenes (evita quedarse colgado en 0%)</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">99a7365</span><span>círculo de progreso al optimizar imágenes</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">2028e11</span><span>indicador de estado de imágenes en las plantillas</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">2cb592a</span><span>&quot;Optimizar imágenes&quot; — sube base64 al servidor (Gmail no muestra base64)</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">c1e5b44</span><span>botón &quot;Descargar .html&quot; en plantillas (biblioteca y editor)</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">555dbb5</span><span>copiar plantilla funciona en móvil (selección + execCommand)</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">98e2823</span><span>Ventas en MVP + plantillas separadas por organización</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">1017e0b</span><span>título pro del PDF de la carta (pestaña &quot;GVV Monthly Report&quot;)</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">34a38ac</span><span>enlace de la carta en /gvv (sin extensión) — arregla caída a login</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">0fc3b16</span><span>% del mes en navy + botón Guardar en la forma rápida</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">7e7047e</span><span>enlace público de la carta como /gvv.pdf (evita filtros de adblock)</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">a7bf151</span><span>servir /carta como proxy first-party (evita ERR_BLOCKED_BY_CLIENT)</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">8d8a183</span><span>subir la carta desde la PC (además de Dropbox)</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">377fd0c</span><span>nombre pro del PDF público de la carta</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">4c72a6c</span><span>publicar la carta mensual en el desk (enlace público fijo)</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">65354d6</span><span>el modal &quot;Plantilla del correo&quot; muestra la campaña publicada</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">75f580e</span><span>el editor completo ahora carga y conserva lo publicado</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">41caeee</span><span>editar la campaña mensual con el editor de correo de Ventas</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">da0ba21</span><span>panel de carpetas por proyecto + Vaciar en todas las vistas</span></div><div class="cl"><span class="h" style="color:var(--navy-2)">37c8d5f</span><span>previsualizar PDFs en móvil con PDF.js</span></div></div>
+  <section id="personas" class="wrap sec">
+    <div class="sec-head"><h2>Qué hizo cada quien</h2></div>
+    <div class="ppl"><div class="prow reveal">
+    <div class="phead"><span class="swatch sw-navy"></span><span class="pname">Angel · producto</span><span class="pcount">25</span></div>
+    <div class="pbar"><div class="pbar-fill fill-angel" style="--s:1.000"></div></div>
+    <div class="pcommits"><div class="cl"><span class="h">fd94202</span><span>iconos SVG propios en vez de emojis</span></div><div class="cl"><span class="h">1521dac</span><span>avances en el desk (botón header + generador automático)</span></div><div class="cl"><span class="h">0788a39</span><span>mini-tablero con tomar/resolver y atribución</span></div><div class="cl"><span class="h">ec4273b</span><span>copiar plantilla sin manglear el formato</span></div><div class="cl"><span class="h">123adac</span><span>fix overlay de progreso siempre visible (hidden anulado por display:flex)</span></div><div class="cl"><span class="h">5ad04ce</span><span>timeout en la subida de imágenes (evita quedarse colgado en 0%)</span></div><div class="pmore">+19 más</div></div>
   </div>
-<div class="panel">
-    <h3><span class="swatch sw-auto" style="display:inline-block;margin-right:8px"></span>Automatización</h3>
-    <p class="sub">21 commits esta semana</p>
-    <div class="commit-list"><div class="cl"><span class="h" style="color:var(--auto)">22ede4b</span><span>cierre automatico Julio 2026</span></div><div class="cl"><span class="h" style="color:var(--auto)">4809fc0</span><span>cierre automatico Julio 2026</span></div><div class="cl"><span class="h" style="color:var(--auto)">c342927</span><span>cierre automatico Julio 2026</span></div><div class="cl"><span class="h" style="color:var(--auto)">76da3cf</span><span>cierre automatico Julio 2026</span></div><div class="cl"><span class="h" style="color:var(--auto)">0d6fb04</span><span>cierre automatico Julio 2026</span></div><div class="cl"><span class="h" style="color:var(--auto)">492db3c</span><span>cierre automatico Julio 2026</span></div><div class="cl"><span class="h" style="color:var(--auto)">7acbc89</span><span>skin in the game 76% -&gt; 61% (numero + textos es/en)</span></div><div class="cl"><span class="h" style="color:var(--auto)">ff28a52</span><span>cierre automatico Julio 2026</span></div><div class="cl"><span class="h" style="color:var(--auto)">c9d5c16</span><span>cierre automatico Julio 2026</span></div><div class="cl"><span class="h" style="color:var(--auto)">926046b</span><span>YTD hero desde celda Excel (M.ytd/ytdNet en METRICS)</span></div><div class="cl"><span class="h" style="color:var(--auto)">1277fb4</span><span>cierre automatico Julio 2026</span></div><div class="cl"><span class="h" style="color:var(--auto)">21b9cc9</span><span>directiva solo-Excel 2026-08-08</span></div><div class="cl"><span class="h" style="color:var(--auto)">89c3c57</span><span>gotcha de la presentacion GVV (nombre = mes de distribucion, no de datos)</span></div><div class="cl"><span class="h" style="color:var(--auto)">d68ff8f</span><span>revierte link de presentacion (la de &quot;Julio 2026&quot; trae datos de junio)</span></div><div class="cl"><span class="h" style="color:var(--auto)">cca356c</span><span>documenta la automatizacion del dashboard GVV (activa)</span></div><div class="cl"><span class="h" style="color:var(--auto)">0880533</span><span>cierre automatico Julio 2026</span></div><div class="cl"><span class="h" style="color:var(--auto)">9da1d73</span><span>mapa fuente-a-campo del dashboard GVV (Excel / carta / presentación)</span></div><div class="cl"><span class="h" style="color:var(--auto)">d1ed39f</span><span>link de la carta mensual a cretumdesk.com (julio), sin depender de FTP</span></div><div class="cl"><span class="h" style="color:var(--auto)">8db15eb</span><span>cierre de julio 2026 (rendimiento + composición del portafolio)</span></div><div class="cl"><span class="h" style="color:var(--auto)">62959c0</span><span>agrupa por fuente (manual primero) en vez de lista plana</span></div><div class="cl"><span class="h" style="color:var(--auto)">ce0dd4b</span><span>Panel admin &quot;Control de precios&quot;: botón + modal en Base de Datos</span></div></div>
+<div class="prow reveal">
+    <div class="phead"><span class="swatch sw-auto"></span><span class="pname">Automatización GVV</span><span class="pcount">19</span></div>
+    <div class="pbar"><div class="pbar-fill fill-auto" style="--s:0.760"></div></div>
+    <div class="pcommits"><div class="cl"><span class="h">22ede4b</span><span>cierre automatico Julio 2026</span></div><div class="cl"><span class="h">4809fc0</span><span>cierre automatico Julio 2026</span></div><div class="cl"><span class="h">c342927</span><span>cierre automatico Julio 2026</span></div><div class="cl"><span class="h">76da3cf</span><span>cierre automatico Julio 2026</span></div><div class="cl"><span class="h">0d6fb04</span><span>cierre automatico Julio 2026</span></div><div class="cl"><span class="h">492db3c</span><span>cierre automatico Julio 2026</span></div><div class="pmore">+13 más</div></div>
   </div>
-<div class="panel">
-    <h3><span class="swatch sw-eug" style="display:inline-block;margin-right:8px"></span>Eugenio</h3>
-    <p class="sub">16 commits esta semana</p>
-    <div class="commit-list"><div class="cl"><span class="h" style="color:var(--eug)">1b01cc9</span><span>cierre automatico Julio 2026</span></div><div class="cl"><span class="h" style="color:var(--eug)">5d8f427</span><span>cierre automatico Julio 2026</span></div><div class="cl"><span class="h" style="color:var(--eug)">e78e0d2</span><span>cierre automatico Julio 2026</span></div><div class="cl"><span class="h" style="color:var(--eug)">9568ec9</span><span>fix Asset Allocation 116% -&gt; 100% (doble conteo fila Cash renombrada por Kevin)</span></div><div class="cl"><span class="h" style="color:var(--eug)">498ae17</span><span>&#39;Copiar link cretumpartners&#39; copia URL versionada por hora (salta cache de navegador del hosting)</span></div><div class="cl"><span class="h" style="color:var(--eug)">6fb0fb1</span><span>autobust de cache en cretumpartners (redirect a ?v=&lt;hora&gt; — el hosting cachea .html 10 anios en navegador)</span></div><div class="cl"><span class="h" style="color:var(--eug)">0ca81db</span><span>Herramientas de la seccion Estructura (draft+injector+logos) para futuras ediciones</span></div><div class="cl"><span class="h" style="color:var(--eug)">8bebfb6</span><span>version movil (flujo vertical apilado &lt;=880px) + logos limpios unificados</span></div><div class="cl"><span class="h" style="color:var(--eug)">eda8007</span><span>actualizar estrategias al Reporte RGA Consulting 2026-07-31 (+Equity ETF, +Greenfield)</span></div><div class="cl"><span class="h" style="color:var(--eug)">60debd3</span><span>fix logo Deloitte (respetar alfa original del webp)</span></div><div class="cl"><span class="h" style="color:var(--eug)">d4b0b75</span><span>logo Deloitte limpio (transparente, chip blanco)</span></div><div class="cl"><span class="h" style="color:var(--eug)">912846f</span><span>logo BNY Mellon limpio (transparente, chip blanco) en vez del recorte borroso</span></div><div class="cl"><span class="h" style="color:var(--eug)">6636dcb</span><span>proveedores a color (sin grayscale, hover scale)</span></div><div class="cl"><span class="h" style="color:var(--eug)">ced83a4</span><span>proveedores con espaciado uniforme (logos con trim + fondo transparente + alturas balanceadas + space-between)</span></div><div class="cl"><span class="h" style="color:var(--eug)">59272c3</span><span>seccion Estructura del Fondo (diagrama animado)</span></div><div class="cl"><span class="h" style="color:var(--eug)">006719a</span><span>logo de Saronic en privados (pvlogo-saronic)</span></div></div>
+<div class="prow reveal">
+    <div class="phead"><span class="swatch sw-eug"></span><span class="pname">Eugenio</span><span class="pcount">16</span></div>
+    <div class="pbar"><div class="pbar-fill fill-eug" style="--s:0.640"></div></div>
+    <div class="pcommits"><div class="cl"><span class="h">1b01cc9</span><span>cierre automatico Julio 2026</span></div><div class="cl"><span class="h">5d8f427</span><span>cierre automatico Julio 2026</span></div><div class="cl"><span class="h">e78e0d2</span><span>cierre automatico Julio 2026</span></div><div class="cl"><span class="h">9568ec9</span><span>fix Asset Allocation 116% -&gt; 100% (doble conteo fila Cash renombrada por Kevin)</span></div><div class="cl"><span class="h">498ae17</span><span>&#39;Copiar link cretumpartners&#39; copia URL versionada por hora (salta cache de navegador del hosting)</span></div><div class="cl"><span class="h">6fb0fb1</span><span>autobust de cache en cretumpartners (redirect a ?v=&lt;hora&gt; — el hosting cachea .html 10 anios en navegador)</span></div><div class="pmore">+10 más</div></div>
   </div></div>
-  </div></section>
+  </section>
 
-  <section><div class="wrap">
-    <div class="sec-head"><span class="num">03</span><h2>Cómo se trabaja</h2></div>
-    <div class="panel">
-      <div class="flow">
-        <div class="step"><div class="rail"><div class="node">1</div><div class="line"></div></div><div class="body"><b>Necesidad</b><span>Sale de una petición, un reporte del equipo o un pendiente.</span></div></div>
-        <div class="step"><div class="rail"><div class="node">2</div><div class="line"></div></div><div class="body"><b>Construir + revisar</b><span>Se arma, se valida y se muestra antes de tocar producción.</span></div></div>
-        <div class="step"><div class="rail"><div class="node">3</div><div class="line"></div></div><div class="body"><b>Aprobación</b><span>Nada se despliega sin visto bueno.</span></div></div>
-        <div class="step"><div class="rail"><div class="node">4</div><div class="line"></div></div><div class="body"><b>Deploy</b><span>Push a <span class="mono">main</span> → Vercel despliega solo → <span class="mono">cretumdesk.com</span>.</span></div></div>
-      </div>
-    </div>
-  </div></section>
-
-  <section><div class="wrap">
-    <div class="sec-head"><span class="num">04</span><h2>Registro de GitHub</h2></div>
-    <details class="log">
-      <summary><span class="caret">▸</span> Ver los 61 commits de la semana <span class="count">6 ago 2026 – 12 ago 2026</span></summary>
-      <div class="logbody">
-  <div class="day"><p class="day-h">12 ago · 7 commits</p>
-    <div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">1521dac</span><span>Blog semanal: avances en el desk (botón header + generador automático)</span></div><div class="lrow"><span class="lw" style="background:var(--auto)"></span><span class="lh">22ede4b</span><span>GVV dashboard: cierre automatico Julio 2026</span></div><div class="lrow"><span class="lw" style="background:var(--auto)"></span><span class="lh">4809fc0</span><span>GVV dashboard: cierre automatico Julio 2026</span></div><div class="lrow"><span class="lw" style="background:var(--eug)"></span><span class="lh">1b01cc9</span><span>GVV dashboard: cierre automatico Julio 2026</span></div><div class="lrow"><span class="lw" style="background:var(--eug)"></span><span class="lh">5d8f427</span><span>GVV dashboard: cierre automatico Julio 2026</span></div><div class="lrow"><span class="lw" style="background:var(--eug)"></span><span class="lh">e78e0d2</span><span>GVV dashboard: cierre automatico Julio 2026</span></div><div class="lrow"><span class="lw" style="background:var(--eug)"></span><span class="lh">9568ec9</span><span>GVV: fix Asset Allocation 116% -&gt; 100% (doble conteo fila Cash renombrada por Kevin)</span></div>
+  <section id="registro" class="wrap sec">
+    <div class="sec-head"><h2>Registro de GitHub</h2><span class="sec-meta">60 commits</span></div>
+    <div class="search reveal"><svg class="ic ic-s" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="q" type="search" placeholder="Buscar en los commits (módulo, texto, hash…)" autocomplete="off" aria-label="Buscar commits"></div>
+    <div class="logbody reveal" id="logbody">
+  <div class="day"><p class="day-h">12 ago · 8 commits</p>
+    <div class="lrow"><span class="lw sw-navy"></span><span class="lh">fd94202</span><span>Blog semanal: iconos SVG propios en vez de emojis</span></div><div class="lrow"><span class="lw sw-navy"></span><span class="lh">1521dac</span><span>Blog semanal: avances en el desk (botón header + generador automático)</span></div><div class="lrow"><span class="lw sw-auto"></span><span class="lh">22ede4b</span><span>GVV dashboard: cierre automatico Julio 2026</span></div><div class="lrow"><span class="lw sw-auto"></span><span class="lh">4809fc0</span><span>GVV dashboard: cierre automatico Julio 2026</span></div><div class="lrow"><span class="lw sw-eug"></span><span class="lh">1b01cc9</span><span>GVV dashboard: cierre automatico Julio 2026</span></div><div class="lrow"><span class="lw sw-eug"></span><span class="lh">5d8f427</span><span>GVV dashboard: cierre automatico Julio 2026</span></div><div class="lrow"><span class="lw sw-eug"></span><span class="lh">e78e0d2</span><span>GVV dashboard: cierre automatico Julio 2026</span></div><div class="lrow"><span class="lw sw-eug"></span><span class="lh">9568ec9</span><span>GVV: fix Asset Allocation 116% -&gt; 100% (doble conteo fila Cash renombrada por Kevin)</span></div>
   </div>
   <div class="day"><p class="day-h">11 ago · 6 commits</p>
-    <div class="lrow"><span class="lw" style="background:var(--auto)"></span><span class="lh">c342927</span><span>GVV dashboard: cierre automatico Julio 2026</span></div><div class="lrow"><span class="lw" style="background:var(--eug)"></span><span class="lh">498ae17</span><span>Portal: &#39;Copiar link cretumpartners&#39; copia URL versionada por hora (salta cache de navegador del hosting)</span></div><div class="lrow"><span class="lw" style="background:var(--auto)"></span><span class="lh">76da3cf</span><span>GVV dashboard: cierre automatico Julio 2026</span></div><div class="lrow"><span class="lw" style="background:var(--eug)"></span><span class="lh">6fb0fb1</span><span>GVV dashboard: autobust de cache en cretumpartners (redirect a ?v=&lt;hora&gt; — el hosting cachea .html 10 anios en navegador)</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">0788a39</span><span>Reportes: mini-tablero con tomar/resolver y atribución</span></div><div class="lrow"><span class="lw" style="background:var(--auto)"></span><span class="lh">0d6fb04</span><span>GVV dashboard: cierre automatico Julio 2026</span></div>
+    <div class="lrow"><span class="lw sw-auto"></span><span class="lh">c342927</span><span>GVV dashboard: cierre automatico Julio 2026</span></div><div class="lrow"><span class="lw sw-eug"></span><span class="lh">498ae17</span><span>Portal: &#39;Copiar link cretumpartners&#39; copia URL versionada por hora (salta cache de navegador del hosting)</span></div><div class="lrow"><span class="lw sw-auto"></span><span class="lh">76da3cf</span><span>GVV dashboard: cierre automatico Julio 2026</span></div><div class="lrow"><span class="lw sw-eug"></span><span class="lh">6fb0fb1</span><span>GVV dashboard: autobust de cache en cretumpartners (redirect a ?v=&lt;hora&gt; — el hosting cachea .html 10 anios en navegador)</span></div><div class="lrow"><span class="lw sw-navy"></span><span class="lh">0788a39</span><span>Reportes: mini-tablero con tomar/resolver y atribución</span></div><div class="lrow"><span class="lw sw-auto"></span><span class="lh">0d6fb04</span><span>GVV dashboard: cierre automatico Julio 2026</span></div>
   </div>
   <div class="day"><p class="day-h">10 ago · 20 commits</p>
-    <div class="lrow"><span class="lw" style="background:var(--eug)"></span><span class="lh">0ca81db</span><span>Herramientas de la seccion Estructura (draft+injector+logos) para futuras ediciones</span></div><div class="lrow"><span class="lw" style="background:var(--eug)"></span><span class="lh">8bebfb6</span><span>GVV estructura: version movil (flujo vertical apilado &lt;=880px) + logos limpios unificados</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">ec4273b</span><span>Ventas: copiar plantilla sin manglear el formato</span></div><div class="lrow"><span class="lw" style="background:var(--eug)"></span><span class="lh">eda8007</span><span>GVV RGA: actualizar estrategias al Reporte RGA Consulting 2026-07-31 (+Equity ETF, +Greenfield)</span></div><div class="lrow"><span class="lw" style="background:var(--eug)"></span><span class="lh">60debd3</span><span>GVV estructura: fix logo Deloitte (respetar alfa original del webp)</span></div><div class="lrow"><span class="lw" style="background:var(--eug)"></span><span class="lh">d4b0b75</span><span>GVV estructura: logo Deloitte limpio (transparente, chip blanco)</span></div><div class="lrow"><span class="lw" style="background:var(--eug)"></span><span class="lh">912846f</span><span>GVV estructura: logo BNY Mellon limpio (transparente, chip blanco) en vez del recorte borroso</span></div><div class="lrow"><span class="lw" style="background:var(--eug)"></span><span class="lh">6636dcb</span><span>GVV estructura: proveedores a color (sin grayscale, hover scale)</span></div><div class="lrow"><span class="lw" style="background:var(--eug)"></span><span class="lh">ced83a4</span><span>GVV estructura: proveedores con espaciado uniforme (logos con trim + fondo transparente + alturas balanceadas + space-between)</span></div><div class="lrow"><span class="lw" style="background:var(--eug)"></span><span class="lh">59272c3</span><span>GVV dashboard: seccion Estructura del Fondo (diagrama animado)</span></div><div class="lrow"><span class="lw" style="background:var(--auto)"></span><span class="lh">492db3c</span><span>GVV dashboard: cierre automatico Julio 2026</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">123adac</span><span>Ventas: fix overlay de progreso siempre visible (hidden anulado por display:flex)</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">5ad04ce</span><span>Ventas: timeout en la subida de imágenes (evita quedarse colgado en 0%)</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">99a7365</span><span>Ventas: círculo de progreso al optimizar imágenes</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">2028e11</span><span>Ventas: indicador de estado de imágenes en las plantillas</span></div><div class="lrow"><span class="lw" style="background:var(--auto)"></span><span class="lh">7acbc89</span><span>GVV: skin in the game 76% -&gt; 61% (numero + textos es/en)</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">2cb592a</span><span>Ventas: &quot;Optimizar imágenes&quot; — sube base64 al servidor (Gmail no muestra base64)</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">c1e5b44</span><span>Ventas: botón &quot;Descargar .html&quot; en plantillas (biblioteca y editor)</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">555dbb5</span><span>Ventas: copiar plantilla funciona en móvil (selección + execCommand)</span></div><div class="lrow"><span class="lw" style="background:var(--auto)"></span><span class="lh">ff28a52</span><span>GVV dashboard: cierre automatico Julio 2026</span></div>
+    <div class="lrow"><span class="lw sw-eug"></span><span class="lh">0ca81db</span><span>Herramientas de la seccion Estructura (draft+injector+logos) para futuras ediciones</span></div><div class="lrow"><span class="lw sw-eug"></span><span class="lh">8bebfb6</span><span>GVV estructura: version movil (flujo vertical apilado &lt;=880px) + logos limpios unificados</span></div><div class="lrow"><span class="lw sw-navy"></span><span class="lh">ec4273b</span><span>Ventas: copiar plantilla sin manglear el formato</span></div><div class="lrow"><span class="lw sw-eug"></span><span class="lh">eda8007</span><span>GVV RGA: actualizar estrategias al Reporte RGA Consulting 2026-07-31 (+Equity ETF, +Greenfield)</span></div><div class="lrow"><span class="lw sw-eug"></span><span class="lh">60debd3</span><span>GVV estructura: fix logo Deloitte (respetar alfa original del webp)</span></div><div class="lrow"><span class="lw sw-eug"></span><span class="lh">d4b0b75</span><span>GVV estructura: logo Deloitte limpio (transparente, chip blanco)</span></div><div class="lrow"><span class="lw sw-eug"></span><span class="lh">912846f</span><span>GVV estructura: logo BNY Mellon limpio (transparente, chip blanco) en vez del recorte borroso</span></div><div class="lrow"><span class="lw sw-eug"></span><span class="lh">6636dcb</span><span>GVV estructura: proveedores a color (sin grayscale, hover scale)</span></div><div class="lrow"><span class="lw sw-eug"></span><span class="lh">ced83a4</span><span>GVV estructura: proveedores con espaciado uniforme (logos con trim + fondo transparente + alturas balanceadas + space-between)</span></div><div class="lrow"><span class="lw sw-eug"></span><span class="lh">59272c3</span><span>GVV dashboard: seccion Estructura del Fondo (diagrama animado)</span></div><div class="lrow"><span class="lw sw-auto"></span><span class="lh">492db3c</span><span>GVV dashboard: cierre automatico Julio 2026</span></div><div class="lrow"><span class="lw sw-navy"></span><span class="lh">123adac</span><span>Ventas: fix overlay de progreso siempre visible (hidden anulado por display:flex)</span></div><div class="lrow"><span class="lw sw-navy"></span><span class="lh">5ad04ce</span><span>Ventas: timeout en la subida de imágenes (evita quedarse colgado en 0%)</span></div><div class="lrow"><span class="lw sw-navy"></span><span class="lh">99a7365</span><span>Ventas: círculo de progreso al optimizar imágenes</span></div><div class="lrow"><span class="lw sw-navy"></span><span class="lh">2028e11</span><span>Ventas: indicador de estado de imágenes en las plantillas</span></div><div class="lrow"><span class="lw sw-auto"></span><span class="lh">7acbc89</span><span>GVV: skin in the game 76% -&gt; 61% (numero + textos es/en)</span></div><div class="lrow"><span class="lw sw-navy"></span><span class="lh">2cb592a</span><span>Ventas: &quot;Optimizar imágenes&quot; — sube base64 al servidor (Gmail no muestra base64)</span></div><div class="lrow"><span class="lw sw-navy"></span><span class="lh">c1e5b44</span><span>Ventas: botón &quot;Descargar .html&quot; en plantillas (biblioteca y editor)</span></div><div class="lrow"><span class="lw sw-navy"></span><span class="lh">555dbb5</span><span>Ventas: copiar plantilla funciona en móvil (selección + execCommand)</span></div><div class="lrow"><span class="lw sw-auto"></span><span class="lh">ff28a52</span><span>GVV dashboard: cierre automatico Julio 2026</span></div>
   </div>
   <div class="day"><p class="day-h">8 ago · 4 commits</p>
-    <div class="lrow"><span class="lw" style="background:var(--eug)"></span><span class="lh">006719a</span><span>GVV: logo de Saronic en privados (pvlogo-saronic)</span></div><div class="lrow"><span class="lw" style="background:var(--auto)"></span><span class="lh">c9d5c16</span><span>GVV dashboard: cierre automatico Julio 2026</span></div><div class="lrow"><span class="lw" style="background:var(--auto)"></span><span class="lh">926046b</span><span>GVV bundle: YTD hero desde celda Excel (M.ytd/ytdNet en METRICS)</span></div><div class="lrow"><span class="lw" style="background:var(--auto)"></span><span class="lh">1277fb4</span><span>GVV dashboard: cierre automatico Julio 2026</span></div>
+    <div class="lrow"><span class="lw sw-eug"></span><span class="lh">006719a</span><span>GVV: logo de Saronic en privados (pvlogo-saronic)</span></div><div class="lrow"><span class="lw sw-auto"></span><span class="lh">c9d5c16</span><span>GVV dashboard: cierre automatico Julio 2026</span></div><div class="lrow"><span class="lw sw-auto"></span><span class="lh">926046b</span><span>GVV bundle: YTD hero desde celda Excel (M.ytd/ytdNet en METRICS)</span></div><div class="lrow"><span class="lw sw-auto"></span><span class="lh">1277fb4</span><span>GVV dashboard: cierre automatico Julio 2026</span></div>
   </div>
   <div class="day"><p class="day-h">7 ago · 19 commits</p>
-    <div class="lrow"><span class="lw" style="background:var(--auto)"></span><span class="lh">21b9cc9</span><span>GVV data sources: directiva solo-Excel 2026-08-08</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">98e2823</span><span>Ventas en MVP + plantillas separadas por organización</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">1017e0b</span><span>Campañas: título pro del PDF de la carta (pestaña &quot;GVV Monthly Report&quot;)</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">34a38ac</span><span>Campañas: enlace de la carta en /gvv (sin extensión) — arregla caída a login</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">0fc3b16</span><span>Campañas: % del mes en navy + botón Guardar en la forma rápida</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">7e7047e</span><span>Campañas: enlace público de la carta como /gvv.pdf (evita filtros de adblock)</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">a7bf151</span><span>Campañas: servir /carta como proxy first-party (evita ERR_BLOCKED_BY_CLIENT)</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">8d8a183</span><span>Campañas: subir la carta desde la PC (además de Dropbox)</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">377fd0c</span><span>Campañas: nombre pro del PDF público de la carta</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">4c72a6c</span><span>Campañas: publicar la carta mensual en el desk (enlace público fijo)</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">65354d6</span><span>Campañas: el modal &quot;Plantilla del correo&quot; muestra la campaña publicada</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">75f580e</span><span>Campañas: el editor completo ahora carga y conserva lo publicado</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">41caeee</span><span>Campañas: editar la campaña mensual con el editor de correo de Ventas</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">da0ba21</span><span>To Do: panel de carpetas por proyecto + Vaciar en todas las vistas</span></div><div class="lrow"><span class="lw" style="background:var(--auto)"></span><span class="lh">89c3c57</span><span>Docs: gotcha de la presentacion GVV (nombre = mes de distribucion, no de datos)</span></div><div class="lrow"><span class="lw" style="background:var(--auto)"></span><span class="lh">d68ff8f</span><span>GVV dashboard: revierte link de presentacion (la de &quot;Julio 2026&quot; trae datos de junio)</span></div><div class="lrow"><span class="lw" style="background:var(--auto)"></span><span class="lh">cca356c</span><span>Docs: documenta la automatizacion del dashboard GVV (activa)</span></div><div class="lrow"><span class="lw" style="background:var(--auto)"></span><span class="lh">0880533</span><span>GVV dashboard: cierre automatico Julio 2026</span></div><div class="lrow"><span class="lw" style="background:var(--navy)"></span><span class="lh">37c8d5f</span><span>Dropbox: previsualizar PDFs en móvil con PDF.js</span></div>
+    <div class="lrow"><span class="lw sw-auto"></span><span class="lh">21b9cc9</span><span>GVV data sources: directiva solo-Excel 2026-08-08</span></div><div class="lrow"><span class="lw sw-navy"></span><span class="lh">98e2823</span><span>Ventas en MVP + plantillas separadas por organización</span></div><div class="lrow"><span class="lw sw-navy"></span><span class="lh">1017e0b</span><span>Campañas: título pro del PDF de la carta (pestaña &quot;GVV Monthly Report&quot;)</span></div><div class="lrow"><span class="lw sw-navy"></span><span class="lh">34a38ac</span><span>Campañas: enlace de la carta en /gvv (sin extensión) — arregla caída a login</span></div><div class="lrow"><span class="lw sw-navy"></span><span class="lh">0fc3b16</span><span>Campañas: % del mes en navy + botón Guardar en la forma rápida</span></div><div class="lrow"><span class="lw sw-navy"></span><span class="lh">7e7047e</span><span>Campañas: enlace público de la carta como /gvv.pdf (evita filtros de adblock)</span></div><div class="lrow"><span class="lw sw-navy"></span><span class="lh">a7bf151</span><span>Campañas: servir /carta como proxy first-party (evita ERR_BLOCKED_BY_CLIENT)</span></div><div class="lrow"><span class="lw sw-navy"></span><span class="lh">8d8a183</span><span>Campañas: subir la carta desde la PC (además de Dropbox)</span></div><div class="lrow"><span class="lw sw-navy"></span><span class="lh">377fd0c</span><span>Campañas: nombre pro del PDF público de la carta</span></div><div class="lrow"><span class="lw sw-navy"></span><span class="lh">4c72a6c</span><span>Campañas: publicar la carta mensual en el desk (enlace público fijo)</span></div><div class="lrow"><span class="lw sw-navy"></span><span class="lh">65354d6</span><span>Campañas: el modal &quot;Plantilla del correo&quot; muestra la campaña publicada</span></div><div class="lrow"><span class="lw sw-navy"></span><span class="lh">75f580e</span><span>Campañas: el editor completo ahora carga y conserva lo publicado</span></div><div class="lrow"><span class="lw sw-navy"></span><span class="lh">41caeee</span><span>Campañas: editar la campaña mensual con el editor de correo de Ventas</span></div><div class="lrow"><span class="lw sw-navy"></span><span class="lh">da0ba21</span><span>To Do: panel de carpetas por proyecto + Vaciar en todas las vistas</span></div><div class="lrow"><span class="lw sw-auto"></span><span class="lh">89c3c57</span><span>Docs: gotcha de la presentacion GVV (nombre = mes de distribucion, no de datos)</span></div><div class="lrow"><span class="lw sw-auto"></span><span class="lh">d68ff8f</span><span>GVV dashboard: revierte link de presentacion (la de &quot;Julio 2026&quot; trae datos de junio)</span></div><div class="lrow"><span class="lw sw-auto"></span><span class="lh">cca356c</span><span>Docs: documenta la automatizacion del dashboard GVV (activa)</span></div><div class="lrow"><span class="lw sw-auto"></span><span class="lh">0880533</span><span>GVV dashboard: cierre automatico Julio 2026</span></div><div class="lrow"><span class="lw sw-navy"></span><span class="lh">37c8d5f</span><span>Dropbox: previsualizar PDFs en móvil con PDF.js</span></div>
   </div>
-  <div class="day"><p class="day-h">6 ago · 5 commits</p>
-    <div class="lrow"><span class="lw" style="background:var(--auto)"></span><span class="lh">9da1d73</span><span>Docs: mapa fuente-a-campo del dashboard GVV (Excel / carta / presentación)</span></div><div class="lrow"><span class="lw" style="background:var(--auto)"></span><span class="lh">d1ed39f</span><span>GVV dashboard: link de la carta mensual a cretumdesk.com (julio), sin depender de FTP</span></div><div class="lrow"><span class="lw" style="background:var(--auto)"></span><span class="lh">8db15eb</span><span>GVV dashboard: cierre de julio 2026 (rendimiento + composición del portafolio)</span></div><div class="lrow"><span class="lw" style="background:var(--auto)"></span><span class="lh">62959c0</span><span>Control de precios: agrupa por fuente (manual primero) en vez de lista plana</span></div><div class="lrow"><span class="lw" style="background:var(--auto)"></span><span class="lh">ce0dd4b</span><span>Panel admin &quot;Control de precios&quot;: botón + modal en Base de Datos</span></div>
+  <div class="day"><p class="day-h">6 ago · 3 commits</p>
+    <div class="lrow"><span class="lw sw-auto"></span><span class="lh">9da1d73</span><span>Docs: mapa fuente-a-campo del dashboard GVV (Excel / carta / presentación)</span></div><div class="lrow"><span class="lw sw-auto"></span><span class="lh">d1ed39f</span><span>GVV dashboard: link de la carta mensual a cretumdesk.com (julio), sin depender de FTP</span></div><div class="lrow"><span class="lw sw-auto"></span><span class="lh">8db15eb</span><span>GVV dashboard: cierre de julio 2026 (rendimiento + composición del portafolio)</span></div>
   </div></div>
-    </details>
-  </div></section>
-
+  </section>
 </main>
 <footer>
   <div class="wrap">
-    <span>Blog semanal · <b style="color:var(--ink-soft)">Cretum Desk</b></span>
-    <span class="mono">Generado 12 ago 2026 · automático los viernes</span>
+    <span>Blog semanal · <b>Cretum Desk</b></span>
+    <span class="mono">Generado 13 ago 2026 · automático los viernes</span>
   </div>
 </footer>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>
+const SUMMARY = "Blog semanal · Cretum Desk (6 ago 2026 – 12 ago 2026)\n60 commits — Angel 25 · Automatización 19 · Eugenio 16\n\nPor módulo:\n• GVV · Datos: 33\n• Campañas · Carta: 11\n• Ventas · Plantillas: 9\n• Plataforma: 2\n• Otros: 2\n• Reportes: 1\n• To Do: 1\n• Dropbox: 1";
 (function(){
   "use strict";
-  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  function fillBar(){ document.querySelectorAll('#bar .seg').forEach(function(s){ s.style.width = s.getAttribute('data-w') + '%'; }); }
-  if (reduce) fillBar(); else requestAnimationFrame(function(){ setTimeout(fillBar, 120); });
-  var cards = Array.prototype.slice.call(document.querySelectorAll('#cards .card'));
+  var reduce = matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var root = document.documentElement;
+
+  // ── Tema (persistente) ──
+  var TKEY = 'blog-theme';
+  var saved = localStorage.getItem(TKEY);
+  if (saved === 'light' || saved === 'dark') root.setAttribute('data-theme', saved);
+  function effective(){ return root.getAttribute('data-theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'); }
+  function syncTheme(){ root.setAttribute('data-eff', effective()); }
+  syncTheme();
+  var themeBtn = document.getElementById('themeBtn');
+  if (themeBtn) themeBtn.addEventListener('click', function(){
+    var next = effective() === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next); localStorage.setItem(TKEY, next); syncTheme();
+  });
+
+  // ── Barra de progreso de scroll ──
+  var prog = document.getElementById('progress');
+  function onScroll(){ var h = document.documentElement; var m = h.scrollHeight - h.clientHeight; prog.style.transform = 'scaleX(' + (m > 0 ? h.scrollTop / m : 0) + ')'; }
+  addEventListener('scroll', onScroll, { passive: true }); onScroll();
+
+  // ── Contadores ──
+  function countUp(el){
+    var t = +el.getAttribute('data-count');
+    if (reduce || t === 0){ el.textContent = t; return; }
+    var s = performance.now(), dur = 850;
+    (function tick(now){ var p = Math.min(1, (now - s) / dur); el.textContent = Math.round(t * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(tick); })(s);
+  }
+  document.querySelectorAll('.hstat .n').forEach(countUp);
+
+  // ── Reveal on scroll (mejora un default ya visible) ──
+  var revs = [].slice.call(document.querySelectorAll('.reveal'));
+  if (reduce || !('IntersectionObserver' in window)) { revs.forEach(function(r){ r.classList.add('in'); }); }
+  else {
+    revs.forEach(function(r){ r.classList.add('pre'); });
+    var io = new IntersectionObserver(function(es){ es.forEach(function(e){ if (e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } }); }, { rootMargin: '0px 0px -8% 0px' });
+    revs.forEach(function(r){ io.observe(r); });
+  }
+
+  // ── Scroll-spy del nav ──
+  var links = [].slice.call(document.querySelectorAll('.snav-links a'));
+  var secs = links.map(function(a){ return document.getElementById(a.getAttribute('href').slice(1)); });
+  if ('IntersectionObserver' in window) {
+    var spy = new IntersectionObserver(function(es){ es.forEach(function(e){ if (e.isIntersecting){ links.forEach(function(a){ a.classList.toggle('on', a.getAttribute('href') === '#' + e.target.id); }); } }); }, { rootMargin: '-45% 0px -50% 0px' });
+    secs.forEach(function(s){ if (s) spy.observe(s); });
+  }
+
+  // ── Filtro por autor ──
+  var cards = [].slice.call(document.querySelectorAll('#cards .card'));
   document.querySelectorAll('.fbtn').forEach(function(btn){
     btn.addEventListener('click', function(){
       var f = btn.getAttribute('data-filter');
       document.querySelectorAll('.fbtn').forEach(function(b){ b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'); });
       cards.forEach(function(c){
-        var owners = (c.getAttribute('data-owner') || '').split(' ');
-        c.classList.toggle('is-hidden', !(f === 'all' || owners.indexOf(f) !== -1));
+        var show = f === 'all' || (c.getAttribute('data-owner') || '').split(' ').indexOf(f) !== -1;
+        if (show){ c.hidden = false; requestAnimationFrame(function(){ c.classList.remove('out'); }); }
+        else { c.classList.add('out'); setTimeout(function(){ if (c.classList.contains('out')) c.hidden = true; }, reduce ? 0 : 200); }
       });
     });
+  });
+
+  // ── Buscador del registro ──
+  var q = document.getElementById('q');
+  if (q) q.addEventListener('input', function(){
+    var v = this.value.trim().toLowerCase();
+    document.querySelectorAll('#logbody .day').forEach(function(day){
+      var any = false;
+      day.querySelectorAll('.lrow').forEach(function(r){ var m = r.textContent.toLowerCase().indexOf(v) !== -1; r.style.display = m ? '' : 'none'; if (m) any = true; });
+      day.style.display = any ? '' : 'none';
+    });
+  });
+
+  // ── Copiar resumen ──
+  var toastEl = document.getElementById('toast'), toastT;
+  function toast(msg){ toastEl.textContent = msg; toastEl.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(function(){ toastEl.classList.remove('show'); }, 2200); }
+  var copyBtn = document.getElementById('copyBtn');
+  if (copyBtn) copyBtn.addEventListener('click', function(){
+    if (navigator.clipboard) navigator.clipboard.writeText(SUMMARY).then(function(){ toast('Resumen copiado'); }, function(){ toast('No se pudo copiar'); });
+    else toast('No se pudo copiar');
   });
 })();
 </script>
