@@ -198,7 +198,7 @@ const body = total === 0 ? emptyState : `
   </nav>
 
   <section id="resumen" class="wrap sec">
-    <div class="sec-head"><h2>Resumen de la semana</h2><span class="sec-meta">${range}</span></div>
+    <div class="sec-head"><h2 class="type">Resumen de la semana</h2><span class="sec-meta">${range}</span></div>
     <div class="summary reveal">
       <div class="chart-card">
         <div class="chart-lbl">Actividad por día</div>
@@ -218,7 +218,7 @@ const body = total === 0 ? emptyState : `
   </section>
 
   <section id="modulos" class="wrap sec">
-    <div class="sec-head"><h2>Lo que se movió, por módulo</h2></div>
+    <div class="sec-head"><h2 class="type">Lo que se movió, por módulo</h2></div>
     <div class="filter" role="group" aria-label="Filtrar por autor">
       <button class="fbtn" data-filter="all" aria-pressed="true">Todos</button>
       <button class="fbtn" data-filter="angel" aria-pressed="false"><span class="swatch sw-navy"></span> Angel</button>
@@ -229,12 +229,12 @@ const body = total === 0 ? emptyState : `
   </section>
 
   <section id="personas" class="wrap sec">
-    <div class="sec-head"><h2>Qué hizo cada quien</h2></div>
+    <div class="sec-head"><h2 class="type">Qué hizo cada quien</h2></div>
     <div class="ppl">${personBlocks}</div>
   </section>
 
   <section id="registro" class="wrap sec">
-    <div class="sec-head"><h2>Registro de GitHub</h2><span class="sec-meta">${total} commits</span></div>
+    <div class="sec-head"><h2 class="type">Registro de GitHub</h2><span class="sec-meta">${total} commits</span></div>
     <div class="search reveal">${ICON('search', 'ic-s')}<input id="q" type="search" placeholder="Buscar en los commits (módulo, texto, hash…)" autocomplete="off" aria-label="Buscar commits"></div>
     <div class="logbody reveal" id="logbody">${logDays}</div>
   </section>`;
@@ -257,7 +257,7 @@ ${STYLE()}
 <header>
   <div class="wrap">
     <p class="eyebrow"><span class="pulse"></span> Blog semanal · Avances en el desk</p>
-    <h1>El pulso de la semana en Cretum&nbsp;Desk</h1>
+    <h1 class="type" data-type="load">El pulso de la semana en Cretum&nbsp;Desk</h1>
     <p class="lede">Lo que se construyó estos días, sacado de los commits y ordenado por módulo y por quién lo llevó. Se regenera solo cada viernes.</p>
     <div class="meta-row">
       <span class="tag">${ICON('calendar', 'ti')} <b>${esc(range)}</b></span>
@@ -315,6 +315,47 @@ const SUMMARY = ${JSON.stringify(summaryText)};
     (function tick(now){ var p = Math.min(1, (now - s) / dur); el.textContent = Math.round(t * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(tick); })(s);
   }
   document.querySelectorAll('.hstat .n').forEach(countUp);
+
+  // ── Títulos "typewriter": teclea en mono como código, lo selecciona y lo
+  //    formatea a la fuente de títulos (Outfit). Enmascara el swap con blur. ──
+  function typeTitle(el){
+    if (el.dataset.typed) return; el.dataset.typed = '1';
+    var full = el.textContent;
+    el.setAttribute('aria-label', full);
+    var txt = document.createElement('span'); txt.className = 'ty-txt'; txt.setAttribute('aria-hidden', 'true');
+    var caret = document.createElement('span'); caret.className = 'ty-caret'; caret.setAttribute('aria-hidden', 'true');
+    var h = el.getBoundingClientRect().height; if (h) el.style.minHeight = h + 'px';
+    el.textContent = ''; el.classList.add('coding'); el.appendChild(txt); el.appendChild(caret);
+    var i = 0;
+    (function step(){
+      txt.textContent = full.slice(0, i);
+      if (i < full.length){ i++; setTimeout(step, 15 + Math.random() * 26); }
+      else finish();
+    })();
+    function finish(){
+      setTimeout(function(){
+        caret.remove(); txt.classList.add('sel');           // "seleccionar"
+        setTimeout(function(){
+          el.classList.add('formatting');                    // blur para enmascarar
+          setTimeout(function(){
+            el.classList.remove('coding'); txt.classList.remove('sel');   // → Outfit
+            requestAnimationFrame(function(){ el.classList.remove('formatting'); });
+            setTimeout(function(){ el.style.minHeight = ''; }, 220);
+          }, 120);
+        }, 470);
+      }, 230);
+    }
+  }
+  var titles = [].slice.call(document.querySelectorAll('.type'));
+  if (reduce) { /* sin animación: se quedan como están */ }
+  else {
+    titles.filter(function(t){ return t.getAttribute('data-type') === 'load'; }).forEach(typeTitle);
+    var scrollT = titles.filter(function(t){ return t.getAttribute('data-type') !== 'load'; });
+    if ('IntersectionObserver' in window) {
+      var tio = new IntersectionObserver(function(es){ es.forEach(function(e){ if (e.isIntersecting){ typeTitle(e.target); tio.unobserve(e.target); } }); }, { rootMargin: '0px 0px -12% 0px' });
+      scrollT.forEach(function(t){ tio.observe(t); });
+    } else scrollT.forEach(typeTitle);
+  }
 
   // ── Reveal on scroll (mejora un default ya visible) ──
   var revs = [].slice.call(document.querySelectorAll('.reveal'));
@@ -430,6 +471,17 @@ function STYLE() {
   .reveal.pre{opacity:0;transform:translateY(14px)}
   .reveal.in{opacity:1;transform:none;transition:opacity .55s var(--ease-out),transform .55s var(--ease-out);transition-delay:var(--d,0ms)}
   @media (prefers-reduced-motion:reduce){.reveal.pre{opacity:1;transform:none}}
+
+  /* Typewriter de títulos: teclea en mono (código) → selecciona → formatea a Outfit */
+  .type{--sel:var(--navy-pale);--sel-ink:var(--navy-2)}
+  .type.coding{font-family:var(--mono);font-weight:400;letter-spacing:0;color:var(--ink-mute)}
+  .type.formatting{filter:blur(3px);opacity:.9;transition:filter .14s ease,opacity .14s ease}
+  .ty-txt{border-radius:4px;padding:0 .05em;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+  .ty-txt.sel{background-image:linear-gradient(var(--sel),var(--sel));background-repeat:no-repeat;background-position:left center;background-size:0% 80%;color:var(--sel-ink);animation:tySel .3s var(--ease-out) forwards}
+  @keyframes tySel{to{background-size:100% 80%}}
+  .ty-caret{display:inline-block;width:.11em;height:1em;background:var(--navy-2);margin-left:.06em;vertical-align:-.1em;border-radius:1px;animation:tyBlink 1.05s steps(1,end) infinite}
+  @keyframes tyBlink{0%,50%{opacity:1}50.01%,100%{opacity:0}}
+  @media (prefers-reduced-motion:reduce){.type.coding{font-family:var(--font);font-weight:inherit;color:inherit}.ty-caret{display:none}.ty-txt.sel{animation:none;background-size:0% 80%;color:inherit}}
 
   /* Header */
   header{padding:56px 0 26px}

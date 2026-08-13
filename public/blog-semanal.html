@@ -63,6 +63,17 @@
   .reveal.in{opacity:1;transform:none;transition:opacity .55s var(--ease-out),transform .55s var(--ease-out);transition-delay:var(--d,0ms)}
   @media (prefers-reduced-motion:reduce){.reveal.pre{opacity:1;transform:none}}
 
+  /* Typewriter de títulos: teclea en mono (código) → selecciona → formatea a Outfit */
+  .type{--sel:var(--navy-pale);--sel-ink:var(--navy-2)}
+  .type.coding{font-family:var(--mono);font-weight:400;letter-spacing:0;color:var(--ink-mute)}
+  .type.formatting{filter:blur(3px);opacity:.9;transition:filter .14s ease,opacity .14s ease}
+  .ty-txt{border-radius:4px;padding:0 .05em;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+  .ty-txt.sel{background-image:linear-gradient(var(--sel),var(--sel));background-repeat:no-repeat;background-position:left center;background-size:0% 80%;color:var(--sel-ink);animation:tySel .3s var(--ease-out) forwards}
+  @keyframes tySel{to{background-size:100% 80%}}
+  .ty-caret{display:inline-block;width:.11em;height:1em;background:var(--navy-2);margin-left:.06em;vertical-align:-.1em;border-radius:1px;animation:tyBlink 1.05s steps(1,end) infinite}
+  @keyframes tyBlink{0%,50%{opacity:1}50.01%,100%{opacity:0}}
+  @media (prefers-reduced-motion:reduce){.type.coding{font-family:var(--font);font-weight:inherit;color:inherit}.ty-caret{display:none}.ty-txt.sel{animation:none;background-size:0% 80%;color:inherit}}
+
   /* Header */
   header{padding:56px 0 26px}
   .eyebrow{font-family:var(--mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--navy-2);display:flex;align-items:center;gap:9px;margin:0 0 18px}
@@ -203,17 +214,17 @@
 <header>
   <div class="wrap">
     <p class="eyebrow"><span class="pulse"></span> Blog semanal · Avances en el desk</p>
-    <h1>El pulso de la semana en Cretum&nbsp;Desk</h1>
+    <h1 class="type" data-type="load">El pulso de la semana en Cretum&nbsp;Desk</h1>
     <p class="lede">Lo que se construyó estos días, sacado de los commits y ordenado por módulo y por quién lo llevó. Se regenera solo cada viernes.</p>
     <div class="meta-row">
-      <span class="tag"><svg class="ic ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5.2" width="17" height="15.3" rx="2.6"/><path d="M3.5 9.6h17M8 3.4v3.6M16 3.4v3.6"/></svg> <b>6 ago 2026 – 12 ago 2026</b></span>
+      <span class="tag"><svg class="ic ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5.2" width="17" height="15.3" rx="2.6"/><path d="M3.5 9.6h17M8 3.4v3.6M16 3.4v3.6"/></svg> <b>6 ago 2026 – 13 ago 2026</b></span>
       <span class="tag"><svg class="ic ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.4"/><path d="M12 7.4V12l3.1 2"/></svg> Cada <b>viernes</b></span>
       <span class="tag"><svg class="ic ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.4"/><path d="M3.6 12h16.8M12 3.6c2.6 2.3 2.6 14.5 0 16.8M12 3.6c-2.6 2.3-2.6 14.5 0 16.8"/></svg> <b>cretumdesk.com</b></span>
     </div>
     <div class="hstats">
-      <div class="hstat"><div class="n" data-count="60">0</div><div class="k">commits</div></div>
-      <div class="hstat"><div class="n" data-count="25">0</div><div class="k"><span class="swatch sw-navy"></span>Angel</div></div>
-      <div class="hstat"><div class="n" data-count="19">0</div><div class="k"><span class="swatch sw-auto"></span>Automatización</div></div>
+      <div class="hstat"><div class="n" data-count="62">0</div><div class="k">commits</div></div>
+      <div class="hstat"><div class="n" data-count="26">0</div><div class="k"><span class="swatch sw-navy"></span>Angel</div></div>
+      <div class="hstat"><div class="n" data-count="20">0</div><div class="k"><span class="swatch sw-auto"></span>Automatización</div></div>
       <div class="hstat"><div class="n" data-count="16">0</div><div class="k"><span class="swatch sw-eug"></span>Eugenio</div></div>
     </div>
   </div>
@@ -236,62 +247,62 @@
   </nav>
 
   <section id="resumen" class="wrap sec">
-    <div class="sec-head"><h2>Resumen de la semana</h2><span class="sec-meta">6 ago 2026 – 12 ago 2026</span></div>
+    <div class="sec-head"><h2 class="type">Resumen de la semana</h2><span class="sec-meta">6 ago 2026 – 13 ago 2026</span></div>
     <div class="summary reveal">
       <div class="chart-card">
         <div class="chart-lbl">Actividad por día</div>
         <div class="chart" id="chart" role="img" aria-label="Commits por día de la semana">
   <div class="acol" style="--i:0">
-    <div class="aval">3</div>
-    <div class="abar"><div class="afill" style="--h:15.0%" title="J 6 ago · 3 commits"></div></div>
-    <div class="adow">J<span class="adate">6</span></div>
-  </div>
-  <div class="acol" style="--i:1">
     <div class="aval">19</div>
     <div class="abar"><div class="afill" style="--h:95.0%" title="V 7 ago · 19 commits"></div></div>
     <div class="adow">V<span class="adate">7</span></div>
   </div>
-  <div class="acol" style="--i:2">
+  <div class="acol" style="--i:1">
     <div class="aval">4</div>
     <div class="abar"><div class="afill" style="--h:20.0%" title="S 8 ago · 4 commits"></div></div>
     <div class="adow">S<span class="adate">8</span></div>
   </div>
-  <div class="acol" style="--i:3">
+  <div class="acol" style="--i:2">
     <div class="aval"></div>
     <div class="abar"><div class="afill zero" style="--h:0.0%" title="D 9 ago · 0 commits"></div></div>
     <div class="adow">D<span class="adate">9</span></div>
   </div>
-  <div class="acol" style="--i:4">
+  <div class="acol" style="--i:3">
     <div class="aval">20</div>
     <div class="abar"><div class="afill peak" style="--h:100.0%" title="L 10 ago · 20 commits"></div></div>
     <div class="adow">L<span class="adate">10</span></div>
   </div>
-  <div class="acol" style="--i:5">
+  <div class="acol" style="--i:4">
     <div class="aval">6</div>
     <div class="abar"><div class="afill" style="--h:30.0%" title="M 11 ago · 6 commits"></div></div>
     <div class="adow">M<span class="adate">11</span></div>
   </div>
-  <div class="acol" style="--i:6">
+  <div class="acol" style="--i:5">
     <div class="aval">8</div>
     <div class="abar"><div class="afill" style="--h:40.0%" title="M 12 ago · 8 commits"></div></div>
     <div class="adow">M<span class="adate">12</span></div>
+  </div>
+  <div class="acol" style="--i:6">
+    <div class="aval">2</div>
+    <div class="abar"><div class="afill" style="--h:10.0%" title="J 13 ago · 2 commits"></div></div>
+    <div class="adow">J<span class="adate">13</span></div>
   </div></div>
       </div>
       <div class="dist-card">
-        <div class="chart-lbl">Reparto de 60 commits</div>
+        <div class="chart-lbl">Reparto de 62 commits</div>
         <div class="bar" id="bar">
-          <div class="seg seg-navy" style="--w:41.7%" title="Angel · 25"></div>
-          <div class="seg seg-auto" style="--w:31.7%" title="Automatización · 19"></div>
-          <div class="seg seg-eug" style="--w:26.7%" title="Eugenio · 16"></div>
+          <div class="seg seg-navy" style="--w:41.9%" title="Angel · 26"></div>
+          <div class="seg seg-auto" style="--w:32.3%" title="Automatización · 20"></div>
+          <div class="seg seg-eug" style="--w:25.8%" title="Eugenio · 16"></div>
         </div>
-        <div class="legend"><span class="lg"><span class="swatch sw-navy"></span>Angel <b>25</b></span><span class="lg"><span class="swatch sw-auto"></span>Automatización <b>19</b></span><span class="lg"><span class="swatch sw-eug"></span>Eugenio <b>16</b></span></div>
-        <div class="dist-note">8 módulos tocados · 6 días activos</div>
+        <div class="legend"><span class="lg"><span class="swatch sw-navy"></span>Angel <b>26</b></span><span class="lg"><span class="swatch sw-auto"></span>Automatización <b>20</b></span><span class="lg"><span class="swatch sw-eug"></span>Eugenio <b>16</b></span></div>
+        <div class="dist-note">8 módulos tocados · 7 días activos</div>
       </div>
     </div>
   </section>
 
   <section id="modulos" class="wrap sec">
-    <div class="sec-head"><h2>Lo que se movió, por módulo</h2></div>
+    <div class="sec-head"><h2 class="type">Lo que se movió, por módulo</h2></div>
     <div class="filter" role="group" aria-label="Filtrar por autor">
       <button class="fbtn" data-filter="all" aria-pressed="true">Todos</button>
       <button class="fbtn" data-filter="angel" aria-pressed="false"><span class="swatch sw-navy"></span> Angel</button>
@@ -302,10 +313,10 @@
     <div class="card-top">
       <span class="card-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 20.5v-6M12 20.5V8M18 20.5v-9"/></svg></span>
       <div class="card-h"><h3>GVV · Datos</h3><div class="card-who"><span class="who auto"><span class="swatch sw-auto"></span>Automatización</span><span class="who eug"><span class="swatch sw-eug"></span>Eugenio</span></div></div>
-      <span class="card-n">33<span>commits</span></span>
+      <span class="card-n">34<span>commits</span></span>
     </div>
     <div class="mshare"><div class="mshare-fill" style="--s:1.000"></div></div>
-    <ul><li>cierre automatico Julio 2026 <span class="lh">22ede4b</span></li><li>cierre automatico Julio 2026 <span class="lh">4809fc0</span></li><li>cierre automatico Julio 2026 <span class="lh">1b01cc9</span></li><li>cierre automatico Julio 2026 <span class="lh">5d8f427</span></li><li>cierre automatico Julio 2026 <span class="lh">e78e0d2</span></li><li>fix Asset Allocation 116% -&gt; 100% (doble conteo fila Cash renombrada por Kevin) <span class="lh">9568ec9</span></li><li>cierre automatico Julio 2026 <span class="lh">c342927</span></li><li>cierre automatico Julio 2026 <span class="lh">76da3cf</span></li><li>autobust de cache en cretumpartners (redirect a ?v=&lt;hora&gt; — el hosting cachea .html 10 anios en navegador) <span class="lh">6fb0fb1</span></li><li>cierre automatico Julio 2026 <span class="lh">0d6fb04</span></li><li>version movil (flujo vertical apilado &lt;=880px) + logos limpios unificados <span class="lh">8bebfb6</span></li><li>actualizar estrategias al Reporte RGA Consulting 2026-07-31 (+Equity ETF, +Greenfield) <span class="lh">eda8007</span></li><li>fix logo Deloitte (respetar alfa original del webp) <span class="lh">60debd3</span></li><li>logo Deloitte limpio (transparente, chip blanco) <span class="lh">d4b0b75</span></li><li>logo BNY Mellon limpio (transparente, chip blanco) en vez del recorte borroso <span class="lh">912846f</span></li><li>proveedores a color (sin grayscale, hover scale) <span class="lh">6636dcb</span></li><li>proveedores con espaciado uniforme (logos con trim + fondo transparente + alturas balanceadas + space-between) <span class="lh">ced83a4</span></li><li>seccion Estructura del Fondo (diagrama animado) <span class="lh">59272c3</span></li><li>cierre automatico Julio 2026 <span class="lh">492db3c</span></li><li>skin in the game 76% -&gt; 61% (numero + textos es/en) <span class="lh">7acbc89</span></li><li>cierre automatico Julio 2026 <span class="lh">ff28a52</span></li><li>logo de Saronic en privados (pvlogo-saronic) <span class="lh">006719a</span></li><li>cierre automatico Julio 2026 <span class="lh">c9d5c16</span></li><li>YTD hero desde celda Excel (M.ytd/ytdNet en METRICS) <span class="lh">926046b</span></li><li>cierre automatico Julio 2026 <span class="lh">1277fb4</span></li><li>directiva solo-Excel 2026-08-08 <span class="lh">21b9cc9</span></li><li>gotcha de la presentacion GVV (nombre = mes de distribucion, no de datos) <span class="lh">89c3c57</span></li><li>revierte link de presentacion (la de &quot;Julio 2026&quot; trae datos de junio) <span class="lh">d68ff8f</span></li><li>documenta la automatizacion del dashboard GVV (activa) <span class="lh">cca356c</span></li><li>cierre automatico Julio 2026 <span class="lh">0880533</span></li><li>mapa fuente-a-campo del dashboard GVV (Excel / carta / presentación) <span class="lh">9da1d73</span></li><li>link de la carta mensual a cretumdesk.com (julio), sin depender de FTP <span class="lh">d1ed39f</span></li><li>cierre de julio 2026 (rendimiento + composición del portafolio) <span class="lh">8db15eb</span></li></ul>
+    <ul><li>cierre automatico Julio 2026 <span class="lh">3402916</span></li><li>cierre automatico Julio 2026 <span class="lh">22ede4b</span></li><li>cierre automatico Julio 2026 <span class="lh">4809fc0</span></li><li>cierre automatico Julio 2026 <span class="lh">1b01cc9</span></li><li>cierre automatico Julio 2026 <span class="lh">5d8f427</span></li><li>cierre automatico Julio 2026 <span class="lh">e78e0d2</span></li><li>fix Asset Allocation 116% -&gt; 100% (doble conteo fila Cash renombrada por Kevin) <span class="lh">9568ec9</span></li><li>cierre automatico Julio 2026 <span class="lh">c342927</span></li><li>cierre automatico Julio 2026 <span class="lh">76da3cf</span></li><li>autobust de cache en cretumpartners (redirect a ?v=&lt;hora&gt; — el hosting cachea .html 10 anios en navegador) <span class="lh">6fb0fb1</span></li><li>cierre automatico Julio 2026 <span class="lh">0d6fb04</span></li><li>version movil (flujo vertical apilado &lt;=880px) + logos limpios unificados <span class="lh">8bebfb6</span></li><li>actualizar estrategias al Reporte RGA Consulting 2026-07-31 (+Equity ETF, +Greenfield) <span class="lh">eda8007</span></li><li>fix logo Deloitte (respetar alfa original del webp) <span class="lh">60debd3</span></li><li>logo Deloitte limpio (transparente, chip blanco) <span class="lh">d4b0b75</span></li><li>logo BNY Mellon limpio (transparente, chip blanco) en vez del recorte borroso <span class="lh">912846f</span></li><li>proveedores a color (sin grayscale, hover scale) <span class="lh">6636dcb</span></li><li>proveedores con espaciado uniforme (logos con trim + fondo transparente + alturas balanceadas + space-between) <span class="lh">ced83a4</span></li><li>seccion Estructura del Fondo (diagrama animado) <span class="lh">59272c3</span></li><li>cierre automatico Julio 2026 <span class="lh">492db3c</span></li><li>skin in the game 76% -&gt; 61% (numero + textos es/en) <span class="lh">7acbc89</span></li><li>cierre automatico Julio 2026 <span class="lh">ff28a52</span></li><li>logo de Saronic en privados (pvlogo-saronic) <span class="lh">006719a</span></li><li>cierre automatico Julio 2026 <span class="lh">c9d5c16</span></li><li>YTD hero desde celda Excel (M.ytd/ytdNet en METRICS) <span class="lh">926046b</span></li><li>cierre automatico Julio 2026 <span class="lh">1277fb4</span></li><li>directiva solo-Excel 2026-08-08 <span class="lh">21b9cc9</span></li><li>gotcha de la presentacion GVV (nombre = mes de distribucion, no de datos) <span class="lh">89c3c57</span></li><li>revierte link de presentacion (la de &quot;Julio 2026&quot; trae datos de junio) <span class="lh">d68ff8f</span></li><li>documenta la automatizacion del dashboard GVV (activa) <span class="lh">cca356c</span></li><li>cierre automatico Julio 2026 <span class="lh">0880533</span></li><li>mapa fuente-a-campo del dashboard GVV (Excel / carta / presentación) <span class="lh">9da1d73</span></li><li>link de la carta mensual a cretumdesk.com (julio), sin depender de FTP <span class="lh">d1ed39f</span></li><li>cierre de julio 2026 (rendimiento + composición del portafolio) <span class="lh">8db15eb</span></li></ul>
   </article>
 <article class="card reveal" data-owner="angel" style="--d:55ms">
     <div class="card-top">
@@ -313,7 +324,7 @@
       <div class="card-h"><h3>Campañas · Carta</h3><div class="card-who"><span class="who angel"><span class="swatch sw-navy"></span>Angel</span></div></div>
       <span class="card-n">11<span>commits</span></span>
     </div>
-    <div class="mshare"><div class="mshare-fill" style="--s:0.333"></div></div>
+    <div class="mshare"><div class="mshare-fill" style="--s:0.324"></div></div>
     <ul><li>título pro del PDF de la carta (pestaña &quot;GVV Monthly Report&quot;) <span class="lh">1017e0b</span></li><li>enlace de la carta en /gvv (sin extensión) — arregla caída a login <span class="lh">34a38ac</span></li><li>% del mes en navy + botón Guardar en la forma rápida <span class="lh">0fc3b16</span></li><li>enlace público de la carta como /gvv.pdf (evita filtros de adblock) <span class="lh">7e7047e</span></li><li>servir /carta como proxy first-party (evita ERR_BLOCKED_BY_CLIENT) <span class="lh">a7bf151</span></li><li>subir la carta desde la PC (además de Dropbox) <span class="lh">8d8a183</span></li><li>nombre pro del PDF público de la carta <span class="lh">377fd0c</span></li><li>publicar la carta mensual en el desk (enlace público fijo) <span class="lh">4c72a6c</span></li><li>el modal &quot;Plantilla del correo&quot; muestra la campaña publicada <span class="lh">65354d6</span></li><li>el editor completo ahora carga y conserva lo publicado <span class="lh">75f580e</span></li><li>editar la campaña mensual con el editor de correo de Ventas <span class="lh">41caeee</span></li></ul>
   </article>
 <article class="card reveal" data-owner="angel" style="--d:110ms">
@@ -322,17 +333,17 @@
       <div class="card-h"><h3>Ventas · Plantillas</h3><div class="card-who"><span class="who angel"><span class="swatch sw-navy"></span>Angel</span></div></div>
       <span class="card-n">9<span>commits</span></span>
     </div>
-    <div class="mshare"><div class="mshare-fill" style="--s:0.273"></div></div>
+    <div class="mshare"><div class="mshare-fill" style="--s:0.265"></div></div>
     <ul><li>copiar plantilla sin manglear el formato <span class="lh">ec4273b</span></li><li>fix overlay de progreso siempre visible (hidden anulado por display:flex) <span class="lh">123adac</span></li><li>timeout en la subida de imágenes (evita quedarse colgado en 0%) <span class="lh">5ad04ce</span></li><li>círculo de progreso al optimizar imágenes <span class="lh">99a7365</span></li><li>indicador de estado de imágenes en las plantillas <span class="lh">2028e11</span></li><li>&quot;Optimizar imágenes&quot; — sube base64 al servidor (Gmail no muestra base64) <span class="lh">2cb592a</span></li><li>botón &quot;Descargar .html&quot; en plantillas (biblioteca y editor) <span class="lh">c1e5b44</span></li><li>copiar plantilla funciona en móvil (selección + execCommand) <span class="lh">555dbb5</span></li><li>Ventas en MVP + plantillas separadas por organización <span class="lh">98e2823</span></li></ul>
   </article>
 <article class="card reveal" data-owner="angel" style="--d:165ms">
     <div class="card-top">
       <span class="card-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4" width="17" height="16" rx="3.2"/><path d="M3.5 9.4h17M9.2 9.4V20"/></svg></span>
       <div class="card-h"><h3>Plataforma</h3><div class="card-who"><span class="who angel"><span class="swatch sw-navy"></span>Angel</span></div></div>
-      <span class="card-n">2<span>commits</span></span>
+      <span class="card-n">3<span>commits</span></span>
     </div>
-    <div class="mshare"><div class="mshare-fill" style="--s:0.061"></div></div>
-    <ul><li>iconos SVG propios en vez de emojis <span class="lh">fd94202</span></li><li>avances en el desk (botón header + generador automático) <span class="lh">1521dac</span></li></ul>
+    <div class="mshare"><div class="mshare-fill" style="--s:0.088"></div></div>
+    <ul><li>rediseño (hero con actividad, nav sticky, tema, buscador) <span class="lh">21a16bb</span></li><li>iconos SVG propios en vez de emojis <span class="lh">fd94202</span></li><li>avances en el desk (botón header + generador automático) <span class="lh">1521dac</span></li></ul>
   </article>
 <article class="card reveal" data-owner="eug" style="--d:220ms">
     <div class="card-top">
@@ -340,7 +351,7 @@
       <div class="card-h"><h3>Otros</h3><div class="card-who"><span class="who eug"><span class="swatch sw-eug"></span>Eugenio</span></div></div>
       <span class="card-n">2<span>commits</span></span>
     </div>
-    <div class="mshare"><div class="mshare-fill" style="--s:0.061"></div></div>
+    <div class="mshare"><div class="mshare-fill" style="--s:0.059"></div></div>
     <ul><li>&#39;Copiar link cretumpartners&#39; copia URL versionada por hora (salta cache de navegador del hosting) <span class="lh">498ae17</span></li><li>Herramientas de la seccion Estructura (draft+injector+logos) para futuras ediciones <span class="lh">0ca81db</span></li></ul>
   </article>
 <article class="card reveal" data-owner="angel" style="--d:275ms">
@@ -349,7 +360,7 @@
       <div class="card-h"><h3>Reportes</h3><div class="card-who"><span class="who angel"><span class="swatch sw-navy"></span>Angel</span></div></div>
       <span class="card-n">1<span>commit</span></span>
     </div>
-    <div class="mshare"><div class="mshare-fill" style="--s:0.030"></div></div>
+    <div class="mshare"><div class="mshare-fill" style="--s:0.029"></div></div>
     <ul><li>mini-tablero con tomar/resolver y atribución <span class="lh">0788a39</span></li></ul>
   </article>
 <article class="card reveal" data-owner="angel" style="--d:330ms">
@@ -358,7 +369,7 @@
       <div class="card-h"><h3>To Do</h3><div class="card-who"><span class="who angel"><span class="swatch sw-navy"></span>Angel</span></div></div>
       <span class="card-n">1<span>commit</span></span>
     </div>
-    <div class="mshare"><div class="mshare-fill" style="--s:0.030"></div></div>
+    <div class="mshare"><div class="mshare-fill" style="--s:0.029"></div></div>
     <ul><li>panel de carpetas por proyecto + Vaciar en todas las vistas <span class="lh">da0ba21</span></li></ul>
   </article>
 <article class="card reveal" data-owner="angel" style="--d:385ms">
@@ -367,34 +378,37 @@
       <div class="card-h"><h3>Dropbox</h3><div class="card-who"><span class="who angel"><span class="swatch sw-navy"></span>Angel</span></div></div>
       <span class="card-n">1<span>commit</span></span>
     </div>
-    <div class="mshare"><div class="mshare-fill" style="--s:0.030"></div></div>
+    <div class="mshare"><div class="mshare-fill" style="--s:0.029"></div></div>
     <ul><li>previsualizar PDFs en móvil con PDF.js <span class="lh">37c8d5f</span></li></ul>
   </article></div>
   </section>
 
   <section id="personas" class="wrap sec">
-    <div class="sec-head"><h2>Qué hizo cada quien</h2></div>
+    <div class="sec-head"><h2 class="type">Qué hizo cada quien</h2></div>
     <div class="ppl"><div class="prow reveal">
-    <div class="phead"><span class="swatch sw-navy"></span><span class="pname">Angel · producto</span><span class="pcount">25</span></div>
+    <div class="phead"><span class="swatch sw-navy"></span><span class="pname">Angel · producto</span><span class="pcount">26</span></div>
     <div class="pbar"><div class="pbar-fill fill-angel" style="--s:1.000"></div></div>
-    <div class="pcommits"><div class="cl"><span class="h">fd94202</span><span>iconos SVG propios en vez de emojis</span></div><div class="cl"><span class="h">1521dac</span><span>avances en el desk (botón header + generador automático)</span></div><div class="cl"><span class="h">0788a39</span><span>mini-tablero con tomar/resolver y atribución</span></div><div class="cl"><span class="h">ec4273b</span><span>copiar plantilla sin manglear el formato</span></div><div class="cl"><span class="h">123adac</span><span>fix overlay de progreso siempre visible (hidden anulado por display:flex)</span></div><div class="cl"><span class="h">5ad04ce</span><span>timeout en la subida de imágenes (evita quedarse colgado en 0%)</span></div><div class="pmore">+19 más</div></div>
+    <div class="pcommits"><div class="cl"><span class="h">21a16bb</span><span>rediseño (hero con actividad, nav sticky, tema, buscador)</span></div><div class="cl"><span class="h">fd94202</span><span>iconos SVG propios en vez de emojis</span></div><div class="cl"><span class="h">1521dac</span><span>avances en el desk (botón header + generador automático)</span></div><div class="cl"><span class="h">0788a39</span><span>mini-tablero con tomar/resolver y atribución</span></div><div class="cl"><span class="h">ec4273b</span><span>copiar plantilla sin manglear el formato</span></div><div class="cl"><span class="h">123adac</span><span>fix overlay de progreso siempre visible (hidden anulado por display:flex)</span></div><div class="pmore">+20 más</div></div>
   </div>
 <div class="prow reveal">
-    <div class="phead"><span class="swatch sw-auto"></span><span class="pname">Automatización GVV</span><span class="pcount">19</span></div>
-    <div class="pbar"><div class="pbar-fill fill-auto" style="--s:0.760"></div></div>
-    <div class="pcommits"><div class="cl"><span class="h">22ede4b</span><span>cierre automatico Julio 2026</span></div><div class="cl"><span class="h">4809fc0</span><span>cierre automatico Julio 2026</span></div><div class="cl"><span class="h">c342927</span><span>cierre automatico Julio 2026</span></div><div class="cl"><span class="h">76da3cf</span><span>cierre automatico Julio 2026</span></div><div class="cl"><span class="h">0d6fb04</span><span>cierre automatico Julio 2026</span></div><div class="cl"><span class="h">492db3c</span><span>cierre automatico Julio 2026</span></div><div class="pmore">+13 más</div></div>
+    <div class="phead"><span class="swatch sw-auto"></span><span class="pname">Automatización GVV</span><span class="pcount">20</span></div>
+    <div class="pbar"><div class="pbar-fill fill-auto" style="--s:0.769"></div></div>
+    <div class="pcommits"><div class="cl"><span class="h">3402916</span><span>cierre automatico Julio 2026</span></div><div class="cl"><span class="h">22ede4b</span><span>cierre automatico Julio 2026</span></div><div class="cl"><span class="h">4809fc0</span><span>cierre automatico Julio 2026</span></div><div class="cl"><span class="h">c342927</span><span>cierre automatico Julio 2026</span></div><div class="cl"><span class="h">76da3cf</span><span>cierre automatico Julio 2026</span></div><div class="cl"><span class="h">0d6fb04</span><span>cierre automatico Julio 2026</span></div><div class="pmore">+14 más</div></div>
   </div>
 <div class="prow reveal">
     <div class="phead"><span class="swatch sw-eug"></span><span class="pname">Eugenio</span><span class="pcount">16</span></div>
-    <div class="pbar"><div class="pbar-fill fill-eug" style="--s:0.640"></div></div>
+    <div class="pbar"><div class="pbar-fill fill-eug" style="--s:0.615"></div></div>
     <div class="pcommits"><div class="cl"><span class="h">1b01cc9</span><span>cierre automatico Julio 2026</span></div><div class="cl"><span class="h">5d8f427</span><span>cierre automatico Julio 2026</span></div><div class="cl"><span class="h">e78e0d2</span><span>cierre automatico Julio 2026</span></div><div class="cl"><span class="h">9568ec9</span><span>fix Asset Allocation 116% -&gt; 100% (doble conteo fila Cash renombrada por Kevin)</span></div><div class="cl"><span class="h">498ae17</span><span>&#39;Copiar link cretumpartners&#39; copia URL versionada por hora (salta cache de navegador del hosting)</span></div><div class="cl"><span class="h">6fb0fb1</span><span>autobust de cache en cretumpartners (redirect a ?v=&lt;hora&gt; — el hosting cachea .html 10 anios en navegador)</span></div><div class="pmore">+10 más</div></div>
   </div></div>
   </section>
 
   <section id="registro" class="wrap sec">
-    <div class="sec-head"><h2>Registro de GitHub</h2><span class="sec-meta">60 commits</span></div>
+    <div class="sec-head"><h2 class="type">Registro de GitHub</h2><span class="sec-meta">62 commits</span></div>
     <div class="search reveal"><svg class="ic ic-s" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="q" type="search" placeholder="Buscar en los commits (módulo, texto, hash…)" autocomplete="off" aria-label="Buscar commits"></div>
     <div class="logbody reveal" id="logbody">
+  <div class="day"><p class="day-h">13 ago · 2 commits</p>
+    <div class="lrow"><span class="lw sw-navy"></span><span class="lh">21a16bb</span><span>Blog semanal: rediseño (hero con actividad, nav sticky, tema, buscador)</span></div><div class="lrow"><span class="lw sw-auto"></span><span class="lh">3402916</span><span>GVV dashboard: cierre automatico Julio 2026</span></div>
+  </div>
   <div class="day"><p class="day-h">12 ago · 8 commits</p>
     <div class="lrow"><span class="lw sw-navy"></span><span class="lh">fd94202</span><span>Blog semanal: iconos SVG propios en vez de emojis</span></div><div class="lrow"><span class="lw sw-navy"></span><span class="lh">1521dac</span><span>Blog semanal: avances en el desk (botón header + generador automático)</span></div><div class="lrow"><span class="lw sw-auto"></span><span class="lh">22ede4b</span><span>GVV dashboard: cierre automatico Julio 2026</span></div><div class="lrow"><span class="lw sw-auto"></span><span class="lh">4809fc0</span><span>GVV dashboard: cierre automatico Julio 2026</span></div><div class="lrow"><span class="lw sw-eug"></span><span class="lh">1b01cc9</span><span>GVV dashboard: cierre automatico Julio 2026</span></div><div class="lrow"><span class="lw sw-eug"></span><span class="lh">5d8f427</span><span>GVV dashboard: cierre automatico Julio 2026</span></div><div class="lrow"><span class="lw sw-eug"></span><span class="lh">e78e0d2</span><span>GVV dashboard: cierre automatico Julio 2026</span></div><div class="lrow"><span class="lw sw-eug"></span><span class="lh">9568ec9</span><span>GVV: fix Asset Allocation 116% -&gt; 100% (doble conteo fila Cash renombrada por Kevin)</span></div>
   </div>
@@ -423,7 +437,7 @@
 </footer>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>
-const SUMMARY = "Blog semanal · Cretum Desk (6 ago 2026 – 12 ago 2026)\n60 commits — Angel 25 · Automatización 19 · Eugenio 16\n\nPor módulo:\n• GVV · Datos: 33\n• Campañas · Carta: 11\n• Ventas · Plantillas: 9\n• Plataforma: 2\n• Otros: 2\n• Reportes: 1\n• To Do: 1\n• Dropbox: 1";
+const SUMMARY = "Blog semanal · Cretum Desk (6 ago 2026 – 13 ago 2026)\n62 commits — Angel 26 · Automatización 20 · Eugenio 16\n\nPor módulo:\n• GVV · Datos: 34\n• Campañas · Carta: 11\n• Ventas · Plantillas: 9\n• Plataforma: 3\n• Otros: 2\n• Reportes: 1\n• To Do: 1\n• Dropbox: 1";
 (function(){
   "use strict";
   var reduce = matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -455,6 +469,47 @@ const SUMMARY = "Blog semanal · Cretum Desk (6 ago 2026 – 12 ago 2026)\n60 co
     (function tick(now){ var p = Math.min(1, (now - s) / dur); el.textContent = Math.round(t * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(tick); })(s);
   }
   document.querySelectorAll('.hstat .n').forEach(countUp);
+
+  // ── Títulos "typewriter": teclea en mono como código, lo selecciona y lo
+  //    formatea a la fuente de títulos (Outfit). Enmascara el swap con blur. ──
+  function typeTitle(el){
+    if (el.dataset.typed) return; el.dataset.typed = '1';
+    var full = el.textContent;
+    el.setAttribute('aria-label', full);
+    var txt = document.createElement('span'); txt.className = 'ty-txt'; txt.setAttribute('aria-hidden', 'true');
+    var caret = document.createElement('span'); caret.className = 'ty-caret'; caret.setAttribute('aria-hidden', 'true');
+    var h = el.getBoundingClientRect().height; if (h) el.style.minHeight = h + 'px';
+    el.textContent = ''; el.classList.add('coding'); el.appendChild(txt); el.appendChild(caret);
+    var i = 0;
+    (function step(){
+      txt.textContent = full.slice(0, i);
+      if (i < full.length){ i++; setTimeout(step, 15 + Math.random() * 26); }
+      else finish();
+    })();
+    function finish(){
+      setTimeout(function(){
+        caret.remove(); txt.classList.add('sel');           // "seleccionar"
+        setTimeout(function(){
+          el.classList.add('formatting');                    // blur para enmascarar
+          setTimeout(function(){
+            el.classList.remove('coding'); txt.classList.remove('sel');   // → Outfit
+            requestAnimationFrame(function(){ el.classList.remove('formatting'); });
+            setTimeout(function(){ el.style.minHeight = ''; }, 220);
+          }, 120);
+        }, 470);
+      }, 230);
+    }
+  }
+  var titles = [].slice.call(document.querySelectorAll('.type'));
+  if (reduce) { /* sin animación: se quedan como están */ }
+  else {
+    titles.filter(function(t){ return t.getAttribute('data-type') === 'load'; }).forEach(typeTitle);
+    var scrollT = titles.filter(function(t){ return t.getAttribute('data-type') !== 'load'; });
+    if ('IntersectionObserver' in window) {
+      var tio = new IntersectionObserver(function(es){ es.forEach(function(e){ if (e.isIntersecting){ typeTitle(e.target); tio.unobserve(e.target); } }); }, { rootMargin: '0px 0px -12% 0px' });
+      scrollT.forEach(function(t){ tio.observe(t); });
+    } else scrollT.forEach(typeTitle);
+  }
 
   // ── Reveal on scroll (mejora un default ya visible) ──
   var revs = [].slice.call(document.querySelectorAll('.reveal'));
