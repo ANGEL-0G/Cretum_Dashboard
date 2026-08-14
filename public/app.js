@@ -11701,6 +11701,8 @@ window.exportFundTrackerExcel = exportFundTrackerExcel;
 let campaignsLoaded = false;
 let campContacts = [];          // [{email, nombre, nombre_completo, responsable, comentarios}]
 let campEditingEmail = null;    // email del contacto en edición (null = modo "añadir")
+let campSort = 'az';            // orden de la matriz: az|za|resp|fecha|rank
+let campHiddenPeriods = new Set(); // meses (YYYY-MM) ocultos en la tabla
 let campEngagement = [];        // [{email, periodo, nivel, ...}]
 let campPending = null;         // upload pendiente de confirmar
 let campRespFilter = 'all';     // filtro por responsable: 'all' | 'me' | 'none' | 'p:<key>'
@@ -12589,34 +12591,91 @@ function campLpRender(nombre, hist) {
 }
 
 /* ── Render de la matriz contactos × meses ── */
+/* ── Orden de la matriz ── */
+function campSortContacts(arr, vistosMap) {
+  const nm = c => (c.nombre_completo || c.email || '').toLowerCase();
+  const s = campSort;
+  arr.sort((a, b) => {
+    if (s === 'za') return nm(b).localeCompare(nm(a), 'es');
+    if (s === 'resp') { const ra = (a.responsable || '~').toLowerCase(), rb = (b.responsable || '~').toLowerCase(); return ra !== rb ? ra.localeCompare(rb, 'es') : nm(a).localeCompare(nm(b), 'es'); }
+    if (s === 'fecha') { const da = a.created_at || '', db = b.created_at || ''; return da !== db ? (db < da ? -1 : 1) : nm(a).localeCompare(nm(b), 'es'); }  // recientes primero
+    if (s === 'rank') { const va = vistosMap.get(a.email) || 0, vb = vistosMap.get(b.email) || 0; return va !== vb ? vb - va : nm(a).localeCompare(nm(b), 'es'); }
+    return nm(a).localeCompare(nm(b), 'es');   // az (default)
+  });
+}
+const CAMP_SORT_LBL = { az: 'A → Z', za: 'Z → A', resp: 'Responsable', fecha: 'Fecha de agregación', rank: 'Ranking de vistas' };
+function campSetSort(s) {
+  campSort = s;
+  const lbl = document.querySelector('#campSortCdd .cdd-label');
+  if (lbl) lbl.textContent = CAMP_SORT_LBL[s] || 'Ordenar';
+  document.querySelectorAll('#campSortCdd .cdd-opt').forEach(o => o.classList.toggle('sel', o.dataset.sort === s));
+  renderCampaigns();
+}
+
+/* ── Filtro de columnas: mostrar/ocultar meses (año → meses con checkbox) ── */
+function campAllPeriods() { return [...new Set(campEngagement.map(e => periodoKey(e.periodo)))].sort(); }
+function campBuildColsPanel() {
+  const panel = document.getElementById('campColsPanel');
+  if (!panel) return;
+  const periods = campAllPeriods();
+  if (!periods.length) { panel.innerHTML = '<div class="cdd-hint">Aún no hay meses cargados.</div>'; return; }
+  const byYear = {};
+  periods.forEach(p => { (byYear[p.slice(0, 4)] ||= []).push(p); });
+  const years = Object.keys(byYear).sort().reverse();
+  panel.innerHTML = `<div class="camp-cols-head"><span>Mostrar meses</span><button type="button" class="camp-cols-all" onclick="campColsAll(true);event.stopPropagation()">Todos</button></div>` +
+    years.map(y => {
+      const months = byYear[y];
+      const allOn = months.every(p => !campHiddenPeriods.has(p));
+      return `<div class="camp-col-year">
+        <label class="camp-col-yhead"><input type="checkbox" ${allOn ? 'checked' : ''} onchange="campToggleYear('${y}',this.checked);event.stopPropagation()"><span>${y}</span></label>
+        <div class="camp-col-months">
+          ${months.map(p => `<label class="camp-col-m"><input type="checkbox" ${!campHiddenPeriods.has(p) ? 'checked' : ''} onchange="campTogglePeriod('${p}',this.checked);event.stopPropagation()"><span>${MESES_ES[(+p.slice(5, 7)) - 1]}</span></label>`).join('')}
+        </div>
+      </div>`;
+    }).join('');
+}
+function campTogglePeriod(p, on) { if (on) campHiddenPeriods.delete(p); else campHiddenPeriods.add(p); campBuildColsPanel(); renderCampaigns(); }
+function campToggleYear(y, on) { campAllPeriods().filter(p => p.slice(0, 4) === y).forEach(p => { if (on) campHiddenPeriods.delete(p); else campHiddenPeriods.add(p); }); campBuildColsPanel(); renderCampaigns(); }
+function campColsAll(on) { if (on) campHiddenPeriods.clear(); else campAllPeriods().forEach(p => campHiddenPeriods.add(p)); campBuildColsPanel(); renderCampaigns(); }
+function campColsOpen() { campBuildColsPanel(); cddToggle('campColsCdd'); }
+
 function renderCampaigns() {
   const matrix = document.getElementById('campMatrix');
   if (!matrix) return;
 
-  // Periodos presentes (orden cronológico)
+  // Periodos presentes (orden cronológico) + los visibles (filtro de columnas)
   const periods = [...new Set(campEngagement.map(e => periodoKey(e.periodo)))].sort();
+  const visPeriods = periods.filter(p => !campHiddenPeriods.has(p));
   // mapa email|periodo → nivel
   const lvl = new Map();
   campEngagement.forEach(e => lvl.set(`${e.email}|${periodoKey(e.periodo)}`, e.nivel));
+  // "Vistos" = meses con interacción (sobre TODOS los periodos, no solo los visibles)
+  const vistosMap = new Map();
+  campContacts.forEach(c => {
+    let v = 0; periods.forEach(p => { if ((lvl.get(`${c.email}|${p}`) || 0) >= 1) v++; });
+    vistosMap.set(c.email, v);
+  });
 
   // Refresca el selector de responsables (conteos al día tras editar/cargar)
   campPopulateResp();
 
-  // Filtro de búsqueda + filtro por responsable
+  // Filtro de búsqueda + filtro por responsable, luego el orden elegido
   const q = (document.getElementById('campSearch')?.value || '').trim().toLowerCase();
-  let contacts = campContacts.slice().sort((a, b) =>
-    (a.nombre_completo || a.email).localeCompare(b.nombre_completo || b.email, 'es'));
-  contacts = contacts.filter(campMatchesResp);
+  let contacts = campContacts.filter(campMatchesResp);
   if (q) contacts = contacts.filter(c =>
     fuzzyMatch(q, c.nombre_completo || '') ||
     (c.email || '').toLowerCase().includes(q) ||   // email: literal (la similitud no aplica bien)
     fuzzyMatch(q, c.responsable || ''));
+  campSortContacts(contacts, vistosMap);
 
   const respLbl = campRespFilter === 'me' ? ' · mis contactos'
     : campRespFilter === 'none' ? ' · sin responsable'
     : campRespFilter.startsWith('p:') ? ' · ' + campTitleCase(campRespFilter.slice(2)) : '';
+  const mesesTxt = visPeriods.length === periods.length
+    ? `${periods.length} mes${periods.length === 1 ? '' : 'es'}`
+    : `${visPeriods.length}/${periods.length} meses`;
   document.getElementById('campCount').textContent =
-    `${contacts.length} LP${contacts.length === 1 ? '' : 's'} · ${periods.length} mes${periods.length === 1 ? '' : 'es'}${respLbl}`;
+    `${contacts.length} LP${contacts.length === 1 ? '' : 's'} · ${mesesTxt}${respLbl}`;
 
   if (!campContacts.length) {
     matrix.innerHTML = `<div class="camp-empty">
@@ -12637,22 +12696,21 @@ function renderCampaigns() {
   }
 
   // Header fila 1: cada mes agrupa 3 sub-columnas; bandas alternadas + botón borrar mes
-  const grpCells = periods.map((p, i) =>
+  const grpCells = visPeriods.map((p, i) =>
     `<th class="camp-mth-grp camp-g${i % 2}" colspan="3" title="${periodoLabel(p)}">` +
       `<span class="camp-mth-lbl">${MESES_ES[(+p.slice(5, 7)) - 1]} '${p.slice(2, 4)}</span>` +
       `<button class="camp-mth-del" title="Borrar ${periodoLabel(p)}" onclick="campDeleteMonthKey('${p}')"><i class="fa-solid fa-xmark"></i></button>` +
     `</th>`
   ).join('');
   // Header fila 2: las sub-columnas ⚡ / ⚡⚡ / ⚡⚡⚡ (subtítulo en azul claro)
-  const subCells = periods.map((p, i) =>
+  const subCells = visPeriods.map((p, i) =>
     `<th class="camp-sub camp-mth-start camp-g${i % 2}">⚡</th><th class="camp-sub camp-g${i % 2}">⚡⚡</th><th class="camp-sub camp-g${i % 2}">⚡⚡⚡</th>`
   ).join('');
 
   const bodyRows = contacts.map(c => {
-    let vistos = 0;
-    const cells = periods.map((p, i) => {
+    const vistos = vistosMap.get(c.email) || 0;
+    const cells = visPeriods.map((p, i) => {
       const n = lvl.get(`${c.email}|${p}`) || 0;
-      if (n >= 1) vistos++;
       const g = `camp-g${i % 2}`;
       return `<td class="camp-cell camp-mth-start ${g} camp-l1">${n === 1 ? '⚡' : ''}</td>` +
              `<td class="camp-cell ${g} camp-l2">${n === 2 ? '⚡⚡' : ''}</td>` +
