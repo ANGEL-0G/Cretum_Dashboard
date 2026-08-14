@@ -9095,6 +9095,7 @@ function renderInvestorDetail(inv, contacts, positions) {
         </div>
         <div class="db-detail-export">
           ${positions.some(p => (p.companies?.name) === 'Space X' || (p.spacex_indirect && +p.spacex_indirect.shares > 0 && !p.distributed_at)) ? `<button class="dbx-btn spx" onclick="exportSpacexReport()" title="Reporte SpaceX — posición, calendario de liberación y cartas del IPO"><i class="fa-solid fa-rocket"></i> Reporte SpaceX</button>` : ''}
+          ${frAvailableFunds(positions).length ? `<button class="dbx-btn spx" onclick="exportFundReport()" title="Reporte de Fondo — posición del LP en Fund IV/V, generado en vivo (capital calls, distribuciones, posiciones activas y cartas)"><i class="fa-solid fa-file-invoice-dollar"></i> Reporte de Fondo</button>` : ''}
           <button class="dbx-btn" onclick="openLettersModal()" title="Todas las cartas de Altareturn: estados de cuenta, capital calls, distribuciones, legales, fiscales y comunicados"><i class="fa-solid fa-envelope-open-text"></i> Cartas</button>
           <button class="dbx-btn" onclick="exportInvestorXlsx()" title="Exportar todo su detalle a Excel"><i class="fa-solid fa-file-excel"></i> Excel</button>
           <button class="dbx-btn pdf" onclick="exportInvestorPdf()" title="Exportar todo su detalle a PDF"><i class="fa-solid fa-file-pdf"></i> PDF</button>
@@ -15868,6 +15869,92 @@ async function frExportXlsx() {
   a.download = `FundRising_${o.name.replace(/[^a-zA-Z0-9]+/g, '_')}.xlsx`;
   a.click();
   URL.revokeObjectURL(a.href);
+}
+
+/* ═══════════════════════════════════════════
+   REPORTE DE FONDO (Fund IV / Fund V) — generado EN VIVO en la Mac Mini
+   El servicio (com.cretum.fund-report, Tailscale Funnel :8443) arma TODO al
+   momento: DB + cartas de capital calls parseadas + tracker re-marcado a
+   mercado + textos bilingües. Auth = token de la sesión Supabase del usuario.
+═══════════════════════════════════════════ */
+const FR_ENDPOINT = 'https://mac-mini-de-cretum.tail4eeacb.ts.net:8443/fund-report';
+const FR_FUNDS = [
+  { key: 'fundV',  label: 'Fund V',  re: /^MVP All-Star Fund V(\s|$)/i },
+  { key: 'fundIV', label: 'Fund IV', re: /^MVP All-Star Fund IV(\s|$)/i },
+];
+
+function frAvailableFunds(positions) {
+  return FR_FUNDS.filter(f => (positions || []).some(p =>
+    !p.distributed_at && f.re.test(p.series?.name || '')));
+}
+
+function frPickFund(funds) {
+  if (funds.length === 1) return Promise.resolve(funds[0].key);
+  return new Promise((resolve) => {
+    const ov = document.createElement('div');
+    ov.className = 'xlang-ov';
+    ov.innerHTML = `
+      <div class="xlang-card">
+        <div class="xlang-h">Reporte de Fondo · Fund Report</div>
+        <div class="xlang-opts">
+          ${funds.map(f => `<button class="xlang-opt" data-f="${f.key}"><span class="xlang-big">${f.label}</span><span class="xlang-sub">MVP All-Star ${f.label} LP</span></button>`).join('')}
+        </div>
+      </div>`;
+    const done = (v) => { ov.remove(); resolve(v); };
+    ov.addEventListener('click', (e) => {
+      const b = e.target.closest('.xlang-opt');
+      if (b) return done(b.dataset.f);
+      if (e.target === ov) done(null);
+    });
+    document.addEventListener('keydown', function esc(e) { if (e.key === 'Escape') { document.removeEventListener('keydown', esc); done(null); } });
+    document.body.appendChild(ov);
+  });
+}
+
+async function exportFundReport() {
+  const d = lastInvestorDetail;
+  if (!d || !d.inv) return toast('Abre primero el detalle del inversionista');
+  const funds = frAvailableFunds(d.positions);
+  if (!funds.length) return toast('Este inversionista no tiene Fund IV ni Fund V');
+  const fund = await frPickFund(funds);
+  if (!fund) return;
+  const lang = await pickExportLang();
+  if (!lang) return;
+  const EN = lang === 'en';
+  try {
+    const { data } = await sb.auth.getSession();
+    const token = data?.session?.access_token;
+    if (!token) return toast('Sesión expirada — vuelve a entrar');
+    toast(EN ? 'Generating Fund Report… (~15s, live data)' : 'Generando Reporte de Fondo… (~15s, datos en vivo)');
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 180000);
+    const r = await fetch(`${FR_ENDPOINT}?investor_id=${d.inv.id}&fund=${fund}&lang=${lang}`, {
+      headers: { Authorization: `Bearer ${token}` }, signal: ctrl.signal,
+    });
+    clearTimeout(timer);
+    if (!r.ok) {
+      let msg = `HTTP ${r.status}`;
+      try { msg = (await r.json()).error || msg; } catch (_) {}
+      if (msg === 'SIN_POSICION') msg = EN ? 'No position in that fund for this account' : 'Esta cuenta no tiene posición en ese fondo';
+      return toast((EN ? 'Could not generate: ' : 'No se pudo generar: ') + msg);
+    }
+    const blob = await r.blob();
+    const cd = r.headers.get('Content-Disposition') || '';
+    const m = cd.match(/filename="([^"]+)"/);
+    const slug = String(d.inv.name).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+    const fname = m ? m[1] : `${EN ? 'Fund_Report' : 'Reporte_Fondo'}_${fund}_${slug}.pdf`;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = fname;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+    toast(EN ? 'Fund Report downloaded' : 'Reporte de Fondo descargado');
+  } catch (e) {
+    console.error('[fund-report]', e);
+    toast(e.name === 'AbortError'
+      ? 'La generación tardó demasiado — reintenta en un momento'
+      : 'No se pudo generar el reporte: ' + (e.message || e));
+  }
 }
 
 // ── Orquestador del botón ──
