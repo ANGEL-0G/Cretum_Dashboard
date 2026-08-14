@@ -4597,30 +4597,8 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 
     <!-- TAB: Gestión (solo admin) -->
     <div class="camp-pane" id="campPaneGestion" style="display:none">
-      <div class="db-search camp-gestion-search">
-        <i class="fa-solid fa-magnifying-glass db-search-ico"></i>
-        <input id="campSearch" class="db-search-inp" placeholder="Buscar LP, email o responsable…" oninput="renderCampaigns()" autocomplete="off">
-      </div>
-      <div class="camp-filterbar" id="campFilterbar">
-        <button class="camp-fchip on" data-rf="all" onclick="campSetResp('all')"><i class="fa-solid fa-layer-group"></i> Todos</button>
-        <button class="camp-fchip" data-rf="me" onclick="campSetResp('me')"><i class="fa-solid fa-user"></i> Mis contactos</button>
-        <button class="camp-fchip" data-rf="none" onclick="campSetResp('none')"><i class="fa-solid fa-user-slash"></i> Sin responsable</button>
-        <select id="campRespSel" class="camp-resp-sel" onchange="campSetResp(this.value ? 'p:'+this.value : 'all')" title="Filtrar por responsable">
-          <option value="">Por responsable…</option>
-        </select>
-        <div class="cdd camp-sort-cdd" id="campSortCdd" style="margin-left:auto">
-          <button class="cdd-btn" type="button" onclick="cddToggle('campSortCdd')" title="Ordenar la tabla"><i class="fa-solid fa-filter cdd-ico"></i><span class="cdd-label">Ordenar</span><i class="fa-solid fa-chevron-down cdd-chev"></i></button>
-          <div class="cdd-panel camp-cdd-panel">
-            <div class="cdd-opt sel" data-sort="az" onclick="campSetSort('az');this.closest('.cdd').classList.remove('open');event.stopPropagation()"><i class="fa-solid fa-arrow-down-a-z"></i> Nombre A → Z</div>
-            <div class="cdd-opt" data-sort="za" onclick="campSetSort('za');this.closest('.cdd').classList.remove('open');event.stopPropagation()"><i class="fa-solid fa-arrow-up-a-z"></i> Nombre Z → A</div>
-            <div class="cdd-opt" data-sort="resp" onclick="campSetSort('resp');this.closest('.cdd').classList.remove('open');event.stopPropagation()"><i class="fa-solid fa-user-tag"></i> Por responsable</div>
-            <div class="cdd-opt" data-sort="fecha" onclick="campSetSort('fecha');this.closest('.cdd').classList.remove('open');event.stopPropagation()"><i class="fa-regular fa-clock"></i> Por fecha de agregación</div>
-            <div class="cdd-opt" data-sort="rank" onclick="campSetSort('rank');this.closest('.cdd').classList.remove('open');event.stopPropagation()"><i class="fa-solid fa-ranking-star"></i> Por ranking de vistas</div>
-          </div>
-        </div>
-      </div>
       <div class="camp-actions">
-        <button class="cdd-btn" type="button" onclick="campTemplateOpen()"><i class="fa-solid fa-envelope-open-text"></i> Plantilla del correo</button>
+        <button class="cdd-btn" type="button" onclick="campTemplateOpen()"><i class="fa-solid fa-envelope-open-text"></i> Editar Mail de Campaña</button>
 
         <!-- Contactos: desplegable de acciones (añadir; editar/eliminar en la tabla) -->
         <div class="cdd" id="campContactsCdd">
@@ -4655,7 +4633,6 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
           </div>
         </div>
 
-        <button class="cdd-btn" type="button" onclick="aperturaOpen()" title="Destinatarios del correo diario de apertura de mercados"><i class="fa-solid fa-sun"></i> Contactos Apertura</button>
         <button class="cdd-btn camp-btn-danger" type="button" onclick="campDeleteMonth()"><i class="fa-solid fa-trash"></i> Borrar mes</button>
       </div>
 
@@ -4678,6 +4655,29 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
           <div class="camp-preview" id="campPreview" style="display:none"></div>
         </div>
       </details>
+
+      <div class="db-search camp-gestion-search">
+        <i class="fa-solid fa-magnifying-glass db-search-ico"></i>
+        <input id="campSearch" class="db-search-inp" placeholder="Buscar LP, email o responsable…" oninput="renderCampaigns()" autocomplete="off">
+      </div>
+      <div class="camp-filterbar" id="campFilterbar">
+        <button class="camp-fchip on" data-rf="all" onclick="campSetResp('all')"><i class="fa-solid fa-layer-group"></i> Todos</button>
+        <button class="camp-fchip" data-rf="me" onclick="campSetResp('me')"><i class="fa-solid fa-user"></i> Mis contactos</button>
+        <button class="camp-fchip" data-rf="none" onclick="campSetResp('none')"><i class="fa-solid fa-user-slash"></i> Sin responsable</button>
+        <select id="campRespSel" class="camp-resp-sel" onchange="campSetResp(this.value ? 'p:'+this.value : 'all')" title="Filtrar por responsable">
+          <option value="">Por responsable…</option>
+        </select>
+        <div class="cdd camp-sort-cdd" id="campSortCdd" style="margin-left:auto">
+          <button class="cdd-btn" type="button" onclick="cddToggle('campSortCdd')" title="Ordenar / filtrar la tabla"><i class="fa-solid fa-filter cdd-ico"></i><span class="cdd-label">Ordenar</span><i class="fa-solid fa-chevron-down cdd-chev"></i></button>
+          <div class="cdd-panel camp-cdd-panel">
+            <div class="cdd-opt sel" data-sort="az" onclick="campSetSort('az');this.closest('.cdd').classList.remove('open');event.stopPropagation()"><i class="fa-solid fa-arrow-down-a-z"></i> Nombre A → Z</div>
+            <div class="cdd-opt" data-sort="za" onclick="campSetSort('za');this.closest('.cdd').classList.remove('open');event.stopPropagation()"><i class="fa-solid fa-arrow-up-a-z"></i> Nombre Z → A</div>
+            <div class="cdd-opt" data-sort="resp" onclick="campSetSort('resp');this.closest('.cdd').classList.remove('open');event.stopPropagation()"><i class="fa-solid fa-user-tag"></i> Por responsable</div>
+            <div class="cdd-opt" data-sort="fecha" onclick="campSetSort('fecha');this.closest('.cdd').classList.remove('open');event.stopPropagation()"><i class="fa-regular fa-clock"></i> Por fecha de agregación</div>
+            <div class="cdd-opt" data-sort="rank" onclick="campSetSort('rank');this.closest('.cdd').classList.remove('open');event.stopPropagation()"><i class="fa-solid fa-ranking-star"></i> Por ranking de vistas</div>
+          </div>
+        </div>
+      </div>
 
       <div class="db-filters" style="border:none;padding-bottom:8px">
         <span class="db-count" id="campCount">—</span>
