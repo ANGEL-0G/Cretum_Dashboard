@@ -11737,30 +11737,31 @@ function campMatchesResp(c) {
 function campSetResp(v) {
   campRespFilter = v || 'all';
   if (campRespFilter === 'p:') campRespFilter = 'all';
+  document.getElementById('campFilterCdd')?.classList.remove('open');
   renderCampaigns();
 }
-// Llena el <select> de responsables con personas distintas + conteos, y refleja chips activos
+// Construye el desplegable de filtro por responsable (Todos / Mis / Sin / por persona) + etiqueta activa.
 function campPopulateResp() {
-  const sel = document.getElementById('campRespSel');
+  const panel = document.getElementById('campFilterPanel');
+  const label = document.getElementById('campFilterLabel');
   const map = new Map();   // key -> {disp, n}
-  campContacts.forEach(c => {
-    campRespPeople(c.responsable).forEach(p => {
-      const k = campRespKey(p);
-      if (!map.has(k)) map.set(k, { disp: campTitleCase(p), n: 0 });
-      map.get(k).n++;
-    });
-  });
-  if (sel) {
-    const items = [...map.entries()].sort((a, b) => a[1].disp.localeCompare(b[1].disp, 'es'));
-    const cur = campRespFilter.startsWith('p:') ? campRespFilter.slice(2) : '';
-    sel.innerHTML = `<option value="">Por responsable…</option>` +
-      items.map(([k, v]) => `<option value="${escapeHtml(k)}"${k === cur ? ' selected' : ''}>${escapeHtml(v.disp)} (${v.n})</option>`).join('');
-    sel.classList.toggle('on', !!cur);
+  campContacts.forEach(c => campRespPeople(c.responsable).forEach(p => {
+    const k = campRespKey(p);
+    if (!map.has(k)) map.set(k, { disp: campTitleCase(p), n: 0 });
+    map.get(k).n++;
+  }));
+  const people = [...map.entries()].sort((a, b) => a[1].disp.localeCompare(b[1].disp, 'es'));
+  const cur = campRespFilter;
+  const fixed = (rf, icon, text) => `<div class="cdd-opt${cur === rf ? ' sel' : ''}" onclick="campSetResp('${rf}');event.stopPropagation()"><i class="fa-solid ${icon}"></i> ${text}</div>`;
+  let html = fixed('all', 'fa-layer-group', 'Todos') + fixed('me', 'fa-user', 'Mis contactos') + fixed('none', 'fa-user-slash', 'Sin responsable');
+  if (people.length) {
+    html += '<div class="camp-filter-div">Por responsable</div>' +
+      people.map(([k, v]) => `<div class="cdd-opt${cur === 'p:' + k ? ' sel' : ''}" onclick="campSetResp('p:${jsArg(k)}');event.stopPropagation()"><i class="fa-solid fa-user-tag"></i> ${escapeHtml(v.disp)} <span class="cdd-tag">${v.n}</span></div>`).join('');
   }
-  // Estado activo de los chips (Todos / Mis contactos / Sin responsable)
-  document.querySelectorAll('#campFilterbar .camp-fchip').forEach(ch => {
-    ch.classList.toggle('on', ch.dataset.rf === campRespFilter);
-  });
+  if (panel) panel.innerHTML = html;
+  if (label) label.textContent = cur === 'all' ? 'Todos' : cur === 'me' ? 'Mis contactos' : cur === 'none' ? 'Sin responsable' : cur.startsWith('p:') ? campTitleCase(cur.slice(2)) : 'Filtrar';
+  const cdd = document.getElementById('campFilterCdd');
+  if (cdd) cdd.classList.toggle('active', cur !== 'all');
 }
 
 const MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',

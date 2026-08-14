@@ -4197,6 +4197,11 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
     .camp-col-months{display:grid;grid-template-columns:1fr 1fr;gap:2px 10px;padding:2px 6px 4px 22px}
     .camp-col-m{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink-soft,#556);cursor:pointer;padding:3px 0}
     .camp-col-yhead input,.camp-col-m input{accent-color:var(--navy);cursor:pointer;width:15px;height:15px;flex:0 0 auto}
+    /* Desplegable "Filtrar" (responsable): divisor + etiqueta activa */
+    .camp-filter-panel{min-width:220px}
+    .camp-filter-div{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-mute,#8894a6);padding:9px 11px 4px;border-top:1px solid var(--line-soft,#eef2f8);margin-top:4px}
+    .camp-filter-panel .cdd-opt .cdd-tag{margin-left:auto}
+    .cdd.active .cdd-btn .cdd-label{color:var(--navy);font-weight:600}
     /* Barra de filtro por responsable */
     .camp-filterbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:4px 0 12px}
     .camp-fchip{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border:1.5px solid var(--line,#e0e3eb);background:var(--white,#fff);color:var(--ink-soft,#667);border-radius:20px;font-size:12.5px;font-weight:600;font-family:inherit;cursor:pointer;transition:border-color .15s,color .15s,background .15s}
@@ -4661,14 +4666,12 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
         <input id="campSearch" class="db-search-inp" placeholder="Buscar LP, email o responsable…" oninput="renderCampaigns()" autocomplete="off">
       </div>
       <div class="camp-filterbar" id="campFilterbar">
-        <button class="camp-fchip on" data-rf="all" onclick="campSetResp('all')"><i class="fa-solid fa-layer-group"></i> Todos</button>
-        <button class="camp-fchip" data-rf="me" onclick="campSetResp('me')"><i class="fa-solid fa-user"></i> Mis contactos</button>
-        <button class="camp-fchip" data-rf="none" onclick="campSetResp('none')"><i class="fa-solid fa-user-slash"></i> Sin responsable</button>
-        <select id="campRespSel" class="camp-resp-sel" onchange="campSetResp(this.value ? 'p:'+this.value : 'all')" title="Filtrar por responsable">
-          <option value="">Por responsable…</option>
-        </select>
+        <div class="cdd camp-filter-cdd" id="campFilterCdd">
+          <button class="cdd-btn" type="button" onclick="cddToggle('campFilterCdd')" title="Filtrar por responsable"><i class="fa-solid fa-filter cdd-ico"></i><span class="cdd-label" id="campFilterLabel">Todos</span><i class="fa-solid fa-chevron-down cdd-chev"></i></button>
+          <div class="cdd-panel camp-cdd-panel camp-filter-panel" id="campFilterPanel"></div>
+        </div>
         <div class="cdd camp-sort-cdd" id="campSortCdd" style="margin-left:auto">
-          <button class="cdd-btn" type="button" onclick="cddToggle('campSortCdd')" title="Ordenar / filtrar la tabla"><i class="fa-solid fa-filter cdd-ico"></i><span class="cdd-label">Ordenar</span><i class="fa-solid fa-chevron-down cdd-chev"></i></button>
+          <button class="cdd-btn" type="button" onclick="cddToggle('campSortCdd')" title="Ordenar la tabla"><i class="fa-solid fa-arrow-down-wide-short cdd-ico"></i><span class="cdd-label">Ordenar</span><i class="fa-solid fa-chevron-down cdd-chev"></i></button>
           <div class="cdd-panel camp-cdd-panel">
             <div class="cdd-opt sel" data-sort="az" onclick="campSetSort('az');this.closest('.cdd').classList.remove('open');event.stopPropagation()"><i class="fa-solid fa-arrow-down-a-z"></i> Nombre A → Z</div>
             <div class="cdd-opt" data-sort="za" onclick="campSetSort('za');this.closest('.cdd').classList.remove('open');event.stopPropagation()"><i class="fa-solid fa-arrow-up-a-z"></i> Nombre Z → A</div>
@@ -6553,6 +6556,6 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 </div>
 
 <script src="/i18n.js?v=20260805-statusui"></script>
-<script src="/app.js?v=20260813-campfiltros"></script>
+<script src="/app.js?v=20260813-campfiltro2"></script>
 </body>
 </html>
