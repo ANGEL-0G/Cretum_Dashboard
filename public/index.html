@@ -4147,6 +4147,25 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
     .camp-empty i{font-size:34px;opacity:.4;display:block;margin-bottom:12px}
     [data-theme="dark"] .camp-name,[data-theme="dark"] .camp-month{background:var(--card,#1a2030)}
     .camp-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    /* Desplegables de Gestión (Contactos / Exportar) */
+    .camp-cdd-panel{padding:6px;min-width:236px}
+    .camp-cdd-panel .cdd-opt{display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:8px;font-size:13px;color:var(--ink,#334);cursor:pointer;transition:background .14s}
+    .camp-cdd-panel .cdd-opt:hover{background:var(--navy-pale)}
+    .camp-cdd-panel .cdd-opt i{width:15px;text-align:center;color:var(--navy)}
+    .camp-cdd-yw{justify-content:space-between;gap:10px}
+    .camp-cdd-yw>span{display:inline-flex;align-items:center;gap:9px}
+    .camp-cdd-yw .camp-export-lotes{border-radius:7px;border:1px solid var(--line,#d7dde8);flex:0 0 auto}
+    .cdd-hint{font-size:11.5px;color:var(--ink-mute,#8894a6);padding:7px 11px 4px;line-height:1.4}
+    /* Acordeón Importar */
+    .camp-collapse{margin-top:12px;border:1px solid var(--line,#e0e3eb);border-radius:12px;overflow:hidden;background:var(--white,#fff)}
+    [data-theme="dark"] .camp-collapse{background:var(--card,#1a2030)}
+    .camp-collapse-sum{display:flex;align-items:center;gap:9px;padding:13px 16px;font-size:13.5px;font-weight:600;color:var(--navy);cursor:pointer;list-style:none;user-select:none}
+    .camp-collapse-sum::-webkit-details-marker{display:none}
+    .camp-collapse-sum .cdd-chev{margin-left:auto;font-size:11px;transition:transform .2s cubic-bezier(.23,1,.32,1)}
+    .camp-collapse[open] .cdd-chev{transform:rotate(180deg)}
+    .camp-collapse-body{padding:2px 16px 16px;animation:campColIn .2s ease}
+    @keyframes campColIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+    @media (prefers-reduced-motion:reduce){.camp-collapse-body{animation:none}}
     /* Barra de filtro por responsable */
     .camp-filterbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:4px 0 12px}
     .camp-fchip{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border:1.5px solid var(--line,#e0e3eb);background:var(--white,#fff);color:var(--ink-soft,#667);border-radius:20px;font-size:12.5px;font-weight:600;font-family:inherit;cursor:pointer;transition:border-color .15s,color .15s,background .15s}
@@ -4560,22 +4579,55 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
         </select>
       </div>
       <div class="camp-actions">
-        <button class="cdd-btn" type="button" onclick="campAddContactOpen()"><i class="fa-solid fa-user-plus"></i> Añadir contacto</button>
         <button class="cdd-btn" type="button" onclick="campTemplateOpen()"><i class="fa-solid fa-envelope-open-text"></i> Plantilla del correo</button>
-        <button class="cdd-btn" type="button" onclick="campExportExcel()"><i class="fa-solid fa-file-excel"></i> Exportar Excel</button>
-        <span class="camp-export-grp" title="En cuántos archivos dividir el export — súbelos a Yesware espaciados ~1 hora para no disparar el antispam de Microsoft">
-          <button class="cdd-btn" type="button" onclick="campExportYesware()"><i class="fa-solid fa-paper-plane"></i> Exportar Contactos</button>
-          <select id="campExportLotes" class="camp-export-lotes">
-            <option value="1">1 archivo</option>
-            <option value="2">2 lotes</option>
-            <option value="4">4 lotes</option>
-            <option value="6">6 lotes</option>
-          </select>
-        </span>
+
+        <!-- Contactos: desplegable de acciones (añadir; editar/eliminar en la tabla) -->
+        <div class="cdd" id="campContactsCdd">
+          <button class="cdd-btn" type="button" onclick="cddToggle('campContactsCdd')"><i class="fa-solid fa-address-book cdd-ico"></i><span class="cdd-label">Contactos</span><i class="fa-solid fa-chevron-down cdd-chev"></i></button>
+          <div class="cdd-panel camp-cdd-panel">
+            <div class="cdd-opt" onclick="campAddContactOpen();this.closest('.cdd').classList.remove('open');event.stopPropagation()"><i class="fa-solid fa-user-plus"></i> Añadir contacto</div>
+            <div class="cdd-hint">Para editar o eliminar, toca un contacto en la tabla de interacción.</div>
+          </div>
+        </div>
+
+        <!-- Exportar: desplegable -->
+        <div class="cdd" id="campExportCdd">
+          <button class="cdd-btn" type="button" onclick="cddToggle('campExportCdd')"><i class="fa-solid fa-file-export cdd-ico"></i><span class="cdd-label">Exportar</span><i class="fa-solid fa-chevron-down cdd-chev"></i></button>
+          <div class="cdd-panel camp-cdd-panel">
+            <div class="cdd-opt" onclick="campExportExcel();this.closest('.cdd').classList.remove('open');event.stopPropagation()"><i class="fa-solid fa-file-excel"></i> Exportar Excel</div>
+            <div class="cdd-opt camp-cdd-yw" onclick="campExportYesware();this.closest('.cdd').classList.remove('open');event.stopPropagation()" title="En cuántos archivos dividir el export — súbelos a Yesware espaciados ~1 h para no disparar el antispam de Microsoft">
+              <span><i class="fa-solid fa-paper-plane"></i> Exportar Contactos</span>
+              <select id="campExportLotes" class="camp-export-lotes" onclick="event.stopPropagation()" onchange="event.stopPropagation()">
+                <option value="1">1 archivo</option><option value="2">2 lotes</option><option value="4">4 lotes</option><option value="6">6 lotes</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
         <button class="cdd-btn" type="button" id="campSheetsBtn" onclick="campSheetsSync()" title="Reescribe el Google Sheets y trae de vuelta los comentarios del equipo"><i class="fa-solid fa-table-cells"></i> Sincronizar Sheets</button>
         <button class="cdd-btn" type="button" onclick="aperturaOpen()" title="Destinatarios del correo diario de apertura de mercados"><i class="fa-solid fa-sun"></i> Contactos Apertura</button>
         <button class="cdd-btn camp-btn-danger" type="button" onclick="campDeleteMonth()"><i class="fa-solid fa-trash"></i> Borrar mes</button>
       </div>
+
+      <!-- Importar: reporte de Yesware (desplegable inline por la zona de arrastre) -->
+      <details class="camp-collapse" id="campImportDetails">
+        <summary class="camp-collapse-sum"><i class="fa-solid fa-file-import"></i> <span>Importar reporte de Yesware</span> <i class="fa-solid fa-chevron-down cdd-chev"></i></summary>
+        <div class="camp-collapse-body">
+          <div class="camp-upload-row">
+            <label class="camp-month-lbl">Mes del reporte
+              <input type="month" id="campMonth" class="camp-month">
+            </label>
+            <div class="camp-drop" id="campDrop"
+                 ondragover="campDragOver(event)" ondragleave="campDragLeave()" ondrop="campDrop(event)"
+                 onclick="document.getElementById('campFileInput').click()">
+              <i class="fa-solid fa-cloud-arrow-up"></i>
+              <span>Arrastra aquí el CSV de Yesware, o haz clic para elegirlo</span>
+              <input type="file" id="campFileInput" accept=".csv,text/csv" style="display:none" onchange="campHandleFiles(this.files)">
+            </div>
+          </div>
+          <div class="camp-preview" id="campPreview" style="display:none"></div>
+        </div>
+      </details>
 
       <div class="db-filters" style="border:none;padding-bottom:8px">
         <span class="db-count" id="campCount">—</span>
@@ -4593,23 +4645,6 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
       </button>
       <div id="campMatrix" class="camp-matrix"></div>
 
-      <!-- Subir CSV de Yesware — al fondo para no estorbar -->
-      <div class="camp-upload">
-        <div class="camp-upload-title"><i class="fa-solid fa-cloud-arrow-up"></i> Subir reporte de Yesware</div>
-        <div class="camp-upload-row">
-          <label class="camp-month-lbl">Mes del reporte
-            <input type="month" id="campMonth" class="camp-month">
-          </label>
-          <div class="camp-drop" id="campDrop"
-               ondragover="campDragOver(event)" ondragleave="campDragLeave()" ondrop="campDrop(event)"
-               onclick="document.getElementById('campFileInput').click()">
-            <i class="fa-solid fa-cloud-arrow-up"></i>
-            <span>Arrastra aquí el CSV de Yesware, o haz clic para elegirlo</span>
-            <input type="file" id="campFileInput" accept=".csv,text/csv" style="display:none" onchange="campHandleFiles(this.files)">
-          </div>
-        </div>
-        <div class="camp-preview" id="campPreview" style="display:none"></div>
-      </div>
     </div>
 
     <!-- TAB: Listas — Apertura Cretum vs Cartas GVV (solo admin) -->
@@ -6446,6 +6481,6 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 </div>
 
 <script src="/i18n.js?v=20260805-statusui"></script>
-<script src="/app.js?v=20260811-reportes"></script>
+<script src="/app.js?v=20260813-campgestion"></script>
 </body>
 </html>

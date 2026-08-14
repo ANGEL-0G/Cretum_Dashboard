@@ -5210,6 +5210,8 @@ function dismissTopLayer() {
   if (q('ntLinkPop') && !q('ntLinkPop').hidden) { ntLinkClose(); return true; }
   // 0b) Menú de perfil (dropdown de la cuenta)
   if (q('settingsPop')?.classList.contains('show')) { q('settingsPop').classList.remove('show'); q('headerUserBtn')?.classList.remove('open'); return true; }
+  // 0c) Desplegables custom (cdd: Exportar/Contactos/columnas…) abiertos
+  if (document.querySelector('.cdd.open')) { document.querySelectorAll('.cdd.open').forEach(el => el.classList.remove('open')); return true; }
   // 1) Drawer de navegación
   if (q('navDrawer')?.classList.contains('open')) { closeNav(); return true; }
   // 2) Modales con limpieza propia
