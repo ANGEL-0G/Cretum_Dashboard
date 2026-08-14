@@ -12748,6 +12748,15 @@ function renderCampaigns() {
   </div>`;
 }
 
+/* ── Importar de Yesware: pop-up con zona de arrastre / explorador ── */
+function campImportOpen() {
+  const m = document.getElementById('campMonth');
+  if (m && !m.value) { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); m.value = d.toISOString().slice(0, 7); }
+  campCancelUpload();   // limpia preview/archivo de una apertura previa
+  document.getElementById('campImportModal').classList.add('show');
+}
+function campImportClose() { document.getElementById('campImportModal').classList.remove('show'); }
+
 /* ── Carga de CSV (drag-drop o file picker) ── */
 function campHandleFiles(files) {
   const file = files && files[0];
@@ -12822,6 +12831,7 @@ async function campConfirmUpload() {
     if (error) throw error;
     toast(`Guardado ${periodoLabel(periodo)} — ${payload.length} LPs actualizados`);
     campCancelUpload();
+    campImportClose();
     campaignsLoaded = false;
     await loadCampaigns();
   } catch (err) {
