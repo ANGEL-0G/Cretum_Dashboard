@@ -4166,6 +4166,25 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
     .camp-collapse-body{padding:2px 16px 16px;animation:campColIn .2s ease}
     @keyframes campColIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
     @media (prefers-reduced-motion:reduce){.camp-collapse-body{animation:none}}
+    /* Modal de contacto: select de responsable + "desde" + tag en opciones */
+    .camp-f-sel{cursor:pointer}
+    .camp-since{font-size:12px;color:var(--ink-mute,#8894a6);margin-top:6px;display:flex;align-items:center;gap:6px}
+    .camp-since b{color:var(--ink,#334)}
+    .cdd-tag{font-size:10px;font-weight:600;color:var(--ink-mute,#8894a6);background:var(--surface-2,#eef2f9);padding:1px 6px;border-radius:6px;margin-left:auto}
+    [data-theme="dark"] .cdd-tag{background:var(--navy-pale)}
+    /* Selector de contacto (Editar / Eliminar) */
+    .camp-pick-search{margin-bottom:10px}
+    .camp-pick-list{display:flex;flex-direction:column;gap:6px;max-height:52vh;overflow-y:auto}
+    .camp-pick-item{display:flex;align-items:center;gap:11px;padding:10px 12px;border:1px solid var(--line,#e0e3eb);border-radius:10px;background:var(--white,#fff);cursor:pointer;text-align:left;font-family:inherit;transition:border-color .14s,background .14s}
+    .camp-pick-item:hover{border-color:var(--navy);background:var(--navy-pale)}
+    .camp-pick-item.del:hover{border-color:var(--red,#d33);background:var(--red-bg,#fdecec)}
+    [data-theme="dark"] .camp-pick-item{background:var(--card,#1a2030)}
+    .camp-pick-ic{width:30px;height:30px;border-radius:8px;background:var(--navy-pale);color:var(--navy);display:grid;place-items:center;flex:0 0 auto;font-size:12px}
+    .camp-pick-item.del .camp-pick-ic{background:var(--red-bg,#fdecec);color:var(--red,#d33)}
+    .camp-pick-txt{display:flex;flex-direction:column;min-width:0}
+    .camp-pick-name{font-size:13.5px;font-weight:600;color:var(--ink,#223)}
+    .camp-pick-sub{font-size:11.5px;color:var(--ink-mute,#8894a6);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .camp-pick-empty{padding:20px;text-align:center;color:var(--ink-mute,#8894a6);font-size:13px}
     /* Barra de filtro por responsable */
     .camp-filterbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:4px 0 12px}
     .camp-fchip{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border:1.5px solid var(--line,#e0e3eb);background:var(--white,#fff);color:var(--ink-soft,#667);border-radius:20px;font-size:12.5px;font-weight:600;font-family:inherit;cursor:pointer;transition:border-color .15s,color .15s,background .15s}
@@ -4586,7 +4605,8 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
           <button class="cdd-btn" type="button" onclick="cddToggle('campContactsCdd')"><i class="fa-solid fa-address-book cdd-ico"></i><span class="cdd-label">Contactos</span><i class="fa-solid fa-chevron-down cdd-chev"></i></button>
           <div class="cdd-panel camp-cdd-panel">
             <div class="cdd-opt" onclick="campAddContactOpen();this.closest('.cdd').classList.remove('open');event.stopPropagation()"><i class="fa-solid fa-user-plus"></i> Añadir contacto</div>
-            <div class="cdd-hint">Para editar o eliminar, toca un contacto en la tabla de interacción.</div>
+            <div class="cdd-opt" onclick="campPickOpen('edit');this.closest('.cdd').classList.remove('open');event.stopPropagation()"><i class="fa-solid fa-user-pen"></i> Editar contacto</div>
+            <div class="cdd-opt" onclick="campPickOpen('delete');this.closest('.cdd').classList.remove('open');event.stopPropagation()"><i class="fa-solid fa-user-minus"></i> Eliminar contacto</div>
           </div>
         </div>
 
@@ -4594,17 +4614,25 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
         <div class="cdd" id="campExportCdd">
           <button class="cdd-btn" type="button" onclick="cddToggle('campExportCdd')"><i class="fa-solid fa-file-export cdd-ico"></i><span class="cdd-label">Exportar</span><i class="fa-solid fa-chevron-down cdd-chev"></i></button>
           <div class="cdd-panel camp-cdd-panel">
-            <div class="cdd-opt" onclick="campExportExcel();this.closest('.cdd').classList.remove('open');event.stopPropagation()"><i class="fa-solid fa-file-excel"></i> Exportar Excel</div>
-            <div class="cdd-opt camp-cdd-yw" onclick="campExportYesware();this.closest('.cdd').classList.remove('open');event.stopPropagation()" title="En cuántos archivos dividir el export — súbelos a Yesware espaciados ~1 h para no disparar el antispam de Microsoft">
-              <span><i class="fa-solid fa-paper-plane"></i> Exportar Contactos</span>
-              <select id="campExportLotes" class="camp-export-lotes" onclick="event.stopPropagation()" onchange="event.stopPropagation()">
-                <option value="1">1 archivo</option><option value="2">2 lotes</option><option value="4">4 lotes</option><option value="6">6 lotes</option>
+            <div class="cdd-opt" onclick="campExportExcel();this.closest('.cdd').classList.remove('open');event.stopPropagation()"><i class="fa-solid fa-file-excel"></i> Excel</div>
+            <div class="cdd-opt" onclick="campExportPDF();this.closest('.cdd').classList.remove('open');event.stopPropagation()"><i class="fa-solid fa-file-pdf"></i> PDF <span class="cdd-tag">matriz</span></div>
+            <div class="cdd-opt camp-cdd-yw" onclick="campExportYesware();this.closest('.cdd').classList.remove('open');event.stopPropagation()" title="CSV para Yesware. Elige en cuántos archivos dividir — súbelos espaciados ~1 h para no disparar el antispam de Microsoft">
+              <span><i class="fa-solid fa-file-csv"></i> CSV <span class="cdd-tag">Yesware</span></span>
+              <select id="campExportLotes" class="camp-export-lotes" onclick="event.stopPropagation()" onchange="event.stopPropagation()" title="Cantidad de lotes">
+                <option value="1">1 archivo</option><option value="2">2 lotes</option><option value="3">3 lotes</option><option value="4">4 lotes</option><option value="5">5 lotes</option><option value="6">6 lotes</option>
               </select>
             </div>
           </div>
         </div>
 
-        <button class="cdd-btn" type="button" id="campSheetsBtn" onclick="campSheetsSync()" title="Reescribe el Google Sheets y trae de vuelta los comentarios del equipo"><i class="fa-solid fa-table-cells"></i> Sincronizar Sheets</button>
+        <!-- Sincronizar: desplegable -->
+        <div class="cdd" id="campSyncCdd">
+          <button class="cdd-btn" type="button" onclick="cddToggle('campSyncCdd')"><i class="fa-solid fa-rotate cdd-ico"></i><span class="cdd-label">Sincronizar</span><i class="fa-solid fa-chevron-down cdd-chev"></i></button>
+          <div class="cdd-panel camp-cdd-panel">
+            <div class="cdd-opt" id="campSheetsBtn" onclick="campSheetsSync();this.closest('.cdd').classList.remove('open');event.stopPropagation()" title="Reescribe el Google Sheets y trae de vuelta los comentarios del equipo"><i class="fa-solid fa-table-cells"></i> Sincronizar Google Sheets</div>
+          </div>
+        </div>
+
         <button class="cdd-btn" type="button" onclick="aperturaOpen()" title="Destinatarios del correo diario de apertura de mercados"><i class="fa-solid fa-sun"></i> Contactos Apertura</button>
         <button class="cdd-btn camp-btn-danger" type="button" onclick="campDeleteMonth()"><i class="fa-solid fa-trash"></i> Borrar mes</button>
       </div>
@@ -4866,22 +4894,40 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
         <button class="camp-modal-x" onclick="campAddContactClose()" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="camp-modal-body">
-        <label class="camp-f-lbl">Nombre <span class="camp-req">*</span></label>
-        <input id="campCNombre" class="camp-f-inp" placeholder="Nombre (sin apellido — el que ve Yesware)" autocomplete="off">
-        <label class="camp-f-lbl">Nombre completo <span class="camp-opt">opcional</span></label>
-        <input id="campCFull" class="camp-f-inp" placeholder="Nombre y apellidos (para la matriz)" autocomplete="off">
-        <label class="camp-f-lbl">Email <span class="camp-req">*</span></label>
+        <label class="camp-f-lbl">Nombre completo <span class="camp-req">*</span></label>
+        <input id="campCFull" class="camp-f-inp" placeholder="Nombre y apellidos" autocomplete="off">
+        <label class="camp-f-lbl">Correo <span class="camp-req">*</span></label>
         <input id="campCEmail" class="camp-f-inp" type="email" placeholder="correo@dominio.com" autocomplete="off">
-        <div class="camp-f-hint" id="campCEmailHint" style="display:none">El email es la llave del histórico — no se edita aquí. Si necesitas cambiarlo, borra y vuelve a crear el contacto.</div>
+        <div class="camp-f-hint" id="campCEmailHint" style="display:none">El correo es la llave del histórico — no se edita aquí. Si necesitas cambiarlo, borra y vuelve a crear el contacto.</div>
+        <label class="camp-f-lbl">Correo alternativo <span class="camp-opt">opcional</span></label>
+        <input id="campCAlt" class="camp-f-inp" type="email" placeholder="segundo correo (opcional)" autocomplete="off">
         <label class="camp-f-lbl">Responsable <span class="camp-opt">opcional</span></label>
-        <input id="campCResp" class="camp-f-inp" placeholder="Quién le da seguimiento" autocomplete="off">
-        <label class="camp-f-lbl">Comentarios <span class="camp-opt">opcional</span></label>
+        <select id="campCResp" class="camp-f-inp camp-f-sel"><option value="">— Sin responsable —</option></select>
+        <label class="camp-f-lbl">Notas <span class="camp-opt">opcional</span></label>
         <textarea id="campCComent" class="camp-f-inp" rows="2" placeholder="Notas de seguimiento" autocomplete="off"></textarea>
+        <div class="camp-since" id="campCSince" style="display:none"></div>
         <div class="camp-modal-msg" id="campCMsg"></div>
       </div>
       <div class="camp-modal-foot">
         <button class="camp-prev-cancel" onclick="campAddContactClose()">Cancelar</button>
         <button class="btn-primary" id="campCSaveBtn" onclick="campAddContactSave()"><i class="fa-solid fa-check"></i> Guardar contacto</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: elegir contacto (para Editar / Eliminar) -->
+  <div class="camp-modal-backdrop" id="campPickModal" onclick="if(event.target===this)campPickClose()">
+    <div class="camp-modal">
+      <div class="camp-modal-head">
+        <div class="camp-modal-title" id="campPickTitle"><i class="fa-solid fa-user-pen"></i> Editar contacto</div>
+        <button class="camp-modal-x" onclick="campPickClose()" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="camp-modal-body">
+        <div class="db-search camp-pick-search">
+          <i class="fa-solid fa-magnifying-glass db-search-ico"></i>
+          <input id="campPickSearch" class="db-search-inp" placeholder="Buscar por nombre, correo o responsable…" autocomplete="off" oninput="campPickRender()">
+        </div>
+        <div class="camp-pick-list" id="campPickList"></div>
       </div>
     </div>
   </div>
@@ -6481,6 +6527,6 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 </div>
 
 <script src="/i18n.js?v=20260805-statusui"></script>
-<script src="/app.js?v=20260813-campgestion"></script>
+<script src="/app.js?v=20260813-campcontactos"></script>
 </body>
 </html>

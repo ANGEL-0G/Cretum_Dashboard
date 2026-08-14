@@ -12270,7 +12270,7 @@ async function loadCampaigns() {
   if (matrix) matrix.innerHTML = '<div class="db-loading"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
   try {
     const [{ data: contacts, error: e1 }, { data: eng, error: e2 }] = await Promise.all([
-      sb.from('lp_contacts').select('email, nombre, nombre_completo, responsable, comentarios, cancelado'),
+      sb.from('lp_contacts').select('email, nombre, nombre_completo, correo_alt, responsable, comentarios, cancelado, created_at'),
       sb.from('campaign_engagement').select('email, periodo, nivel, opened, clicked, replied'),
     ]);
     if (e1) throw e1; if (e2) throw e2;
@@ -12781,6 +12781,42 @@ function campDrop(e) {
 }
 
 /* ── Exportar matriz a Excel — MISMO formato que el Sheets (3 sub-columnas/mes) ── */
+// PDF de la matriz de interacción (LP × meses, con los ⚡). Reusa renderReportPdf.
+async function campExportPDF() {
+  if (!campContacts.length) { toast('No hay datos para exportar'); return; }
+  const periods = [...new Set(campEngagement.map(e => periodoKey(e.periodo)))].sort();
+  const lvl = new Map();
+  campEngagement.forEach(e => lvl.set(`${e.email}|${periodoKey(e.periodo)}`, e.nivel));
+  const contacts = campContacts.slice().sort((a, b) => (a.nombre_completo || a.email).localeCompare(b.nombre_completo || b.email, 'es'));
+  const E = escapeHtml, gl = n => n >= 3 ? '⚡⚡⚡' : n >= 2 ? '⚡⚡' : n >= 1 ? '⚡' : '';
+  const head = periods.map(p => `<th>${MESES_ES[(+p.slice(5, 7)) - 1].slice(0, 3)} '${p.slice(2, 4)}</th>`).join('');
+  const rows = contacts.map(c => {
+    let vistos = 0;
+    const cells = periods.map(p => { const n = lvl.get(`${c.email}|${p}`) || 0; if (n >= 1) vistos++; return `<td class="l${n}">${gl(n)}</td>`; }).join('');
+    return `<tr><td class="nm">${E(c.nombre_completo || c.nombre || '—')}<span class="em">${E(c.email)}${c.responsable ? ' · ' + E(c.responsable) : ''}</span></td><td class="v">${vistos}</td>${cells}</tr>`;
+  }).join('');
+  const now = new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' });
+  const html = `<!doctype html><html><head><meta charset="utf-8"><style>
+@page{size:Letter landscape;margin:12mm}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,Arial,sans-serif;color:#17202e;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+h1{font-size:16px;color:#1A3A6B}
+.sub{font-size:9.5px;color:#66707f;margin:2px 0 12px}
+table{border-collapse:collapse;width:100%;font-size:9px;table-layout:fixed}
+th,td{border:1px solid #dce3ee;padding:4px 5px;text-align:center;overflow:hidden}
+th{background:#eef3fa;color:#1A3A6B;font-weight:700}
+th.lp,td.nm{text-align:left;white-space:nowrap;width:180px}
+td.nm .em{display:block;font-size:7.5px;color:#8894a6;font-weight:400}
+td.v{font-weight:700;color:#1A3A6B;width:44px}
+tbody tr:nth-child(even){background:#f7f9fc}
+</style></head><body>
+<h1>Campañas · Matriz de interacción</h1>
+<div class="sub">${contacts.length} LPs · ${periods.length} meses · generado ${now} · ⚡ abrió · ⚡⚡ +click · ⚡⚡⚡ +respondió</div>
+<table><thead><tr><th class="lp">LP</th><th>Vistos</th>${head}</tr></thead><tbody>${rows}</tbody></table>
+</body></html>`;
+  await renderReportPdf(html, `Campanas-Matriz-${new Date().toISOString().slice(0, 10)}.pdf`);
+}
+
 async function campExportExcel() {
   if (!campContacts.length) { toast('No hay datos para exportar'); return; }
   const periods = [...new Set(campEngagement.map(e => periodoKey(e.periodo)))].sort();
@@ -12966,70 +13002,146 @@ function aperturaCompose() {
   window.location.href = `mailto:?bcc=${encodeURIComponent(bcc)}&subject=${encodeURIComponent('Apertura de Mercados — ' + fecha)}`;
 }
 
+/* ── Responsable: SOLO usuarios del sistema, los más frecuentes arriba ── */
+function campFillRespSelect(currentVal) {
+  const sel = document.getElementById('campCResp');
+  if (!sel) return;
+  // Frecuencia global de cada responsable (por clave normalizada).
+  const freq = new Map();
+  campContacts.forEach(c => campRespPeople(c.responsable).forEach(p => {
+    const k = campRespKey(p); freq.set(k, (freq.get(k) || 0) + 1);
+  }));
+  const users = [...new Set(Object.values(USERS)
+    .filter(u => u && !u.hidden && (u.nameRaw || u.name))
+    .map(u => u.nameRaw || u.name))];
+  users.sort((a, b) => {
+    const fa = freq.get(campRespKey(a)) || 0, fb = freq.get(campRespKey(b)) || 0;
+    return fa !== fb ? fb - fa : a.localeCompare(b, 'es');   // frecuentes primero
+  });
+  let opts = '<option value="">— Sin responsable —</option>' + users.map(u => {
+    const n = freq.get(campRespKey(u)) || 0;
+    return `<option value="${escapeHtml(u)}">${escapeHtml(u)}${n ? ` (${n})` : ''}</option>`;
+  }).join('');
+  // Si el responsable actual es externo (no es usuario), se conserva como opción.
+  if (currentVal && !users.some(u => campRespKey(u) === campRespKey(currentVal))) {
+    opts += `<option value="${escapeHtml(currentVal)}">${escapeHtml(currentVal)} · externo</option>`;
+  }
+  sel.innerHTML = opts;
+  sel.value = currentVal || '';
+}
+function campFmtSince(iso) {
+  try { return new Date(iso).toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' }); }
+  catch (e) { return String(iso).slice(0, 10); }
+}
+
 /* ── Añadir / Editar contacto (mini-modal, modo dual) ── */
 function campAddContactOpen() {
   campEditingEmail = null;
-  ['campCNombre', 'campCFull', 'campCEmail', 'campCResp', 'campCComent'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  ['campCFull', 'campCEmail', 'campCAlt', 'campCComent'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   const em = document.getElementById('campCEmail'); em.disabled = false;
   document.getElementById('campCEmailHint').style.display = 'none';
+  document.getElementById('campCSince').style.display = 'none';
+  campFillRespSelect('');
   document.getElementById('campCTitle').innerHTML = '<i class="fa-solid fa-user-plus"></i> Añadir contacto';
   document.getElementById('campCSaveBtn').innerHTML = '<i class="fa-solid fa-check"></i> Guardar contacto';
   const msg = document.getElementById('campCMsg'); msg.textContent = ''; msg.className = 'camp-modal-msg';
   document.getElementById('campContactModal').classList.add('show');
-  setTimeout(() => document.getElementById('campCNombre').focus(), 60);
+  setTimeout(() => document.getElementById('campCFull').focus(), 60);
 }
 
 function campEditContactOpen(email) {
   const c = campContacts.find(x => x.email === email);
   if (!c) return;
   campEditingEmail = email;
-  document.getElementById('campCNombre').value = c.nombre || '';
-  document.getElementById('campCFull').value   = c.nombre_completo || '';
+  document.getElementById('campCFull').value = c.nombre_completo || c.nombre || '';
   const em = document.getElementById('campCEmail'); em.value = c.email; em.disabled = true;
   document.getElementById('campCEmailHint').style.display = '';
-  document.getElementById('campCResp').value   = c.responsable || '';
+  document.getElementById('campCAlt').value = c.correo_alt || '';
+  campFillRespSelect(c.responsable || '');
   document.getElementById('campCComent').value = c.comentarios || '';
+  const since = document.getElementById('campCSince');
+  if (c.created_at) { since.style.display = ''; since.innerHTML = `<i class="fa-regular fa-clock"></i> En Contactos desde: <b>${campFmtSince(c.created_at)}</b>`; }
+  else since.style.display = 'none';
   document.getElementById('campCTitle').innerHTML = '<i class="fa-solid fa-user-pen"></i> Editar contacto';
   document.getElementById('campCSaveBtn').innerHTML = '<i class="fa-solid fa-check"></i> Guardar cambios';
   const msg = document.getElementById('campCMsg'); msg.textContent = ''; msg.className = 'camp-modal-msg';
   document.getElementById('campContactModal').classList.add('show');
-  setTimeout(() => document.getElementById('campCNombre').focus(), 60);
+  setTimeout(() => document.getElementById('campCFull').focus(), 60);
 }
 
 function campAddContactClose() { document.getElementById('campContactModal').classList.remove('show'); campEditingEmail = null; }
 
 async function campAddContactSave() {
-  const nombre = document.getElementById('campCNombre').value.trim();
   const full   = document.getElementById('campCFull').value.trim();
   const email  = document.getElementById('campCEmail').value.trim().toLowerCase();
+  const alt    = document.getElementById('campCAlt').value.trim().toLowerCase();
   const resp   = document.getElementById('campCResp').value.trim();
   const coment = document.getElementById('campCComent').value.trim();
   const msg    = document.getElementById('campCMsg');
   const fail = (t) => { msg.textContent = t; msg.className = 'camp-modal-msg err'; };
-  if (!nombre) return fail('El nombre es obligatorio.');
+  if (!full) return fail('El nombre completo es obligatorio.');
+  if (alt && !alt.includes('@')) return fail('El correo alternativo no parece válido.');
+  const nombre = full.split(/\s+/)[0];   // nombre corto (el que ve Yesware)
 
   if (campEditingEmail) {
     // ── EDITAR: el email es la llave del histórico, no se cambia aquí ──
     const { error } = await sb.from('lp_contacts').update({
-      nombre, nombre_completo: full || nombre, responsable: resp || null, comentarios: coment || null,
+      nombre, nombre_completo: full, correo_alt: alt || null, responsable: resp || null, comentarios: coment || null,
     }).eq('email', campEditingEmail);
     if (error) return fail('Error al guardar: ' + error.message);
-    toast(`Contacto actualizado: ${nombre}`);
+    toast(`Contacto actualizado: ${full}`);
   } else {
     // ── AÑADIR ──
-    if (!email) return fail('Nombre y email son obligatorios.');
-    if (!email.includes('@')) return fail('El email no parece válido.');
+    if (!email) return fail('El correo es obligatorio.');
+    if (!email.includes('@')) return fail('El correo no parece válido.');
     const dup = campContacts.find(c => c.email === email);
     if (dup) return fail(`Ya existe: ${dup.nombre_completo || dup.nombre || email}.`);
     const { error } = await sb.from('lp_contacts').insert({
-      email, nombre, nombre_completo: full || nombre, responsable: resp || null, comentarios: coment || null,
+      email, nombre, nombre_completo: full, correo_alt: alt || null, responsable: resp || null, comentarios: coment || null,
     });
     if (error) return fail('Error al guardar: ' + error.message);
-    toast(`Contacto añadido: ${nombre}`);
+    toast(`Contacto añadido: ${full}`);
   }
   campAddContactClose();
   campaignsLoaded = false;
   await loadCampaigns();
+}
+
+/* ── Selector de contacto (para Editar / Eliminar desde el desplegable) ── */
+let campPickMode = 'edit';
+function campPickOpen(mode) {
+  campPickMode = mode;
+  document.getElementById('campPickTitle').innerHTML = mode === 'delete'
+    ? '<i class="fa-solid fa-user-minus"></i> Eliminar contacto'
+    : '<i class="fa-solid fa-user-pen"></i> Editar contacto';
+  document.getElementById('campPickSearch').value = '';
+  campPickRender();
+  document.getElementById('campPickModal').classList.add('show');
+  setTimeout(() => document.getElementById('campPickSearch').focus(), 60);
+}
+function campPickClose() { document.getElementById('campPickModal').classList.remove('show'); }
+function campPickRender() {
+  const list = document.getElementById('campPickList');
+  if (!list) return;
+  const q = (document.getElementById('campPickSearch')?.value || '').trim().toLowerCase();
+  let rows = campContacts.slice().sort((a, b) => (a.nombre_completo || a.email).localeCompare(b.nombre_completo || b.email, 'es'));
+  if (q) rows = rows.filter(c => (c.nombre_completo || '').toLowerCase().includes(q) || (c.email || '').toLowerCase().includes(q) || (c.responsable || '').toLowerCase().includes(q));
+  if (!rows.length) { list.innerHTML = '<div class="camp-pick-empty">Sin resultados.</div>'; return; }
+  const isDel = campPickMode === 'delete';
+  list.innerHTML = rows.slice(0, 300).map(c => `
+    <button class="camp-pick-item${isDel ? ' del' : ''}" type="button" onclick="campPickAct('${jsArg(c.email)}')">
+      <span class="camp-pick-ic"><i class="fa-solid ${isDel ? 'fa-trash' : 'fa-pen'}"></i></span>
+      <span class="camp-pick-txt"><span class="camp-pick-name">${escapeHtml(c.nombre_completo || c.nombre || '—')}</span><span class="camp-pick-sub">${escapeHtml(c.email)}${c.responsable ? ' · ' + escapeHtml(c.responsable) : ''}</span></span>
+    </button>`).join('');
+}
+async function campPickAct(email) {
+  if (campPickMode === 'delete') {
+    await campDeleteContact(email);       // ya confirma y recarga campContacts
+    if (document.getElementById('campPickModal')?.classList.contains('show')) campPickRender();
+  } else {
+    campPickClose();
+    campEditContactOpen(email);
+  }
 }
 
 /* ═══════════════════════════════════════════
