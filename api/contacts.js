@@ -161,8 +161,17 @@ export default async function handler(req, res) {
     if (action === 'apertura_tabla') {
       const { data: cts, error: ec } = await admin.from('apertura_contacts').select('email, nombre').order('nombre', { nullsFirst: false });
       if (ec) throw ec;
-      const { data: eng, error: ee } = await admin.from('apertura_engagement').select('email, fecha, nivel');
-      if (ee) throw ee;
+      // Paginado: apertura_engagement crece ~170 filas/día; sin paginar, el default
+      // de 1000 filas de PostgREST truncaba y cortaba los días recientes.
+      let eng = [], engFrom = 0;
+      for (;;) {
+        const { data: page, error: ee } = await admin.from('apertura_engagement')
+          .select('email, fecha, nivel').order('fecha').range(engFrom, engFrom + 999);
+        if (ee) throw ee;
+        eng = eng.concat(page || []);
+        if (!page || page.length < 1000) break;
+        engFrom += 1000;
+      }
       const byEmail = {};
       (eng || []).forEach(e => { (byEmail[e.email] ||= []).push(e); });
       const out = (cts || []).map(c => {

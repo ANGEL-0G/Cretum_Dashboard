@@ -11703,6 +11703,21 @@ let campContacts = [];          // [{email, nombre, nombre_completo, responsable
 let campEditingEmail = null;    // email del contacto en edición (null = modo "añadir")
 let campSort = 'az';            // orden de la matriz: az|za|resp|fecha|rank
 let campHiddenPeriods = new Set(); // meses (YYYY-MM) ocultos en la tabla
+
+// Trae TODAS las filas de una tabla (paginado) — evita el corte a 1000 de PostgREST.
+async function sbSelectAll(table, cols, orderCol) {
+  let out = [], from = 0;
+  for (;;) {
+    let q = sb.from(table).select(cols).range(from, from + 999);
+    if (orderCol) q = q.order(orderCol);
+    const { data, error } = await q;
+    if (error) throw error;
+    out = out.concat(data || []);
+    if (!data || data.length < 1000) break;
+    from += 1000;
+  }
+  return out;
+}
 let campEngagement = [];        // [{email, periodo, nivel, ...}]
 let campPending = null;         // upload pendiente de confirmar
 let campRespFilter = 'all';     // filtro por responsable: 'all' | 'me' | 'none' | 'p:<key>'
@@ -12103,15 +12118,24 @@ async function aptMatrixRender() {
   if (!el) return;
   el.innerHTML = '<div class="db-loading"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
   try {
-    const { data: eng, error } = await sb.from('apertura_engagement').select('email, fecha, opened, clicked, nivel').order('fecha');
-    if (error) throw error;
-    if (!eng || !eng.length) {
+    // Paginado: el default de 1000 filas truncaba los días recientes (~170/día).
+    let eng = [], engFrom = 0;
+    for (;;) {
+      const { data: page, error } = await sb.from('apertura_engagement')
+        .select('email, fecha, opened, clicked, nivel').order('fecha').range(engFrom, engFrom + 999);
+      if (error) throw error;
+      eng = eng.concat(page || []);
+      if (!page || page.length < 1000) break;
+      engFrom += 1000;
+    }
+    if (!eng.length) {
       el.innerHTML = `<div class="apt-empty"><i class="fa-solid fa-chart-simple"></i>Aún no hay seguimiento de Apertura.<br>Cuando definamos el flujo y subas el archivo del día, aquí verás la matriz de quién abrió, por día.</div>`;
       return;
     }
     const { data: cts } = await sb.from('apertura_contacts').select('email, nombre');
     const nameOf = {}; (cts || []).forEach(c => { nameOf[c.email] = c.nombre; });
-    const fechas = [...new Set(eng.map(e => e.fecha))].sort();
+    // Días recientes primero (a la izquierda) para que se vean sin scrollear.
+    const fechas = [...new Set(eng.map(e => e.fecha))].sort().reverse();
     const emails = [...new Set(eng.map(e => e.email))].sort();
     const key = (e, f) => e + '|' + f;
     const map = {}; eng.forEach(e => { map[key(e.email, e.fecha)] = e; });
@@ -12272,13 +12296,13 @@ async function loadCampaigns() {
   const matrix = document.getElementById('campMatrix');
   if (matrix) matrix.innerHTML = '<div class="db-loading"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
   try {
-    const [{ data: contacts, error: e1 }, { data: eng, error: e2 }] = await Promise.all([
-      sb.from('lp_contacts').select('email, nombre, nombre_completo, correo_alt, responsable, comentarios, cancelado, created_at'),
-      sb.from('campaign_engagement').select('email, periodo, nivel, opened, clicked, replied'),
+    const [contacts, eng] = await Promise.all([
+      sb.from('lp_contacts').select('email, nombre, nombre_completo, correo_alt, responsable, comentarios, cancelado, created_at')
+        .then(r => { if (r.error) throw r.error; return r.data || []; }),
+      sbSelectAll('campaign_engagement', 'email, periodo, nivel, opened, clicked, replied'),  // paginado: >1000 filas
     ]);
-    if (e1) throw e1; if (e2) throw e2;
-    campContacts = contacts || [];
-    campEngagement = eng || [];
+    campContacts = contacts;
+    campEngagement = eng;
     campaignsLoaded = true;
     // Mes por defecto = el ANTERIOR (la campaña de un mes se envía la 1ª semana
     // del mes siguiente, así que lo que se sube en junio es el reporte de mayo).
