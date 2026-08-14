@@ -4202,6 +4202,9 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
     .camp-filter-div{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-mute,#8894a6);padding:9px 11px 4px;border-top:1px solid var(--line-soft,#eef2f8);margin-top:4px}
     .camp-filter-panel .cdd-opt .cdd-tag{margin-left:auto}
     .cdd.active .cdd-btn .cdd-label{color:var(--navy);font-weight:600}
+    /* Ordenar: sección de meses embebida */
+    .camp-sort-panel{min-width:244px}
+    .camp-cols-inline{border-top:1px solid var(--line-soft,#eef2f8);margin-top:6px;padding-top:2px}
     /* Barra de filtro por responsable */
     .camp-filterbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:4px 0 12px}
     .camp-fchip{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border:1.5px solid var(--line,#e0e3eb);background:var(--white,#fff);color:var(--ink-soft,#667);border-radius:20px;font-size:12.5px;font-weight:600;font-family:inherit;cursor:pointer;transition:border-color .15s,color .15s,background .15s}
@@ -4671,13 +4674,15 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
           <div class="cdd-panel camp-cdd-panel camp-filter-panel" id="campFilterPanel"></div>
         </div>
         <div class="cdd camp-sort-cdd" id="campSortCdd" style="margin-left:auto">
-          <button class="cdd-btn" type="button" onclick="cddToggle('campSortCdd')" title="Ordenar la tabla"><i class="fa-solid fa-arrow-down-wide-short cdd-ico"></i><span class="cdd-label">Ordenar</span><i class="fa-solid fa-chevron-down cdd-chev"></i></button>
-          <div class="cdd-panel camp-cdd-panel">
+          <button class="cdd-btn" type="button" onclick="campSortOpen()" title="Ordenar y elegir meses"><i class="fa-solid fa-arrow-down-wide-short cdd-ico"></i><span class="cdd-label">Ordenar</span><i class="fa-solid fa-chevron-down cdd-chev"></i></button>
+          <div class="cdd-panel camp-cdd-panel camp-sort-panel">
+            <div class="camp-filter-div" style="border-top:none;margin-top:0;padding-top:2px">Ordenar por</div>
             <div class="cdd-opt sel" data-sort="az" onclick="campSetSort('az');this.closest('.cdd').classList.remove('open');event.stopPropagation()"><i class="fa-solid fa-arrow-down-a-z"></i> Nombre A → Z</div>
             <div class="cdd-opt" data-sort="za" onclick="campSetSort('za');this.closest('.cdd').classList.remove('open');event.stopPropagation()"><i class="fa-solid fa-arrow-up-a-z"></i> Nombre Z → A</div>
             <div class="cdd-opt" data-sort="resp" onclick="campSetSort('resp');this.closest('.cdd').classList.remove('open');event.stopPropagation()"><i class="fa-solid fa-user-tag"></i> Por responsable</div>
             <div class="cdd-opt" data-sort="fecha" onclick="campSetSort('fecha');this.closest('.cdd').classList.remove('open');event.stopPropagation()"><i class="fa-regular fa-clock"></i> Por fecha de agregación</div>
             <div class="cdd-opt" data-sort="rank" onclick="campSetSort('rank');this.closest('.cdd').classList.remove('open');event.stopPropagation()"><i class="fa-solid fa-ranking-star"></i> Por ranking de vistas</div>
+            <div id="campColsPanel" class="camp-cols-inline"></div>
           </div>
         </div>
       </div>
@@ -4689,10 +4694,6 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
           <span class="camp-l2">⚡⚡</span> + click ·
           <span class="camp-l3">⚡⚡⚡</span> + respondió
         </span>
-        <div class="cdd camp-cols-cdd" id="campColsCdd" style="margin-left:auto">
-          <button class="cdd-btn" type="button" onclick="campColsOpen()" title="Mostrar u ocultar meses de la tabla"><i class="fa-solid fa-table-columns cdd-ico"></i><span class="cdd-label">Meses</span><i class="fa-solid fa-chevron-down cdd-chev"></i></button>
-          <div class="cdd-panel camp-cols-panel" id="campColsPanel"></div>
-        </div>
       </div>
 
       <!-- En móvil la matriz es muy ancha: se muestra solo al pulsar este botón -->
@@ -6556,6 +6557,6 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 </div>
 
 <script src="/i18n.js?v=20260805-statusui"></script>
-<script src="/app.js?v=20260813-campfiltro2"></script>
+<script src="/app.js?v=20260813-campfiltro3"></script>
 </body>
 </html>

@@ -12638,7 +12638,7 @@ function campBuildColsPanel() {
 function campTogglePeriod(p, on) { if (on) campHiddenPeriods.delete(p); else campHiddenPeriods.add(p); campBuildColsPanel(); renderCampaigns(); }
 function campToggleYear(y, on) { campAllPeriods().filter(p => p.slice(0, 4) === y).forEach(p => { if (on) campHiddenPeriods.delete(p); else campHiddenPeriods.add(p); }); campBuildColsPanel(); renderCampaigns(); }
 function campColsAll(on) { if (on) campHiddenPeriods.clear(); else campAllPeriods().forEach(p => campHiddenPeriods.add(p)); campBuildColsPanel(); renderCampaigns(); }
-function campColsOpen() { campBuildColsPanel(); cddToggle('campColsCdd'); }
+function campSortOpen() { campBuildColsPanel(); cddToggle('campSortCdd'); }
 
 function renderCampaigns() {
   const matrix = document.getElementById('campMatrix');
