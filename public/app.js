@@ -3792,8 +3792,15 @@ function renderHomeModules() {
   renderHomeNews();
 }
 
-/* ── Widget de noticias del portafolio (home de Cretum) ── */
+/* ── Widget de noticias del portafolio (home de Cretum) — al final, desplegable ── */
 let homeNewsCache = null;
+function homeNewsCollapsed() { try { return localStorage.getItem('hn-collapsed') === '1'; } catch (e) { return false; } }
+function toggleHomeNews() {
+  const host = document.getElementById('homeNews'); if (!host) return;
+  const collapsed = !host.classList.contains('collapsed');
+  host.classList.toggle('collapsed', collapsed);
+  try { localStorage.setItem('hn-collapsed', collapsed ? '1' : '0'); } catch (e) {}
+}
 async function renderHomeNews() {
   const host = document.getElementById('homeNews');
   if (!host) return;
@@ -3810,19 +3817,23 @@ async function renderHomeNews() {
   // La más reciente por empresa (para variedad), luego las 4 más nuevas.
   const perCo = {}; d.items.forEach(i => { if (!perCo[i.company]) perCo[i.company] = i; });
   const top = Object.values(perCo).sort((a, b) => (b.published || '').localeCompare(a.published || '')).slice(0, 4);
+  host.classList.toggle('collapsed', homeNewsCollapsed());
   host.innerHTML = `
-    <div class="hn-head">
-      <div class="hn-title"><i class="fa-solid fa-newspaper"></i> Novedades del portafolio</div>
-      <button class="hn-all" type="button" onclick="window.open('/blog','_blank','noopener')">Ver todas <i class="fa-solid fa-arrow-right"></i></button>
-    </div>
-    <div class="hn-grid">
-      ${top.map(i => `
-        <div class="hn-card">
-          <div class="hn-top"><span class="hn-co">${escapeHtml(i.company)}</span><span class="hn-time">${ago(i.published)}</span></div>
-          <div class="hn-text" title="${escapeHtml(i.title)}">${escapeHtml(i.title_es || i.title)}</div>
-          <div class="hn-foot"><span class="hn-src">${escapeHtml(i.source)}</span><a class="hn-btn" href="${escapeHtml(i.url)}" target="_blank" rel="noopener">Leer <i class="fa-solid fa-arrow-up-right-from-square"></i></a></div>
-        </div>`).join('')}
-    </div>`;
+    <button class="hn-bar" type="button" onclick="toggleHomeNews()" aria-label="Mostrar u ocultar noticias">
+      <span class="hn-bar-title"><i class="fa-solid fa-newspaper"></i> Novedades del portafolio</span>
+      <span class="hn-bar-right"><span class="hn-count">${top.length}</span><i class="fa-solid fa-chevron-down hn-chev"></i></span>
+    </button>
+    <div class="hn-body"><div class="hn-inner">
+      <div class="hn-grid">
+        ${top.map(i => `
+          <div class="hn-card">
+            <div class="hn-top"><span class="hn-co">${escapeHtml(i.company)}</span><span class="hn-time">${ago(i.published)}</span></div>
+            <div class="hn-text" title="${escapeHtml(i.title)}">${escapeHtml(i.title_es || i.title)}</div>
+            <div class="hn-foot"><span class="hn-src">${escapeHtml(i.source)}</span><a class="hn-btn" href="${escapeHtml(i.url)}" target="_blank" rel="noopener">Leer <i class="fa-solid fa-arrow-up-right-from-square"></i></a></div>
+          </div>`).join('')}
+      </div>
+      <div class="hn-more"><button type="button" class="hn-viewall" onclick="window.open('/blog','_blank','noopener')">Ver todas las noticias <i class="fa-solid fa-arrow-right"></i></button></div>
+    </div></div>`;
   host.style.display = '';
 }
 
