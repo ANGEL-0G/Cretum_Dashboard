@@ -3788,6 +3788,42 @@ function renderHomeModules() {
 
   // Tablero del equipo: solo en el home de MVP
   updateHomeBoard();
+  // Noticias del portafolio: solo en el home de Cretum
+  renderHomeNews();
+}
+
+/* ── Widget de noticias del portafolio (home de Cretum) ── */
+let homeNewsCache = null;
+async function renderHomeNews() {
+  const host = document.getElementById('homeNews');
+  if (!host) return;
+  if (currentOrg !== 'cretum') { host.style.display = 'none'; return; }
+  if (!homeNewsCache) {
+    try {
+      const r = await fetch('/data/company-news.json', { cache: 'no-store' });
+      homeNewsCache = await r.json();
+    } catch (e) { host.style.display = 'none'; return; }
+  }
+  const d = homeNewsCache;
+  if (!d || !Array.isArray(d.items) || !d.items.length || currentView !== 'home') { host.style.display = 'none'; return; }
+  const ago = (iso) => { const dt = new Date(iso); if (isNaN(dt)) return ''; const s = (Date.now() - dt.getTime()) / 1000; return s < 3600 ? Math.max(1, Math.round(s / 60)) + ' min' : s < 86400 ? Math.round(s / 3600) + ' h' : Math.round(s / 86400) + ' d'; };
+  // La más reciente por empresa (para variedad), luego las 4 más nuevas.
+  const perCo = {}; d.items.forEach(i => { if (!perCo[i.company]) perCo[i.company] = i; });
+  const top = Object.values(perCo).sort((a, b) => (b.published || '').localeCompare(a.published || '')).slice(0, 4);
+  host.innerHTML = `
+    <div class="hn-head">
+      <div class="hn-title"><i class="fa-solid fa-newspaper"></i> Novedades del portafolio</div>
+      <button class="hn-all" type="button" onclick="window.open('/blog','_blank','noopener')">Ver todas <i class="fa-solid fa-arrow-right"></i></button>
+    </div>
+    <div class="hn-grid">
+      ${top.map(i => `
+        <div class="hn-card">
+          <div class="hn-top"><span class="hn-co">${escapeHtml(i.company)}</span><span class="hn-time">${ago(i.published)}</span></div>
+          <div class="hn-text" title="${escapeHtml(i.title)}">${escapeHtml(i.title_es || i.title)}</div>
+          <div class="hn-foot"><span class="hn-src">${escapeHtml(i.source)}</span><a class="hn-btn" href="${escapeHtml(i.url)}" target="_blank" rel="noopener">Leer <i class="fa-solid fa-arrow-up-right-from-square"></i></a></div>
+        </div>`).join('')}
+    </div>`;
+  host.style.display = '';
 }
 
 /* ═══════════════════════════════════════════

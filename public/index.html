@@ -2207,6 +2207,29 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 .lp-phase-pct{font-weight:700;color:var(--gray-900);white-space:nowrap}
 .lp-dd-nota{font-size:11px;color:var(--gray-500);margin-top:5px;font-style:italic}
 
+/* Widget de noticias del portafolio (home de Cretum) */
+.home-news{margin-bottom:24px;background:var(--card,#fff);border:1px solid var(--line,#e2e8f1);border-radius:16px;padding:18px 20px}
+.hn-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.hn-title{display:flex;align-items:center;gap:9px;font-size:14.5px;font-weight:700;color:var(--ink,#17202e)}
+.hn-title i{color:var(--navy)}
+.hn-all{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--navy);background:none;border:none;cursor:pointer;font-family:inherit;padding:6px 9px;border-radius:8px;transition:background .15s}
+.hn-all:hover{background:var(--navy-pale)}
+.hn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:12px}
+.hn-card{display:flex;flex-direction:column;gap:9px;border:1px solid var(--line,#e2e8f1);border-radius:12px;padding:13px 14px;background:var(--white,#fff);transition:border-color .16s,transform .16s}
+[data-theme="dark"] .hn-card{background:var(--card,#141d2f)}
+.hn-card:hover{border-color:var(--navy-pale);transform:translateY(-2px)}
+.hn-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.hn-co{font-size:11px;font-weight:600;color:var(--navy);background:var(--navy-pale);padding:2px 8px;border-radius:999px;white-space:nowrap}
+.hn-time{font-size:10.5px;color:var(--ink-mute,#8894a6);white-space:nowrap}
+.hn-text{font-size:13px;line-height:1.4;font-weight:600;color:var(--ink,#17202e);flex:1;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.hn-foot{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.hn-src{font-size:11px;color:var(--ink-mute,#8894a6);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hn-btn{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;color:var(--navy);background:var(--navy-pale);padding:5px 10px;border-radius:8px;text-decoration:none;white-space:nowrap;flex:0 0 auto;transition:background .15s,color .15s}
+.hn-btn:hover{background:var(--navy);color:#fff}
+[data-theme="dark"] .hn-btn:hover{color:#0b1220}
+@media (max-width:600px){.hn-grid{grid-template-columns:1fr 1fr}.hn-text{-webkit-line-clamp:2}}
+@media (max-width:400px){.hn-grid{grid-template-columns:1fr}}
+
 .home-modules{
   display:flex;flex-wrap:wrap;justify-content:center;gap:14px;
   margin-bottom:24px;
@@ -3928,6 +3951,9 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 
     <!-- Tablero del equipo (solo MVP): avisos/noticias de Slack + eventos + notas manuales -->
     <div class="home-board" id="homeBoard" style="display:none"></div>
+
+    <!-- Noticias del portafolio (solo Cretum): titulares principales + enlace al hub -->
+    <div class="home-news" id="homeNews" style="display:none"></div>
 
     <div class="home-cust-bar" id="homeCustBar">
       <span class="home-cust-hint" id="homeCustHint"></span>
@@ -6735,6 +6761,6 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 </div>
 
 <script src="/i18n.js?v=20260805-statusui"></script>
-<script src="/app.js?v=20260817-modaccess"></script>
+<script src="/app.js?v=20260817-news"></script>
 </body>
 </html>

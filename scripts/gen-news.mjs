@@ -95,6 +95,18 @@ function tag(block, name) {
   return m ? m[1] : '';
 }
 
+// Traduce EN→ES con el endpoint gratis de Google Translate. Si falla, devuelve ''.
+async function translateES(text) {
+  if (!text) return '';
+  try {
+    const u = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=es&dt=t&q=' + encodeURIComponent(text);
+    const r = await fetch(u, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+    if (!r.ok) return '';
+    const j = await r.json();
+    return (j[0] || []).map(x => x[0]).join('').trim();
+  } catch (e) { return ''; }
+}
+
 async function fetchCompany(c) {
   const q = encodeURIComponent(`${c.q} when:${WINDOW}`);
   const url = `https://news.google.com/rss/search?q=${q}&hl=en-US&gl=US&ceid=US:en`;
@@ -139,6 +151,13 @@ const seen = new Set();
 const items = all
   .filter(x => { if (seen.has(x.url)) return false; seen.add(x.url); return true; })
   .sort((a, b) => (b.published || '').localeCompare(a.published || ''));
+
+// Resumen en español = titular traducido (fallback al inglés si falla la traducción).
+for (const it of items) {
+  it.title_es = (await translateES(it.title)) || it.title;
+  await new Promise(r => setTimeout(r, 120));
+}
+console.log(`[news] traducidas ${items.filter(i => i.title_es !== i.title).length}/${items.length}`);
 
 mkdirSync(OUT_DIR, { recursive: true });
 writeFileSync(OUT, JSON.stringify({
