@@ -15162,6 +15162,19 @@ function spxrEn(s) {
     [/Tras earnings Q2 2027 \(est\.\) — liberación final/g, 'After Q2 2027 earnings (est.) — final release'],
     [/Lock-up extendido \(tras earnings Q4 2026, est\.\)/g, 'Extended lock-up (after Q4 2026 earnings, est.)'],
     [/Bloque (\d) \(~15 días tras el cliff\)/g, 'Block $1 (~15 days after the cliff)'],
+    [/1er día de venta legal — directos \(22F\/22J\/22K\); 2º día hábil tras resultados Q2/g, '1st legal sale day — direct vehicles (22F/22J/22K); 2nd trading day after Q2 results'],
+    [/1er día de venta legal — vehículos de fondo \(Fund IV\/V, 26B\)/g, '1st legal sale day — fund vehicles (Fund IV/V, 26B)'],
+    [/1er día de venta legal/g, '1st legal sale day'],
+    [/2º cliff — 2º día hábil tras resultados Q3 \(~inicios de nov\)/g, '2nd cliff — 2nd trading day after Q3 results (~early Nov)'],
+    [/2º día hábil tras resultados (Q\d)( \d{4})?/g, (m, q, y) => `2nd trading day after ${q}${y || ''} results`],
+    [/~inicios de nov/g, '~early Nov'],
+    [/~inicios de may/g, '~early May'],
+    [/Inicio del extendido/g, 'Start of the extended lock-up'],
+    [/nada en especie antes del 2-feb/g, 'nothing in kind before Feb 2'],
+    [/expiración total del primer tramo \(17%\)/g, 'full expiration of the first tranche (17%)'],
+    [/liberación total del primer tramo/g, 'full release of the first tranche'],
+    [/liberación final/g, 'final release'],
+    [/2º cliff \(~fin nov\/dic 2026\)/g, '2nd cliff (~late Nov/Dec 2026)'],
     [/Bloque (\d)/g, 'Block $1'],
     [/Bono por desempeño — condicional/g, 'Performance bonus — conditional'],
     [/Bono por desempeño/g, 'Performance bonus'],
@@ -15266,42 +15279,64 @@ function spxrBuildData(d, live) {
 
   // Calendario combinado (solo acciones ACTIVAS): A = dos mitades, B = 180 días.
   // Directas: por serie. Indirectas: Fund IV = 20% A + 80% B; Fund V = 100% B.
-  let shA = 0;
+  // Además, cada tramo lleva su ANCLA (22F/22J/22K = directo 6-ago; resto = fondo 9-sep)
+  // para que el calendario use las fechas correctas por origen (doc Release Dates 29-jul-2026).
+  let shAd = 0, shAf = 0, shBd = 0, shBf = 0;
   act.forEach(a => {
-    if (a.indirect) { if (a.fund === 'IV') shA += 0.2 * a.shares; }
-    else if (a.struct === 'A') shA += a.shares;
+    if (a.indirect) {
+      if (a.fund === 'IV') { shAf += 0.2 * a.shares; shBf += 0.8 * a.shares; }
+      else shBf += a.shares;
+    } else if (a.struct === 'A') {
+      if (spxAnchor(a.serie) === 'dir') shAd += a.shares; else shAf += a.shares;
+    } else {
+      if (spxAnchor(a.serie) === 'dir') shBd += a.shares; else shBf += a.shares;
+    }
   });
+  const shA = shAd + shAf;
   const shB = totSh - shA;
 
   return {
     inv, combined, live, act, sold, hasSold: sold.length > 0,
     hasReinv, reinvP, reinvRows, crossReinv, addReinv, cashOut, cashFracNoted, soldShares, soldCost, soldPps, soldDate,
     totSh, totCost, totVal, original, totalGenerado, shA, shB,
-    calendar: spxrCalendar(shA, shB),
+    calendar: spxrCalendar(shAd, shAf, shBd, shBf),
   };
 }
 
 // ── Calendario combinado con redondeo que SIEMPRE suma exacto (lección Turanzas) ──
-function spxrCalendar(shA, shB) {
+function spxrCalendar(shAd, shAf, shBd, shBf) {
+  const shA = shAd + shAf, shB = shBd + shBf;
   const TOT = shA + shB;
   if (TOT <= 0) return { rows: [], TOT: 0 };
-  const pool = shB + shA / 2, ext = shA / 2;
+  const ext = shA / 2;
   const rows = [];
-  let counted = 0, acum = 0;
+  let counted = 0;
   const pctNumL = s => { const m = String(s).match(/(\d+(?:\.\d+)?)/); return m ? +m[1] / 100 : null; };
 
-  // Fase 180 días (todo B + 1ª mitad de A)
+  // Fase 180 días (todo B + 1ª mitad de A) — cada ancla con SU calendario:
+  // directos (22F/22J/22K) desde el 6-ago; vehículos de fondo desde el 9-sep.
   const scope180 = (shA > 0 && shB > 0) ? 'Cal. 2 + 1ª mitad Cal. 1' : (shA > 0 ? '1ª mitad Cal. 1' : 'Calendario de 180 días');
-  const b = SPX_LOCKUP_B_FONDO;   // reporte de acciones indirectas (LPs de fondo) -> ancla 9-sep
-  const numericB = b.filter(e => pctNumL(e.pct) != null);
-  let sum180 = 0;
-  numericB.forEach(e => { sum180 += Math.round(pool * pctNumL(e.pct)); });
-  const rem180 = Math.round(pool) - sum180;
-  b.forEach((e, i) => {
-    const isRem = pctNumL(e.pct) == null;
-    const sh = isRem ? rem180 : Math.round(pool * pctNumL(e.pct));
-    counted += sh; acum = counted;
-    rows.push({ date: spxrDate(e.date), label: e.label, sh, pct: (sh / TOT * 100), acum: (acum / TOT * 100), scope: scope180 });
+  const ev = [];
+  [{ cal: SPX_LOCKUP_B_DIR, pool: shBd + shAd / 2 },
+   { cal: SPX_LOCKUP_B_FONDO, pool: shBf + shAf / 2 }].filter(x => x.pool >= 0.5).forEach(({ cal, pool }) => {
+    let sum = 0;
+    cal.forEach(e => { if (pctNumL(e.pct) != null) sum += Math.round(pool * pctNumL(e.pct)); });
+    cal.forEach(e => {
+      const isRem = pctNumL(e.pct) == null;
+      ev.push({ date: e.date, label: e.label, sh: isRem ? Math.round(pool) - sum : Math.round(pool * pctNumL(e.pct)) });
+    });
+  });
+  // fusionar hitos idénticos de ambas anclas (ej. Día 180 el 8-dic) y ordenar por fecha
+  const d180 = 'Día 180 — liberación total del primer tramo';
+  ev.forEach(e => { if (/^Día 180/.test(e.label)) e.label = d180; });
+  for (let i = ev.length - 1; i > 0; i--) {
+    const j = ev.findIndex(x => x.date === ev[i].date && x.label === ev[i].label);
+    if (j >= 0 && j < i) { ev[j].sh += ev[i].sh; ev.splice(i, 1); }
+  }
+  ev.sort((a, b) => a.date.localeCompare(b.date));
+  ev.forEach(e => {
+    counted += e.sh;
+    rows.push({ date: spxrDate(e.date), label: e.label, sh: e.sh, pct: (e.sh / TOT * 100), acum: (counted / TOT * 100), scope: scope180 });
   });
 
   // Lock-up extendido (2ª mitad de A)
@@ -15321,7 +15356,7 @@ function spxrCalendar(shA, shB) {
   // normaliza acumulado final a 100.0 exacto
   const lastCounted = [...rows].reverse().find(r => !r.bonus);
   if (lastCounted) lastCounted.acum = 100;
-  return { rows, TOT: Math.round(TOT), pool: Math.round(pool), ext: Math.round(ext) };
+  return { rows, TOT: Math.round(TOT), pool: Math.round(shBd + shBf + shA / 2), ext: Math.round(ext) };
 }
 
 // ── Narrativa "¿Qué pasó con la posición?" por caso (ES/EN) ──
@@ -15505,7 +15540,7 @@ tr.bono td{background:#fdf6ec;color:#9a6c1f}
   ${sec(T('Calendario combinado de distribuciones', 'Combined distribution schedule'))}
   <table><thead><tr><th>${T('Fecha', 'Date')}</th><th>${T('Evento', 'Event')}</th><th class="n">${T('Acciones', 'Shares')}</th><th class="n">% total</th><th class="n">${T('Acum. %', 'Cum. %')}</th><th>${T('Detalle', 'Detail')}</th></tr></thead>
   <tbody>${calRows}<tr class="tot"><td colspan="2">${T('Total liberado', 'Total released')}</td><td class="n">${SPXR_INT(D.calendar.TOT)}</td><td class="n">100%</td><td></td><td class="det"></td></tr></tbody></table>
-  <div class="fn">${T('Acciones por fecha = suma de lo que libera cada calendario ese día (redondeadas). Fechas del documento oficial de lock-up por vehículo (29-jul-2026): vehículos de fondo venden desde el 9 sep 2026; día 180 = 8 dic 2026. El prospecto final es la autoridad.', 'Shares per date = sum of what each schedule releases that day (rounded). Dates from the official per-vehicle lock-up document (Jul 29, 2026): fund vehicles can sell from Sep 9, 2026; day 180 = Dec 8, 2026. The final prospectus is the controlling authority.')}</div>
+  <div class="fn">${T('Acciones por fecha = suma de lo que libera cada calendario ese día (redondeadas). Fechas de los documentos oficiales de lock-up (29-jul-2026): directos (22F/22J/22K) venden desde el 6 ago 2026, vehículos de fondo desde el 9 sep 2026; día 180 = 8 dic 2026. El prospecto final es la autoridad.', 'Shares per date = sum of what each schedule releases that day (rounded). Dates from the official lock-up documents (Jul 29, 2026): direct vehicles (22F/22J/22K) can sell from Aug 6, 2026, fund vehicles from Sep 9, 2026; day 180 = Dec 8, 2026. The final prospectus is the controlling authority.')}</div>
   <div class="note">${T(`<b>Split 5:1:</b> todas las acciones están en base post-split. <b>Precio:</b> el valor de ${SPXR_MONEY(D.totVal)} usa el precio de cierre de hoy de ${SPXR_P2(P)}/acción y se mueve con el precio público de SpaceX. <b>Cifras no realizadas:</b> el monto final dependerá del precio al liberarse cada tramo y de la elección cash/in-kind; las cifras no reflejan retenciones por gastos ni carried interest.${D.hasSold && D.cashOut > 0.01 ? ` <b>Venta previa:</b> el efectivo de la liquidación parcial (${SPXR_MONEY(D.cashOut)}) ya fue entregado y no está sujeto al lock-up.` : ''}`, `<b>5:1 split:</b> all shares are on a post-split basis. <b>Price:</b> the ${SPXR_MONEY(D.totVal)} value uses today's closing price of ${SPXR_P2(P)}/share and moves with SpaceX's public price. <b>Unrealized figures:</b> the final amount will depend on the price when each tranche is released and on the cash/in-kind election; figures do not reflect withholding for expenses or carried interest.${D.hasSold && D.cashOut > 0.01 ? ` <b>Prior sale:</b> the cash from the partial liquidation (${SPXR_MONEY(D.cashOut)}) has already been delivered and is not subject to the lock-up.` : ''}`)}</div>
   ${sec(T('Anexo 1 — Distribución de los primeros 180 días', 'Annex 1 — First 180 days release'))}
   <p class="para">${T(`Mecanismo de las acciones que se liberan en los primeros ~6 meses${D.shA > 0 && D.shB > 0 ? ` (todo el Calendario 2 + la 1ª mitad del Calendario 1: ${SPXR_INT(D.calendar.pool)} acciones)` : ` (${SPXR_INT(D.calendar.pool)} acciones)`}. Liberación escalonada ligada a desempeño; expira el 9 de diciembre de 2026. Porcentajes sobre las acciones sujetas a este calendario.`, `Mechanics of the shares released within the first ~6 months${D.shA > 0 && D.shB > 0 ? ` (all of Schedule 2 + the 1st half of Schedule 1: ${SPXR_INT(D.calendar.pool)} shares)` : ` (${SPXR_INT(D.calendar.pool)} shares)`}. Staggered release tied to performance; expires December 9, 2026. Percentages are over the shares subject to this schedule.`)}</p>
