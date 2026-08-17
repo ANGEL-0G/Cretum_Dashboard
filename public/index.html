@@ -1996,20 +1996,25 @@ body:has(.modal-backdrop.show,.camp-modal-backdrop.show,.home-picker-backdrop.sh
 .home-board{margin-bottom:24px}
 .hb-card{background:#fff;border:1px solid var(--gray-200);border-radius:14px;padding:18px 20px 16px}
 [data-theme="dark"] .hb-card{background:var(--gray-50)}
-/* Cabecera clicable: título + descripción + flecha (siempre visible) */
+/* Cabecera clicable: botón naranja (acento MVP) con texto blanco y flecha */
 .hb-toggle{
   display:flex;align-items:center;gap:10px;width:100%;
-  border:0;background:transparent;padding:2px 0;margin:0;
+  border:0;background:var(--navy);color:#fff;
+  padding:11px 15px;margin:0;border-radius:10px;
   font-family:var(--font);cursor:pointer;text-align:left;
+  transition:filter .15s,transform .16s cubic-bezier(.23,1,.32,1);
 }
+.hb-toggle:hover{filter:brightness(1.08)}
+.hb-toggle:active{transform:scale(.99)}
 .hb-chev{
-  flex:0 0 auto;font-size:11px;color:var(--gray-400);
-  transition:transform .22s cubic-bezier(.23,1,.32,1),color .15s;
+  flex:0 0 auto;font-size:11px;color:rgba(255,255,255,.9);
+  transition:transform .22s cubic-bezier(.23,1,.32,1);
 }
-.hb-toggle:hover .hb-chev{color:var(--navy)}
 .hb-card.collapsed .hb-chev{transform:rotate(-90deg)}
-.hb-title{font-size:13px;font-weight:600;color:var(--gray-700);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
-.hb-desc{font-size:12px;color:var(--gray-500);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hb-title{font-size:13px;font-weight:600;color:#fff;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+.hb-desc{font-size:12px;color:rgba(255,255,255,.8);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* En MVP oscuro el acento (--navy) se aclara demasiado para texto blanco: fija el naranja de marca */
+[data-theme="dark"][data-org="mvp"] .hb-toggle{background:#ED7824}
 /* Cuerpo colapsable (grid-template-rows: animable sin layout thrash) */
 .hb-wrap{
   display:grid;grid-template-rows:1fr;
