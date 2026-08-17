@@ -3785,6 +3785,206 @@ function renderHomeModules() {
   // Panel ejecutivo MVP: ahora vive en Base de Datos → botón "Full LATAM MVP Snapshot".
   const kpiHost = document.getElementById('homeKpis');
   if (kpiHost) { kpiHost.style.display = 'none'; kpiHost.innerHTML = ''; }
+
+  // Tablero del equipo: solo en el home de MVP
+  updateHomeBoard();
+}
+
+/* ═══════════════════════════════════════════
+   TABLERO DEL EQUIPO (home MVP)
+   Avisos/noticias/eventos: los alimenta el digest de Slack
+   (GitHub Actions, 8:00 y 18:00 CDMX → tabla bulletin_items)
+   + notas manuales del equipo desde el composer.
+═══════════════════════════════════════════ */
+let hbLoaded = false;
+let hbItems = [];          // filas de bulletin_items (org=mvp), más reciente primero
+let hbLastRun = null;      // ran_at de la última corrida del digest
+let hbExpanded = false;    // "Ver todos" del feed
+let hbKind = 'aviso';      // tipo seleccionado en el composer
+const HB_FEED_LIMIT = 5;
+
+function updateHomeBoard() {
+  const host = document.getElementById('homeBoard');
+  if (!host) return;
+  if (currentOrg !== 'mvp') { host.style.display = 'none'; host.innerHTML = ''; return; }
+  host.style.display = '';
+  if (!hbLoaded) {
+    host.innerHTML = `<div class="hb-card"><div class="home-kpis-load">${t('Cargando tablero…')}</div></div>`;
+    loadBoard();
+  } else {
+    renderBoard();
+  }
+}
+
+async function loadBoard() {
+  const host = document.getElementById('homeBoard');
+  try {
+    const [items, runs] = await Promise.all([
+      sb.from('bulletin_items').select('*').eq('org', 'mvp')
+        .order('posted_at', { ascending: false, nullsFirst: false }).limit(80),
+      sb.from('bulletin_runs').select('ran_at').eq('org', 'mvp')
+        .order('ran_at', { ascending: false }).limit(1),
+    ]);
+    if (items.error) throw items.error;
+    hbItems = items.data || [];
+    hbLastRun = (runs.data && runs.data[0]) ? runs.data[0].ran_at : null;
+    hbLoaded = true;
+    renderBoard();
+  } catch (e) {
+    if (host) host.innerHTML = `<div class="hb-card"><div class="hb-err">${t('No se pudo cargar el tablero')}: ${escapeHtml(e.message || 'error')}</div></div>`;
+  }
+}
+
+// "hoy 8:04" / "ayer" / "14 ago"
+function hbWhen(iso) {
+  if (!iso) return '';
+  const d = new Date(iso), now = new Date();
+  const day = x => `${x.getFullYear()}-${x.getMonth()}-${x.getDate()}`;
+  const yest = new Date(now); yest.setDate(now.getDate() - 1);
+  if (day(d) === day(now)) return `${t('hoy')} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+  if (day(d) === day(yest)) return t('ayer');
+  const mes = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'][d.getMonth()];
+  return `${d.getDate()} ${mes}`;
+}
+
+function hbCanDelete(it) {
+  if (currentProfile?.role === 'admin') return true;
+  return it.source === 'manual' && it.created_by === currentUser;
+}
+
+function hbItemHTML(it) {
+  const meta = [];
+  if (it.author) meta.push(escapeHtml(it.author));
+  if (it.source === 'slack' && it.channel) meta.push(escapeHtml(it.channel));
+  if (it.source === 'manual') meta.push(t('nota del equipo'));
+  meta.push(hbWhen(it.posted_at || it.created_at));
+  const title = it.permalink
+    ? `<a class="hb-t" href="${escapeHtml(it.permalink)}" target="_blank" rel="noopener">${escapeHtml(it.title)}</a>`
+    : `<div class="hb-t">${escapeHtml(it.title)}</div>`;
+  const del = hbCanDelete(it)
+    ? `<button class="hb-del" onclick="hbDelete('${it.id}')" title="${t('Eliminar')}" aria-label="${t('Eliminar')}"><i class="fa-solid fa-xmark"></i></button>`
+    : '';
+  return `<div class="hb-item">
+    <span class="hb-chip ${it.kind}">${t(it.kind === 'aviso' ? 'Aviso' : it.kind === 'noticia' ? 'Noticia' : 'Evento')}</span>
+    <div class="hb-txt">${title}<div class="hb-m">${meta.join(' · ')}</div></div>
+    ${del}
+  </div>`;
+}
+
+function hbEventHTML(it) {
+  const mes = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+  let dateBox;
+  if (it.event_date) {
+    const [y, m, d] = it.event_date.split('-').map(Number);
+    dateBox = `<div class="hb-ev-d"><div class="hb-ev-day">${d}</div><div class="hb-ev-mon">${mes[m - 1]}</div></div>`;
+  } else {
+    dateBox = `<div class="hb-ev-d"><div class="hb-ev-day"><i class="fa-regular fa-calendar" style="font-size:13px"></i></div><div class="hb-ev-mon">—</div></div>`;
+  }
+  const t_ = it.permalink
+    ? `<a class="hb-t hb-ev-t" href="${escapeHtml(it.permalink)}" target="_blank" rel="noopener" style="font-size:12.5px">${escapeHtml(it.title)}</a>`
+    : `<div class="hb-ev-t">${escapeHtml(it.title)}</div>`;
+  return `<div class="hb-ev">${dateBox}<div class="hb-txt">${t_}${it.author ? `<div class="hb-ev-m">${escapeHtml(it.author)}</div>` : ''}</div></div>`;
+}
+
+function renderBoard() {
+  const host = document.getElementById('homeBoard');
+  if (!host || currentOrg !== 'mvp') return;
+
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const events = hbItems
+    .filter(it => it.kind === 'evento' && (!it.event_date || new Date(it.event_date + 'T23:59:59') >= today))
+    .sort((a, b) => (a.event_date || '9999') < (b.event_date || '9999') ? -1 : 1)
+    .slice(0, 6);
+  const feed = hbItems.filter(it => it.kind !== 'evento');
+  const shown = hbExpanded ? feed.slice(0, 25) : feed.slice(0, HB_FEED_LIMIT);
+  const hidden = feed.length - shown.length;
+
+  const upd = hbLastRun
+    ? `${t('Actualizado')} ${hbWhen(hbLastRun)} · 8:00 / 18:00`
+    : `${t('Se actualiza a las')} 8:00 / 18:00`;
+
+  const feedHtml = shown.length
+    ? shown.map(hbItemHTML).join('')
+      + (!hbExpanded && hidden > 0 ? `<button class="hb-more" onclick="hbToggleExpand()">${t('Ver todos')} (${feed.length})</button>` : '')
+      + (hbExpanded && feed.length > HB_FEED_LIMIT ? `<button class="hb-more" onclick="hbToggleExpand()">${t('Ver menos')}</button>` : '')
+    : `<div class="hb-empty">${t('Sin avisos por ahora. El resumen de Slack llega a las 8:00 y 18:00.')}</div>`;
+
+  const evHtml = events.length
+    ? events.map(hbEventHTML).join('')
+    : `<div class="hb-empty">${t('Sin eventos próximos.')}</div>`;
+
+  host.innerHTML = `<div class="hb-card">
+    <div class="hb-head">
+      <span class="hb-title">${t('Tablero del equipo')}</span>
+      <span class="hb-upd">${upd}</span>
+      <button class="hb-add" onclick="openBoardComposer()"><i class="fa-solid fa-plus"></i> ${t('Nota')}</button>
+    </div>
+    <div class="hb-grid">
+      <div>
+        <div class="hb-col-h">${t('Avisos y noticias')} · #general</div>
+        ${feedHtml}
+      </div>
+      <div>
+        <div class="hb-col-h">${t('Próximos eventos')}</div>
+        ${evHtml}
+      </div>
+    </div>
+  </div>`;
+}
+
+function hbToggleExpand() { hbExpanded = !hbExpanded; renderBoard(); }
+
+async function hbDelete(id) {
+  const ok = await showConfirm(t('¿Eliminar esta nota?'), t('Se quitará del tablero para todo el equipo.'));
+  if (!ok) return;
+  const { error } = await sb.from('bulletin_items').delete().eq('id', id);
+  if (error) { toast(t('No se pudo eliminar')); return; }
+  hbItems = hbItems.filter(it => it.id !== id);
+  renderBoard();
+}
+
+/* ── Composer de nota manual ── */
+function openBoardComposer() {
+  hbKind = 'aviso';
+  document.querySelectorAll('.hb-kind-btn').forEach(b => b.classList.toggle('on', b.dataset.k === 'aviso'));
+  const dr = document.getElementById('hbDateRow'); if (dr) dr.style.display = 'none';
+  const ti = document.getElementById('hbTitle'); if (ti) ti.value = '';
+  const bo = document.getElementById('hbBody'); if (bo) bo.value = '';
+  const da = document.getElementById('hbDate'); if (da) da.value = '';
+  document.getElementById('hbComposer')?.classList.add('show');
+  setTimeout(() => ti?.focus(), 80);
+}
+function closeBoardComposer() {
+  document.getElementById('hbComposer')?.classList.remove('show');
+}
+function hbSetKind(k) {
+  hbKind = k;
+  document.querySelectorAll('.hb-kind-btn').forEach(b => b.classList.toggle('on', b.dataset.k === k));
+  const dr = document.getElementById('hbDateRow');
+  if (dr) dr.style.display = k === 'evento' ? '' : 'none';
+}
+async function publishBoardNote() {
+  const title = document.getElementById('hbTitle')?.value.trim();
+  if (!title) { toast(t('Escribe un título')); return; }
+  const btn = document.getElementById('hbPublish');
+  if (btn) btn.disabled = true;
+  const body = document.getElementById('hbBody')?.value.trim() || null;
+  const date = document.getElementById('hbDate')?.value || null;
+  const row = {
+    org: 'mvp', kind: hbKind, title, body,
+    source: 'manual',
+    author: currentProfile?.full_name || null,
+    created_by: currentUser,
+    event_date: hbKind === 'evento' ? date : null,
+    posted_at: new Date().toISOString(),
+  };
+  const { data, error } = await sb.from('bulletin_items').insert(row).select().single();
+  if (btn) btn.disabled = false;
+  if (error) { toast(t('No se pudo publicar la nota')); return; }
+  hbItems.unshift(data);
+  closeBoardComposer();
+  renderBoard();
+  toast(t('Nota publicada'));
 }
 
 // Formato compacto de USD

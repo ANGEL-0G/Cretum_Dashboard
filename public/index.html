@@ -1991,6 +1991,107 @@ body:has(.modal-backdrop.show,.camp-modal-backdrop.show,.home-picker-backdrop.sh
 .home-top-fill{height:100%;background:var(--navy);border-radius:6px}
 .home-top-val{flex:0 0 auto;color:var(--gray-700);font-weight:600;font-variant-numeric:tabular-nums}
 .home-kpis-load,.home-kpis-err{font-size:13px;color:var(--gray-500);padding:8px 2px}
+
+/* ── Tablero del equipo (home MVP): digest de Slack + notas manuales ── */
+.home-board{margin-bottom:24px}
+.hb-card{background:#fff;border:1px solid var(--gray-200);border-radius:14px;padding:18px 20px 16px}
+[data-theme="dark"] .hb-card{background:var(--gray-50)}
+.hb-head{display:flex;align-items:baseline;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.hb-title{font-size:13px;font-weight:600;color:var(--gray-700);text-transform:uppercase;letter-spacing:.5px}
+.hb-upd{font-size:11px;color:var(--gray-400)}
+.hb-add{
+  margin-left:auto;display:inline-flex;align-items:center;gap:6px;
+  padding:6px 13px;border:1px solid var(--gray-200);border-radius:999px;
+  background:transparent;color:var(--gray-700);font-size:12px;font-weight:500;
+  font-family:var(--font);cursor:pointer;
+  transition:border-color .15s,color .15s,transform .16s cubic-bezier(.23,1,.32,1);
+}
+.hb-add:hover{border-color:var(--navy);color:var(--navy)}
+.hb-add:active{transform:scale(.97)}
+.hb-grid{display:grid;grid-template-columns:1fr 264px;gap:6px 30px;align-items:start}
+@media(max-width:760px){.hb-grid{grid-template-columns:1fr;gap:18px}}
+.hb-col-h{font-size:11px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:var(--gray-400);margin-bottom:6px}
+.hb-item{
+  display:flex;gap:10px;align-items:flex-start;position:relative;
+  padding:9px 26px 9px 10px;margin:0 -10px;border-radius:9px;
+  transition:background .15s;
+  animation:hbIn .3s cubic-bezier(.23,1,.32,1) both;
+}
+.hb-item:nth-child(2){animation-delay:40ms}
+.hb-item:nth-child(3){animation-delay:80ms}
+.hb-item:nth-child(4){animation-delay:120ms}
+.hb-item:nth-child(5){animation-delay:160ms}
+.hb-item:nth-child(n+6){animation-delay:200ms}
+@keyframes hbIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@media (prefers-reduced-motion: reduce){.hb-item{animation:none}}
+.hb-item:hover{background:var(--gray-50)}
+[data-theme="dark"] .hb-item:hover{background:var(--gray-100)}
+.hb-chip{
+  flex:0 0 auto;margin-top:2px;font-size:9.5px;font-weight:600;
+  letter-spacing:.4px;text-transform:uppercase;border-radius:999px;padding:3px 8px;
+}
+.hb-chip.aviso{background:var(--amber-bg);color:var(--amber)}
+.hb-chip.noticia{background:var(--blue-bg);color:var(--blue)}
+.hb-chip.evento{background:var(--green-bg);color:var(--green)}
+.hb-txt{min-width:0;flex:1}
+.hb-t{font-size:13.5px;line-height:1.45;color:var(--gray-900);word-break:break-word}
+a.hb-t{text-decoration:none;transition:color .15s}
+a.hb-t:hover{color:var(--navy)}
+.hb-m{font-size:11px;color:var(--gray-500);margin-top:2px;display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.hb-m i{font-size:9px}
+.hb-del{
+  position:absolute;top:9px;right:6px;border:0;background:transparent;
+  color:var(--gray-300);font-size:12px;cursor:pointer;padding:3px 5px;border-radius:6px;
+  opacity:0;transition:opacity .15s,color .15s;
+}
+.hb-item:hover .hb-del{opacity:1}
+.hb-del:hover{color:var(--red)}
+@media(pointer:coarse){.hb-del{opacity:1}}
+.hb-ev{display:flex;gap:11px;align-items:center;padding:7px 0}
+.hb-ev + .hb-ev{border-top:1px dashed var(--gray-100)}
+.hb-ev-d{
+  flex:0 0 42px;text-align:center;border:1px solid var(--gray-200);
+  border-radius:9px;padding:5px 0 4px;background:var(--white);
+}
+.hb-ev-day{font-family:var(--mono);font-size:15px;font-weight:500;color:var(--gray-900);line-height:1.15}
+.hb-ev-mon{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--navy)}
+.hb-ev-t{font-size:12.5px;line-height:1.4;color:var(--gray-900);word-break:break-word}
+.hb-ev-m{font-size:10.5px;color:var(--gray-500);margin-top:1px}
+.hb-more{
+  border:0;background:transparent;color:var(--navy);font-size:12px;font-weight:500;
+  font-family:var(--font);cursor:pointer;padding:7px 0 2px;
+  transition:opacity .15s;
+}
+.hb-more:hover{opacity:.75}
+.hb-empty{font-size:12.5px;color:var(--gray-400);padding:6px 0 2px;line-height:1.55}
+.hb-err{font-size:12.5px;color:var(--red);padding:6px 0 2px}
+/* Composer de nota manual */
+.hb-comp{text-align:left;width:400px}
+.hb-kinds{display:flex;gap:6px;margin:14px 0 12px}
+.hb-kind-btn{
+  flex:1;padding:7px 0;border:1px solid var(--gray-200);border-radius:999px;
+  background:transparent;color:var(--gray-500);font-size:12px;font-weight:500;
+  font-family:var(--font);cursor:pointer;
+  transition:border-color .15s,color .15s,background-color .15s,transform .16s cubic-bezier(.23,1,.32,1);
+}
+.hb-kind-btn:active{transform:scale(.97)}
+.hb-kind-btn.on{border-color:var(--navy);color:var(--navy);background:var(--navy-ghost)}
+.hb-inp{
+  width:100%;padding:9px 12px;border:1px solid var(--gray-200);border-radius:var(--r-md);
+  background:var(--white);color:var(--gray-900);font-size:13.5px;font-family:var(--font);
+  margin-bottom:10px;transition:border-color .15s;
+}
+.hb-inp:focus{outline:none;border-color:var(--navy)}
+.hb-ta{resize:vertical;min-height:64px;line-height:1.5}
+.hb-f-label{display:block;font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:5px}
+.hb-pub{background:var(--navy);color:#fff}
+.hb-pub:hover{filter:brightness(1.08)}
+.hb-pub:active{transform:scale(.97)}
+[data-theme="dark"] .hb-ev-d{background:var(--gray-100)}
+[data-theme="dark"][data-org="mvp"] .hb-card{background:#1a1610}
+[data-theme="dark"][data-org="mvp"] .hb-inp{background:#120e0a;border-color:#3d3428}
+[data-theme="dark"][data-org="mvp"] .hb-ev-d{background:#12100a;border-color:#3d3428}
+
 /* Botón + modal Full LATAM MVP Snapshot */
 .db-snap-btn{margin-left:auto;display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border:none;border-radius:10px;background:var(--navy);color:#fff;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:filter .15s}
 .db-snap-btn:hover{filter:brightness(1.08)}
@@ -3825,6 +3926,9 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 
     <div class="home-kpis" id="homeKpis" style="display:none"></div>
 
+    <!-- Tablero del equipo (solo MVP): avisos/noticias de Slack + eventos + notas manuales -->
+    <div class="home-board" id="homeBoard" style="display:none"></div>
+
     <div class="home-cust-bar" id="homeCustBar">
       <span class="home-cust-hint" id="homeCustHint"></span>
       <span class="home-cust-tip" id="homeCustTip" data-i18n>Personaliza tu menú dentro de Cretum Desk</span>
@@ -3838,6 +3942,29 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
     <div class="home-soon">
       <div class="home-soon-h" data-i18n>Próximamente</div>
       <div class="home-soon-grid" id="homeSoonGrid"></div>
+    </div>
+  </div>
+
+  <!-- Composer: nota manual del tablero del equipo (home MVP).
+       Usa .modal-backdrop → el "atrás" del teléfono la cierra vía dismissTopLayer(). -->
+  <div class="modal-backdrop" id="hbComposer" onclick="if(event.target===this)closeBoardComposer()">
+    <div class="modal-box hb-comp">
+      <div class="modal-title" style="text-align:left" data-i18n>Nueva nota</div>
+      <div class="hb-kinds">
+        <button class="hb-kind-btn on" data-k="aviso" onclick="hbSetKind('aviso')" data-i18n>Aviso</button>
+        <button class="hb-kind-btn" data-k="noticia" onclick="hbSetKind('noticia')" data-i18n>Noticia</button>
+        <button class="hb-kind-btn" data-k="evento" onclick="hbSetKind('evento')" data-i18n>Evento</button>
+      </div>
+      <input class="hb-inp" id="hbTitle" maxlength="140" placeholder="Título — lo que el equipo debe saber" autocomplete="off">
+      <textarea class="hb-inp hb-ta" id="hbBody" rows="3" placeholder="Detalle (opcional)"></textarea>
+      <div id="hbDateRow" style="display:none">
+        <label class="hb-f-label" for="hbDate" data-i18n>Fecha del evento</label>
+        <input type="date" class="hb-inp" id="hbDate">
+      </div>
+      <div class="modal-actions" style="justify-content:flex-end">
+        <button class="modal-btn modal-cancel" onclick="closeBoardComposer()" data-i18n>Cancelar</button>
+        <button class="modal-btn hb-pub" id="hbPublish" onclick="publishBoardNote()" data-i18n>Publicar</button>
+      </div>
     </div>
   </div>
 
