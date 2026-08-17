@@ -4185,6 +4185,17 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
     .camp-pick-name{font-size:13.5px;font-weight:600;color:var(--ink,#223)}
     .camp-pick-sub{font-size:11.5px;color:var(--ink-mute,#8894a6);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .camp-pick-empty{padding:20px;text-align:center;color:var(--ink-mute,#8894a6);font-size:13px}
+    /* Acceso a módulos por usuario */
+    .usr-mod-sub{font-size:13px;color:var(--ink-soft,#556);margin-bottom:12px}
+    .usr-mod-all{display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--ink-soft,#556);padding:11px 13px;border:1px solid var(--line,#e0e3eb);border-radius:11px;margin-bottom:12px;cursor:pointer;line-height:1.4}
+    .usr-mod-all input{margin-top:1px;accent-color:var(--navy);width:16px;height:16px;flex:0 0 auto}
+    .usr-mod-all b{color:var(--ink,#223)}
+    .usr-mod-list{display:flex;flex-direction:column;gap:6px;max-height:44vh;overflow-y:auto;transition:opacity .15s ease}
+    .usr-mod-list.is-all{opacity:.45;pointer-events:none}
+    .usr-mod-item{display:flex;align-items:center;gap:11px;padding:9px 12px;border:1px solid var(--line,#e0e3eb);border-radius:10px;cursor:pointer;font-size:13.5px;color:var(--ink,#223)}
+    .usr-mod-item:hover{border-color:var(--navy)}
+    .usr-mod-item input{accent-color:var(--navy);width:16px;height:16px;flex:0 0 auto}
+    .usr-mod-ic{width:28px;height:28px;border-radius:8px;background:var(--navy-pale);color:var(--navy);display:grid;place-items:center;flex:0 0 auto;font-size:12px}
     /* Pop-up de Importar de Yesware */
     .camp-modal .camp-month{width:100%;margin-bottom:4px}
     .camp-drop-modal{flex:none;width:100%;min-width:0;min-height:136px;flex-direction:column;text-align:center;margin-top:6px;cursor:pointer;transition:border-color .16s ease,background .16s ease,transform .12s ease}
@@ -5383,6 +5394,25 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 <div id="usrKebabMenu" class="um-menu" hidden></div>
 <div id="usrRolePop" class="rp-pop" hidden></div>
 
+<!-- Modal: acceso a módulos por usuario (solo admin) -->
+<div class="camp-modal-backdrop" id="usrModulesModal" onclick="if(event.target===this)usrModulesClose()">
+  <div class="camp-modal">
+    <div class="camp-modal-head">
+      <div class="camp-modal-title"><i class="fa-solid fa-table-cells-large"></i> Acceso a módulos</div>
+      <button class="camp-modal-x" onclick="usrModulesClose()" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="camp-modal-body">
+      <div class="usr-mod-sub" id="usrModulesWho"></div>
+      <label class="usr-mod-all"><input type="checkbox" id="usrModulesAll" onchange="usrModulesToggleAll(this.checked)"><span><b>Acceso a todo</b><br>Sin restricción — ve todos los módulos que permite su rol.</span></label>
+      <div class="usr-mod-list" id="usrModulesList"></div>
+    </div>
+    <div class="camp-modal-foot">
+      <button class="camp-prev-cancel" onclick="usrModulesClose()">Cancelar</button>
+      <button class="btn-primary" id="usrModulesSaveBtn" onclick="usrModulesSave()"><i class="fa-solid fa-check"></i> Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: crear / editar usuario -->
 <div class="camp-modal-backdrop" id="usrModal" onclick="if(event.target===this)usrClose()">
   <div class="camp-modal">
@@ -6578,6 +6608,6 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 </div>
 
 <script src="/i18n.js?v=20260805-statusui"></script>
-<script src="/app.js?v=20260814-apertura1000"></script>
+<script src="/app.js?v=20260817-modaccess"></script>
 </body>
 </html>

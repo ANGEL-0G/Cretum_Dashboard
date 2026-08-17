@@ -44,11 +44,22 @@ async function initSupabase() {
 async function loadProfile(userId) {
   const { data, error } = await sb
     .from('profiles')
-    .select('id, full_name, initials, role')
+    .select('id, full_name, initials, role, allowed_modules')
     .eq('id', userId)
     .single();
   if (error) throw error;
   return data;
+}
+
+// ¿El usuario actual tiene acceso a este módulo (view)? Gating de interfaz por
+// usuario (lo define el admin). Los admins siempre ven todo; NULL = sin
+// restricción; el inicio/selector siempre disponibles.
+function moduleAllowed(view) {
+  if (currentProfile?.role === 'admin') return true;
+  if (view === 'home' || view === 'selector' || view === 'usuarios') return true;
+  const am = currentProfile?.allowed_modules;
+  if (!Array.isArray(am)) return true;   // null/indefinido = todo
+  return am.includes(view);
 }
 
 async function loadAllProfiles() {
@@ -3624,7 +3635,8 @@ function homeAllowedModules() {
   const isColab = currentProfile?.role === 'colaborador';
   const isEditorOrAdmin = isAdmin || currentProfile?.role === 'editor' || isColab;
   return (ORG_MODULES[currentOrg] || []).filter(m =>
-    (!m.adminOnly || isAdmin) && (!m.editorOrAdmin || isEditorOrAdmin) && !(m.hideColaborador && isColab));
+    (!m.adminOnly || isAdmin) && (!m.editorOrAdmin || isEditorOrAdmin) && !(m.hideColaborador && isColab)
+    && moduleAllowed(m.view));
 }
 
 // Aplica orden guardado (los desconocidos van al final, en su orden original) y separa ocultos.
@@ -4153,7 +4165,8 @@ function renderNavList() {
   const isColab = currentProfile?.role === 'colaborador';
   const isEditorOrAdmin = isAdmin || currentProfile?.role === 'editor' || isColab;
   const items = (currentOrg ? ORG_NAV[currentOrg] : []).filter(it =>
-    (!it.adminOnly || isAdmin) && (!it.editorOrAdmin || isEditorOrAdmin) && !(it.hideColaborador && isColab));
+    (!it.adminOnly || isAdmin) && (!it.editorOrAdmin || isEditorOrAdmin) && !(it.hideColaborador && isColab)
+    && moduleAllowed(it.view));
   list.innerHTML = items.map(it => `
     <button class="nav-item" data-view="${it.view}" onclick="switchView('${it.view}')">
       <i class="${it.brand ? 'fa-brands' : 'fa-solid'} ${it.icon}"></i>
@@ -4190,6 +4203,8 @@ window.__afterLang = function () {
 let viewHistory = [];
 
 function switchView(view, isBack = false) {
+  // Acceso por usuario (lo define el admin): si no tiene este módulo, al inicio.
+  if (!moduleAllowed(view)) view = 'home';
   // History — guarda la vista actual antes de cambiar
   if (!isBack && currentView && currentView !== view) {
     if (viewHistory[viewHistory.length - 1] !== currentView) {
@@ -14114,6 +14129,8 @@ function usrMenu(id, ev) {
     `<button onclick="usrEditOpen('${id}');usrMenuClose()"><i class="fa-solid fa-pen"></i> Editar datos</button>`,
     `<button onclick="usrPwOpen('${id}');usrMenuClose()"><i class="fa-solid fa-key"></i> Restablecer contraseña</button>`,
   ];
+  // Módulos por usuario: no aplica a admins (siempre ven todo).
+  if (u.role !== 'admin') items.push(`<button onclick="usrModulesOpen('${id}');usrMenuClose()"><i class="fa-solid fa-table-cells-large"></i> Módulos y accesos</button>`);
   if (canHard) items.push(u.disabled
     ? `<button onclick="usrToggle('${id}',true);usrMenuClose()"><i class="fa-solid fa-circle-check"></i> Habilitar</button>`
     : `<button onclick="usrToggle('${id}',false);usrMenuClose()"><i class="fa-solid fa-ban"></i> Deshabilitar</button>`);
@@ -14137,6 +14154,64 @@ document.addEventListener('click', (e) => {
   if (p && !p.hidden && !p.contains(e.target) && !e.target.closest('.rp-pill')) usrRolePopClose();
 });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { usrMenuClose(); usrRolePopClose(); } });
+
+/* ── Acceso a módulos por usuario (lo define el admin) ── */
+// Lista de módulos toggleables: unión de ORG_MODULES (cretum+mvp), sin los admin-only.
+function allModulesForAccess() {
+  const seen = new Set(), out = [];
+  ['cretum', 'mvp'].forEach(org => (ORG_MODULES[org] || []).forEach(m => {
+    if (m.adminOnly || seen.has(m.view)) return;
+    seen.add(m.view);
+    out.push({ view: m.view, label: m.title, icon: m.icon, brand: !!m.iconBrand });
+  }));
+  return out;
+}
+let usrModulesId = null;
+function usrModulesOpen(id) {
+  const u = usrUsers.find(x => x.id === id); if (!u) return;
+  usrModulesId = id;
+  document.getElementById('usrModulesWho').innerHTML = `Para <b>${escapeHtml(u.full_name || u.email)}</b>`;
+  const am = Array.isArray(u.allowed_modules) ? u.allowed_modules : null;
+  const all = am === null;
+  document.getElementById('usrModulesAll').checked = all;
+  document.getElementById('usrModulesList').innerHTML = allModulesForAccess().map(m => `
+    <label class="usr-mod-item">
+      <input type="checkbox" value="${escapeHtml(m.view)}" ${all || (am && am.includes(m.view)) ? 'checked' : ''}>
+      <span class="usr-mod-ic"><i class="${m.brand ? 'fa-brands' : 'fa-solid'} ${m.icon}"></i></span>
+      <span>${escapeHtml(m.label)}</span>
+    </label>`).join('');
+  usrModulesSetDisabled(all);
+  document.getElementById('usrModulesModal').classList.add('show');
+}
+function usrModulesClose() { document.getElementById('usrModulesModal').classList.remove('show'); usrModulesId = null; }
+function usrModulesSetDisabled(on) {
+  document.querySelectorAll('#usrModulesList input[type=checkbox]').forEach(c => { c.disabled = on; });
+  document.getElementById('usrModulesList').classList.toggle('is-all', on);
+}
+function usrModulesToggleAll(on) {
+  document.querySelectorAll('#usrModulesList input[type=checkbox]').forEach(c => { c.checked = on; });
+  usrModulesSetDisabled(on);
+}
+async function usrModulesSave() {
+  const id = usrModulesId; if (!id) return;
+  const all = document.getElementById('usrModulesAll').checked;
+  const allowed_modules = all ? null
+    : [...document.querySelectorAll('#usrModulesList input[type=checkbox]:checked')].map(c => c.value);
+  const btn = document.getElementById('usrModulesSaveBtn'); if (btn) btn.disabled = true;
+  try {
+    await usrApi({ action: 'users_update', id, allowed_modules });
+    const u = usrUsers.find(x => x.id === id); if (u) u.allowed_modules = allowed_modules;
+    toast('Accesos actualizados');
+    usrModulesClose();
+    // Si me cambié a mí mismo, refresca mi propio home/menú al instante.
+    if (id === currentUser && currentProfile) {
+      currentProfile.allowed_modules = allowed_modules;
+      renderNavList();
+      if (currentView === 'home') renderHomeModules();
+    }
+  } catch (e) { toast('No se pudo guardar: ' + (e.message || 'error')); }
+  finally { if (btn) btn.disabled = false; }
+}
 
 function usrGenPw(inputId) {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';

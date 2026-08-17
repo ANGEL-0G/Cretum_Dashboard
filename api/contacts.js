@@ -69,13 +69,14 @@ export default async function handler(req, res) {
       if (action === 'users_list') {
         const { data: list, error: e } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
         if (e) throw e;
-        const { data: profs } = await admin.from('profiles').select('id, full_name, initials, role, hidden');
+        const { data: profs } = await admin.from('profiles').select('id, full_name, initials, role, hidden, allowed_modules');
         const pById = {}; (profs || []).forEach(p => { pById[p.id] = p; });
         const users = (list?.users || []).map(u => {
           const p = pById[u.id] || {};
           return {
             id: u.id, email: u.email || '',
             full_name: p.full_name || '', role: p.role || null, hidden: !!p.hidden,
+            allowed_modules: Array.isArray(p.allowed_modules) ? p.allowed_modules : null,
             disabled: !!(u.banned_until && new Date(u.banned_until) > new Date()),
             last_sign_in: u.last_sign_in_at || null, created_at: u.created_at || null,
           };
@@ -115,6 +116,10 @@ export default async function handler(req, res) {
           if (!ROLES.includes(role)) return res.status(400).json({ error: 'Rol inválido' });
           if (isSelf && role !== 'admin') return res.status(400).json({ error: 'No puedes quitarte a ti mismo el rol admin' });
           patch.role = role;
+        }
+        // Acceso a módulos por usuario: array = solo esos; null = sin restricción (todo).
+        if (body.allowed_modules !== undefined) {
+          patch.allowed_modules = Array.isArray(body.allowed_modules) ? body.allowed_modules.map(String) : null;
         }
         if (Object.keys(patch).length) { const { error: pe } = await admin.from('profiles').update(patch).eq('id', targetId); if (pe) throw pe; }
         if (body.email != null) {
