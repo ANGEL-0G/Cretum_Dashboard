@@ -8077,8 +8077,8 @@ const XLATE_LONG = [
    'A portion follows an extended lock-up (in installments) up to ~14 months post-IPO; final release ~Aug 2027.'],
   ['Estructura del S-1 de SpaceX (IPO 12-jun-2026); fechas del doc oficial de lock-up (29-jul-2026). El prospecto final es la autoridad.',
    'Structure from the SpaceX S-1 (IPO Jun 12, 2026); first earnings not yet official — 1st cliff estimated: Aug 17, 2026. The final prospectus governs.'],
-  ['Calendario del S-1 de SpaceX; las fechas ligadas a earnings son estimadas y el prospecto definitivo es la autoridad. El bono por desempeño (+10%) es condicional y, de cumplirse, adelanta esas acciones del remanente del día 180 — no son acciones adicionales, por eso no suma al total.',
-   'Schedule from the SpaceX S-1; earnings-linked dates are estimates and the definitive prospectus governs. The performance bonus (+10%) is conditional and, if met, brings those shares forward from the day-180 remainder — they are not additional shares, so they do not add to the total.'],
+  ['Calendario del S-1 de SpaceX; las fechas ligadas a earnings son estimadas y el prospecto definitivo es la autoridad.',
+   'Schedule from the SpaceX S-1; earnings-linked dates are estimates and the definitive prospectus governs.'],
   ['Posiciones que el fondo subyacente liquidó y cuyo importe se reinvirtió en un vehículo directo de SpaceX (Serie 26A QP). La parte reinvertida no es efectivo devuelto al inversionista; el resto (si lo hay) sí se entregó en efectivo.',
    'Positions liquidated by the underlying fund whose proceeds were reinvested into a direct SpaceX vehicle (Series 26A QP). The reinvested portion is not cash returned to the investor; the remainder (if any) was paid in cash.'],
 ];
@@ -8299,10 +8299,6 @@ async function exportInvestorHtml() {
         // Solo hitos que le liberan acciones a ESTE inversionista (sin filas en $0 del calendario que no le aplica)
         const evReal = ev.filter(e => e.sh >= 0.5);
         ev.length = 0; ev.push(...evReal);
-        // Bono por desempeño (+10%): condicional; de cumplirse ADELANTA parte del remanente del día 180
-        // (no son acciones adicionales) — por eso la fila no suma al total. Ventana: ~10 días tras earnings Q2.
-        const bonusSh = 0.10 * (sB + sA / 2);
-        if (bonusSh >= 0.5 && today <= '2026-08-31') ev.push({ date: '2026-08-18', dlbl: '~ago 2026', label: 'Bono por desempeño — condicional (+10%)', sh: bonusSh, bonus: true });
         ev.sort((a, b) => a.date.localeCompare(b.date));
         if (ev.length && price > 0) {
           const F = d => new Date(d + 'T12:00:00').toLocaleDateString(LOC, { day: 'numeric', month: 'short', year: 'numeric' });
@@ -8313,7 +8309,7 @@ async function exportInvestorHtml() {
           tbl.innerHTML = `<div class="xp-liq-h">Próximas liberaciones — calendario estimado</div>
             <table class="db-table"><thead><tr><th>Fecha est.</th><th>Evento</th><th class="num">Acciones</th></tr></thead>
             <tbody>${rows}<tr class="xp-liq-tot"><td colspan="2">Total por liberar</td><td class="num">${Math.round(tot).toLocaleString('en-US')}</td></tr></tbody></table>
-            <div class="xp-liq-note">Calendario del S-1 de SpaceX; las fechas ligadas a earnings son estimadas y el prospecto definitivo es la autoridad. El bono por desempeño (+10%) es condicional y, de cumplirse, adelanta esas acciones del remanente del día 180 — no son acciones adicionales, por eso no suma al total.</div>`;
+            <div class="xp-liq-note">Calendario del S-1 de SpaceX; las fechas ligadas a earnings son estimadas y el prospecto definitivo es la autoridad.</div>`;
           const lock = [...clone.querySelectorAll('.db-section')].find(s => (s.querySelector('.db-section-h')?.textContent || '').startsWith('Lock-up'));
           if (lock) lock.appendChild(tbl);
         }
@@ -15508,8 +15504,8 @@ tr.bono td{background:#fdf6ec;color:#9a6c1f}
   ${como.map(p => `<p class="para">${p}</p>`).join('')}
   ${sec(T('Calendario combinado de distribuciones', 'Combined distribution schedule'))}
   <table><thead><tr><th>${T('Fecha', 'Date')}</th><th>${T('Evento', 'Event')}</th><th class="n">${T('Acciones', 'Shares')}</th><th class="n">% total</th><th class="n">${T('Acum. %', 'Cum. %')}</th><th>${T('Detalle', 'Detail')}</th></tr></thead>
-  <tbody>${calRows}<tr class="tot"><td colspan="2">${T('Total liberado', 'Total released')}</td><td class="n">${SPXR_INT(D.calendar.TOT)}</td><td class="n">100%</td><td></td><td class="det">${T('Bono condicional adelantaría parte del remanente', 'A conditional bonus would bring forward part of the remainder')}</td></tr></tbody></table>
-  <div class="fn">${T('Acciones por fecha = suma de lo que libera cada calendario ese día (redondeadas). Fechas del documento oficial de lock-up por vehículo (29-jul-2026): vehículos de fondo venden desde el 9 sep 2026; día 180 = 8 dic 2026. El prospecto final es la autoridad. El bono +10% es condicional y no se incluye en el acumulado base.', 'Shares per date = sum of what each schedule releases that day (rounded). Dates from the official per-vehicle lock-up document (Jul 29, 2026): fund vehicles can sell from Sep 9, 2026; day 180 = Dec 8, 2026. The final prospectus is the controlling authority. The +10% bonus is conditional and is not included in the base cumulative.')}</div>
+  <tbody>${calRows}<tr class="tot"><td colspan="2">${T('Total liberado', 'Total released')}</td><td class="n">${SPXR_INT(D.calendar.TOT)}</td><td class="n">100%</td><td></td><td class="det"></td></tr></tbody></table>
+  <div class="fn">${T('Acciones por fecha = suma de lo que libera cada calendario ese día (redondeadas). Fechas del documento oficial de lock-up por vehículo (29-jul-2026): vehículos de fondo venden desde el 9 sep 2026; día 180 = 8 dic 2026. El prospecto final es la autoridad.', 'Shares per date = sum of what each schedule releases that day (rounded). Dates from the official per-vehicle lock-up document (Jul 29, 2026): fund vehicles can sell from Sep 9, 2026; day 180 = Dec 8, 2026. The final prospectus is the controlling authority.')}</div>
   <div class="note">${T(`<b>Split 5:1:</b> todas las acciones están en base post-split. <b>Precio:</b> el valor de ${SPXR_MONEY(D.totVal)} usa el precio de cierre de hoy de ${SPXR_P2(P)}/acción y se mueve con el precio público de SpaceX. <b>Cifras no realizadas:</b> el monto final dependerá del precio al liberarse cada tramo y de la elección cash/in-kind; las cifras no reflejan retenciones por gastos ni carried interest.${D.hasSold && D.cashOut > 0.01 ? ` <b>Venta previa:</b> el efectivo de la liquidación parcial (${SPXR_MONEY(D.cashOut)}) ya fue entregado y no está sujeto al lock-up.` : ''}`, `<b>5:1 split:</b> all shares are on a post-split basis. <b>Price:</b> the ${SPXR_MONEY(D.totVal)} value uses today's closing price of ${SPXR_P2(P)}/share and moves with SpaceX's public price. <b>Unrealized figures:</b> the final amount will depend on the price when each tranche is released and on the cash/in-kind election; figures do not reflect withholding for expenses or carried interest.${D.hasSold && D.cashOut > 0.01 ? ` <b>Prior sale:</b> the cash from the partial liquidation (${SPXR_MONEY(D.cashOut)}) has already been delivered and is not subject to the lock-up.` : ''}`)}</div>
   ${sec(T('Anexo 1 — Distribución de los primeros 180 días', 'Annex 1 — First 180 days release'))}
   <p class="para">${T(`Mecanismo de las acciones que se liberan en los primeros ~6 meses${D.shA > 0 && D.shB > 0 ? ` (todo el Calendario 2 + la 1ª mitad del Calendario 1: ${SPXR_INT(D.calendar.pool)} acciones)` : ` (${SPXR_INT(D.calendar.pool)} acciones)`}. Liberación escalonada ligada a desempeño; expira el 9 de diciembre de 2026. Porcentajes sobre las acciones sujetas a este calendario.`, `Mechanics of the shares released within the first ~6 months${D.shA > 0 && D.shB > 0 ? ` (all of Schedule 2 + the 1st half of Schedule 1: ${SPXR_INT(D.calendar.pool)} shares)` : ` (${SPXR_INT(D.calendar.pool)} shares)`}. Staggered release tied to performance; expires December 9, 2026. Percentages are over the shares subject to this schedule.`)}</p>
