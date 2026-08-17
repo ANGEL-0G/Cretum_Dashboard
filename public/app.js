@@ -3850,6 +3850,19 @@ let hbExpanded = false;    // "Ver todos" del feed
 let hbKind = 'aviso';      // tipo seleccionado en el composer
 const HB_FEED_LIMIT = 5;
 
+// Colapsado por defecto (para no comer pantalla); se recuerda por navegador.
+let hbCollapsed = true;
+try { hbCollapsed = localStorage.getItem('hb_collapsed') !== '0'; } catch (e) {}
+
+function hbToggleCollapse() {
+  hbCollapsed = !hbCollapsed;
+  try { localStorage.setItem('hb_collapsed', hbCollapsed ? '1' : '0'); } catch (e) {}
+  const card = document.querySelector('#homeBoard .hb-card');
+  const tog = document.querySelector('#homeBoard .hb-toggle');
+  if (card) card.classList.toggle('collapsed', hbCollapsed);
+  if (tog) tog.setAttribute('aria-expanded', String(!hbCollapsed));
+}
+
 function updateHomeBoard() {
   const host = document.getElementById('homeBoard');
   if (!host) return;
@@ -3960,22 +3973,28 @@ function renderBoard() {
     ? events.map(hbEventHTML).join('')
     : `<div class="hb-empty">${t('Sin eventos próximos.')}</div>`;
 
-  host.innerHTML = `<div class="hb-card">
-    <div class="hb-head">
-      <span class="hb-title">${t('Tablero del equipo')}</span>
-      <span class="hb-upd">${upd}</span>
-      <button class="hb-add" onclick="openBoardComposer()"><i class="fa-solid fa-plus"></i> ${t('Nota')}</button>
-    </div>
-    <div class="hb-grid">
-      <div>
-        <div class="hb-col-h">${t('Avisos y noticias')} · #general</div>
-        ${feedHtml}
+  host.innerHTML = `<div class="hb-card${hbCollapsed ? ' collapsed' : ''}">
+    <button class="hb-toggle" onclick="hbToggleCollapse()" aria-expanded="${!hbCollapsed}">
+      <i class="fa-solid fa-chevron-down hb-chev"></i>
+      <span class="hb-title">${t('Tablero Slack MVP')}</span>
+      <span class="hb-desc">${t('Noticias relevantes del Slack')}</span>
+    </button>
+    <div class="hb-wrap"><div class="hb-inner">
+      <div class="hb-sub">
+        <span class="hb-upd">${upd}</span>
+        <button class="hb-add" onclick="openBoardComposer()"><i class="fa-solid fa-plus"></i> ${t('Nota')}</button>
       </div>
-      <div>
-        <div class="hb-col-h">${t('Próximos eventos')}</div>
-        ${evHtml}
+      <div class="hb-grid">
+        <div>
+          <div class="hb-col-h">${t('Avisos y noticias')} · #general</div>
+          ${feedHtml}
+        </div>
+        <div>
+          <div class="hb-col-h">${t('Próximos eventos')}</div>
+          ${evHtml}
+        </div>
       </div>
-    </div>
+    </div></div>
   </div>`;
 }
 

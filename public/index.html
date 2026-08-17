@@ -1996,8 +1996,29 @@ body:has(.modal-backdrop.show,.camp-modal-backdrop.show,.home-picker-backdrop.sh
 .home-board{margin-bottom:24px}
 .hb-card{background:#fff;border:1px solid var(--gray-200);border-radius:14px;padding:18px 20px 16px}
 [data-theme="dark"] .hb-card{background:var(--gray-50)}
-.hb-head{display:flex;align-items:baseline;gap:10px;margin-bottom:14px;flex-wrap:wrap}
-.hb-title{font-size:13px;font-weight:600;color:var(--gray-700);text-transform:uppercase;letter-spacing:.5px}
+/* Cabecera clicable: título + descripción + flecha (siempre visible) */
+.hb-toggle{
+  display:flex;align-items:center;gap:10px;width:100%;
+  border:0;background:transparent;padding:2px 0;margin:0;
+  font-family:var(--font);cursor:pointer;text-align:left;
+}
+.hb-chev{
+  flex:0 0 auto;font-size:11px;color:var(--gray-400);
+  transition:transform .22s cubic-bezier(.23,1,.32,1),color .15s;
+}
+.hb-toggle:hover .hb-chev{color:var(--navy)}
+.hb-card.collapsed .hb-chev{transform:rotate(-90deg)}
+.hb-title{font-size:13px;font-weight:600;color:var(--gray-700);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+.hb-desc{font-size:12px;color:var(--gray-500);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Cuerpo colapsable (grid-template-rows: animable sin layout thrash) */
+.hb-wrap{
+  display:grid;grid-template-rows:1fr;
+  transition:grid-template-rows .24s cubic-bezier(.23,1,.32,1);
+}
+.hb-card.collapsed .hb-wrap{grid-template-rows:0fr}
+.hb-inner{overflow:hidden;min-width:0}
+@media (prefers-reduced-motion: reduce){.hb-wrap{transition:none}.hb-chev{transition:color .15s}}
+.hb-sub{display:flex;align-items:center;gap:10px;margin:12px 0 12px;flex-wrap:wrap}
 .hb-upd{font-size:11px;color:var(--gray-400)}
 .hb-add{
   margin-left:auto;display:inline-flex;align-items:center;gap:6px;

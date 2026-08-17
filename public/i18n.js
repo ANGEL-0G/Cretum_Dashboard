@@ -1034,6 +1034,8 @@ const EN = {
 
   // ── Tablero del equipo (home MVP) ──
   'Tablero del equipo': 'Team board',
+  'Tablero Slack MVP': 'MVP Slack Board',
+  'Noticias relevantes del Slack': 'Relevant news from Slack',
   'Avisos y noticias': 'Announcements & news',
   'Próximos eventos': 'Upcoming events',
   'Cargando tablero…': 'Loading board…',
