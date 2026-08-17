@@ -9099,7 +9099,6 @@ const SPX_STRUCTURES = {
     summary: 'Liberación escalonada y ligada a desempeño dentro de la ventana estándar de <b>180 días</b>. Expira por completo ~9 de diciembre de 2026.',
     phases: [
       { hito: '1er día de venta legal (directos: 6 ago 2026 · fondos: 9 sep 2026)', pct: '20%', detalle: 'Fecha REAL del doc oficial de lock-up. Acumulado: 20%.' },
-      { hito: 'Bono por desempeño', pct: '+10%', detalle: 'Solo si SPCX cierra en $175.50+ (30% sobre IPO) en 5 de los 10 días previos. Directos (evaluado 6-ago): NO se activó.' },
       { hito: 'Bloques sucesivos — días 70/90/105/120/135', pct: '7% por bloque', detalle: 'Directos: 20 ago · 9 sep · 24 sep · 9 oct · 24 oct 2026. Acumulado: 55%.' },
       { hito: '2º cliff — 2º día hábil tras resultados Q3 (~inicios de nov)', pct: '28%', detalle: 'Acumulado: 83%.' },
       { hito: 'Día 180 (8 dic 2026)', pct: '17% remanente', detalle: 'Expiración total del primer tramo. Acumulado: 100%.' },
@@ -9112,7 +9111,6 @@ const SPX_STRUCTURES = {
     groups: [
       { label: 'Primera mitad (~50%) — lock-up de 180 días', phases: [
         { hito: '1er día de venta legal (directos: 6 ago 2026 · fondos: 9 sep 2026)', pct: '20%', detalle: 'Fecha REAL del doc oficial de lock-up.' },
-        { hito: '~mismo período', pct: '+10% bonus', detalle: 'Solo si SPCX cierra en $175.50+ (30% sobre IPO) en 5 de los 10 días previos. Directos (evaluado 6-ago): NO se activó.' },
         { hito: 'Días 70/90/105/120/135', pct: '7% por bloque', detalle: 'Directos: 20 ago · 9 sep · 24 sep · 9 oct · 24 oct 2026.' },
         { hito: '2º día hábil tras resultados Q3 (~inicios de nov)', pct: '28%', detalle: '' },
         { hito: 'Día 180 (8 dic 2026)', pct: '17% remanente', detalle: 'Cierre de la primera mitad.' },
@@ -15308,9 +15306,6 @@ function spxrCalendar(shA, shB) {
     const sh = isRem ? rem180 : Math.round(pool * pctNumL(e.pct));
     counted += sh; acum = counted;
     rows.push({ date: spxrDate(e.date), label: e.label, sh, pct: (sh / TOT * 100), acum: (acum / TOT * 100), scope: scope180 });
-    if (i === 0) {   // bono condicional tras el cliff — fila aparte, NO suma al acumulado
-      rows.push({ date: '~ sep 2026', label: 'Bono por desempeño — condicional', sh: Math.round(pool * 0.10), pct: (pool * 0.10 / TOT * 100), acum: null, scope: 'Solo si SPCX cierra en $175.50+ (30% sobre IPO) en 5 de los 10 días previos; adelanta parte del remanente', bonus: true });
-    }
   });
 
   // Lock-up extendido (2ª mitad de A)
