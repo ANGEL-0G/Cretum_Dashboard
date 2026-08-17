@@ -128,12 +128,24 @@ async function dbxJson(endpoint, body, accessToken) {
   return res.json();
 }
 
+// Dropbox-API-Arg viaja como header HTTP, y los headers solo aceptan Latin-1.
+// Un nombre de archivo con caracteres fuera de ese rango (p. ej. el espacio fino
+// U+202F que macOS mete en "… 11.30 AM.pdf") revienta fetch() antes de salir la
+// petición. Dropbox documenta la solución: JSON "header-safe" con todo lo
+// no-ASCII escapado como \uXXXX.
+function httpHeaderSafeJson(obj) {
+  return JSON.stringify(obj).replace(
+    /[\u007f-\uffff]/g,
+    c => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'),
+  );
+}
+
 async function dbxContent(endpoint, arg, accessToken) {
   const res = await fetch(`${DROPBOX_CONTENT}${endpoint}`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${accessToken}`,
-      'Dropbox-API-Arg': JSON.stringify(arg),
+      'Dropbox-API-Arg': httpHeaderSafeJson(arg),
     },
   });
   if (!res.ok) {
