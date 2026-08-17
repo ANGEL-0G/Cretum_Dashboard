@@ -333,7 +333,7 @@ ${STYLE()}
     <header class="hero-news">
       <div class="wrap">
         <p class="eyebrow reveal" style="--d:40ms"><span class="pulse"></span> Novedades del portafolio</p>
-        <h1 class="type" data-type="load">Noticias de las empresas de Cretum</h1>
+        <h1 class="type" data-type="load">Noticias de las empresas en seguimiento</h1>
         <p class="lede reveal" style="--d:180ms">Titulares recientes de las compañías donde invierte el portafolio, filtrados a <b>medios confiables</b> (Reuters, Bloomberg, TechCrunch, CNBC, FT…). Se actualiza varias veces al día.</p>
         <div class="meta-row reveal" style="--d:280ms">
           <span class="tag">${ICON('globe', 'ti')} <b id="newsMetaCount">cargando…</b></span>
