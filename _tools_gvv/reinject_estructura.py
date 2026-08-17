@@ -3,8 +3,8 @@ draft (con layout movil). Mismas claves t (ya inyectadas). Valida round-trip."""
 import json, re, shutil
 
 CANON = "/Users/air/cretum_dashboard_coworker/public/gvv-detalle.html"
-DRAFT = "/private/tmp/claude-501/-Users-air/86d1252e-b059-44a8-ad59-89d1b49e408c/scratchpad/estructura_draft.html"
-URIS = "/private/tmp/claude-501/-Users-air/86d1252e-b059-44a8-ad59-89d1b49e408c/scratchpad/logos/uris.json"
+DRAFT = "/Users/air/cretum_dashboard_coworker/_tools_gvv/estructura_draft.html"
+URIS = "/Users/air/cretum_dashboard_coworker/_tools_gvv/uris.json"
 
 d = open(DRAFT).read()
 sec = d[d.find('<section id="estructura"'):d.find('</section>') + len('</section>')]
