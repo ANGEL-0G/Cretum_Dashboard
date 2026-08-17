@@ -15884,8 +15884,38 @@ const FR_FUNDS = [
 ];
 
 function frAvailableFunds(positions) {
-  return FR_FUNDS.filter(f => (positions || []).some(p =>
-    !p.distributed_at && f.re.test(p.series?.name || '')));
+  // investorIds = dueños reales de la posición que matchea ese fondo (solo viene
+  // poblado en vista combinada — openInvestorGroup selecciona investor_id por fila;
+  // openInvestor no, porque ahi ya se sabe el dueño: d.inv.id).
+  return FR_FUNDS.map(f => {
+    const matches = (positions || []).filter(p => !p.distributed_at && f.re.test(p.series?.name || ''));
+    if (!matches.length) return null;
+    return { ...f, investorIds: [...new Set(matches.map(p => p.investor_id).filter(id => id != null))] };
+  }).filter(Boolean);
+}
+
+// Cuando el fondo elegido en vista combinada vive en mas de una cuenta, pregunta cual.
+function frPickAccount(accounts) {
+  if (accounts.length === 1) return Promise.resolve(accounts[0].id);
+  return new Promise((resolve) => {
+    const ov = document.createElement('div');
+    ov.className = 'xlang-ov';
+    ov.innerHTML = `
+      <div class="xlang-card">
+        <div class="xlang-h">¿De qué cuenta? · Which account?</div>
+        <div class="xlang-opts">
+          ${accounts.map(a => `<button class="xlang-opt" data-id="${a.id}"><span class="xlang-big">${escapeHtml(a.name)}</span></button>`).join('')}
+        </div>
+      </div>`;
+    const done = (v) => { ov.remove(); resolve(v); };
+    ov.addEventListener('click', (e) => {
+      const b = e.target.closest('.xlang-opt');
+      if (b) return done(+b.dataset.id);
+      if (e.target === ov) done(null);
+    });
+    document.addEventListener('keydown', function esc(e) { if (e.key === 'Escape') { document.removeEventListener('keydown', esc); done(null); } });
+    document.body.appendChild(ov);
+  });
 }
 
 function frPickFund(funds) {
@@ -15918,6 +15948,20 @@ async function exportFundReport() {
   if (!funds.length) return toast('Este inversionista no tiene Fund IV ni Fund V');
   const fund = await frPickFund(funds);
   if (!fund) return;
+  // Vista combinada: el sintético no tiene id propio — hay que resolver a cuál
+  // de las cuentas fusionadas pertenece la posición del fondo elegido.
+  let investorId = d.inv.id;
+  if (d.inv._combined) {
+    const ids = funds.find(f => f.key === fund)?.investorIds || [];
+    if (!ids.length) return toast('No se encontró la cuenta dueña de esa posición');
+    investorId = ids[0];
+    if (ids.length > 1) {
+      const accounts = (d.inv._accounts || []).filter(a => ids.includes(a.id));
+      investorId = await frPickAccount(accounts);
+      if (!investorId) return;
+    }
+  }
+  const acctName = d.inv._combined ? ((d.inv._accounts || []).find(a => a.id === investorId)?.name || d.inv.name) : d.inv.name;
   const lang = await pickExportLang();
   if (!lang) return;
   const EN = lang === 'en';
@@ -15928,7 +15972,7 @@ async function exportFundReport() {
     toast(EN ? 'Generating Fund Report… (~15s, live data)' : 'Generando Reporte de Fondo… (~15s, datos en vivo)');
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 180000);
-    const r = await fetch(`${FR_ENDPOINT}?investor_id=${d.inv.id}&fund=${fund}&lang=${lang}`, {
+    const r = await fetch(`${FR_ENDPOINT}?investor_id=${investorId}&fund=${fund}&lang=${lang}`, {
       headers: { Authorization: `Bearer ${token}` }, signal: ctrl.signal,
     });
     clearTimeout(timer);
@@ -15941,7 +15985,7 @@ async function exportFundReport() {
     const blob = await r.blob();
     const cd = r.headers.get('Content-Disposition') || '';
     const m = cd.match(/filename="([^"]+)"/);
-    const slug = String(d.inv.name).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+    const slug = String(acctName).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
     const fname = m ? m[1] : `${EN ? 'Fund_Report' : 'Reporte_Fondo'}_${fund}_${slug}.pdf`;
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
