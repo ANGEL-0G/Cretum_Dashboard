@@ -37,6 +37,6 @@ export default async function handler(req, res) {
       };
     }
   }
-  res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=300');
+  res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=60');
   res.status(200).json(out);
 }
