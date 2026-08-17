@@ -148,6 +148,10 @@
     {
       "src": "public/og/*.png",
       "use": "@vercel/static"
+    },
+    {
+      "src": "public/data/*.json",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
@@ -315,6 +319,10 @@
     {
       "src": "/og/(.*)",
       "dest": "/public/og/$1"
+    },
+    {
+      "src": "/data/(.*)",
+      "dest": "/public/data/$1"
     },
     {
       "src": "/(.*)",

@@ -1,0 +1,39 @@
+name: Noticias del portafolio
+
+# Consulta Google News (filtrado a medios confiables) para las empresas del
+# portafolio y actualiza public/data/company-news.json. Varias veces al día para
+# frescura. Sin llaves ni funciones de Vercel (repo público → Actions gratis).
+
+on:
+  schedule:
+    - cron: '0 13,19,23 * * *'    # ~7am, 1pm, 5pm CDMX (UTC-6)
+  workflow_dispatch: {}
+
+concurrency:
+  group: portfolio-news
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Generar noticias
+        run: node scripts/gen-news.mjs
+      - name: Commit si cambió
+        run: |
+          git config user.name  "Noticias portafolio"
+          git config user.email "actions@users.noreply.github.com"
+          if git diff --quiet -- public/data/company-news.json; then
+            echo "Sin cambios en las noticias."
+          else
+            git add public/data/company-news.json
+            git commit -m "Noticias del portafolio (auto)"
+            git push
+          fi

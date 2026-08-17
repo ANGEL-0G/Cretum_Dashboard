@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<title>Avances en el desk · Cretum</title>
+<title>Noticias Cretum</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='1' y='1' width='30' height='30' rx='7' fill='%231A3A6B'/><g fill='%23fff'><rect x='7.4' y='17' width='4.2' height='8' rx='1.4'/><rect x='13.9' y='11.5' width='4.2' height='13.5' rx='1.4'/><rect x='20.4' y='7.5' width='4.2' height='17.5' rx='1.4'/></g></svg>">
@@ -230,6 +230,40 @@
   .empty{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:48px 22px;text-align:center;box-shadow:var(--raise);margin-top:20px}
   .empty h3{margin:0 0 8px;font-size:19px} .empty p{margin:0;color:var(--ink-mute)}
 
+  /* ── Barra de pestañas (Noticias / Avances del desk) ── */
+  .tabbar{position:sticky;top:0;z-index:55;background:color-mix(in srgb,var(--bg) 85%,transparent);backdrop-filter:saturate(1.4) blur(10px);-webkit-backdrop-filter:saturate(1.4) blur(10px);border-bottom:1px solid var(--line)}
+  .tabbar-in{display:flex;align-items:center;gap:14px;height:54px}
+  .brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;letter-spacing:-.01em;color:var(--ink)}
+  .brand-mark{width:10px;height:10px;border-radius:3px;background:var(--navy)}
+  .tabs{display:flex;gap:4px;flex:1}
+  .tab{font-size:14px;font-weight:600;color:var(--ink-soft);background:none;border:none;padding:8px 14px;border-radius:9px;cursor:pointer;font-family:inherit;transition:color .16s var(--ease-out),background .16s var(--ease-out)}
+  .tab:hover{color:var(--ink);background:var(--surface-2)}
+  .tab.on{color:var(--navy-2);background:var(--navy-pale)}
+  .tab:active{transform:scale(.98)}
+  #pane-avances .snav{top:54px}   /* la sub-nav del reporte, bajo la barra de pestañas */
+  .hero-news{padding:42px 0 20px}
+  /* ── Filtro por empresa ── */
+  .news-filter{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px}
+  .nf-chip{font-size:12.5px;font-weight:500;padding:6px 13px;border-radius:999px;cursor:pointer;background:var(--surface);border:1px solid var(--line);color:var(--ink-soft);font-family:inherit;transition:transform .14s var(--ease-out),border-color .14s ease,color .14s ease,background .14s ease}
+  @media (hover:hover){.nf-chip:hover{border-color:var(--navy-2);color:var(--ink)}}
+  .nf-chip:active{transform:scale(.96)}
+  .nf-chip.on{background:var(--navy);border-color:var(--navy);color:#fff}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .nf-chip.on{color:#0C121E}}
+  :root[data-theme="dark"] .nf-chip.on{color:#0C121E}
+  /* ── Rejilla de noticias ── */
+  .news-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+  .news-card{display:flex;flex-direction:column;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:15px;padding:17px 18px;box-shadow:var(--raise);text-decoration:none;color:inherit;transition:transform .18s var(--ease-out),border-color .18s var(--ease-out),box-shadow .18s var(--ease-out);animation:newsIn .5s var(--ease-out) both;animation-delay:calc(var(--i,0) * 32ms)}
+  @media (hover:hover){.news-card:hover{transform:translateY(-3px);border-color:var(--navy-pale);box-shadow:0 8px 26px rgba(18,30,54,.08)}}
+  @keyframes newsIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.news-card{animation:none}}
+  .news-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .news-co{font-size:11.5px;font-weight:600;color:var(--navy-2);background:var(--navy-pale);padding:3px 9px;border-radius:999px;white-space:nowrap}
+  .news-time{font-family:var(--mono);font-size:11px;color:var(--ink-mute);white-space:nowrap}
+  .news-title{font-size:15px;line-height:1.35;font-weight:600;letter-spacing:-.01em;color:var(--ink);flex:1}
+  .news-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:var(--ink-mute)}
+  .news-src{font-weight:500}
+  .news-go{color:var(--navy-2);font-size:13px}
+  .news-empty{grid-column:1/-1;padding:40px 20px;text-align:center;color:var(--ink-mute);font-size:14px;border:1px dashed var(--line);border-radius:14px}
   footer{border-top:1px solid var(--line);padding:28px 0 60px;color:var(--ink-mute);font-size:13px;margin-top:24px}
   footer .wrap{display:flex;flex-wrap:wrap;gap:6px 14px;justify-content:space-between;align-items:center} footer b{color:var(--ink-soft)}
 
@@ -240,26 +274,59 @@
 </head>
 <body>
 <div class="progress" id="progress" aria-hidden="true"></div>
-<header>
-  <div class="wrap">
-    <p class="eyebrow reveal" style="--d:40ms"><span class="pulse"></span> Blog semanal · Avances en el desk</p>
-    <h1 class="type" data-type="load">El pulso de la semana en Cretum&nbsp;Desk</h1>
-    <p class="lede reveal" style="--d:180ms">Lo que se construyó estos días, sacado de los commits y ordenado por módulo y por quién lo llevó. Se regenera solo cada viernes.</p>
-    <div class="meta-row reveal" style="--d:280ms">
-      <span class="tag"><svg class="ic ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5.2" width="17" height="15.3" rx="2.6"/><path d="M3.5 9.6h17M8 3.4v3.6M16 3.4v3.6"/></svg> <b>7 ago 2026 – 13 ago 2026</b></span>
-      <span class="tag"><svg class="ic ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.4"/><path d="M12 7.4V12l3.1 2"/></svg> Cada <b>viernes</b></span>
-      <span class="tag"><svg class="ic ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.4"/><path d="M3.6 12h16.8M12 3.6c2.6 2.3 2.6 14.5 0 16.8M12 3.6c-2.6 2.3-2.6 14.5 0 16.8"/></svg> <b>cretumdesk.com</b></span>
-    </div>
-    <div class="hstats reveal" style="--d:360ms">
-      <div class="hstat"><div class="n" data-count="57">0</div><div class="k">commits</div></div>
-      <div class="hstat"><div class="n" data-count="28">0</div><div class="k"><span class="swatch sw-navy"></span>Angel</div></div>
-      <div class="hstat"><div class="n" data-count="13">0</div><div class="k"><span class="swatch sw-auto"></span>Automatización</div></div>
-      <div class="hstat"><div class="n" data-count="16">0</div><div class="k"><span class="swatch sw-eug"></span>Eugenio</div></div>
-    </div>
-  </div>
-</header>
-<main>
 
+<nav class="tabbar" id="tabbar">
+  <div class="wrap tabbar-in">
+    <span class="brand"><span class="brand-mark"></span> Cretum</span>
+    <div class="tabs" role="tablist" aria-label="Secciones">
+      <button class="tab on" data-pane="noticias" role="tab" aria-selected="true">Noticias</button>
+      <button class="tab" data-pane="avances" role="tab" aria-selected="false">Avances del desk</button>
+    </div>
+    <button class="iconbtn only-ic" id="themeBtn" title="Cambiar tema" aria-label="Cambiar tema"><svg class="ic ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.4A8 8 0 1 1 9.6 4 6.5 6.5 0 0 0 20 14.4z"/></svg><svg class="ic ic-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.3M12 19.1v2.3M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M2.6 12h2.3M19.1 12h2.3M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"/></svg></button>
+  </div>
+</nav>
+
+<main>
+  <!-- ═══════════ NOTICIAS (principal) ═══════════ -->
+  <section class="pane on" id="pane-noticias">
+    <header class="hero-news">
+      <div class="wrap">
+        <p class="eyebrow reveal" style="--d:40ms"><span class="pulse"></span> Novedades del portafolio</p>
+        <h1 class="type" data-type="load">Noticias de las empresas de Cretum</h1>
+        <p class="lede reveal" style="--d:180ms">Titulares recientes de las compañías donde invierte el portafolio, filtrados a <b>medios confiables</b> (Reuters, Bloomberg, TechCrunch, CNBC, FT…). Se actualiza varias veces al día.</p>
+        <div class="meta-row reveal" style="--d:280ms">
+          <span class="tag"><svg class="ic ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.4"/><path d="M3.6 12h16.8M12 3.6c2.6 2.3 2.6 14.5 0 16.8M12 3.6c-2.6 2.3-2.6 14.5 0 16.8"/></svg> <b id="newsMetaCount">cargando…</b></span>
+          <span class="tag"><svg class="ic ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.4"/><path d="M12 7.4V12l3.1 2"/></svg> actualizado <b id="newsMetaWhen">—</b></span>
+        </div>
+      </div>
+    </header>
+    <div class="wrap sec">
+      <div class="news-filter" id="newsFilter" role="group" aria-label="Filtrar por empresa"></div>
+      <div class="news-grid" id="newsGrid"><div class="news-empty">Cargando noticias…</div></div>
+    </div>
+  </section>
+
+  <!-- ═══════════ AVANCES DEL DESK (secundario) ═══════════ -->
+  <section class="pane" id="pane-avances" hidden>
+    <header>
+      <div class="wrap">
+        <p class="eyebrow reveal" style="--d:40ms"><span class="pulse"></span> Blog semanal · Avances en el desk</p>
+        <h1>El pulso de la semana en Cretum&nbsp;Desk</h1>
+        <p class="lede reveal" style="--d:180ms">Lo que se construyó estos días, sacado de los commits y ordenado por módulo y por quién lo llevó. Se regenera solo cada viernes.</p>
+        <div class="meta-row reveal" style="--d:280ms">
+          <span class="tag"><svg class="ic ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5.2" width="17" height="15.3" rx="2.6"/><path d="M3.5 9.6h17M8 3.4v3.6M16 3.4v3.6"/></svg> <b>10 ago 2026 – 17 ago 2026</b></span>
+          <span class="tag"><svg class="ic ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.4"/><path d="M12 7.4V12l3.1 2"/></svg> Cada <b>viernes</b></span>
+          <span class="tag"><svg class="ic ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.4"/><path d="M3.6 12h16.8M12 3.6c2.6 2.3 2.6 14.5 0 16.8M12 3.6c-2.6 2.3-2.6 14.5 0 16.8"/></svg> <b>cretumdesk.com</b></span>
+        </div>
+        <div class="hstats reveal" style="--d:360ms">
+          <div class="hstat"><div class="n" data-count="48">0</div><div class="k">commits</div></div>
+          <div class="hstat"><div class="n" data-count="22">0</div><div class="k"><span class="swatch sw-navy"></span>Angel</div></div>
+          <div class="hstat"><div class="n" data-count="10">0</div><div class="k"><span class="swatch sw-auto"></span>Automatización</div></div>
+          <div class="hstat"><div class="n" data-count="16">0</div><div class="k"><span class="swatch sw-eug"></span>Eugenio</div></div>
+        </div>
+      </div>
+    </header>
+    
   <nav class="snav" id="snav">
     <div class="wrap snav-in">
       <div class="snav-links">
@@ -270,7 +337,6 @@
       </div>
       <div class="snav-act">
         <button class="iconbtn" id="copyBtn" title="Copiar resumen"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8.5" y="8.5" width="11" height="11" rx="2.5"/><path d="M15.5 8.5V6A2 2 0 0 0 13.5 4h-7A2 2 0 0 0 4.5 6v7a2 2 0 0 0 2 2H8.5"/></svg><span>Copiar</span></button>
-        <button class="iconbtn only-ic" id="themeBtn" title="Cambiar tema" aria-label="Cambiar tema"><svg class="ic ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.4A8 8 0 1 1 9.6 4 6.5 6.5 0 0 0 20 14.4z"/></svg><svg class="ic ic-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.3M12 19.1v2.3M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M2.6 12h2.3M19.1 12h2.3M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"/></svg></button>
       </div>
     </div>
   </nav>
@@ -280,63 +346,63 @@
        y aquí se insertaría SOLO si existe; si no, no aparece. Así el resto sigue
        auto-generado desde git y este bloque queda como toque manual opcional. -->
   <section id="resumen" class="wrap sec">
-    <div class="sec-head"><h2 class="type">Resumen de la semana</h2><span class="sec-meta">7 ago 2026 – 13 ago 2026</span></div>
+    <div class="sec-head"><h2 class="type">Resumen de la semana</h2><span class="sec-meta">10 ago 2026 – 17 ago 2026</span></div>
     <div class="summary reveal">
       <div class="chart-card">
         <div class="chart-lbl">Actividad por día</div>
         <div class="chart" id="chart" role="img" aria-label="Commits por día de la semana">
   <div class="acol" style="--i:0">
-    <div class="aval">14</div>
-    <div class="abar"><div class="afill" style="--h:70.0%" title="V 7 ago · 14 commits"></div></div>
-    <div class="adow">V<span class="adate">7</span></div>
-  </div>
-  <div class="acol" style="--i:1">
-    <div class="aval">4</div>
-    <div class="abar"><div class="afill" style="--h:20.0%" title="S 8 ago · 4 commits"></div></div>
-    <div class="adow">S<span class="adate">8</span></div>
-  </div>
-  <div class="acol" style="--i:2">
-    <div class="aval"></div>
-    <div class="abar"><div class="afill zero" style="--h:0.0%" title="D 9 ago · 0 commits"></div></div>
-    <div class="adow">D<span class="adate">9</span></div>
-  </div>
-  <div class="acol" style="--i:3">
-    <div class="aval">20</div>
-    <div class="abar"><div class="afill peak" style="--h:100.0%" title="L 10 ago · 20 commits"></div></div>
-    <div class="adow">L<span class="adate">10</span></div>
-  </div>
-  <div class="acol" style="--i:4">
     <div class="aval">6</div>
-    <div class="abar"><div class="afill" style="--h:30.0%" title="M 11 ago · 6 commits"></div></div>
+    <div class="abar"><div class="afill" style="--h:54.5%" title="M 11 ago · 6 commits"></div></div>
     <div class="adow">M<span class="adate">11</span></div>
   </div>
-  <div class="acol" style="--i:5">
+  <div class="acol" style="--i:1">
     <div class="aval">8</div>
-    <div class="abar"><div class="afill" style="--h:40.0%" title="M 12 ago · 8 commits"></div></div>
+    <div class="abar"><div class="afill" style="--h:72.7%" title="M 12 ago · 8 commits"></div></div>
     <div class="adow">M<span class="adate">12</span></div>
   </div>
-  <div class="acol" style="--i:6">
+  <div class="acol" style="--i:2">
     <div class="aval">5</div>
-    <div class="abar"><div class="afill" style="--h:25.0%" title="J 13 ago · 5 commits"></div></div>
+    <div class="abar"><div class="afill" style="--h:45.5%" title="J 13 ago · 5 commits"></div></div>
     <div class="adow">J<span class="adate">13</span></div>
+  </div>
+  <div class="acol" style="--i:3">
+    <div class="aval">11</div>
+    <div class="abar"><div class="afill peak" style="--h:100.0%" title="V 14 ago · 11 commits"></div></div>
+    <div class="adow">V<span class="adate">14</span></div>
+  </div>
+  <div class="acol" style="--i:4">
+    <div class="aval"></div>
+    <div class="abar"><div class="afill zero" style="--h:0.0%" title="S 15 ago · 0 commits"></div></div>
+    <div class="adow">S<span class="adate">15</span></div>
+  </div>
+  <div class="acol" style="--i:5">
+    <div class="aval"></div>
+    <div class="abar"><div class="afill zero" style="--h:0.0%" title="D 16 ago · 0 commits"></div></div>
+    <div class="adow">D<span class="adate">16</span></div>
+  </div>
+  <div class="acol" style="--i:6">
+    <div class="aval">2</div>
+    <div class="abar"><div class="afill" style="--h:18.2%" title="L 17 ago · 2 commits"></div></div>
+    <div class="adow">L<span class="adate">17</span></div>
   </div></div>
       </div>
       <div class="dist-card">
         <div class="chart-lbl">Reparto por persona</div>
         <div class="donut-wrap"><svg class="donut" viewBox="0 0 104 104" role="img" aria-label="Reparto de commits por persona">
     <circle cx="52" cy="52" r="40" fill="none" stroke="var(--surface-2)" stroke-width="15"/>
-    <g transform="rotate(-90 52 52)"><circle class="a-navy" cx="52" cy="52" r="40" fill="none" stroke-width="15" stroke-dasharray="123.46 127.87" stroke-dashoffset="0.00"/><circle class="a-auto" cx="52" cy="52" r="40" fill="none" stroke-width="15" stroke-dasharray="57.32 194.01" stroke-dashoffset="-123.46"/><circle class="a-eug" cx="52" cy="52" r="40" fill="none" stroke-width="15" stroke-dasharray="70.55 180.78" stroke-dashoffset="-180.78"/></g>
-    <text x="52" y="51" class="don-n">57</text>
+    <g transform="rotate(-90 52 52)"><circle class="a-navy" cx="52" cy="52" r="40" fill="none" stroke-width="15" stroke-dasharray="115.19 136.14" stroke-dashoffset="0.00"/><circle class="a-auto" cx="52" cy="52" r="40" fill="none" stroke-width="15" stroke-dasharray="52.36 198.97" stroke-dashoffset="-115.19"/><circle class="a-eug" cx="52" cy="52" r="40" fill="none" stroke-width="15" stroke-dasharray="83.78 167.55" stroke-dashoffset="-167.55"/></g>
+    <text x="52" y="51" class="don-n">48</text>
     <text x="52" y="66" class="don-k">commits</text>
   </svg></div>
-        <div class="legend"><span class="lg"><span class="swatch sw-navy"></span>Angel <b>28</b></span><span class="lg"><span class="swatch sw-auto"></span>Automatización <b>13</b></span><span class="lg"><span class="swatch sw-eug"></span>Eugenio <b>16</b></span></div>
-        <div class="dist-note">7 módulos tocados · 6 días activos</div>
+        <div class="legend"><span class="lg"><span class="swatch sw-navy"></span>Angel <b>22</b></span><span class="lg"><span class="swatch sw-auto"></span>Automatización <b>10</b></span><span class="lg"><span class="swatch sw-eug"></span>Eugenio <b>16</b></span></div>
+        <div class="dist-note">6 módulos tocados · 6 días activos</div>
       </div>
     </div>
     <div class="heat-card reveal">
       <div class="heat-top"><div class="chart-lbl">Actividad de las últimas 13 semanas</div>
         <div class="heat-legend"><span>Menos</span><span class="hc h0"></span><span class="hc h1"></span><span class="hc h2"></span><span class="hc h3"></span><span class="hc h4"></span><span>Más</span></div></div>
-      <div class="heat-scroll"><div class="heat" role="img" aria-label="Mapa de calor de commits por día (últimas 13 semanas)"><span class="hc h0" title="11 may · 0 commits"></span><span class="hc h0" title="12 may · 0 commits"></span><span class="hc h0" title="13 may · 0 commits"></span><span class="hc h0" title="14 may · 0 commits"></span><span class="hc h1" title="15 may · 2 commits"></span><span class="hc h0" title="16 may · 0 commits"></span><span class="hc h0" title="17 may · 0 commits"></span><span class="hc h0" title="18 may · 0 commits"></span><span class="hc h0" title="19 may · 0 commits"></span><span class="hc h1" title="20 may · 4 commits"></span><span class="hc h0" title="21 may · 0 commits"></span><span class="hc h1" title="22 may · 1 commit"></span><span class="hc h0" title="23 may · 0 commits"></span><span class="hc h0" title="24 may · 0 commits"></span><span class="hc h0" title="25 may · 0 commits"></span><span class="hc h0" title="26 may · 0 commits"></span><span class="hc h1" title="27 may · 9 commits"></span><span class="hc h0" title="28 may · 0 commits"></span><span class="hc h1" title="29 may · 8 commits"></span><span class="hc h0" title="30 may · 0 commits"></span><span class="hc h0" title="31 may · 0 commits"></span><span class="hc h1" title="1 jun · 1 commit"></span><span class="hc h0" title="2 jun · 0 commits"></span><span class="hc h1" title="3 jun · 1 commit"></span><span class="hc h0" title="4 jun · 0 commits"></span><span class="hc h1" title="5 jun · 9 commits"></span><span class="hc h0" title="6 jun · 0 commits"></span><span class="hc h0" title="7 jun · 0 commits"></span><span class="hc h2" title="8 jun · 14 commits"></span><span class="hc h1" title="9 jun · 3 commits"></span><span class="hc h2" title="10 jun · 12 commits"></span><span class="hc h1" title="11 jun · 6 commits"></span><span class="hc h1" title="12 jun · 6 commits"></span><span class="hc h0" title="13 jun · 0 commits"></span><span class="hc h0" title="14 jun · 0 commits"></span><span class="hc h2" title="15 jun · 12 commits"></span><span class="hc h1" title="16 jun · 3 commits"></span><span class="hc h2" title="17 jun · 16 commits"></span><span class="hc h0" title="18 jun · 0 commits"></span><span class="hc h1" title="19 jun · 5 commits"></span><span class="hc h0" title="20 jun · 0 commits"></span><span class="hc h0" title="21 jun · 0 commits"></span><span class="hc h0" title="22 jun · 0 commits"></span><span class="hc h3" title="23 jun · 29 commits"></span><span class="hc h4" title="24 jun · 35 commits"></span><span class="hc h2" title="25 jun · 12 commits"></span><span class="hc h1" title="26 jun · 3 commits"></span><span class="hc h0" title="27 jun · 0 commits"></span><span class="hc h0" title="28 jun · 0 commits"></span><span class="hc h3" title="29 jun · 25 commits"></span><span class="hc h1" title="30 jun · 1 commit"></span><span class="hc h2" title="1 jul · 14 commits"></span><span class="hc h2" title="2 jul · 18 commits"></span><span class="hc h2" title="3 jul · 16 commits"></span><span class="hc h0" title="4 jul · 0 commits"></span><span class="hc h0" title="5 jul · 0 commits"></span><span class="hc h1" title="6 jul · 2 commits"></span><span class="hc h1" title="7 jul · 6 commits"></span><span class="hc h1" title="8 jul · 6 commits"></span><span class="hc h2" title="9 jul · 17 commits"></span><span class="hc h1" title="10 jul · 9 commits"></span><span class="hc h1" title="11 jul · 1 commit"></span><span class="hc h0" title="12 jul · 0 commits"></span><span class="hc h1" title="13 jul · 9 commits"></span><span class="hc h1" title="14 jul · 4 commits"></span><span class="hc h2" title="15 jul · 17 commits"></span><span class="hc h1" title="16 jul · 9 commits"></span><span class="hc h2" title="17 jul · 16 commits"></span><span class="hc h0" title="18 jul · 0 commits"></span><span class="hc h0" title="19 jul · 0 commits"></span><span class="hc h1" title="20 jul · 3 commits"></span><span class="hc h1" title="21 jul · 7 commits"></span><span class="hc h1" title="22 jul · 9 commits"></span><span class="hc h1" title="23 jul · 7 commits"></span><span class="hc h2" title="24 jul · 12 commits"></span><span class="hc h0" title="25 jul · 0 commits"></span><span class="hc h0" title="26 jul · 0 commits"></span><span class="hc h0" title="27 jul · 0 commits"></span><span class="hc h1" title="28 jul · 4 commits"></span><span class="hc h1" title="29 jul · 1 commit"></span><span class="hc h2" title="30 jul · 11 commits"></span><span class="hc h2" title="31 jul · 14 commits"></span><span class="hc h0" title="1 ago · 0 commits"></span><span class="hc h1" title="2 ago · 1 commit"></span><span class="hc h4" title="3 ago · 40 commits"></span><span class="hc h2" title="4 ago · 15 commits"></span><span class="hc h1" title="5 ago · 9 commits"></span><span class="hc h1" title="6 ago · 5 commits"></span><span class="hc h2" title="7 ago · 19 commits"></span><span class="hc h1" title="8 ago · 4 commits"></span><span class="hc h0" title="9 ago · 0 commits"></span><span class="hc h2" title="10 ago · 20 commits"></span><span class="hc h1" title="11 ago · 6 commits"></span><span class="hc h1" title="12 ago · 8 commits"></span><span class="hc h1" title="13 ago · 5 commits"></span><span class="hc h0" title="14 ago · 0 commits"></span></div></div>
+      <div class="heat-scroll"><div class="heat" role="img" aria-label="Mapa de calor de commits por día (últimas 13 semanas)"><span class="hc h0" title="18 may · 0 commits"></span><span class="hc h0" title="19 may · 0 commits"></span><span class="hc h1" title="20 may · 4 commits"></span><span class="hc h0" title="21 may · 0 commits"></span><span class="hc h1" title="22 may · 1 commit"></span><span class="hc h0" title="23 may · 0 commits"></span><span class="hc h0" title="24 may · 0 commits"></span><span class="hc h0" title="25 may · 0 commits"></span><span class="hc h0" title="26 may · 0 commits"></span><span class="hc h1" title="27 may · 9 commits"></span><span class="hc h0" title="28 may · 0 commits"></span><span class="hc h1" title="29 may · 8 commits"></span><span class="hc h0" title="30 may · 0 commits"></span><span class="hc h0" title="31 may · 0 commits"></span><span class="hc h1" title="1 jun · 1 commit"></span><span class="hc h0" title="2 jun · 0 commits"></span><span class="hc h1" title="3 jun · 1 commit"></span><span class="hc h0" title="4 jun · 0 commits"></span><span class="hc h1" title="5 jun · 9 commits"></span><span class="hc h0" title="6 jun · 0 commits"></span><span class="hc h0" title="7 jun · 0 commits"></span><span class="hc h2" title="8 jun · 14 commits"></span><span class="hc h1" title="9 jun · 3 commits"></span><span class="hc h2" title="10 jun · 12 commits"></span><span class="hc h1" title="11 jun · 6 commits"></span><span class="hc h1" title="12 jun · 6 commits"></span><span class="hc h0" title="13 jun · 0 commits"></span><span class="hc h0" title="14 jun · 0 commits"></span><span class="hc h2" title="15 jun · 12 commits"></span><span class="hc h1" title="16 jun · 3 commits"></span><span class="hc h2" title="17 jun · 16 commits"></span><span class="hc h0" title="18 jun · 0 commits"></span><span class="hc h1" title="19 jun · 5 commits"></span><span class="hc h0" title="20 jun · 0 commits"></span><span class="hc h0" title="21 jun · 0 commits"></span><span class="hc h0" title="22 jun · 0 commits"></span><span class="hc h3" title="23 jun · 29 commits"></span><span class="hc h4" title="24 jun · 35 commits"></span><span class="hc h2" title="25 jun · 12 commits"></span><span class="hc h1" title="26 jun · 3 commits"></span><span class="hc h0" title="27 jun · 0 commits"></span><span class="hc h0" title="28 jun · 0 commits"></span><span class="hc h3" title="29 jun · 25 commits"></span><span class="hc h1" title="30 jun · 1 commit"></span><span class="hc h2" title="1 jul · 14 commits"></span><span class="hc h2" title="2 jul · 18 commits"></span><span class="hc h2" title="3 jul · 16 commits"></span><span class="hc h0" title="4 jul · 0 commits"></span><span class="hc h0" title="5 jul · 0 commits"></span><span class="hc h1" title="6 jul · 2 commits"></span><span class="hc h1" title="7 jul · 6 commits"></span><span class="hc h1" title="8 jul · 6 commits"></span><span class="hc h2" title="9 jul · 17 commits"></span><span class="hc h1" title="10 jul · 9 commits"></span><span class="hc h1" title="11 jul · 1 commit"></span><span class="hc h0" title="12 jul · 0 commits"></span><span class="hc h1" title="13 jul · 9 commits"></span><span class="hc h1" title="14 jul · 4 commits"></span><span class="hc h2" title="15 jul · 17 commits"></span><span class="hc h1" title="16 jul · 9 commits"></span><span class="hc h2" title="17 jul · 16 commits"></span><span class="hc h0" title="18 jul · 0 commits"></span><span class="hc h0" title="19 jul · 0 commits"></span><span class="hc h1" title="20 jul · 3 commits"></span><span class="hc h1" title="21 jul · 7 commits"></span><span class="hc h1" title="22 jul · 9 commits"></span><span class="hc h1" title="23 jul · 7 commits"></span><span class="hc h2" title="24 jul · 12 commits"></span><span class="hc h0" title="25 jul · 0 commits"></span><span class="hc h0" title="26 jul · 0 commits"></span><span class="hc h0" title="27 jul · 0 commits"></span><span class="hc h1" title="28 jul · 4 commits"></span><span class="hc h1" title="29 jul · 1 commit"></span><span class="hc h2" title="30 jul · 11 commits"></span><span class="hc h2" title="31 jul · 14 commits"></span><span class="hc h0" title="1 ago · 0 commits"></span><span class="hc h1" title="2 ago · 1 commit"></span><span class="hc h4" title="3 ago · 40 commits"></span><span class="hc h2" title="4 ago · 15 commits"></span><span class="hc h1" title="5 ago · 9 commits"></span><span class="hc h1" title="6 ago · 5 commits"></span><span class="hc h2" title="7 ago · 19 commits"></span><span class="hc h1" title="8 ago · 4 commits"></span><span class="hc h0" title="9 ago · 0 commits"></span><span class="hc h2" title="10 ago · 20 commits"></span><span class="hc h1" title="11 ago · 6 commits"></span><span class="hc h1" title="12 ago · 8 commits"></span><span class="hc h1" title="13 ago · 5 commits"></span><span class="hc h2" title="14 ago · 11 commits"></span><span class="hc h0" title="15 ago · 0 commits"></span><span class="hc h0" title="16 ago · 0 commits"></span><span class="hc h1" title="17 ago · 2 commits"></span></div></div>
     </div>
   </section>
 
@@ -351,90 +417,87 @@
     <div class="card-top">
       <span class="card-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 20.5v-6M12 20.5V8M18 20.5v-9"/></svg></span>
       <div class="card-h"><h3>GVV · Datos</h3><div class="card-who"><span class="who auto"><span class="swatch sw-auto"></span>Automatización</span><span class="who eug"><span class="swatch sw-eug"></span>Eugenio</span></div></div>
-      <span class="card-n">27<span>commits</span></span>
+      <span class="card-n">21<span>commits</span></span>
     </div>
-    <svg class="spark" viewBox="0 0 108 26" preserveAspectRatio="none" aria-hidden="true"><path class="spark-a" d="M0 26 L0.0 23.0 L8.3 24.0 L16.6 24.0 L24.9 24.0 L33.2 23.0 L41.5 24.0 L49.8 23.0 L58.2 23.0 L66.5 15.4 L74.8 21.1 L83.1 23.0 L91.4 24.0 L99.7 9.7 L108.0 3.0 L108 26 Z"/><path class="spark-l" d="M0.0 23.0 L8.3 24.0 L16.6 24.0 L24.9 24.0 L33.2 23.0 L41.5 24.0 L49.8 23.0 L58.2 23.0 L66.5 15.4 L74.8 21.1 L83.1 23.0 L91.4 24.0 L99.7 9.7 L108.0 3.0"/></svg>
-    <ul><li style="--li:0">cierre automatico Julio 2026 <span class="lh">3402916</span></li><li style="--li:1">cierre automatico Julio 2026 <span class="lh">22ede4b</span></li><li style="--li:2">cierre automatico Julio 2026 <span class="lh">4809fc0</span></li><li style="--li:3">cierre automatico Julio 2026 <span class="lh">1b01cc9</span></li><li style="--li:4">cierre automatico Julio 2026 <span class="lh">5d8f427</span></li><li style="--li:5">cierre automatico Julio 2026 <span class="lh">e78e0d2</span></li><li style="--li:6">fix Asset Allocation 116% -&gt; 100% (doble conteo fila Cash renombrada por Kevin) <span class="lh">9568ec9</span></li><li style="--li:7">cierre automatico Julio 2026 <span class="lh">c342927</span></li><li style="--li:8">cierre automatico Julio 2026 <span class="lh">76da3cf</span></li><li style="--li:9">autobust de cache en cretumpartners (redirect a ?v=&lt;hora&gt; — el hosting cachea .html 10 anios en navegador) <span class="lh">6fb0fb1</span></li><li style="--li:10">cierre automatico Julio 2026 <span class="lh">0d6fb04</span></li><li style="--li:11">version movil (flujo vertical apilado &lt;=880px) + logos limpios unificados <span class="lh">8bebfb6</span></li><li style="--li:12">actualizar estrategias al Reporte RGA Consulting 2026-07-31 (+Equity ETF, +Greenfield) <span class="lh">eda8007</span></li><li style="--li:12">fix logo Deloitte (respetar alfa original del webp) <span class="lh">60debd3</span></li><li style="--li:12">logo Deloitte limpio (transparente, chip blanco) <span class="lh">d4b0b75</span></li><li style="--li:12">logo BNY Mellon limpio (transparente, chip blanco) en vez del recorte borroso <span class="lh">912846f</span></li><li style="--li:12">proveedores a color (sin grayscale, hover scale) <span class="lh">6636dcb</span></li><li style="--li:12">proveedores con espaciado uniforme (logos con trim + fondo transparente + alturas balanceadas + space-between) <span class="lh">ced83a4</span></li><li style="--li:12">seccion Estructura del Fondo (diagrama animado) <span class="lh">59272c3</span></li><li style="--li:12">cierre automatico Julio 2026 <span class="lh">492db3c</span></li><li style="--li:12">skin in the game 76% -&gt; 61% (numero + textos es/en) <span class="lh">7acbc89</span></li><li style="--li:12">cierre automatico Julio 2026 <span class="lh">ff28a52</span></li><li style="--li:12">logo de Saronic en privados (pvlogo-saronic) <span class="lh">006719a</span></li><li style="--li:12">cierre automatico Julio 2026 <span class="lh">c9d5c16</span></li><li style="--li:12">YTD hero desde celda Excel (M.ytd/ytdNet en METRICS) <span class="lh">926046b</span></li><li style="--li:12">cierre automatico Julio 2026 <span class="lh">1277fb4</span></li><li style="--li:12">directiva solo-Excel 2026-08-08 <span class="lh">21b9cc9</span></li></ul>
+    <svg class="spark" viewBox="0 0 108 26" preserveAspectRatio="none" aria-hidden="true"><path class="spark-a" d="M0 26 L0.0 24.0 L8.3 24.0 L16.6 24.0 L24.9 23.0 L33.2 24.0 L41.5 23.0 L49.8 23.0 L58.2 15.4 L66.5 21.1 L74.8 23.0 L83.1 24.0 L91.4 9.7 L99.7 3.0 L108.0 24.0 L108 26 Z"/><path class="spark-l" d="M0.0 24.0 L8.3 24.0 L16.6 24.0 L24.9 23.0 L33.2 24.0 L41.5 23.0 L49.8 23.0 L58.2 15.4 L66.5 21.1 L74.8 23.0 L83.1 24.0 L91.4 9.7 L99.7 3.0 L108.0 24.0"/></svg>
+    <ul><li style="--li:0">cierre automatico Julio 2026 <span class="lh">3402916</span></li><li style="--li:1">cierre automatico Julio 2026 <span class="lh">22ede4b</span></li><li style="--li:2">cierre automatico Julio 2026 <span class="lh">4809fc0</span></li><li style="--li:3">cierre automatico Julio 2026 <span class="lh">1b01cc9</span></li><li style="--li:4">cierre automatico Julio 2026 <span class="lh">5d8f427</span></li><li style="--li:5">cierre automatico Julio 2026 <span class="lh">e78e0d2</span></li><li style="--li:6">fix Asset Allocation 116% -&gt; 100% (doble conteo fila Cash renombrada por Kevin) <span class="lh">9568ec9</span></li><li style="--li:7">cierre automatico Julio 2026 <span class="lh">c342927</span></li><li style="--li:8">cierre automatico Julio 2026 <span class="lh">76da3cf</span></li><li style="--li:9">autobust de cache en cretumpartners (redirect a ?v=&lt;hora&gt; — el hosting cachea .html 10 anios en navegador) <span class="lh">6fb0fb1</span></li><li style="--li:10">cierre automatico Julio 2026 <span class="lh">0d6fb04</span></li><li style="--li:11">version movil (flujo vertical apilado &lt;=880px) + logos limpios unificados <span class="lh">8bebfb6</span></li><li style="--li:12">actualizar estrategias al Reporte RGA Consulting 2026-07-31 (+Equity ETF, +Greenfield) <span class="lh">eda8007</span></li><li style="--li:12">fix logo Deloitte (respetar alfa original del webp) <span class="lh">60debd3</span></li><li style="--li:12">logo Deloitte limpio (transparente, chip blanco) <span class="lh">d4b0b75</span></li><li style="--li:12">logo BNY Mellon limpio (transparente, chip blanco) en vez del recorte borroso <span class="lh">912846f</span></li><li style="--li:12">proveedores a color (sin grayscale, hover scale) <span class="lh">6636dcb</span></li><li style="--li:12">proveedores con espaciado uniforme (logos con trim + fondo transparente + alturas balanceadas + space-between) <span class="lh">ced83a4</span></li><li style="--li:12">seccion Estructura del Fondo (diagrama animado) <span class="lh">59272c3</span></li><li style="--li:12">cierre automatico Julio 2026 <span class="lh">492db3c</span></li><li style="--li:12">skin in the game 76% -&gt; 61% (numero + textos es/en) <span class="lh">7acbc89</span></li></ul>
+  </article>
+<article class="card reveal" data-owner="angel auto">
+    <div class="card-top">
+      <span class="card-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4" width="17" height="16" rx="3.2"/><path d="M3.5 9.4h17M9.2 9.4V20"/></svg></span>
+      <div class="card-h"><h3>Plataforma</h3><div class="card-who"><span class="who angel"><span class="swatch sw-navy"></span>Angel</span><span class="who auto"><span class="swatch sw-auto"></span>Automatización</span></div></div>
+      <span class="card-n">8<span>commits</span></span>
+    </div>
+    <svg class="spark" viewBox="0 0 108 26" preserveAspectRatio="none" aria-hidden="true"><path class="spark-a" d="M0 26 L0.0 24.0 L8.3 24.0 L16.6 24.0 L24.9 24.0 L33.2 24.0 L41.5 20.2 L49.8 24.0 L58.2 24.0 L66.5 24.0 L74.8 24.0 L83.1 8.7 L91.4 3.0 L99.7 10.6 L108.0 22.1 L108 26 Z"/><path class="spark-l" d="M0.0 24.0 L8.3 24.0 L16.6 24.0 L24.9 24.0 L33.2 24.0 L41.5 20.2 L49.8 24.0 L58.2 24.0 L66.5 24.0 L74.8 24.0 L83.1 8.7 L91.4 3.0 L99.7 10.6 L108.0 22.1"/></svg>
+    <ul><li style="--li:0">acceso a módulos por usuario (definido por admin) <span class="lh">4edba77</span></li><li style="--li:1">avances de la semana (auto) <span class="lh">de64b0d</span></li><li style="--li:2">imágenes de datos (heatmap, dona, sparklines) <span class="lh">1c7018c</span></li><li style="--li:3">composición tipo Notion + filtro Angel / Eugenio+Automatización <span class="lh">596cd02</span></li><li style="--li:4">títulos con efecto typewriter (teclea código → formatea) <span class="lh">85c7382</span></li><li style="--li:5">rediseño (hero con actividad, nav sticky, tema, buscador) <span class="lh">21a16bb</span></li><li style="--li:6">iconos SVG propios en vez de emojis <span class="lh">fd94202</span></li><li style="--li:7">avances en el desk (botón header + generador automático) <span class="lh">1521dac</span></li></ul>
   </article>
 <article class="card reveal" data-owner="angel">
     <div class="card-top">
       <span class="card-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.5" y="3" width="15" height="18" rx="2.4"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4.5"/></svg></span>
       <div class="card-h"><h3>Campañas · Carta</h3><div class="card-who"><span class="who angel"><span class="swatch sw-navy"></span>Angel</span></div></div>
-      <span class="card-n">11<span>commits</span></span>
+      <span class="card-n">7<span>commits</span></span>
     </div>
-    <svg class="spark" viewBox="0 0 108 26" preserveAspectRatio="none" aria-hidden="true"><path class="spark-a" d="M0 26 L0.0 24.0 L8.3 24.0 L16.6 24.0 L24.9 24.0 L33.2 24.0 L41.5 24.0 L49.8 18.8 L58.2 24.0 L66.5 24.0 L74.8 24.0 L83.1 24.0 L91.4 15.3 L99.7 3.0 L108.0 24.0 L108 26 Z"/><path class="spark-l" d="M0.0 24.0 L8.3 24.0 L16.6 24.0 L24.9 24.0 L33.2 24.0 L41.5 24.0 L49.8 18.8 L58.2 24.0 L66.5 24.0 L74.8 24.0 L83.1 24.0 L91.4 15.3 L99.7 3.0 L108.0 24.0"/></svg>
-    <ul><li style="--li:0">título pro del PDF de la carta (pestaña &quot;GVV Monthly Report&quot;) <span class="lh">1017e0b</span></li><li style="--li:1">enlace de la carta en /gvv (sin extensión) — arregla caída a login <span class="lh">34a38ac</span></li><li style="--li:2">% del mes en navy + botón Guardar en la forma rápida <span class="lh">0fc3b16</span></li><li style="--li:3">enlace público de la carta como /gvv.pdf (evita filtros de adblock) <span class="lh">7e7047e</span></li><li style="--li:4">servir /carta como proxy first-party (evita ERR_BLOCKED_BY_CLIENT) <span class="lh">a7bf151</span></li><li style="--li:5">subir la carta desde la PC (además de Dropbox) <span class="lh">8d8a183</span></li><li style="--li:6">nombre pro del PDF público de la carta <span class="lh">377fd0c</span></li><li style="--li:7">publicar la carta mensual en el desk (enlace público fijo) <span class="lh">4c72a6c</span></li><li style="--li:8">el modal &quot;Plantilla del correo&quot; muestra la campaña publicada <span class="lh">65354d6</span></li><li style="--li:9">el editor completo ahora carga y conserva lo publicado <span class="lh">75f580e</span></li><li style="--li:10">editar la campaña mensual con el editor de correo de Ventas <span class="lh">41caeee</span></li></ul>
+    <svg class="spark" viewBox="0 0 108 26" preserveAspectRatio="none" aria-hidden="true"><path class="spark-a" d="M0 26 L0.0 24.0 L8.3 24.0 L16.6 24.0 L24.9 24.0 L33.2 24.0 L41.5 18.8 L49.8 24.0 L58.2 24.0 L66.5 24.0 L74.8 24.0 L83.1 15.3 L91.4 3.0 L99.7 11.8 L108.0 24.0 L108 26 Z"/><path class="spark-l" d="M0.0 24.0 L8.3 24.0 L16.6 24.0 L24.9 24.0 L33.2 24.0 L41.5 18.8 L49.8 24.0 L58.2 24.0 L66.5 24.0 L74.8 24.0 L83.1 15.3 L91.4 3.0 L99.7 11.8 L108.0 24.0"/></svg>
+    <ul><li style="--li:0">Importar como botón + pop-up, y botones adaptados a móvil <span class="lh">606566b</span></li><li style="--li:1">filtros juntos + &quot;Meses&quot; dentro de &quot;Ordenar&quot; <span class="lh">73c62e4</span></li><li style="--li:2">filtro por responsable como desplegable (izquierda) <span class="lh">2a2deb1</span></li><li style="--li:3">reordenar (acciones → buscador → filtros) + ajustes <span class="lh">0ae264e</span></li><li style="--li:4">orden + filtro de columnas por mes <span class="lh">2125e41</span></li><li style="--li:5">Contactos (add/edit/del), Exportar Excel/PDF/CSV, Sincronizar <span class="lh">020bed8</span></li><li style="--li:6">agrupar acciones en Exportar / Importar / Contactos <span class="lh">e0ae669</span></li></ul>
   </article>
 <article class="card reveal" data-owner="angel">
     <div class="card-top">
       <span class="card-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2.6"/><path d="M4.2 7.5 12 12.8 19.8 7.5"/></svg></span>
       <div class="card-h"><h3>Ventas · Plantillas</h3><div class="card-who"><span class="who angel"><span class="swatch sw-navy"></span>Angel</span></div></div>
-      <span class="card-n">9<span>commits</span></span>
+      <span class="card-n">5<span>commits</span></span>
     </div>
-    <svg class="spark" viewBox="0 0 108 26" preserveAspectRatio="none" aria-hidden="true"><path class="spark-a" d="M0 26 L0.0 24.0 L8.3 24.0 L16.6 24.0 L24.9 24.0 L33.2 24.0 L41.5 24.0 L49.8 24.0 L58.2 24.0 L66.5 18.8 L74.8 18.8 L83.1 18.8 L91.4 24.0 L99.7 18.8 L108.0 3.0 L108 26 Z"/><path class="spark-l" d="M0.0 24.0 L8.3 24.0 L16.6 24.0 L24.9 24.0 L33.2 24.0 L41.5 24.0 L49.8 24.0 L58.2 24.0 L66.5 18.8 L74.8 18.8 L83.1 18.8 L91.4 24.0 L99.7 18.8 L108.0 3.0"/></svg>
-    <ul><li style="--li:0">copiar plantilla sin manglear el formato <span class="lh">ec4273b</span></li><li style="--li:1">fix overlay de progreso siempre visible (hidden anulado por display:flex) <span class="lh">123adac</span></li><li style="--li:2">timeout en la subida de imágenes (evita quedarse colgado en 0%) <span class="lh">5ad04ce</span></li><li style="--li:3">círculo de progreso al optimizar imágenes <span class="lh">99a7365</span></li><li style="--li:4">indicador de estado de imágenes en las plantillas <span class="lh">2028e11</span></li><li style="--li:5">&quot;Optimizar imágenes&quot; — sube base64 al servidor (Gmail no muestra base64) <span class="lh">2cb592a</span></li><li style="--li:6">botón &quot;Descargar .html&quot; en plantillas (biblioteca y editor) <span class="lh">c1e5b44</span></li><li style="--li:7">copiar plantilla funciona en móvil (selección + execCommand) <span class="lh">555dbb5</span></li><li style="--li:8">Ventas en MVP + plantillas separadas por organización <span class="lh">98e2823</span></li></ul>
+    <svg class="spark" viewBox="0 0 108 26" preserveAspectRatio="none" aria-hidden="true"><path class="spark-a" d="M0 26 L0.0 24.0 L8.3 24.0 L16.6 24.0 L24.9 24.0 L33.2 24.0 L41.5 24.0 L49.8 24.0 L58.2 18.8 L66.5 18.8 L74.8 18.8 L83.1 24.0 L91.4 18.8 L99.7 3.0 L108.0 24.0 L108 26 Z"/><path class="spark-l" d="M0.0 24.0 L8.3 24.0 L16.6 24.0 L24.9 24.0 L33.2 24.0 L41.5 24.0 L49.8 24.0 L58.2 18.8 L66.5 18.8 L74.8 18.8 L83.1 24.0 L91.4 18.8 L99.7 3.0 L108.0 24.0"/></svg>
+    <ul><li style="--li:0">copiar plantilla sin manglear el formato <span class="lh">ec4273b</span></li><li style="--li:1">fix overlay de progreso siempre visible (hidden anulado por display:flex) <span class="lh">123adac</span></li><li style="--li:2">timeout en la subida de imágenes (evita quedarse colgado en 0%) <span class="lh">5ad04ce</span></li><li style="--li:3">círculo de progreso al optimizar imágenes <span class="lh">99a7365</span></li><li style="--li:4">indicador de estado de imágenes en las plantillas <span class="lh">2028e11</span></li></ul>
   </article>
-<article class="card reveal" data-owner="angel">
-    <div class="card-top">
-      <span class="card-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4" width="17" height="16" rx="3.2"/><path d="M3.5 9.4h17M9.2 9.4V20"/></svg></span>
-      <div class="card-h"><h3>Plataforma</h3><div class="card-who"><span class="who angel"><span class="swatch sw-navy"></span>Angel</span></div></div>
-      <span class="card-n">6<span>commits</span></span>
-    </div>
-    <svg class="spark" viewBox="0 0 108 26" preserveAspectRatio="none" aria-hidden="true"><path class="spark-a" d="M0 26 L0.0 24.0 L8.3 24.0 L16.6 24.0 L24.9 24.0 L33.2 24.0 L41.5 24.0 L49.8 20.2 L58.2 24.0 L66.5 24.0 L74.8 24.0 L83.1 24.0 L91.4 8.7 L99.7 3.0 L108.0 12.5 L108 26 Z"/><path class="spark-l" d="M0.0 24.0 L8.3 24.0 L16.6 24.0 L24.9 24.0 L33.2 24.0 L41.5 24.0 L49.8 20.2 L58.2 24.0 L66.5 24.0 L74.8 24.0 L83.1 24.0 L91.4 8.7 L99.7 3.0 L108.0 12.5"/></svg>
-    <ul><li style="--li:0">imágenes de datos (heatmap, dona, sparklines) <span class="lh">1c7018c</span></li><li style="--li:1">composición tipo Notion + filtro Angel / Eugenio+Automatización <span class="lh">596cd02</span></li><li style="--li:2">títulos con efecto typewriter (teclea código → formatea) <span class="lh">85c7382</span></li><li style="--li:3">rediseño (hero con actividad, nav sticky, tema, buscador) <span class="lh">21a16bb</span></li><li style="--li:4">iconos SVG propios en vez de emojis <span class="lh">fd94202</span></li><li style="--li:5">avances en el desk (botón header + generador automático) <span class="lh">1521dac</span></li></ul>
-  </article>
-<article class="card reveal" data-owner="eug">
+<article class="card reveal" data-owner="angel eug">
     <div class="card-top">
       <span class="card-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="currentColor" stroke="none"><circle cx="6" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="18" cy="12" r="1.5"/></g></svg></span>
-      <div class="card-h"><h3>Otros</h3><div class="card-who"><span class="who eug"><span class="swatch sw-eug"></span>Eugenio</span></div></div>
-      <span class="card-n">2<span>commits</span></span>
+      <div class="card-h"><h3>Otros</h3><div class="card-who"><span class="who angel"><span class="swatch sw-navy"></span>Angel</span><span class="who eug"><span class="swatch sw-eug"></span>Eugenio</span></div></div>
+      <span class="card-n">4<span>commits</span></span>
     </div>
-    <svg class="spark" viewBox="0 0 108 26" preserveAspectRatio="none" aria-hidden="true"><path class="spark-a" d="M0 26 L0.0 23.7 L8.3 22.5 L16.6 18.8 L24.9 20.6 L33.2 11.6 L41.5 12.9 L49.8 4.9 L58.2 3.0 L66.5 20.0 L74.8 9.8 L83.1 16.6 L91.4 18.4 L99.7 12.6 L108.0 23.4 L108 26 Z"/><path class="spark-l" d="M0.0 23.7 L8.3 22.5 L16.6 18.8 L24.9 20.6 L33.2 11.6 L41.5 12.9 L49.8 4.9 L58.2 3.0 L66.5 20.0 L74.8 9.8 L83.1 16.6 L91.4 18.4 L99.7 12.6 L108.0 23.4"/></svg>
-    <ul><li style="--li:0">&#39;Copiar link cretumpartners&#39; copia URL versionada por hora (salta cache de navegador del hosting) <span class="lh">498ae17</span></li><li style="--li:1">Herramientas de la seccion Estructura (draft+injector+logos) para futuras ediciones <span class="lh">0ca81db</span></li></ul>
+    <svg class="spark" viewBox="0 0 108 26" preserveAspectRatio="none" aria-hidden="true"><path class="spark-a" d="M0 26 L0.0 22.5 L8.3 18.8 L16.6 20.6 L24.9 11.6 L33.2 12.9 L41.5 4.9 L49.8 3.0 L58.2 20.0 L66.5 9.8 L74.8 16.6 L83.1 18.4 L91.4 12.6 L99.7 22.8 L108.0 24.0 L108 26 Z"/><path class="spark-l" d="M0.0 22.5 L8.3 18.8 L16.6 20.6 L24.9 11.6 L33.2 12.9 L41.5 4.9 L49.8 3.0 L58.2 20.0 L66.5 9.8 L74.8 16.6 L83.1 18.4 L91.4 12.6 L99.7 22.8 L108.0 24.0"/></svg>
+    <ul><li style="--li:0">arreglar corte a 1000 filas (días recientes se perdían) <span class="lh">c37857c</span></li><li style="--li:1">Ordenar pegado a Filtrar (quita margin-left:auto) <span class="lh">fb3d56e</span></li><li style="--li:2">&#39;Copiar link cretumpartners&#39; copia URL versionada por hora (salta cache de navegador del hosting) <span class="lh">498ae17</span></li><li style="--li:3">Herramientas de la seccion Estructura (draft+injector+logos) para futuras ediciones <span class="lh">0ca81db</span></li></ul>
   </article>
-<article class="card reveal" data-owner="angel">
+<article class="card reveal" data-owner="auto eug angel">
     <div class="card-top">
       <span class="card-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 21V4h11l-2.5 3L17 10H6"/></svg></span>
-      <div class="card-h"><h3>Reportes</h3><div class="card-who"><span class="who angel"><span class="swatch sw-navy"></span>Angel</span></div></div>
-      <span class="card-n">1<span>commit</span></span>
+      <div class="card-h"><h3>Reportes</h3><div class="card-who"><span class="who auto"><span class="swatch sw-auto"></span>Automatización</span><span class="who eug"><span class="swatch sw-eug"></span>Eugenio</span><span class="who angel"><span class="swatch sw-navy"></span>Angel</span></div></div>
+      <span class="card-n">3<span>commits</span></span>
     </div>
-    <svg class="spark" viewBox="0 0 108 26" preserveAspectRatio="none" aria-hidden="true"><path class="spark-a" d="M0 26 L0.0 24.0 L8.3 24.0 L16.6 24.0 L24.9 24.0 L33.2 24.0 L41.5 24.0 L49.8 12.7 L58.2 24.0 L66.5 3.0 L74.8 24.0 L83.1 24.0 L91.4 24.0 L99.7 22.4 L108.0 22.4 L108 26 Z"/><path class="spark-l" d="M0.0 24.0 L8.3 24.0 L16.6 24.0 L24.9 24.0 L33.2 24.0 L41.5 24.0 L49.8 12.7 L58.2 24.0 L66.5 3.0 L74.8 24.0 L83.1 24.0 L91.4 24.0 L99.7 22.4 L108.0 22.4"/></svg>
-    <ul><li style="--li:0">mini-tablero con tomar/resolver y atribución <span class="lh">0788a39</span></li></ul>
-  </article>
-<article class="card reveal" data-owner="angel">
-    <div class="card-top">
-      <span class="card-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4.5"/><path d="M8 12.3l2.6 2.6L16.2 9"/></svg></span>
-      <div class="card-h"><h3>To Do</h3><div class="card-who"><span class="who angel"><span class="swatch sw-navy"></span>Angel</span></div></div>
-      <span class="card-n">1<span>commit</span></span>
-    </div>
-    <svg class="spark" viewBox="0 0 108 26" preserveAspectRatio="none" aria-hidden="true"><path class="spark-a" d="M0 26 L0.0 24.0 L8.3 24.0 L16.6 24.0 L24.9 24.0 L33.2 24.0 L41.5 24.0 L49.8 10.0 L58.2 6.5 L66.5 10.0 L74.8 13.5 L83.1 6.5 L91.4 24.0 L99.7 3.0 L108.0 24.0 L108 26 Z"/><path class="spark-l" d="M0.0 24.0 L8.3 24.0 L16.6 24.0 L24.9 24.0 L33.2 24.0 L41.5 24.0 L49.8 10.0 L58.2 6.5 L66.5 10.0 L74.8 13.5 L83.1 6.5 L91.4 24.0 L99.7 3.0 L108.0 24.0"/></svg>
-    <ul><li style="--li:0">panel de carpetas por proyecto + Vaciar en todas las vistas <span class="lh">da0ba21</span></li></ul>
+    <svg class="spark" viewBox="0 0 108 26" preserveAspectRatio="none" aria-hidden="true"><path class="spark-a" d="M0 26 L0.0 24.0 L8.3 24.0 L16.6 24.0 L24.9 24.0 L33.2 24.0 L41.5 12.7 L49.8 24.0 L58.2 3.0 L66.5 24.0 L74.8 24.0 L83.1 24.0 L91.4 22.4 L99.7 20.8 L108.0 22.4 L108 26 Z"/><path class="spark-l" d="M0.0 24.0 L8.3 24.0 L16.6 24.0 L24.9 24.0 L33.2 24.0 L41.5 12.7 L49.8 24.0 L58.2 3.0 L66.5 24.0 L74.8 24.0 L83.1 24.0 L91.4 22.4 L99.7 20.8 L108.0 22.4"/></svg>
+    <ul><li style="--li:0">resolver investor_id correcto en portafolio combinado <span class="lh">54a1e68</span></li><li style="--li:1">Reporte de Fondo (Fund IV/V) descargable por inversionista — generado EN VIVO en la Mini <span class="lh">201f9ec</span></li><li style="--li:2">mini-tablero con tomar/resolver y atribución <span class="lh">0788a39</span></li></ul>
   </article></div>
   </section>
 
   <section id="personas" class="wrap sec">
     <div class="sec-head"><h2 class="type">Qué hizo cada quien</h2></div>
     <div class="ppl"><div class="prow reveal">
-    <div class="phead"><span class="swatch sw-navy"></span><span class="pname">Angel · producto</span><span class="pcount">28</span></div>
+    <div class="phead"><span class="swatch sw-navy"></span><span class="pname">Angel · producto</span><span class="pcount">22</span></div>
     <div class="pbar"><div class="pbar-fill fill-angel" style="--s:1.000"></div></div>
-    <div class="pcommits"><div class="cl" style="--li:0"><span class="h">1c7018c</span><span>imágenes de datos (heatmap, dona, sparklines)</span></div><div class="cl" style="--li:1"><span class="h">596cd02</span><span>composición tipo Notion + filtro Angel / Eugenio+Automatización</span></div><div class="cl" style="--li:2"><span class="h">85c7382</span><span>títulos con efecto typewriter (teclea código → formatea)</span></div><div class="cl" style="--li:3"><span class="h">21a16bb</span><span>rediseño (hero con actividad, nav sticky, tema, buscador)</span></div><div class="cl" style="--li:4"><span class="h">fd94202</span><span>iconos SVG propios en vez de emojis</span></div><div class="cl" style="--li:5"><span class="h">1521dac</span><span>avances en el desk (botón header + generador automático)</span></div><div class="pmore">+22 más</div></div>
+    <div class="pcommits"><div class="cl" style="--li:0"><span class="h">4edba77</span><span>acceso a módulos por usuario (definido por admin)</span></div><div class="cl" style="--li:1"><span class="h">c37857c</span><span>arreglar corte a 1000 filas (días recientes se perdían)</span></div><div class="cl" style="--li:2"><span class="h">606566b</span><span>Importar como botón + pop-up, y botones adaptados a móvil</span></div><div class="cl" style="--li:3"><span class="h">fb3d56e</span><span>Ordenar pegado a Filtrar (quita margin-left:auto)</span></div><div class="cl" style="--li:4"><span class="h">73c62e4</span><span>filtros juntos + &quot;Meses&quot; dentro de &quot;Ordenar&quot;</span></div><div class="cl" style="--li:5"><span class="h">2a2deb1</span><span>filtro por responsable como desplegable (izquierda)</span></div><div class="pmore">+16 más</div></div>
   </div>
 <div class="prow reveal">
-    <div class="phead"><span class="swatch sw-auto"></span><span class="pname">Automatización GVV</span><span class="pcount">13</span></div>
-    <div class="pbar"><div class="pbar-fill fill-auto" style="--s:0.464"></div></div>
-    <div class="pcommits"><div class="cl" style="--li:0"><span class="h">3402916</span><span>cierre automatico Julio 2026</span></div><div class="cl" style="--li:1"><span class="h">22ede4b</span><span>cierre automatico Julio 2026</span></div><div class="cl" style="--li:2"><span class="h">4809fc0</span><span>cierre automatico Julio 2026</span></div><div class="cl" style="--li:3"><span class="h">c342927</span><span>cierre automatico Julio 2026</span></div><div class="cl" style="--li:4"><span class="h">76da3cf</span><span>cierre automatico Julio 2026</span></div><div class="cl" style="--li:5"><span class="h">0d6fb04</span><span>cierre automatico Julio 2026</span></div><div class="pmore">+7 más</div></div>
+    <div class="phead"><span class="swatch sw-auto"></span><span class="pname">Automatización GVV</span><span class="pcount">10</span></div>
+    <div class="pbar"><div class="pbar-fill fill-auto" style="--s:0.455"></div></div>
+    <div class="pcommits"><div class="cl" style="--li:0"><span class="h">54a1e68</span><span>resolver investor_id correcto en portafolio combinado</span></div><div class="cl" style="--li:1"><span class="h">de64b0d</span><span>avances de la semana (auto)</span></div><div class="cl" style="--li:2"><span class="h">3402916</span><span>cierre automatico Julio 2026</span></div><div class="cl" style="--li:3"><span class="h">22ede4b</span><span>cierre automatico Julio 2026</span></div><div class="cl" style="--li:4"><span class="h">4809fc0</span><span>cierre automatico Julio 2026</span></div><div class="cl" style="--li:5"><span class="h">c342927</span><span>cierre automatico Julio 2026</span></div><div class="pmore">+4 más</div></div>
   </div>
 <div class="prow reveal">
     <div class="phead"><span class="swatch sw-eug"></span><span class="pname">Eugenio</span><span class="pcount">16</span></div>
-    <div class="pbar"><div class="pbar-fill fill-eug" style="--s:0.571"></div></div>
-    <div class="pcommits"><div class="cl" style="--li:0"><span class="h">1b01cc9</span><span>cierre automatico Julio 2026</span></div><div class="cl" style="--li:1"><span class="h">5d8f427</span><span>cierre automatico Julio 2026</span></div><div class="cl" style="--li:2"><span class="h">e78e0d2</span><span>cierre automatico Julio 2026</span></div><div class="cl" style="--li:3"><span class="h">9568ec9</span><span>fix Asset Allocation 116% -&gt; 100% (doble conteo fila Cash renombrada por Kevin)</span></div><div class="cl" style="--li:4"><span class="h">498ae17</span><span>&#39;Copiar link cretumpartners&#39; copia URL versionada por hora (salta cache de navegador del hosting)</span></div><div class="cl" style="--li:5"><span class="h">6fb0fb1</span><span>autobust de cache en cretumpartners (redirect a ?v=&lt;hora&gt; — el hosting cachea .html 10 anios en navegador)</span></div><div class="pmore">+10 más</div></div>
+    <div class="pbar"><div class="pbar-fill fill-eug" style="--s:0.727"></div></div>
+    <div class="pcommits"><div class="cl" style="--li:0"><span class="h">201f9ec</span><span>Reporte de Fondo (Fund IV/V) descargable por inversionista — generado EN VIVO en la Mini</span></div><div class="cl" style="--li:1"><span class="h">1b01cc9</span><span>cierre automatico Julio 2026</span></div><div class="cl" style="--li:2"><span class="h">5d8f427</span><span>cierre automatico Julio 2026</span></div><div class="cl" style="--li:3"><span class="h">e78e0d2</span><span>cierre automatico Julio 2026</span></div><div class="cl" style="--li:4"><span class="h">9568ec9</span><span>fix Asset Allocation 116% -&gt; 100% (doble conteo fila Cash renombrada por Kevin)</span></div><div class="cl" style="--li:5"><span class="h">498ae17</span><span>&#39;Copiar link cretumpartners&#39; copia URL versionada por hora (salta cache de navegador del hosting)</span></div><div class="pmore">+10 más</div></div>
   </div></div>
   </section>
 
   <section id="registro" class="wrap sec">
-    <div class="sec-head"><h2 class="type">Registro de GitHub</h2><span class="sec-meta">57 commits</span></div>
+    <div class="sec-head"><h2 class="type">Registro de GitHub</h2><span class="sec-meta">48 commits</span></div>
     <div class="search reveal"><svg class="ic ic-s" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="q" type="search" placeholder="Buscar en los commits (módulo, texto, hash…)" autocomplete="off" aria-label="Buscar commits"></div>
     <div class="logbody reveal" id="logbody">
+  <div class="day"><p class="day-h">17 ago · 2 commits</p>
+    <div class="lrow" style="--li:0"><span class="lw sw-navy"></span><span class="lh">4edba77</span><span>Usuarios: acceso a módulos por usuario (definido por admin)</span></div><div class="lrow" style="--li:1"><span class="lw sw-auto"></span><span class="lh">54a1e68</span><span>Reporte de Fondo: resolver investor_id correcto en portafolio combinado</span></div>
+  </div>
+  <div class="day"><p class="day-h">14 ago · 11 commits</p>
+    <div class="lrow" style="--li:0"><span class="lw sw-eug"></span><span class="lh">201f9ec</span><span>Reporte de Fondo (Fund IV/V) descargable por inversionista — generado EN VIVO en la Mini</span></div><div class="lrow" style="--li:1"><span class="lw sw-navy"></span><span class="lh">c37857c</span><span>Apertura/Campañas: arreglar corte a 1000 filas (días recientes se perdían)</span></div><div class="lrow" style="--li:2"><span class="lw sw-navy"></span><span class="lh">606566b</span><span>Campañas · Gestión: Importar como botón + pop-up, y botones adaptados a móvil</span></div><div class="lrow" style="--li:3"><span class="lw sw-navy"></span><span class="lh">fb3d56e</span><span>Campanas: Ordenar pegado a Filtrar (quita margin-left:auto)</span></div><div class="lrow" style="--li:4"><span class="lw sw-navy"></span><span class="lh">73c62e4</span><span>Campañas · Gestión: filtros juntos + &quot;Meses&quot; dentro de &quot;Ordenar&quot;</span></div><div class="lrow" style="--li:5"><span class="lw sw-navy"></span><span class="lh">2a2deb1</span><span>Campañas · Gestión: filtro por responsable como desplegable (izquierda)</span></div><div class="lrow" style="--li:6"><span class="lw sw-navy"></span><span class="lh">0ae264e</span><span>Campañas · Gestión: reordenar (acciones → buscador → filtros) + ajustes</span></div><div class="lrow" style="--li:7"><span class="lw sw-navy"></span><span class="lh">2125e41</span><span>Campañas · Gestión (B): orden + filtro de columnas por mes</span></div><div class="lrow" style="--li:8"><span class="lw sw-navy"></span><span class="lh">020bed8</span><span>Campañas · Gestión (A): Contactos (add/edit/del), Exportar Excel/PDF/CSV, Sincronizar</span></div><div class="lrow" style="--li:9"><span class="lw sw-navy"></span><span class="lh">e0ae669</span><span>Campañas · Gestión: agrupar acciones en Exportar / Importar / Contactos</span></div><div class="lrow" style="--li:10"><span class="lw sw-auto"></span><span class="lh">de64b0d</span><span>Blog semanal: avances de la semana (auto)</span></div>
+  </div>
   <div class="day"><p class="day-h">13 ago · 5 commits</p>
     <div class="lrow" style="--li:0"><span class="lw sw-navy"></span><span class="lh">1c7018c</span><span>Blog semanal: imágenes de datos (heatmap, dona, sparklines)</span></div><div class="lrow" style="--li:1"><span class="lw sw-navy"></span><span class="lh">596cd02</span><span>Blog semanal: composición tipo Notion + filtro Angel / Eugenio+Automatización</span></div><div class="lrow" style="--li:2"><span class="lw sw-navy"></span><span class="lh">85c7382</span><span>Blog semanal: títulos con efecto typewriter (teclea código → formatea)</span></div><div class="lrow" style="--li:3"><span class="lw sw-navy"></span><span class="lh">21a16bb</span><span>Blog semanal: rediseño (hero con actividad, nav sticky, tema, buscador)</span></div><div class="lrow" style="--li:4"><span class="lw sw-auto"></span><span class="lh">3402916</span><span>GVV dashboard: cierre automatico Julio 2026</span></div>
   </div>
@@ -444,26 +507,21 @@
   <div class="day"><p class="day-h">11 ago · 6 commits</p>
     <div class="lrow" style="--li:0"><span class="lw sw-auto"></span><span class="lh">c342927</span><span>GVV dashboard: cierre automatico Julio 2026</span></div><div class="lrow" style="--li:1"><span class="lw sw-eug"></span><span class="lh">498ae17</span><span>Portal: &#39;Copiar link cretumpartners&#39; copia URL versionada por hora (salta cache de navegador del hosting)</span></div><div class="lrow" style="--li:2"><span class="lw sw-auto"></span><span class="lh">76da3cf</span><span>GVV dashboard: cierre automatico Julio 2026</span></div><div class="lrow" style="--li:3"><span class="lw sw-eug"></span><span class="lh">6fb0fb1</span><span>GVV dashboard: autobust de cache en cretumpartners (redirect a ?v=&lt;hora&gt; — el hosting cachea .html 10 anios en navegador)</span></div><div class="lrow" style="--li:4"><span class="lw sw-navy"></span><span class="lh">0788a39</span><span>Reportes: mini-tablero con tomar/resolver y atribución</span></div><div class="lrow" style="--li:5"><span class="lw sw-auto"></span><span class="lh">0d6fb04</span><span>GVV dashboard: cierre automatico Julio 2026</span></div>
   </div>
-  <div class="day"><p class="day-h">10 ago · 20 commits</p>
-    <div class="lrow" style="--li:0"><span class="lw sw-eug"></span><span class="lh">0ca81db</span><span>Herramientas de la seccion Estructura (draft+injector+logos) para futuras ediciones</span></div><div class="lrow" style="--li:1"><span class="lw sw-eug"></span><span class="lh">8bebfb6</span><span>GVV estructura: version movil (flujo vertical apilado &lt;=880px) + logos limpios unificados</span></div><div class="lrow" style="--li:2"><span class="lw sw-navy"></span><span class="lh">ec4273b</span><span>Ventas: copiar plantilla sin manglear el formato</span></div><div class="lrow" style="--li:3"><span class="lw sw-eug"></span><span class="lh">eda8007</span><span>GVV RGA: actualizar estrategias al Reporte RGA Consulting 2026-07-31 (+Equity ETF, +Greenfield)</span></div><div class="lrow" style="--li:4"><span class="lw sw-eug"></span><span class="lh">60debd3</span><span>GVV estructura: fix logo Deloitte (respetar alfa original del webp)</span></div><div class="lrow" style="--li:5"><span class="lw sw-eug"></span><span class="lh">d4b0b75</span><span>GVV estructura: logo Deloitte limpio (transparente, chip blanco)</span></div><div class="lrow" style="--li:6"><span class="lw sw-eug"></span><span class="lh">912846f</span><span>GVV estructura: logo BNY Mellon limpio (transparente, chip blanco) en vez del recorte borroso</span></div><div class="lrow" style="--li:7"><span class="lw sw-eug"></span><span class="lh">6636dcb</span><span>GVV estructura: proveedores a color (sin grayscale, hover scale)</span></div><div class="lrow" style="--li:8"><span class="lw sw-eug"></span><span class="lh">ced83a4</span><span>GVV estructura: proveedores con espaciado uniforme (logos con trim + fondo transparente + alturas balanceadas + space-between)</span></div><div class="lrow" style="--li:9"><span class="lw sw-eug"></span><span class="lh">59272c3</span><span>GVV dashboard: seccion Estructura del Fondo (diagrama animado)</span></div><div class="lrow" style="--li:10"><span class="lw sw-auto"></span><span class="lh">492db3c</span><span>GVV dashboard: cierre automatico Julio 2026</span></div><div class="lrow" style="--li:11"><span class="lw sw-navy"></span><span class="lh">123adac</span><span>Ventas: fix overlay de progreso siempre visible (hidden anulado por display:flex)</span></div><div class="lrow" style="--li:12"><span class="lw sw-navy"></span><span class="lh">5ad04ce</span><span>Ventas: timeout en la subida de imágenes (evita quedarse colgado en 0%)</span></div><div class="lrow" style="--li:13"><span class="lw sw-navy"></span><span class="lh">99a7365</span><span>Ventas: círculo de progreso al optimizar imágenes</span></div><div class="lrow" style="--li:14"><span class="lw sw-navy"></span><span class="lh">2028e11</span><span>Ventas: indicador de estado de imágenes en las plantillas</span></div><div class="lrow" style="--li:14"><span class="lw sw-auto"></span><span class="lh">7acbc89</span><span>GVV: skin in the game 76% -&gt; 61% (numero + textos es/en)</span></div><div class="lrow" style="--li:14"><span class="lw sw-navy"></span><span class="lh">2cb592a</span><span>Ventas: &quot;Optimizar imágenes&quot; — sube base64 al servidor (Gmail no muestra base64)</span></div><div class="lrow" style="--li:14"><span class="lw sw-navy"></span><span class="lh">c1e5b44</span><span>Ventas: botón &quot;Descargar .html&quot; en plantillas (biblioteca y editor)</span></div><div class="lrow" style="--li:14"><span class="lw sw-navy"></span><span class="lh">555dbb5</span><span>Ventas: copiar plantilla funciona en móvil (selección + execCommand)</span></div><div class="lrow" style="--li:14"><span class="lw sw-auto"></span><span class="lh">ff28a52</span><span>GVV dashboard: cierre automatico Julio 2026</span></div>
-  </div>
-  <div class="day"><p class="day-h">8 ago · 4 commits</p>
-    <div class="lrow" style="--li:0"><span class="lw sw-eug"></span><span class="lh">006719a</span><span>GVV: logo de Saronic en privados (pvlogo-saronic)</span></div><div class="lrow" style="--li:1"><span class="lw sw-auto"></span><span class="lh">c9d5c16</span><span>GVV dashboard: cierre automatico Julio 2026</span></div><div class="lrow" style="--li:2"><span class="lw sw-auto"></span><span class="lh">926046b</span><span>GVV bundle: YTD hero desde celda Excel (M.ytd/ytdNet en METRICS)</span></div><div class="lrow" style="--li:3"><span class="lw sw-auto"></span><span class="lh">1277fb4</span><span>GVV dashboard: cierre automatico Julio 2026</span></div>
-  </div>
-  <div class="day"><p class="day-h">7 ago · 14 commits</p>
-    <div class="lrow" style="--li:0"><span class="lw sw-auto"></span><span class="lh">21b9cc9</span><span>GVV data sources: directiva solo-Excel 2026-08-08</span></div><div class="lrow" style="--li:1"><span class="lw sw-navy"></span><span class="lh">98e2823</span><span>Ventas en MVP + plantillas separadas por organización</span></div><div class="lrow" style="--li:2"><span class="lw sw-navy"></span><span class="lh">1017e0b</span><span>Campañas: título pro del PDF de la carta (pestaña &quot;GVV Monthly Report&quot;)</span></div><div class="lrow" style="--li:3"><span class="lw sw-navy"></span><span class="lh">34a38ac</span><span>Campañas: enlace de la carta en /gvv (sin extensión) — arregla caída a login</span></div><div class="lrow" style="--li:4"><span class="lw sw-navy"></span><span class="lh">0fc3b16</span><span>Campañas: % del mes en navy + botón Guardar en la forma rápida</span></div><div class="lrow" style="--li:5"><span class="lw sw-navy"></span><span class="lh">7e7047e</span><span>Campañas: enlace público de la carta como /gvv.pdf (evita filtros de adblock)</span></div><div class="lrow" style="--li:6"><span class="lw sw-navy"></span><span class="lh">a7bf151</span><span>Campañas: servir /carta como proxy first-party (evita ERR_BLOCKED_BY_CLIENT)</span></div><div class="lrow" style="--li:7"><span class="lw sw-navy"></span><span class="lh">8d8a183</span><span>Campañas: subir la carta desde la PC (además de Dropbox)</span></div><div class="lrow" style="--li:8"><span class="lw sw-navy"></span><span class="lh">377fd0c</span><span>Campañas: nombre pro del PDF público de la carta</span></div><div class="lrow" style="--li:9"><span class="lw sw-navy"></span><span class="lh">4c72a6c</span><span>Campañas: publicar la carta mensual en el desk (enlace público fijo)</span></div><div class="lrow" style="--li:10"><span class="lw sw-navy"></span><span class="lh">65354d6</span><span>Campañas: el modal &quot;Plantilla del correo&quot; muestra la campaña publicada</span></div><div class="lrow" style="--li:11"><span class="lw sw-navy"></span><span class="lh">75f580e</span><span>Campañas: el editor completo ahora carga y conserva lo publicado</span></div><div class="lrow" style="--li:12"><span class="lw sw-navy"></span><span class="lh">41caeee</span><span>Campañas: editar la campaña mensual con el editor de correo de Ventas</span></div><div class="lrow" style="--li:13"><span class="lw sw-navy"></span><span class="lh">da0ba21</span><span>To Do: panel de carpetas por proyecto + Vaciar en todas las vistas</span></div>
+  <div class="day"><p class="day-h">10 ago · 16 commits</p>
+    <div class="lrow" style="--li:0"><span class="lw sw-eug"></span><span class="lh">0ca81db</span><span>Herramientas de la seccion Estructura (draft+injector+logos) para futuras ediciones</span></div><div class="lrow" style="--li:1"><span class="lw sw-eug"></span><span class="lh">8bebfb6</span><span>GVV estructura: version movil (flujo vertical apilado &lt;=880px) + logos limpios unificados</span></div><div class="lrow" style="--li:2"><span class="lw sw-navy"></span><span class="lh">ec4273b</span><span>Ventas: copiar plantilla sin manglear el formato</span></div><div class="lrow" style="--li:3"><span class="lw sw-eug"></span><span class="lh">eda8007</span><span>GVV RGA: actualizar estrategias al Reporte RGA Consulting 2026-07-31 (+Equity ETF, +Greenfield)</span></div><div class="lrow" style="--li:4"><span class="lw sw-eug"></span><span class="lh">60debd3</span><span>GVV estructura: fix logo Deloitte (respetar alfa original del webp)</span></div><div class="lrow" style="--li:5"><span class="lw sw-eug"></span><span class="lh">d4b0b75</span><span>GVV estructura: logo Deloitte limpio (transparente, chip blanco)</span></div><div class="lrow" style="--li:6"><span class="lw sw-eug"></span><span class="lh">912846f</span><span>GVV estructura: logo BNY Mellon limpio (transparente, chip blanco) en vez del recorte borroso</span></div><div class="lrow" style="--li:7"><span class="lw sw-eug"></span><span class="lh">6636dcb</span><span>GVV estructura: proveedores a color (sin grayscale, hover scale)</span></div><div class="lrow" style="--li:8"><span class="lw sw-eug"></span><span class="lh">ced83a4</span><span>GVV estructura: proveedores con espaciado uniforme (logos con trim + fondo transparente + alturas balanceadas + space-between)</span></div><div class="lrow" style="--li:9"><span class="lw sw-eug"></span><span class="lh">59272c3</span><span>GVV dashboard: seccion Estructura del Fondo (diagrama animado)</span></div><div class="lrow" style="--li:10"><span class="lw sw-auto"></span><span class="lh">492db3c</span><span>GVV dashboard: cierre automatico Julio 2026</span></div><div class="lrow" style="--li:11"><span class="lw sw-navy"></span><span class="lh">123adac</span><span>Ventas: fix overlay de progreso siempre visible (hidden anulado por display:flex)</span></div><div class="lrow" style="--li:12"><span class="lw sw-navy"></span><span class="lh">5ad04ce</span><span>Ventas: timeout en la subida de imágenes (evita quedarse colgado en 0%)</span></div><div class="lrow" style="--li:13"><span class="lw sw-navy"></span><span class="lh">99a7365</span><span>Ventas: círculo de progreso al optimizar imágenes</span></div><div class="lrow" style="--li:14"><span class="lw sw-navy"></span><span class="lh">2028e11</span><span>Ventas: indicador de estado de imágenes en las plantillas</span></div><div class="lrow" style="--li:14"><span class="lw sw-auto"></span><span class="lh">7acbc89</span><span>GVV: skin in the game 76% -&gt; 61% (numero + textos es/en)</span></div>
   </div></div>
+  </section>
   </section>
 </main>
 <footer>
   <div class="wrap">
     <span>Blog semanal · <b>Cretum Desk</b></span>
-    <span class="mono">Generado 14 ago 2026 · automático los viernes</span>
+    <span class="mono">Generado 17 ago 2026 · automático los viernes</span>
   </div>
 </footer>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>
-const SUMMARY = "Blog semanal · Cretum Desk (7 ago 2026 – 13 ago 2026)\n57 commits — Angel 28 · Automatización 13 · Eugenio 16\n\nPor módulo:\n• GVV · Datos: 27\n• Campañas · Carta: 11\n• Ventas · Plantillas: 9\n• Plataforma: 6\n• Otros: 2\n• Reportes: 1\n• To Do: 1";
+const SUMMARY = "Blog semanal · Cretum Desk (10 ago 2026 – 17 ago 2026)\n48 commits — Angel 22 · Automatización 10 · Eugenio 16\n\nPor módulo:\n• GVV · Datos: 21\n• Plataforma: 8\n• Campañas · Carta: 7\n• Ventas · Plantillas: 5\n• Otros: 4\n• Reportes: 3";
 (function(){
   "use strict";
   var reduce = matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -588,6 +646,52 @@ const SUMMARY = "Blog semanal · Cretum Desk (7 ago 2026 – 13 ago 2026)\n57 co
     if (navigator.clipboard) navigator.clipboard.writeText(SUMMARY).then(function(){ toast('Resumen copiado'); }, function(){ toast('No se pudo copiar'); });
     else toast('No se pudo copiar');
   });
+
+  // ── Pestañas: Noticias (principal) / Avances del desk ──
+  var tabs = [].slice.call(document.querySelectorAll('.tab'));
+  var panes = { noticias: document.getElementById('pane-noticias'), avances: document.getElementById('pane-avances') };
+  function showPane(name){
+    if (!panes[name]) return;
+    tabs.forEach(function(t){ var on = t.getAttribute('data-pane') === name; t.classList.toggle('on', on); t.setAttribute('aria-selected', on ? 'true' : 'false'); });
+    Object.keys(panes).forEach(function(k){ panes[k].hidden = (k !== name); });
+    // Revela lo que quedó oculto por vivir en una pestaña no visible.
+    panes[name].querySelectorAll('.reveal').forEach(function(r){ r.classList.add('in'); });
+    window.scrollTo(0, 0);
+    try { if (location.hash !== '#' + name) history.replaceState(null, '', name === 'noticias' ? location.pathname : '#' + name); } catch(e){}
+  }
+  tabs.forEach(function(t){ t.addEventListener('click', function(){ showPane(t.getAttribute('data-pane')); }); });
+  if (location.hash === '#avances') showPane('avances');
+
+  // ── Noticias del portafolio (lee /data/company-news.json) ──
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function ago(iso){ var d = new Date(iso); if (isNaN(d)) return ''; var s = (Date.now() - d.getTime())/1000; if (s < 3600) return Math.max(1, Math.round(s/60)) + ' min'; if (s < 86400) return Math.round(s/3600) + ' h'; return Math.round(s/86400) + ' d'; }
+  var newsData = null, newsCo = 'all';
+  var grid = document.getElementById('newsGrid');
+  fetch('/data/company-news.json', { cache: 'no-store' }).then(function(r){ if(!r.ok) throw 0; return r.json(); }).then(function(d){
+    newsData = d;
+    var mc = document.getElementById('newsMetaCount'); if (mc) mc.textContent = d.count + ' notas · ' + (d.companies ? d.companies.length : 0) + ' empresas';
+    var mw = document.getElementById('newsMetaWhen'); if (mw) mw.textContent = ago(d.generated) + ' atrás';
+    renderFilter(); renderNews();
+  }).catch(function(){ if (grid) grid.innerHTML = '<div class="news-empty">No se pudieron cargar las noticias. Reintenta en un momento.</div>'; });
+  function renderFilter(){
+    var f = document.getElementById('newsFilter'); if (!f || !newsData) return;
+    var cos = Object.keys(newsData.items.reduce(function(a, i){ a[i.company] = 1; return a; }, {})).sort();
+    f.innerHTML = '<button class="nf-chip on" data-co="all">Todas</button>' + cos.map(function(co){ return '<button class="nf-chip" data-co="' + esc(co) + '">' + esc(co) + '</button>'; }).join('');
+    f.querySelectorAll('.nf-chip').forEach(function(b){ b.addEventListener('click', function(){ newsCo = b.getAttribute('data-co'); f.querySelectorAll('.nf-chip').forEach(function(x){ x.classList.toggle('on', x === b); }); renderNews(); }); });
+  }
+  function renderNews(){
+    if (!grid || !newsData) return;
+    var items = newsData.items;
+    if (newsCo !== 'all') items = items.filter(function(i){ return i.company === newsCo; });
+    if (!items.length){ grid.innerHTML = '<div class="news-empty">Sin noticias para este filtro por ahora.</div>'; return; }
+    grid.innerHTML = items.map(function(i, idx){
+      return '<a class="news-card" href="' + esc(i.url) + '" target="_blank" rel="noopener" style="--i:' + Math.min(idx, 24) + '">'
+        + '<div class="news-top"><span class="news-co">' + esc(i.company) + '</span><span class="news-time">' + ago(i.published) + '</span></div>'
+        + '<div class="news-title">' + esc(i.title) + '</div>'
+        + '<div class="news-foot"><span class="news-src">' + esc(i.source) + '</span><span class="news-go">↗</span></div>'
+        + '</a>';
+    }).join('');
+  }
 })();
 </script>
 </body>

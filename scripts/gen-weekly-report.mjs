@@ -250,7 +250,6 @@ const body = total === 0 ? emptyState : `
       </div>
       <div class="snav-act">
         <button class="iconbtn" id="copyBtn" title="Copiar resumen">${ICON('copy')}<span>Copiar</span></button>
-        <button class="iconbtn only-ic" id="themeBtn" title="Cambiar tema" aria-label="Cambiar tema">${ICON('moon', 'ic-moon')}${ICON('sun', 'ic-sun')}</button>
       </div>
     </div>
   </nav>
@@ -305,7 +304,7 @@ const html = `<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<title>Avances en el desk · Cretum</title>
+<title>Noticias Cretum</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='1' y='1' width='30' height='30' rx='7' fill='%231A3A6B'/><g fill='%23fff'><rect x='7.4' y='17' width='4.2' height='8' rx='1.4'/><rect x='13.9' y='11.5' width='4.2' height='13.5' rx='1.4'/><rect x='20.4' y='7.5' width='4.2' height='17.5' rx='1.4'/></g></svg>">
@@ -316,26 +315,60 @@ ${STYLE()}
 </head>
 <body>
 <div class="progress" id="progress" aria-hidden="true"></div>
-<header>
-  <div class="wrap">
-    <p class="eyebrow reveal" style="--d:40ms"><span class="pulse"></span> Blog semanal · Avances en el desk</p>
-    <h1 class="type" data-type="load">El pulso de la semana en Cretum&nbsp;Desk</h1>
-    <p class="lede reveal" style="--d:180ms">Lo que se construyó estos días, sacado de los commits y ordenado por módulo y por quién lo llevó. Se regenera solo cada viernes.</p>
-    <div class="meta-row reveal" style="--d:280ms">
-      <span class="tag">${ICON('calendar', 'ti')} <b>${esc(range)}</b></span>
-      <span class="tag">${ICON('clock', 'ti')} Cada <b>viernes</b></span>
-      <span class="tag">${ICON('globe', 'ti')} <b>cretumdesk.com</b></span>
+
+<nav class="tabbar" id="tabbar">
+  <div class="wrap tabbar-in">
+    <span class="brand"><span class="brand-mark"></span> Cretum</span>
+    <div class="tabs" role="tablist" aria-label="Secciones">
+      <button class="tab on" data-pane="noticias" role="tab" aria-selected="true">Noticias</button>
+      <button class="tab" data-pane="avances" role="tab" aria-selected="false">Avances del desk</button>
     </div>
-    <div class="hstats reveal" style="--d:360ms">
-      <div class="hstat"><div class="n" data-count="${total}">0</div><div class="k">commits</div></div>
-      <div class="hstat"><div class="n" data-count="${counts.angel}">0</div><div class="k"><span class="swatch sw-navy"></span>Angel</div></div>
-      <div class="hstat"><div class="n" data-count="${counts.auto}">0</div><div class="k"><span class="swatch sw-auto"></span>Automatización</div></div>
-      <div class="hstat"><div class="n" data-count="${counts.eug}">0</div><div class="k"><span class="swatch sw-eug"></span>Eugenio</div></div>
-    </div>
+    <button class="iconbtn only-ic" id="themeBtn" title="Cambiar tema" aria-label="Cambiar tema">${ICON('moon', 'ic-moon')}${ICON('sun', 'ic-sun')}</button>
   </div>
-</header>
+</nav>
+
 <main>
-${body}
+  <!-- ═══════════ NOTICIAS (principal) ═══════════ -->
+  <section class="pane on" id="pane-noticias">
+    <header class="hero-news">
+      <div class="wrap">
+        <p class="eyebrow reveal" style="--d:40ms"><span class="pulse"></span> Novedades del portafolio</p>
+        <h1 class="type" data-type="load">Noticias de las empresas de Cretum</h1>
+        <p class="lede reveal" style="--d:180ms">Titulares recientes de las compañías donde invierte el portafolio, filtrados a <b>medios confiables</b> (Reuters, Bloomberg, TechCrunch, CNBC, FT…). Se actualiza varias veces al día.</p>
+        <div class="meta-row reveal" style="--d:280ms">
+          <span class="tag">${ICON('globe', 'ti')} <b id="newsMetaCount">cargando…</b></span>
+          <span class="tag">${ICON('clock', 'ti')} actualizado <b id="newsMetaWhen">—</b></span>
+        </div>
+      </div>
+    </header>
+    <div class="wrap sec">
+      <div class="news-filter" id="newsFilter" role="group" aria-label="Filtrar por empresa"></div>
+      <div class="news-grid" id="newsGrid"><div class="news-empty">Cargando noticias…</div></div>
+    </div>
+  </section>
+
+  <!-- ═══════════ AVANCES DEL DESK (secundario) ═══════════ -->
+  <section class="pane" id="pane-avances" hidden>
+    <header>
+      <div class="wrap">
+        <p class="eyebrow reveal" style="--d:40ms"><span class="pulse"></span> Blog semanal · Avances en el desk</p>
+        <h1>El pulso de la semana en Cretum&nbsp;Desk</h1>
+        <p class="lede reveal" style="--d:180ms">Lo que se construyó estos días, sacado de los commits y ordenado por módulo y por quién lo llevó. Se regenera solo cada viernes.</p>
+        <div class="meta-row reveal" style="--d:280ms">
+          <span class="tag">${ICON('calendar', 'ti')} <b>${esc(range)}</b></span>
+          <span class="tag">${ICON('clock', 'ti')} Cada <b>viernes</b></span>
+          <span class="tag">${ICON('globe', 'ti')} <b>cretumdesk.com</b></span>
+        </div>
+        <div class="hstats reveal" style="--d:360ms">
+          <div class="hstat"><div class="n" data-count="${total}">0</div><div class="k">commits</div></div>
+          <div class="hstat"><div class="n" data-count="${counts.angel}">0</div><div class="k"><span class="swatch sw-navy"></span>Angel</div></div>
+          <div class="hstat"><div class="n" data-count="${counts.auto}">0</div><div class="k"><span class="swatch sw-auto"></span>Automatización</div></div>
+          <div class="hstat"><div class="n" data-count="${counts.eug}">0</div><div class="k"><span class="swatch sw-eug"></span>Eugenio</div></div>
+        </div>
+      </div>
+    </header>
+    ${body}
+  </section>
 </main>
 <footer>
   <div class="wrap">
@@ -470,6 +503,52 @@ const SUMMARY = ${JSON.stringify(summaryText)};
     if (navigator.clipboard) navigator.clipboard.writeText(SUMMARY).then(function(){ toast('Resumen copiado'); }, function(){ toast('No se pudo copiar'); });
     else toast('No se pudo copiar');
   });
+
+  // ── Pestañas: Noticias (principal) / Avances del desk ──
+  var tabs = [].slice.call(document.querySelectorAll('.tab'));
+  var panes = { noticias: document.getElementById('pane-noticias'), avances: document.getElementById('pane-avances') };
+  function showPane(name){
+    if (!panes[name]) return;
+    tabs.forEach(function(t){ var on = t.getAttribute('data-pane') === name; t.classList.toggle('on', on); t.setAttribute('aria-selected', on ? 'true' : 'false'); });
+    Object.keys(panes).forEach(function(k){ panes[k].hidden = (k !== name); });
+    // Revela lo que quedó oculto por vivir en una pestaña no visible.
+    panes[name].querySelectorAll('.reveal').forEach(function(r){ r.classList.add('in'); });
+    window.scrollTo(0, 0);
+    try { if (location.hash !== '#' + name) history.replaceState(null, '', name === 'noticias' ? location.pathname : '#' + name); } catch(e){}
+  }
+  tabs.forEach(function(t){ t.addEventListener('click', function(){ showPane(t.getAttribute('data-pane')); }); });
+  if (location.hash === '#avances') showPane('avances');
+
+  // ── Noticias del portafolio (lee /data/company-news.json) ──
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function ago(iso){ var d = new Date(iso); if (isNaN(d)) return ''; var s = (Date.now() - d.getTime())/1000; if (s < 3600) return Math.max(1, Math.round(s/60)) + ' min'; if (s < 86400) return Math.round(s/3600) + ' h'; return Math.round(s/86400) + ' d'; }
+  var newsData = null, newsCo = 'all';
+  var grid = document.getElementById('newsGrid');
+  fetch('/data/company-news.json', { cache: 'no-store' }).then(function(r){ if(!r.ok) throw 0; return r.json(); }).then(function(d){
+    newsData = d;
+    var mc = document.getElementById('newsMetaCount'); if (mc) mc.textContent = d.count + ' notas · ' + (d.companies ? d.companies.length : 0) + ' empresas';
+    var mw = document.getElementById('newsMetaWhen'); if (mw) mw.textContent = ago(d.generated) + ' atrás';
+    renderFilter(); renderNews();
+  }).catch(function(){ if (grid) grid.innerHTML = '<div class="news-empty">No se pudieron cargar las noticias. Reintenta en un momento.</div>'; });
+  function renderFilter(){
+    var f = document.getElementById('newsFilter'); if (!f || !newsData) return;
+    var cos = Object.keys(newsData.items.reduce(function(a, i){ a[i.company] = 1; return a; }, {})).sort();
+    f.innerHTML = '<button class="nf-chip on" data-co="all">Todas</button>' + cos.map(function(co){ return '<button class="nf-chip" data-co="' + esc(co) + '">' + esc(co) + '</button>'; }).join('');
+    f.querySelectorAll('.nf-chip').forEach(function(b){ b.addEventListener('click', function(){ newsCo = b.getAttribute('data-co'); f.querySelectorAll('.nf-chip').forEach(function(x){ x.classList.toggle('on', x === b); }); renderNews(); }); });
+  }
+  function renderNews(){
+    if (!grid || !newsData) return;
+    var items = newsData.items;
+    if (newsCo !== 'all') items = items.filter(function(i){ return i.company === newsCo; });
+    if (!items.length){ grid.innerHTML = '<div class="news-empty">Sin noticias para este filtro por ahora.</div>'; return; }
+    grid.innerHTML = items.map(function(i, idx){
+      return '<a class="news-card" href="' + esc(i.url) + '" target="_blank" rel="noopener" style="--i:' + Math.min(idx, 24) + '">'
+        + '<div class="news-top"><span class="news-co">' + esc(i.company) + '</span><span class="news-time">' + ago(i.published) + '</span></div>'
+        + '<div class="news-title">' + esc(i.title) + '</div>'
+        + '<div class="news-foot"><span class="news-src">' + esc(i.source) + '</span><span class="news-go">↗</span></div>'
+        + '</a>';
+    }).join('');
+  }
 })();
 </script>
 </body>
@@ -702,6 +781,40 @@ function STYLE() {
   .empty{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:48px 22px;text-align:center;box-shadow:var(--raise);margin-top:20px}
   .empty h3{margin:0 0 8px;font-size:19px} .empty p{margin:0;color:var(--ink-mute)}
 
+  /* ── Barra de pestañas (Noticias / Avances del desk) ── */
+  .tabbar{position:sticky;top:0;z-index:55;background:color-mix(in srgb,var(--bg) 85%,transparent);backdrop-filter:saturate(1.4) blur(10px);-webkit-backdrop-filter:saturate(1.4) blur(10px);border-bottom:1px solid var(--line)}
+  .tabbar-in{display:flex;align-items:center;gap:14px;height:54px}
+  .brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;letter-spacing:-.01em;color:var(--ink)}
+  .brand-mark{width:10px;height:10px;border-radius:3px;background:var(--navy)}
+  .tabs{display:flex;gap:4px;flex:1}
+  .tab{font-size:14px;font-weight:600;color:var(--ink-soft);background:none;border:none;padding:8px 14px;border-radius:9px;cursor:pointer;font-family:inherit;transition:color .16s var(--ease-out),background .16s var(--ease-out)}
+  .tab:hover{color:var(--ink);background:var(--surface-2)}
+  .tab.on{color:var(--navy-2);background:var(--navy-pale)}
+  .tab:active{transform:scale(.98)}
+  #pane-avances .snav{top:54px}   /* la sub-nav del reporte, bajo la barra de pestañas */
+  .hero-news{padding:42px 0 20px}
+  /* ── Filtro por empresa ── */
+  .news-filter{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px}
+  .nf-chip{font-size:12.5px;font-weight:500;padding:6px 13px;border-radius:999px;cursor:pointer;background:var(--surface);border:1px solid var(--line);color:var(--ink-soft);font-family:inherit;transition:transform .14s var(--ease-out),border-color .14s ease,color .14s ease,background .14s ease}
+  @media (hover:hover){.nf-chip:hover{border-color:var(--navy-2);color:var(--ink)}}
+  .nf-chip:active{transform:scale(.96)}
+  .nf-chip.on{background:var(--navy);border-color:var(--navy);color:#fff}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .nf-chip.on{color:#0C121E}}
+  :root[data-theme="dark"] .nf-chip.on{color:#0C121E}
+  /* ── Rejilla de noticias ── */
+  .news-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+  .news-card{display:flex;flex-direction:column;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:15px;padding:17px 18px;box-shadow:var(--raise);text-decoration:none;color:inherit;transition:transform .18s var(--ease-out),border-color .18s var(--ease-out),box-shadow .18s var(--ease-out);animation:newsIn .5s var(--ease-out) both;animation-delay:calc(var(--i,0) * 32ms)}
+  @media (hover:hover){.news-card:hover{transform:translateY(-3px);border-color:var(--navy-pale);box-shadow:0 8px 26px rgba(18,30,54,.08)}}
+  @keyframes newsIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.news-card{animation:none}}
+  .news-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .news-co{font-size:11.5px;font-weight:600;color:var(--navy-2);background:var(--navy-pale);padding:3px 9px;border-radius:999px;white-space:nowrap}
+  .news-time{font-family:var(--mono);font-size:11px;color:var(--ink-mute);white-space:nowrap}
+  .news-title{font-size:15px;line-height:1.35;font-weight:600;letter-spacing:-.01em;color:var(--ink);flex:1}
+  .news-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:var(--ink-mute)}
+  .news-src{font-weight:500}
+  .news-go{color:var(--navy-2);font-size:13px}
+  .news-empty{grid-column:1/-1;padding:40px 20px;text-align:center;color:var(--ink-mute);font-size:14px;border:1px dashed var(--line);border-radius:14px}
   footer{border-top:1px solid var(--line);padding:28px 0 60px;color:var(--ink-mute);font-size:13px;margin-top:24px}
   footer .wrap{display:flex;flex-wrap:wrap;gap:6px 14px;justify-content:space-between;align-items:center} footer b{color:var(--ink-soft)}
 
