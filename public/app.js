@@ -9056,14 +9056,14 @@ function companyTheme(name) {
 // ambos (fijo desde el IPO 12-jun-2026). Bloques intermedios ~cada 15 días (aprox). El tramo
 // extendido no puede entregarse en especie antes del 2-feb-2027; liberación final ~ago-2027.
 const SPX_LOCKUP_B_DIR = [
-  { date: '2026-08-06', pct: '20%', label: '1er día de venta legal — vehículos directos (22F/22J/22K)' },
-  { date: '2026-08-21', pct: '7%',  label: 'Bloque 1 (~15 días)' },
-  { date: '2026-09-05', pct: '7%',  label: 'Bloque 2' },
-  { date: '2026-09-20', pct: '7%',  label: 'Bloque 3' },
-  { date: '2026-10-05', pct: '7%',  label: 'Bloque 4' },
-  { date: '2026-10-20', pct: '7%',  label: 'Bloque 5' },
-  { date: '2026-11-04', pct: '28%', label: '2º cliff (~nov 2026)' },
-  { date: '2026-12-08', pct: 'Remanente', label: 'Día 180 — liberación total del primer tramo' },
+  { date: '2026-08-06', pct: '20%', label: '1er día de venta legal — directos (22F/22J/22K); 2º día hábil tras resultados Q2' },
+  { date: '2026-08-20', pct: '7%',  label: 'Día 70' },
+  { date: '2026-09-09', pct: '7%',  label: 'Día 90' },
+  { date: '2026-09-24', pct: '7%',  label: 'Día 105' },
+  { date: '2026-10-09', pct: '7%',  label: 'Día 120' },
+  { date: '2026-10-24', pct: '7%',  label: 'Día 135' },
+  { date: '2026-11-04', pct: '28%', label: '2º cliff — 2º día hábil tras resultados Q3 (~inicios de nov)' },
+  { date: '2026-12-08', pct: 'Remanente', label: 'Día 180 — expiración total del primer tramo (17%)' },
 ];
 const SPX_LOCKUP_B_FONDO = [
   { date: '2026-09-09', pct: '20%', label: '1er día de venta legal — vehículos de fondo (Fund IV/V, 26B)' },
@@ -9078,12 +9078,12 @@ const SPX_LOCKUP_B_FONDO = [
 // Anclas: directo = 22F/22J/22K; todo lo demás (fondos, 26B/QC, 26A QP, SX-1...) = fondo.
 const spxAnchor = s => /22F|22J|22K/i.test(s || '') ? 'dir' : 'fondo';
 const SPX_LOCKUP_A_EXT = [
-  { date: '2027-02-02', pct: '20%', label: 'Inicio del lock-up extendido (fecha dura: nada en especie antes)' },
-  { date: '2027-03-19', pct: '10%', label: 'Día 280' },
-  { date: '2027-05-18', pct: '20%', label: '~may 2027' },
-  { date: '2027-05-18', pct: '10%', label: 'Día 340' },
-  { date: '2027-06-13', pct: '20%', label: 'Día 366' },
-  { date: '2027-08-17', pct: '20%', label: '~ago 2027 — liberación final' },
+  { date: '2027-02-02', pct: '20%', label: 'Inicio del extendido — 2º día hábil tras resultados Q4 2026 (~feb 2027; nada en especie antes del 2-feb)' },
+  { date: '2027-03-18', pct: '10%', label: 'Día 280' },
+  { date: '2027-05-04', pct: '20%', label: '2º día hábil tras resultados Q1 2027 (~inicios de may)' },
+  { date: '2027-05-17', pct: '10%', label: 'Día 340' },
+  { date: '2027-06-12', pct: '20%', label: 'Día 366' },
+  { date: '2027-08-17', pct: '20%', label: '2º día hábil tras resultados Q2 2027 (~ago 2027) — liberación final' },
 ];
 function spxStructures(seriesName) {
   const s = seriesName || '';
@@ -9099,10 +9099,10 @@ const SPX_STRUCTURES = {
     summary: 'Liberación escalonada y ligada a desempeño dentro de la ventana estándar de <b>180 días</b>. Expira por completo ~9 de diciembre de 2026.',
     phases: [
       { hito: '1er día de venta legal (directos: 6 ago 2026 · fondos: 9 sep 2026)', pct: '20%', detalle: 'Fecha REAL del doc oficial de lock-up. Acumulado: 20%.' },
-      { hito: 'Bono por desempeño', pct: '+10%', detalle: 'Si la acción cotiza ≥30% arriba del IPO en 5 de 10 días consecutivos. Acumulado: 30%.' },
-      { hito: 'Bloques sucesivos (cada ~15 días)', pct: '7% por bloque', detalle: '5 bloques (ago/sep–nov 2026). Acumulado: 65%.' },
-      { hito: '2º cliff (~nov 2026)', pct: '28%', detalle: 'Acumulado: 93%.' },
-      { hito: 'Día 180 (8 dic 2026)', pct: 'Remanente', detalle: 'Liberación total del primer tramo. Acumulado: 100%.' },
+      { hito: 'Bono por desempeño', pct: '+10%', detalle: 'Solo si SPCX cierra en $175.50+ (30% sobre IPO) en 5 de los 10 días previos. Directos (evaluado 6-ago): NO se activó.' },
+      { hito: 'Bloques sucesivos — días 70/90/105/120/135', pct: '7% por bloque', detalle: 'Directos: 20 ago · 9 sep · 24 sep · 9 oct · 24 oct 2026. Acumulado: 55%.' },
+      { hito: '2º cliff — 2º día hábil tras resultados Q3 (~inicios de nov)', pct: '28%', detalle: 'Acumulado: 83%.' },
+      { hito: 'Día 180 (8 dic 2026)', pct: '17% remanente', detalle: 'Expiración total del primer tramo. Acumulado: 100%.' },
     ],
     nota: 'Porcentajes del S-1 de SpaceX (mayo 2026); fechas del documento oficial de lock-up por vehículo (29-jul-2026): directos (22F/22J/22K) venden desde el 6-ago-2026, vehículos de fondo desde el 9-sep-2026, día 180 = 8-dic-2026 para ambos. El prospecto final es la autoridad.',
   },
@@ -9112,18 +9112,18 @@ const SPX_STRUCTURES = {
     groups: [
       { label: 'Primera mitad (~50%) — lock-up de 180 días', phases: [
         { hito: '1er día de venta legal (directos: 6 ago 2026 · fondos: 9 sep 2026)', pct: '20%', detalle: 'Fecha REAL del doc oficial de lock-up.' },
-        { hito: '~mismo período', pct: '+10% bonus', detalle: 'Solo si el precio cierra ≥30% arriba del precio de oferta en 5 de los 10 días siguientes.' },
-        { hito: 'Cada ~15 días', pct: '7% por bloque', detalle: 'Bloques sucesivos (ago/sep–nov 2026).' },
-        { hito: '~nov 2026', pct: '28%', detalle: '' },
-        { hito: 'Día 180 (8 dic 2026)', pct: 'Remanente', detalle: 'Cierre de la primera mitad.' },
+        { hito: '~mismo período', pct: '+10% bonus', detalle: 'Solo si SPCX cierra en $175.50+ (30% sobre IPO) en 5 de los 10 días previos. Directos (evaluado 6-ago): NO se activó.' },
+        { hito: 'Días 70/90/105/120/135', pct: '7% por bloque', detalle: 'Directos: 20 ago · 9 sep · 24 sep · 9 oct · 24 oct 2026.' },
+        { hito: '2º día hábil tras resultados Q3 (~inicios de nov)', pct: '28%', detalle: '' },
+        { hito: 'Día 180 (8 dic 2026)', pct: '17% remanente', detalle: 'Cierre de la primera mitad.' },
       ] },
       { label: 'Segunda mitad (~50%) — lock-up extendido (patrón 20/10/20/10/20/20)', phases: [
-        { hito: 'No antes del 2 feb 2027', pct: '20%', detalle: 'Inicio del lock-up extendido. Restricción dura: nada puede entregarse en especie antes de esta fecha.' },
-        { hito: 'Día 280 (~19 mar 2027)', pct: '10%', detalle: '' },
-        { hito: '~may 2027', pct: '20%', detalle: '' },
-        { hito: 'Día 340 (~18 may 2027)', pct: '10%', detalle: '' },
-        { hito: 'Día 366 (~13 jun 2027)', pct: '20%', detalle: '' },
-        { hito: '~ago 2027', pct: '20%', detalle: 'Remanente — liberación final.' },
+        { hito: 'No antes del 2 feb 2027', pct: '20%', detalle: 'Inicio del extendido — 2º día hábil tras resultados Q4 2026. Restricción dura: nada puede entregarse en especie antes del 2-feb.' },
+        { hito: 'Día 280 (18 mar 2027)', pct: '10%', detalle: '' },
+        { hito: '~inicios de may 2027', pct: '20%', detalle: '2º día hábil tras resultados Q1 2027.' },
+        { hito: 'Día 340 (17 may 2027)', pct: '10%', detalle: '' },
+        { hito: 'Día 366 (12 jun 2027)', pct: '20%', detalle: '' },
+        { hito: '~ago 2027', pct: '20%', detalle: '2º día hábil tras resultados Q2 2027 — liberación final.' },
       ] },
     ],
     nota: 'Porcentajes del S-1 de SpaceX (mayo 2026); fechas del documento oficial de lock-up por vehículo (29-jul-2026). El prospecto final es la autoridad. Liquidez total ~ agosto 2027 (~14 meses post-IPO).',
@@ -15309,7 +15309,7 @@ function spxrCalendar(shA, shB) {
     counted += sh; acum = counted;
     rows.push({ date: spxrDate(e.date), label: e.label, sh, pct: (sh / TOT * 100), acum: (acum / TOT * 100), scope: scope180 });
     if (i === 0) {   // bono condicional tras el cliff — fila aparte, NO suma al acumulado
-      rows.push({ date: '~ sep 2026', label: 'Bono por desempeño — condicional', sh: Math.round(pool * 0.10), pct: (pool * 0.10 / TOT * 100), acum: null, scope: 'Solo si SpaceX cotiza >=30% sobre el IPO; adelanta parte del remanente', bonus: true });
+      rows.push({ date: '~ sep 2026', label: 'Bono por desempeño — condicional', sh: Math.round(pool * 0.10), pct: (pool * 0.10 / TOT * 100), acum: null, scope: 'Solo si SPCX cierra en $175.50+ (30% sobre IPO) en 5 de los 10 días previos; adelanta parte del remanente', bonus: true });
     }
   });
 
