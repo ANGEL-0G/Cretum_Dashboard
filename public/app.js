@@ -10078,10 +10078,10 @@ async function openDbxActivity(){
     box.innerHTML = entries.map(e => `
       <div class="dbx-act-row">
         <span class="dbx-act-who">${escapeHtml(e.user_name || '—')}</span>
-        <span>subió</span>
+        <span>${e.action === 'delete' ? 'eliminó' : 'subió'}</span>
         <span class="dbx-act-file">${escapeHtml(e.file_name)}</span>
         <span>en ${escapeHtml(e.folder_path || '/')}</span>
-        ${e.confirmed ? '' : '<span class="dbx-act-pending">(sin confirmar)</span>'}
+        ${e.confirmed || e.action === 'delete' ? '' : '<span class="dbx-act-pending">(sin confirmar)</span>'}
         <span class="dbx-act-meta">${fmtSize(e.size_bytes != null ? Number(e.size_bytes) : null)} · ${fmtWhen(e.created_at)}</span>
       </div>`).join('');
   } catch (err) {
@@ -10098,14 +10098,40 @@ function dbxAct(ev){
   const e = dbxState.entries[+btn.dataset.idx];
   if (!e) return;
   if (btn.dataset.act === 'link') dbxCopyLink(e.path);
+  else if (btn.dataset.act === 'del') dbxDeleteFile(e);
   else dbxDownloadFile(e.path, e.name);
 }
 
-// HTML de los dos botones de acción (copiar enlace / descargar) para un archivo.
+// Elimina un archivo (con confirmación). Va a la papelera de Dropbox —
+// recuperable ~30 días desde dropbox.com — y queda en el registro de Actividad.
+async function dbxDeleteFile(entry){
+  const ok = await showConfirm('¿Eliminar archivo?',
+    `"${entry.name}" se moverá a la papelera de Dropbox (recuperable ~30 días). ` +
+    'El borrado quedará asentado en Actividad con tu nombre.');
+  if (!ok) return;
+  try {
+    toast(`Eliminando ${entry.name}…`);
+    const r = await authedFetch('/api/dropbox?action=delete&path=' + encodeURIComponent(entry.path));
+    if (!r.ok) throw new Error((await r.json()).error || `HTTP ${r.status}`);
+    toast('Archivo eliminado');
+    loadDbxFolder(dbxState.path);
+  } catch (err) {
+    console.error('[dbx delete]', err);
+    toast('No se pudo eliminar: ' + err.message);
+  }
+}
+
+// HTML de los botones de acción (copiar enlace / descargar / eliminar) para
+// un archivo. Eliminar solo aparece para editor/admin — con confirmación,
+// va a la papelera de Dropbox (~30 días recuperable) y queda en Actividad.
 function dbxActionsHtml(i){
+  const del = (roleReal === 'admin' || roleReal === 'editor')
+    ? `<button class="dbx-act danger" data-act="del" data-idx="${i}" title="Eliminar" aria-label="Eliminar" onclick="dbxAct(event)"><i class="fa-solid fa-trash-can"></i></button>`
+    : '';
   return `<div class="dbx-acts">
     <button class="dbx-act" data-act="link" data-idx="${i}" title="Copiar enlace" aria-label="Copiar enlace" onclick="dbxAct(event)"><i class="fa-solid fa-link"></i></button>
     <button class="dbx-act" data-act="dl" data-idx="${i}" title="Descargar a mi PC" aria-label="Descargar a mi PC" onclick="dbxAct(event)"><i class="fa-solid fa-download"></i></button>
+    ${del}
   </div>`;
 }
 

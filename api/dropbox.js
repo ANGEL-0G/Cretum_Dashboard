@@ -344,6 +344,38 @@ export default async function handler(req, res) {
       return res.status(200).json({ link: data.link, activity_id: activityId });
     }
 
+    // Borrado (solo editor/admin, el frontend pide confirmación). No es
+    // destructivo de verdad: Dropbox conserva lo eliminado ~30 días y se
+    // recupera desde dropbox.com. Queda asentado en dropbox_activity.
+    if (action === 'delete') {
+      const admin = getSupabaseAdmin();
+      const { data: prof } = admin
+        ? await admin.from('profiles').select('role, full_name').eq('id', user.id).maybeSingle()
+        : { data: null };
+      if (prof?.role !== 'editor' && prof?.role !== 'admin') {
+        return res.status(403).json({ error: 'Solo editores o administradores pueden eliminar archivos' });
+      }
+      const path = (req.query.path || '').toString();
+      if (!path) return res.status(400).json({ error: 'path requerido' });
+      if (!underRoot(path, root)) return res.status(403).json({ error: 'Ruta fuera del alcance permitido' });
+      const data = await dbxJson('/2/files/delete_v2', { path }, accessToken);
+      if (admin) {
+        try {
+          const meta = (data && data.metadata) || {};
+          await admin.from('dropbox_activity').insert({
+            user_id: user.id,
+            user_name: prof?.full_name || user.email || null,
+            action: 'delete',
+            file_name: meta.name || (path.split('/').pop() || path),
+            folder_path: path.slice(0, path.lastIndexOf('/')) || '/',
+            size_bytes: meta.size ?? null,
+            confirmed: true,
+          });
+        } catch (e) { console.error('[dropbox] registro de borrado falló:', e); }
+      }
+      return res.status(200).json({ ok: true });
+    }
+
     if (action === 'upload_confirm') {
       const id = Number(req.query.id);
       if (!Number.isFinite(id)) return res.status(400).json({ error: 'id requerido' });
