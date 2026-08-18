@@ -23,13 +23,19 @@
  * Escritura en Dropbox: requiere scope files.content.write en la app.
  */
 
+import { createHash } from 'node:crypto';
 import { getRedis } from './_lib/redis.js';
 import { authenticate } from './_lib/auth.js';
 import { getSupabaseAdmin } from './_lib/supabase.js';
 
 const DROPBOX_API = 'https://api.dropboxapi.com';
 const DROPBOX_CONTENT = 'https://content.dropboxapi.com';
-const TOKEN_CACHE_KEY = 'dropbox:access_token';
+// La llave del caché incluye una huella del refresh token: al rotar la
+// autorización (p. ej. para sumar scopes) el access token cacheado del
+// token anterior deja de encontrarse, en vez de servirse hasta 4h con
+// permisos viejos.
+const TOKEN_CACHE_KEY = 'dropbox:access_token:'
+  + createHash('sha256').update(process.env.DROPBOX_REFRESH_TOKEN || '').digest('hex').slice(0, 12);
 
 let memoryToken = { token: null, expiresAt: 0 };
 
