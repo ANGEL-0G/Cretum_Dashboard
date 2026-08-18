@@ -6789,6 +6789,19 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   </div>
 </div>
 
+<!-- Modal: renombrar archivo de Dropbox -->
+<div class="modal-backdrop" id="dbxRenameModal" onclick="if(event.target===this)closeDbxRename(false)">
+  <div class="modal-box">
+    <div class="modal-title" style="text-align:left"><i class="fa-solid fa-pen" style="color:var(--navy);margin-right:8px"></i>Renombrar archivo</div>
+    <input class="hb-inp" id="dbxRenameInput" autocomplete="off" spellcheck="false" style="margin-top:12px"
+           onkeydown="if(event.key==='Enter')closeDbxRename(true)">
+    <div class="modal-actions">
+      <button class="modal-btn modal-cancel" onclick="closeDbxRename(false)">Cancelar</button>
+      <button class="modal-btn modal-ok" style="background:var(--accent,#1a3a6b)" onclick="closeDbxRename(true)">Renombrar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: actividad de Dropbox (quién subió qué desde el desk) -->
 <div class="modal-backdrop" id="dbxActivityModal" onclick="if(event.target===this)this.classList.remove('show')">
   <div class="modal-box" style="max-width:560px;width:calc(100vw - 32px)">

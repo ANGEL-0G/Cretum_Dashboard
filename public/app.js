@@ -5499,6 +5499,7 @@ function dismissTopLayer() {
   if (q('taskModal')?.classList.contains('show'))   { closeTaskModal();   return true; }
   if (q('assignModal')?.classList.contains('show')) { closeAssignModal(); return true; }
   if (q('confirmModal')?.classList.contains('show')) { closeConfirm(false); return true; }  // = cancelar (resuelve la promesa)
+  if (q('dbxRenameModal')?.classList.contains('show')) { closeDbxRename(false); return true; }  // = cancelar (resuelve la promesa)
   // 2b) Editor de correo (Ventas / campaña) — overlay a pantalla completa; se cierra
   //     antes que el modal de campaña que puede quedar debajo.
   if (q('etEditor') && !q('etEditor').hidden) { etCloseEditor(); return true; }
@@ -10078,7 +10079,7 @@ async function openDbxActivity(){
     box.innerHTML = entries.map(e => `
       <div class="dbx-act-row">
         <span class="dbx-act-who">${escapeHtml(e.user_name || '—')}</span>
-        <span>${e.action === 'delete' ? 'eliminó' : 'subió'}</span>
+        <span>${e.action === 'delete' ? 'eliminó' : e.action === 'rename' ? 'renombró' : 'subió'}</span>
         <span class="dbx-act-file">${escapeHtml(e.file_name)}</span>
         <span>en ${escapeHtml(e.folder_path || '/')}</span>
         ${e.confirmed || e.action === 'delete' ? '' : '<span class="dbx-act-pending">(sin confirmar)</span>'}
@@ -10099,7 +10100,48 @@ function dbxAct(ev){
   if (!e) return;
   if (btn.dataset.act === 'link') dbxCopyLink(e.path);
   else if (btn.dataset.act === 'del') dbxDeleteFile(e);
+  else if (btn.dataset.act === 'ren') dbxRenameFile(e);
   else dbxDownloadFile(e.path, e.name);
+}
+
+// ── Renombrar archivo (editor/admin) ──
+// Modal propio con el nombre pre-seleccionado (sin la extensión, para
+// editar rápido). Sin autorename: si el nombre ya existe, el API avisa.
+let _dbxRenameResolve = null;
+function openDbxRename(currentName){
+  return new Promise(resolve => {
+    _dbxRenameResolve = resolve;
+    const inp = document.getElementById('dbxRenameInput');
+    inp.value = currentName;
+    document.getElementById('dbxRenameModal').classList.add('show');
+    const dot = currentName.lastIndexOf('.');
+    inp.focus();
+    inp.setSelectionRange(0, dot > 0 ? dot : currentName.length);
+  });
+}
+function closeDbxRename(ok){
+  document.getElementById('dbxRenameModal').classList.remove('show');
+  if (_dbxRenameResolve) {
+    const v = ok ? document.getElementById('dbxRenameInput').value.trim() : null;
+    _dbxRenameResolve(v);
+    _dbxRenameResolve = null;
+  }
+}
+async function dbxRenameFile(entry){
+  const nuevo = await openDbxRename(entry.name);
+  if (!nuevo || nuevo === entry.name) return;
+  try {
+    toast('Renombrando…');
+    const r = await authedFetch('/api/dropbox?action=rename'
+      + '&path=' + encodeURIComponent(entry.path)
+      + '&name=' + encodeURIComponent(nuevo));
+    if (!r.ok) throw new Error((await r.json()).error || `HTTP ${r.status}`);
+    toast('Archivo renombrado');
+    loadDbxFolder(dbxState.path);
+  } catch (err) {
+    console.error('[dbx rename]', err);
+    toast('No se pudo renombrar: ' + err.message);
+  }
 }
 
 // Elimina un archivo (con confirmación). Va a la papelera de Dropbox —
@@ -10126,7 +10168,8 @@ async function dbxDeleteFile(entry){
 // va a la papelera de Dropbox (~30 días recuperable) y queda en Actividad.
 function dbxActionsHtml(i){
   const del = (roleReal === 'admin' || roleReal === 'editor')
-    ? `<button class="dbx-act danger" data-act="del" data-idx="${i}" title="Eliminar" aria-label="Eliminar" onclick="dbxAct(event)"><i class="fa-solid fa-trash-can"></i></button>`
+    ? `<button class="dbx-act" data-act="ren" data-idx="${i}" title="Renombrar" aria-label="Renombrar" onclick="dbxAct(event)"><i class="fa-solid fa-pen"></i></button>`
+      + `<button class="dbx-act danger" data-act="del" data-idx="${i}" title="Eliminar" aria-label="Eliminar" onclick="dbxAct(event)"><i class="fa-solid fa-trash-can"></i></button>`
     : '';
   return `<div class="dbx-acts">
     <button class="dbx-act" data-act="link" data-idx="${i}" title="Copiar enlace" aria-label="Copiar enlace" onclick="dbxAct(event)"><i class="fa-solid fa-link"></i></button>

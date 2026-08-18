@@ -428,6 +428,50 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
+    // Renombrar (solo editor/admin): move_v2 dentro de la misma carpeta.
+    // Sin autorename: si el nombre ya está ocupado se avisa, no se inventa "(1)".
+    if (action === 'rename') {
+      const admin = getSupabaseAdmin();
+      const { data: prof } = admin
+        ? await admin.from('profiles').select('role, full_name').eq('id', user.id).maybeSingle()
+        : { data: null };
+      if (prof?.role !== 'editor' && prof?.role !== 'admin') {
+        return res.status(403).json({ error: 'Solo editores o administradores pueden renombrar archivos' });
+      }
+      const from = (req.query.path || '').toString();
+      const name = (req.query.name || '').toString().replace(/[\\/]/g, '').replace(/[\x00-\x1f]/g, '').trim();
+      if (!from || !name) return res.status(400).json({ error: 'path y name requeridos' });
+      if (!underRoot(from, root)) return res.status(403).json({ error: 'Ruta fuera del alcance permitido' });
+      const folder = from.slice(0, from.lastIndexOf('/'));
+      const oldName = from.split('/').pop() || from;
+      if (name === oldName) return res.status(200).json({ ok: true });
+      const mvRes = await fetch(`${DROPBOX_API}/2/files/move_v2`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from_path: from, to_path: `${folder}/${name}`, autorename: false }),
+      });
+      if (!mvRes.ok) {
+        const txt = await mvRes.text();
+        if (txt.includes('conflict')) {
+          return res.status(409).json({ error: 'Ya existe un archivo con ese nombre en esta carpeta' });
+        }
+        throw new Error(`Dropbox move_v2 ${mvRes.status}: ${txt}`);
+      }
+      if (admin) {
+        try {
+          await admin.from('dropbox_activity').insert({
+            user_id: user.id,
+            user_name: prof?.full_name || user.email || null,
+            action: 'rename',
+            file_name: `${oldName} → ${name}`,
+            folder_path: folder || '/',
+            confirmed: true,
+          });
+        } catch (e) { console.error('[dropbox] registro de renombre falló:', e); }
+      }
+      return res.status(200).json({ ok: true });
+    }
+
     if (action === 'upload_confirm') {
       const id = Number(req.query.id);
       if (!Number.isFinite(id)) return res.status(400).json({ error: 'id requerido' });
