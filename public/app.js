@@ -5332,7 +5332,7 @@ function mhRenderGrid() {
     return `
     <div class="et-card">
       <div class="et-card-prev" onclick="mhPreviewOpen('${t.id}')" title="Ver en grande">
-        <iframe id="mhprev-${t.id}" sandbox="" scrolling="no" tabindex="-1" aria-hidden="true"></iframe>
+        <iframe id="mhprev-${t.id}" sandbox="allow-scripts" scrolling="no" tabindex="-1" aria-hidden="true"></iframe>
         <span class="et-openpill"><i class="fa-solid fa-eye"></i> Ver</span>
       </div>
       <div class="et-card-body">
