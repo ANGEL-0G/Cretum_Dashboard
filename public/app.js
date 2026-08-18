@@ -5341,6 +5341,7 @@ function mhRenderGrid() {
       </div>
       <div class="et-card-foot">
         <button class="et-copy" onclick="mhCopy('${t.id}')"><i class="fa-solid fa-copy"></i> Copiar</button>
+        <button class="mh-dl" onclick="mhDownload('${t.id}')" title="Descargar el archivo .html (para abrir en el navegador o mandar por WhatsApp)"><i class="fa-solid fa-download"></i> Descargar</button>
         <button class="et-kebab" onclick="mhMenu('${t.id}', this)" aria-label="Más opciones"><i class="fa-solid fa-ellipsis"></i></button>
       </div>
     </div>`;
@@ -5363,8 +5364,6 @@ function mhMenu(id, btn) {
   etClosePops();
   const pop = document.getElementById('etPop');
   pop.innerHTML = `
-    <button class="et-mi" onclick="etClosePops();mhCopy('${id}')"><i class="fa-solid fa-copy"></i> Copiar</button>
-    <button class="et-mi" onclick="etClosePops();mhDownload('${id}')"><i class="fa-solid fa-download"></i> Descargar .html</button>
     <button class="et-mi danger" onclick="etClosePops();mhDeleteById('${id}')"><i class="fa-solid fa-trash"></i> Eliminar</button>`;
   etPositionPop(pop, btn);
 }
@@ -5460,6 +5459,7 @@ function mhPreviewClose() {
   mhPrevId = null;
 }
 function mhPreviewCopy() { const t = mhData.find(x => x.id === mhPrevId); if (t) etCopyHtml(t.html || ''); }
+function mhPreviewDownload() { if (mhPrevId) mhDownload(mhPrevId); }
 
 /* ── Historial de versiones (14 días) ── */
 let etVersionsFor = null;
