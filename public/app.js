@@ -5326,18 +5326,24 @@ function mhRenderGrid() {
     </div>`;
     return;
   }
+  // Tarjeta "desplegable": compacta muestra solo el nombre; al pasar el mouse el
+  // preview se revela deslizándose de abajo hacia arriba. En táctil (sin hover) el
+  // preview queda visible por CSS. Clic en el nombre → vista previa a pantalla completa.
   grid.innerHTML = mhData.map(t => {
     const who = USERS[t.created_by]?.name || '';
     const when = t.updated_at ? fmtCreated(t.updated_at) : '';
     return `
-    <div class="et-card">
-      <div class="et-card-prev" onclick="mhPreviewOpen('${t.id}')" title="Ver en grande">
-        <iframe id="mhprev-${t.id}" sandbox="allow-scripts" scrolling="no" tabindex="-1" aria-hidden="true"></iframe>
-        <span class="et-openpill"><i class="fa-solid fa-eye"></i> Ver</span>
-      </div>
-      <div class="et-card-body">
-        <div class="et-card-title">${escapeHtml(t.title || 'HTML')}</div>
-        <div class="et-card-meta">Actualizado ${when}${who ? ' · ' + escapeHtml(who) : ''}</div>
+    <div class="mh-card">
+      <button class="mh-top" onclick="mhPreviewOpen('${t.id}')" title="Ver en grande">
+        <span class="mh-top-ico"><i class="fa-solid fa-file-code"></i></span>
+        <span class="mh-top-tx">
+          <span class="mh-top-title">${escapeHtml(t.title || 'HTML')}</span>
+          <span class="mh-top-meta">Actualizado ${when}${who ? ' · ' + escapeHtml(who) : ''}</span>
+        </span>
+        <span class="mh-top-eye"><i class="fa-solid fa-eye"></i></span>
+      </button>
+      <div class="mh-reveal">
+        <iframe id="mhrev-${t.id}" class="mh-reveal-frame" sandbox="allow-scripts" scrolling="no" tabindex="-1" aria-hidden="true"></iframe>
       </div>
       <div class="et-card-foot">
         <button class="et-copy" onclick="mhCopy('${t.id}')"><i class="fa-solid fa-copy"></i> Copiar</button>
@@ -5347,7 +5353,7 @@ function mhRenderGrid() {
     </div>`;
   }).join('');
   mhData.forEach(t => {
-    const fr = document.getElementById('mhprev-' + t.id);
+    const fr = document.getElementById('mhrev-' + t.id);
     if (fr) fr.srcdoc = t.html || '<div style="font-family:sans-serif;color:#9aa;padding:16px">(vacío)</div>';
   });
 }
