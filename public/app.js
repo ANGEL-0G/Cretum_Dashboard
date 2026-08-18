@@ -9572,16 +9572,22 @@ function openDropbox(){
   if (upBtn) upBtn.style.display = (roleReal === 'admin' || roleReal === 'editor') ? '' : 'none';
   if (!dbxState.loaded) {
     dbxState.loaded = true;
-    loadDbxFolder('');
+    // Reabre en la última carpeta visitada (sobrevive recargas). Si esa
+    // carpeta ya no existe en Dropbox, loadDbxFolder cae a la raíz.
+    let saved = '';
+    try { saved = localStorage.getItem('dbxLastPath') || ''; } catch (e) {}
+    loadDbxFolder(saved, { fallbackRoot: !!saved });
   }
 }
 
-async function loadDbxFolder(path){
+async function loadDbxFolder(path, opts){
   dbxState.searching = false;
   dbxState.searchQuery = '';
   document.getElementById('dbxSearchInput').value = '';
   document.getElementById('dbxSearchClear').classList.remove('show');
   dbxState.path = path || '';
+  // Recuerda la carpeta para reabrir ahí tras una recarga
+  try { localStorage.setItem('dbxLastPath', dbxState.path); } catch (e) {}
   renderDbxBreadcrumb();
   const container = document.getElementById('dbxContainer');
   container.innerHTML = `<div class="dbx-status"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando...</div>`;
@@ -9593,6 +9599,13 @@ async function loadDbxFolder(path){
     dbxState.entries = data.entries || [];
     renderDbxEntries();
   } catch (err) {
+    // La carpeta restaurada de una sesión anterior pudo haberse movido o
+    // renombrado en Dropbox — en ese caso cae a la raíz en vez de atorarse.
+    if (opts && opts.fallbackRoot && path) {
+      try { localStorage.removeItem('dbxLastPath'); } catch (e) {}
+      loadDbxFolder('');
+      return;
+    }
     container.innerHTML = `<div class="dbx-status error">
       <i class="fa-solid fa-triangle-exclamation"></i>
       No se pudo cargar la carpeta.<br>
