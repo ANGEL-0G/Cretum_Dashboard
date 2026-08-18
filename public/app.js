@@ -3960,14 +3960,14 @@ function renderBoard() {
   const hidden = feed.length - shown.length;
 
   const upd = hbLastRun
-    ? `${t('Actualizado')} ${hbWhen(hbLastRun)} · 8:00 / 18:00`
-    : `${t('Se actualiza a las')} 8:00 / 18:00`;
+    ? `${t('Actualizado')} ${hbWhen(hbLastRun)} · ${t('se actualiza cada hora')}`
+    : t('Se actualiza cada hora');
 
   const feedHtml = shown.length
     ? shown.map(hbItemHTML).join('')
       + (!hbExpanded && hidden > 0 ? `<button class="hb-more" onclick="hbToggleExpand()">${t('Ver todos')} (${feed.length})</button>` : '')
       + (hbExpanded && feed.length > HB_FEED_LIMIT ? `<button class="hb-more" onclick="hbToggleExpand()">${t('Ver menos')}</button>` : '')
-    : `<div class="hb-empty">${t('Sin avisos por ahora. El resumen de Slack llega a las 8:00 y 18:00.')}</div>`;
+    : `<div class="hb-empty">${t('Sin avisos por ahora. El tablero se actualiza cada hora.')}</div>`;
 
   const evHtml = events.length
     ? events.map(hbEventHTML).join('')

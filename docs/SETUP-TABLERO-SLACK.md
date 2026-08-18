@@ -3,7 +3,7 @@
 El home de MVP muestra un **Tablero del equipo** con avisos, noticias y eventos.
 Lo alimentan dos fuentes:
 
-1. **Rutina de Claude en la nube** — corre a las **8:00 y 18:00 CDMX** con los
+1. **Rutina de Claude en la nube** — corre **cada hora, en punto** con los
    conectores de claude.ai de Angel (Slack + Supabase). Lee `#general` del
    workspace mvpvc, clasifica los mensajes y los inserta en la tabla
    `bulletin_items`. **No usa Slack App, ni bot token, ni GitHub Secrets** —
@@ -13,9 +13,9 @@ Lo alimentan dos fuentes:
 
 ## La rutina
 
-- Nombre: **"Tablero MVP — digest de Slack (8:00 y 18:00 CDMX)"**
+- Nombre: **"Tablero MVP — digest de Slack (cada hora)"**
 - ID: `trig_01HjKAVXUtTVu6pynBBqxKhR`
-- Cron: `0 0,14 * * *` UTC (= 18:00 y 8:00 CDMX)
+- Cron: `0 * * * *` UTC (cada hora en punto)
 - Administrarla (pausar, editar, ver corridas, borrar):
   https://claude.ai/code/routines/trig_01HjKAVXUtTVu6pynBBqxKhR
 - Conectores: Slack y Supabase de la cuenta de Angel (claude.ai/customize/connectors).
