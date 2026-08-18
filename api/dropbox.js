@@ -176,6 +176,58 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Supabase no configurado' });
   }
 
+  // Diagnóstico servidor-a-servidor (mismo candado que el cron de reminders).
+  // Solo metadatos: cuenta autorizada, búsqueda por nombre y listado de una
+  // carpeta. Sirve para depurar problemas de namespace/cuenta sin JWT.
+  if ((req.query.action || '') === 'diag') {
+    const secret = req.headers['x-cron-secret'] || req.query.secret;
+    if (!process.env.CRON_SECRET || secret !== process.env.CRON_SECRET) {
+      return res.status(401).json({ error: 'No autorizado' });
+    }
+    try {
+      const accessToken = await getAccessToken();
+      const acctRes = await fetch(`${DROPBOX_API}/2/users/get_current_account`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      const acct = await acctRes.json();
+      let search = null;
+      const q = (req.query.q || '').toString();
+      if (q) {
+        const s = await dbxJson('/2/files/search_v2', {
+          query: q, options: { max_results: 10, filename_only: true },
+        }, accessToken);
+        search = (s.matches || []).map(m => ({
+          path: m.metadata.metadata.path_display,
+          size: m.metadata.metadata.size ?? null,
+          modified: m.metadata.metadata.server_modified ?? null,
+        }));
+      }
+      let listing = null;
+      const lp = (req.query.lpath || '').toString();
+      if (lp) {
+        const l = await dbxJson('/2/files/list_folder', { path: lp }, accessToken);
+        listing = (l.entries || []).map(e => ({
+          tag: e['.tag'], name: e.name, size: e.size ?? null, modified: e.server_modified ?? null,
+        }));
+      }
+      return res.status(200).json({
+        account: {
+          email: acct.email,
+          name: acct.name?.display_name,
+          type: acct.account_type?.['.tag'],
+          team: acct.team?.name || null,
+          root_info: acct.root_info || null,
+        },
+        search,
+        listing,
+      });
+    } catch (err) {
+      console.error('[dropbox diag]', err);
+      return res.status(500).json({ error: String(err.message || err).slice(0, 500) });
+    }
+  }
+
   const user = await authenticate(req);
   if (!user) return res.status(401).json({ error: 'No autorizado' });
 
