@@ -10062,6 +10062,16 @@ async function dbxUploadFiles(files){
 }
 
 // ── Historial interno: quién subió qué desde el desk ──
+let _dbxActRows = [];
+// Clic en la ruta de una fila de Actividad → navega el explorador a esa carpeta
+function dbxActivityGo(i){
+  const row = _dbxActRows[i];
+  if (!row) return;
+  document.getElementById('dbxActivityModal').classList.remove('show');
+  const p = row.folder_path && row.folder_path !== '/' ? row.folder_path : '';
+  loadDbxFolder(p);
+}
+
 async function openDbxActivity(){
   const modal = document.getElementById('dbxActivityModal');
   const box = document.getElementById('dbxActivityList');
@@ -10076,13 +10086,16 @@ async function openDbxActivity(){
       return;
     }
     const fmtWhen = d => new Date(d).toLocaleString('es-MX', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-    box.innerHTML = entries.map(e => `
+    // La ruta es un enlace: clic → cierra el modal y navega el explorador a
+    // esa carpeta. Las filas se guardan aparte para no escapar rutas en el onclick.
+    _dbxActRows = entries;
+    box.innerHTML = entries.map((e, i) => `
       <div class="dbx-act-row">
         <span class="dbx-act-who">${escapeHtml(e.user_name || '—')}</span>
         <span>${e.action === 'delete' ? 'eliminó' : e.action === 'rename' ? 'renombró' : 'subió'}</span>
         <span class="dbx-act-file">${escapeHtml(e.file_name)}</span>
-        <span>en ${escapeHtml(e.folder_path || '/')}</span>
-        ${e.confirmed || e.action === 'delete' ? '' : '<span class="dbx-act-pending">(sin confirmar)</span>'}
+        <span>en <button class="dbx-act-path" onclick="dbxActivityGo(${i})" title="Ir a esta carpeta">${escapeHtml(e.folder_path || '/')}</button></span>
+        ${e.confirmed || e.action !== 'upload' ? '' : '<span class="dbx-act-pending">(sin confirmar)</span>'}
         <span class="dbx-act-meta">${fmtSize(e.size_bytes != null ? Number(e.size_bytes) : null)} · ${fmtWhen(e.created_at)}</span>
       </div>`).join('');
   } catch (err) {
