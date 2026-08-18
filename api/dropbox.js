@@ -14,12 +14,18 @@
  *   preview   → preview binario PDF (?path=...) — Office/Word/Excel
  *   download  → binario del archivo (inline por defecto; ?dl=1 fuerza guardado
  *               a la PC con Content-Disposition: attachment y nombre)
+ *   upload_link    → link temporal de subida (?path=carpeta&name=archivo&size=n)
+ *                    [solo editor/admin] — asienta el intento en dropbox_activity
+ *   upload_confirm → marca la subida como completada (?id=activity_id)
+ *   activity       → historial interno de subidas desde el desk (últimas 100)
  *
  * Auth: requiere Bearer JWT de Supabase en todas las acciones.
+ * Escritura en Dropbox: requiere scope files.content.write en la app.
  */
 
 import { getRedis } from './_lib/redis.js';
 import { authenticate } from './_lib/auth.js';
+import { getSupabaseAdmin } from './_lib/supabase.js';
 
 const DROPBOX_API = 'https://api.dropboxapi.com';
 const DROPBOX_CONTENT = 'https://content.dropboxapi.com';
@@ -285,6 +291,76 @@ export default async function handler(req, res) {
       }
       res.setHeader('Cache-Control', 'private, max-age=600');
       return res.status(200).send(buf);
+    }
+
+    // ── Subida en 3 pasos ──────────────────────────────────────────
+    // 1) upload_link  → emite un link temporal de Dropbox y asienta el intento
+    //    en dropbox_activity (registro interno: la cuenta de Dropbox es
+    //    compartida, así que quién subió qué solo lo sabemos nosotros).
+    // 2) el navegador sube el binario DIRECTO a Dropbox con ese link — las
+    //    funciones de Vercel cortan cuerpos >4.5MB, proxear no es opción.
+    // 3) upload_confirm → marca la fila como confirmada (subida terminada).
+    // autorename: nunca pisa un archivo existente, Dropbox agrega " (1)".
+    if (action === 'upload_link') {
+      const admin = getSupabaseAdmin();
+      const { data: prof } = admin
+        ? await admin.from('profiles').select('role, full_name').eq('id', user.id).maybeSingle()
+        : { data: null };
+      if (prof?.role !== 'editor' && prof?.role !== 'admin') {
+        return res.status(403).json({ error: 'Solo editores o administradores pueden subir archivos' });
+      }
+      const name = (req.query.name || '').toString().replace(/[\\/]/g, '').replace(/[\x00-\x1f]/g, '').trim();
+      if (!name) return res.status(400).json({ error: 'name requerido' });
+      const relPath = (req.query.path || '').toString();
+      const folder = joinPath(root, relPath);
+      if (folder && !underRoot(folder, root)) {
+        return res.status(403).json({ error: 'Ruta fuera del alcance permitido' });
+      }
+      const data = await dbxJson('/2/files/get_temporary_upload_link', {
+        commit_info: { path: `${folder}/${name}`, mode: 'add', autorename: true, mute: false },
+      }, accessToken);
+      // Registro interno — si falla no bloquea la subida, pero queda en logs
+      let activityId = null;
+      if (admin) {
+        try {
+          const size = Number(req.query.size);
+          const { data: row } = await admin.from('dropbox_activity').insert({
+            user_id: user.id,
+            user_name: prof?.full_name || user.email || null,
+            action: 'upload',
+            file_name: name,
+            folder_path: relPath || '/',
+            size_bytes: Number.isFinite(size) ? size : null,
+          }).select('id').single();
+          activityId = row?.id ?? null;
+        } catch (e) { console.error('[dropbox] registro de subida falló:', e); }
+      }
+      return res.status(200).json({ link: data.link, activity_id: activityId });
+    }
+
+    if (action === 'upload_confirm') {
+      const id = Number(req.query.id);
+      if (!Number.isFinite(id)) return res.status(400).json({ error: 'id requerido' });
+      const admin = getSupabaseAdmin();
+      if (admin) {
+        // Solo el mismo usuario que pidió el link puede confirmar su fila
+        await admin.from('dropbox_activity')
+          .update({ confirmed: true })
+          .eq('id', id)
+          .eq('user_id', user.id);
+      }
+      return res.status(200).json({ ok: true });
+    }
+
+    // Historial de subidas hechas desde el desk (visible a todo el equipo)
+    if (action === 'activity') {
+      const admin = getSupabaseAdmin();
+      if (!admin) return res.status(200).json({ entries: [] });
+      const { data: rows } = await admin.from('dropbox_activity')
+        .select('id, user_name, action, file_name, folder_path, size_bytes, confirmed, created_at')
+        .order('created_at', { ascending: false })
+        .limit(100);
+      return res.status(200).json({ entries: rows || [] });
     }
 
     return res.status(400).json({ error: `action inválida: ${action}` });

@@ -2584,6 +2584,36 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 }
 .dbx-view-btn.on{background:var(--white);color:var(--navy);box-shadow:var(--shadow-sm)}
 
+/* Botones de acción del toolbar (Actividad / Subir) */
+.dbx-tool-btn{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:8px 13px;border-radius:var(--r-md);cursor:pointer;
+  border:1px solid var(--gray-200);background:var(--white);color:var(--gray-600);
+  font-family:var(--font);font-size:12.5px;font-weight:500;
+  transition:color .15s,background-color .15s,border-color .15s,box-shadow .15s;
+}
+.dbx-tool-btn:hover{color:var(--navy);border-color:var(--gray-300);box-shadow:var(--shadow-sm)}
+.dbx-tool-btn.primary{background:var(--accent,#1a3a6b);border-color:var(--accent,#1a3a6b);color:#fff}
+.dbx-tool-btn.primary:hover{opacity:.92;color:#fff}
+.dbx-tool-btn:disabled{opacity:.55;cursor:default;box-shadow:none}
+[data-theme="dark"] .dbx-tool-btn{background:#161616;border-color:#2a2a2a;color:#bbb}
+[data-theme="dark"] .dbx-tool-btn:hover{color:#eee}
+@media (max-width:600px){ .dbx-tool-btn .dbx-tool-lbl{display:none} }
+
+/* Modal: actividad de subidas */
+.dbx-act-list{max-height:min(52vh,420px);overflow-y:auto;margin-top:10px;text-align:left}
+.dbx-act-row{
+  display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;
+  padding:8px 4px;border-bottom:1px solid var(--gray-100);font-size:12.5px;
+}
+.dbx-act-row:last-child{border-bottom:none}
+.dbx-act-who{font-weight:500;color:var(--gray-900)}
+.dbx-act-file{color:var(--navy);word-break:break-all}
+.dbx-act-meta{color:var(--gray-400);font-size:11.5px;margin-left:auto;white-space:nowrap}
+.dbx-act-pending{color:var(--gray-400);font-style:italic}
+[data-theme="dark"] .dbx-act-row{border-color:#222}
+[data-theme="dark"] .dbx-act-who{color:#eee}
+
 .dbx-breadcrumb{
   display:flex;align-items:center;gap:4px;flex-wrap:wrap;
   font-size:13px;color:var(--gray-500);margin-bottom:14px;
@@ -4060,6 +4090,13 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
           <i class="fa-solid fa-list"></i>
         </button>
       </div>
+      <button class="dbx-tool-btn" id="dbxActivityBtn" onclick="openDbxActivity()" title="Quién ha subido qué desde el desk">
+        <i class="fa-solid fa-clock-rotate-left"></i><span class="dbx-tool-lbl">Actividad</span>
+      </button>
+      <button class="dbx-tool-btn primary" id="dbxUploadBtn" onclick="dbxPickUpload()" style="display:none" title="Subir archivos a la carpeta actual">
+        <i class="fa-solid fa-arrow-up-from-bracket"></i><span class="dbx-tool-lbl">Subir</span>
+      </button>
+      <input id="dbxUploadInput" type="file" multiple style="display:none" onchange="dbxUploadFiles(this.files)">
     </div>
     <div class="dbx-breadcrumb" id="dbxBreadcrumb"></div>
     <div id="dbxContainer"></div>
@@ -6745,6 +6782,18 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
       <div class="form-field"><label class="form-label">Notas <span class="form-label-opt">opcional</span></label>
         <input class="form-input" id="frProNotes"></div>
       <button class="dbx-btn primary" style="width:100%;justify-content:center;margin-top:6px" onclick="frSaveProspect()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: actividad de Dropbox (quién subió qué desde el desk) -->
+<div class="modal-backdrop" id="dbxActivityModal" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="modal-box" style="max-width:560px;width:calc(100vw - 32px)">
+    <div class="modal-title" style="text-align:left"><i class="fa-solid fa-clock-rotate-left" style="color:var(--navy);margin-right:8px"></i>Actividad de Dropbox</div>
+    <div class="modal-msg" style="text-align:left;margin:2px 0 0">Subidas hechas desde el desk. Lo que se sube o cambia directo en Dropbox no aparece aquí.</div>
+    <div class="dbx-act-list" id="dbxActivityList"></div>
+    <div class="modal-actions">
+      <button class="modal-btn modal-cancel" onclick="document.getElementById('dbxActivityModal').classList.remove('show')">Cerrar</button>
     </div>
   </div>
 </div>

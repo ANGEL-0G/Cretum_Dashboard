@@ -9566,6 +9566,10 @@ function fmtDbxDate(d){
 }
 
 function openDropbox(){
+  // El botón "Subir" solo aparece para quien puede escribir (editor/admin);
+  // se evalúa en cada apertura por si el rol cambió en la sesión.
+  const upBtn = document.getElementById('dbxUploadBtn');
+  if (upBtn) upBtn.style.display = (roleReal === 'admin' || roleReal === 'editor') ? '' : 'none';
   if (!dbxState.loaded) {
     dbxState.loaded = true;
     loadDbxFolder('');
@@ -9989,6 +9993,87 @@ async function dbxCopyLink(path){
     toast('Enlace copiado — caduca en ~4 h');
   } catch (e) {
     toast('No se pudo copiar el enlace');
+  }
+}
+
+// ── Subida de archivos (editor/admin) ──
+// El binario NO pasa por nuestro servidor (Vercel corta cuerpos >4.5MB):
+// pedimos al API un link temporal de subida — que además asienta el intento
+// en el registro interno dropbox_activity — y el navegador manda el archivo
+// directo a Dropbox. Si ya existe uno con el mismo nombre, Dropbox lo
+// renombra solo (" (1)"); nunca se pisa nada desde el desk.
+function dbxPickUpload(){
+  if (dbxState.searching) { toast('Sal de la búsqueda para subir a una carpeta'); return; }
+  document.getElementById('dbxUploadInput').click();
+}
+
+async function dbxUploadFiles(files){
+  const list = Array.from(files || []);
+  const input = document.getElementById('dbxUploadInput');
+  input.value = '';                       // permite re-subir el mismo archivo después
+  if (!list.length) return;
+  const btn = document.getElementById('dbxUploadBtn');
+  btn.disabled = true;
+  let ok = 0;
+  try {
+    for (let i = 0; i < list.length; i++) {
+      const f = list[i];
+      toast(`Subiendo ${i + 1}/${list.length}: ${f.name}…`);
+      const r = await authedFetch('/api/dropbox?action=upload_link'
+        + '&path=' + encodeURIComponent(dbxState.path)
+        + '&name=' + encodeURIComponent(f.name)
+        + '&size=' + f.size);
+      if (!r.ok) throw new Error((await r.json()).error || `HTTP ${r.status}`);
+      const { link, activity_id } = await r.json();
+      const up = await fetch(link, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/octet-stream' },
+        body: f,
+      });
+      if (!up.ok) throw new Error(`Dropbox rechazó la subida (HTTP ${up.status})`);
+      ok++;
+      // Confirma en el registro que la subida terminó (best-effort)
+      if (activity_id != null) {
+        authedFetch('/api/dropbox?action=upload_confirm&id=' + activity_id).catch(() => {});
+      }
+    }
+    toast(ok === 1 ? 'Archivo subido' : `${ok} archivos subidos`);
+  } catch (err) {
+    console.error('[dbx upload]', err);
+    toast('No se pudo subir: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    if (ok) loadDbxFolder(dbxState.path);   // refresca la carpeta para ver lo nuevo
+  }
+}
+
+// ── Historial interno: quién subió qué desde el desk ──
+async function openDbxActivity(){
+  const modal = document.getElementById('dbxActivityModal');
+  const box = document.getElementById('dbxActivityList');
+  box.innerHTML = '<div class="dbx-status"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando…</div>';
+  modal.classList.add('show');
+  try {
+    const r = await authedFetch('/api/dropbox?action=activity');
+    if (!r.ok) throw new Error((await r.json()).error || `HTTP ${r.status}`);
+    const { entries } = await r.json();
+    if (!entries || !entries.length) {
+      box.innerHTML = '<div class="dbx-status">Sin actividad todavía — aquí aparecerá cada archivo subido desde el desk</div>';
+      return;
+    }
+    const fmtWhen = d => new Date(d).toLocaleString('es-MX', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    box.innerHTML = entries.map(e => `
+      <div class="dbx-act-row">
+        <span class="dbx-act-who">${escapeHtml(e.user_name || '—')}</span>
+        <span>subió</span>
+        <span class="dbx-act-file">${escapeHtml(e.file_name)}</span>
+        <span>en ${escapeHtml(e.folder_path || '/')}</span>
+        ${e.confirmed ? '' : '<span class="dbx-act-pending">(sin confirmar)</span>'}
+        <span class="dbx-act-meta">${fmtSize(e.size_bytes != null ? Number(e.size_bytes) : null)} · ${fmtWhen(e.created_at)}</span>
+      </div>`).join('');
+  } catch (err) {
+    box.innerHTML = `<div class="dbx-status error">No se pudo cargar el historial<br>
+      <span style="font-size:11px;color:var(--gray-400)">${escapeHtml(err.message)}</span></div>`;
   }
 }
 
