@@ -5334,20 +5334,20 @@ function mhRenderGrid() {
     const when = t.updated_at ? fmtCreated(t.updated_at) : '';
     return `
     <div class="mh-card">
+      <button class="mh-tab" onclick="event.stopPropagation();mhOpenTab('${t.id}')" title="Abrir en otra pestaña a pantalla completa" aria-label="Abrir en otra pestaña"><i class="fa-solid fa-arrow-up-right-from-square"></i></button>
       <button class="mh-top" onclick="mhPreviewOpen('${t.id}')" title="Ver en grande">
         <span class="mh-top-ico"><i class="fa-solid fa-file-code"></i></span>
         <span class="mh-top-tx">
           <span class="mh-top-title">${escapeHtml(t.title || 'HTML')}</span>
           <span class="mh-top-meta">Actualizado ${when}${who ? ' · ' + escapeHtml(who) : ''}</span>
         </span>
-        <span class="mh-top-eye"><i class="fa-solid fa-eye"></i></span>
       </button>
       <div class="mh-reveal">
         <iframe id="mhrev-${t.id}" class="mh-reveal-frame" sandbox="allow-scripts" scrolling="no" tabindex="-1" aria-hidden="true"></iframe>
       </div>
       <div class="et-card-foot">
-        <button class="et-copy" onclick="mhCopy('${t.id}')"><i class="fa-solid fa-copy"></i> Copiar</button>
-        <button class="mh-dl" onclick="mhDownload('${t.id}')" title="Descargar el archivo .html (para abrir en el navegador o mandar por WhatsApp)"><i class="fa-solid fa-download"></i> Descargar</button>
+        <button class="mh-download-primary" onclick="mhDownload('${t.id}')" title="Descargar el archivo .html (para abrir en el navegador o mandar por WhatsApp)"><i class="fa-solid fa-download"></i> Descargar</button>
+        <button class="mh-copy-secondary" onclick="mhCopy('${t.id}')"><i class="fa-solid fa-copy"></i> Copiar</button>
         <button class="et-kebab" onclick="mhMenu('${t.id}', this)" aria-label="Más opciones"><i class="fa-solid fa-ellipsis"></i></button>
       </div>
     </div>`;
@@ -5359,6 +5359,16 @@ function mhRenderGrid() {
 }
 
 function mhCopy(id) { const t = mhData.find(x => x.id === id); if (t) etCopyHtml(t.html || ''); }
+// Abre el HTML en una pestaña nueva a pantalla completa (blob URL → corre su JS,
+// se ve tal cual, ideal para los HTML que necesitan JavaScript).
+function mhOpenTab(id) {
+  const t = mhData.find(x => x.id === id);
+  if (!t) return;
+  const url = URL.createObjectURL(new Blob([t.html || ''], { type: 'text/html;charset=utf-8' }));
+  const w = window.open(url, '_blank', 'noopener');
+  if (!w) toast('Permite las ventanas emergentes para abrirlo');
+  setTimeout(() => URL.revokeObjectURL(url), 60000);   // deja tiempo a que cargue
+}
 function mhDownload(id) {
   const t = mhData.find(x => x.id === id);
   if (!t) return;
@@ -5466,6 +5476,7 @@ function mhPreviewClose() {
 }
 function mhPreviewCopy() { const t = mhData.find(x => x.id === mhPrevId); if (t) etCopyHtml(t.html || ''); }
 function mhPreviewDownload() { if (mhPrevId) mhDownload(mhPrevId); }
+function mhPreviewOpenTab() { if (mhPrevId) mhOpenTab(mhPrevId); }
 
 /* ── Historial de versiones (14 días) ── */
 let etVersionsFor = null;
