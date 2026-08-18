@@ -742,6 +742,26 @@ select.camp-f-inp::-ms-expand,select.form-input::-ms-expand{display:none}
 .et-empty h3{font-size:16px;font-weight:600;color:var(--gray-800);margin:0 0 4px}
 .et-empty p{font-size:13.5px;color:var(--gray-400);margin:0 auto 16px;max-width:44ch}
 
+/* ═══ HTML's MVP (Ventas · solo MVP) — reusa el estilo de Plantillas ═══ */
+#ventasHtmls{position:relative;min-height:66vh}
+#ventasHtmls.et-dragging .et-dropzone{display:flex;animation:etPopIn .14s var(--et-ease)}
+/* Modal: crear pegando código */
+.mh-modal{width:min(620px,94vw)}
+.mh-form{padding:14px 18px 18px;display:flex;flex-direction:column;gap:12px}
+.mh-input{border:1px solid var(--gray-200);border-radius:var(--r-md);padding:10px 12px;font-family:var(--font);font-size:14px;color:var(--gray-900);background:var(--gray-50);outline:none;transition:border-color .15s}
+.mh-input:focus{border-color:var(--navy)}
+.mh-code{min-height:280px;resize:vertical;border:1px solid var(--gray-200);border-radius:var(--r-md);padding:12px 14px;font-family:var(--mono,monospace);font-size:12.5px;line-height:1.55;color:var(--gray-800);background:var(--white);outline:none;white-space:pre;overflow:auto}
+.mh-code:focus{border-color:var(--navy)}
+.mh-actions{display:flex;justify-content:flex-end;gap:8px}
+/* Vista previa a pantalla completa (solo lectura) */
+.mh-prev-backdrop{z-index:1300}
+.mh-prev-box{background:var(--gray-50);border-radius:var(--r-lg);width:min(900px,96vw);height:min(88vh,900px);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 18px 52px rgba(0,0,0,.28);transform:scale(.97) translateY(10px);transition:transform .3s var(--et-ease)}
+.mh-prev-backdrop.show .mh-prev-box{transform:none}
+.mh-prev-bar{display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--white);border-bottom:1px solid var(--gray-200);flex-shrink:0}
+.mh-prev-title{flex:1;min-width:0;font-size:15px;font-weight:600;color:var(--gray-900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mh-prev-bar-r{display:flex;align-items:center;gap:7px;flex-shrink:0}
+.mh-prev-frame{flex:1;border:0;background:#fff;width:100%;min-height:0}
+
 /* Popover genérico (menús / color / enlace) — fixed para no recortarse */
 .et-pop{position:fixed;z-index:1500;background:var(--white);border:1px solid var(--gray-200);border-radius:var(--r-md);box-shadow:0 14px 40px -8px rgba(15,23,42,.28),0 4px 10px -6px rgba(15,23,42,.2);padding:5px;min-width:190px;transform-origin:top right;animation:etPopIn .15s var(--et-ease)}
 .et-pop[hidden]{display:none}   /* gana al display:grid de .et-colorpop, etc. */
@@ -5977,6 +5997,14 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
         </span>
         <i class="fa-solid fa-chevron-right fm-card-arrow"></i>
       </button>
+      <button class="fm-card ventas-mvp-only" type="button" onclick="openMvpHtmls()">
+        <span class="fm-card-ico"><i class="fa-solid fa-code"></i></span>
+        <span class="fm-card-text">
+          <span class="fm-card-title">HTML's MVP</span>
+          <span class="fm-card-desc">Sube archivos .html o pega el código de un correo; se guardan listos para copiar y pegar en Outlook o Gmail. Para cambiar uno, vuelve a subirlo.</span>
+        </span>
+        <i class="fa-solid fa-chevron-right fm-card-arrow"></i>
+      </button>
     </div>
   </div>
 
@@ -5994,6 +6022,26 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
       <div class="et-dropzone-in">
         <i class="fa-solid fa-file-arrow-up"></i>
         <div>Suelta tu archivo <b>.html</b> para crear una plantilla</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HTML's MVP (biblioteca simple: subir/pegar HTML, copiar y enviar — sin editor) -->
+  <div id="ventasHtmls" style="display:none">
+    <div class="et-top">
+      <button class="fm-back" type="button" onclick="ventasBackHome()" style="margin:0"><i class="fa-solid fa-arrow-left"></i> Ventas</button>
+      <div class="et-top-r">
+        <span class="et-count" id="mhCount"></span>
+        <button class="et-ebtn" type="button" onclick="mhFilePick()"><i class="fa-solid fa-file-arrow-up"></i> <span class="et-ebtn-tx">Subir HTML</span></button>
+        <button class="btn-primary" type="button" onclick="mhNewOpen()"><i class="fa-solid fa-plus"></i> Nuevo HTML</button>
+        <input type="file" id="mhFile" accept=".html,text/html" multiple hidden onchange="mhOnFile(event)">
+      </div>
+    </div>
+    <div id="mhGrid" class="et-grid"></div>
+    <div class="et-dropzone" id="mhDropzone" aria-hidden="true">
+      <div class="et-dropzone-in">
+        <i class="fa-solid fa-file-arrow-up"></i>
+        <div>Suelta tu archivo <b>.html</b> para guardarlo</div>
       </div>
     </div>
   </div>
@@ -6324,6 +6372,38 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
     </div>
     <div class="et-vnote">Cambios de los últimos <b>14 días</b>. Restaurar guarda antes la versión actual.</div>
     <div id="etVersionsList" class="et-vlist"></div>
+  </div>
+</div>
+
+<!-- HTML's MVP: crear pegando código -->
+<div class="modal-backdrop notes-modal" id="mhModal" onclick="if(event.target===this)mhNewClose()">
+  <div class="et-vmodal mh-modal">
+    <div class="et-vmodal-head">
+      <div class="fm-title">Nuevo HTML</div>
+      <button class="fm-x" onclick="mhNewClose()" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="mh-form">
+      <input type="text" id="mhTitle" class="mh-input" placeholder="Nombre (ej. Newsletter septiembre)" autocomplete="off">
+      <textarea id="mhCode" class="mh-code" placeholder="Pega aquí el código HTML del correo…" spellcheck="false"></textarea>
+      <div class="mh-actions">
+        <button class="et-ebtn" type="button" onclick="mhNewClose()">Cancelar</button>
+        <button class="et-ebtn primary" type="button" onclick="mhNewSave()"><i class="fa-solid fa-check"></i> Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HTML's MVP: vista previa a pantalla completa (solo lectura) -->
+<div class="modal-backdrop mh-prev-backdrop" id="mhPreview" onclick="if(event.target===this)mhPreviewClose()">
+  <div class="mh-prev-box">
+    <div class="mh-prev-bar">
+      <div class="mh-prev-title" id="mhPreviewTitle">Vista previa</div>
+      <div class="mh-prev-bar-r">
+        <button class="et-ebtn primary" type="button" onclick="mhPreviewCopy()"><i class="fa-solid fa-copy"></i> <span class="et-ebtn-tx">Copiar</span></button>
+        <button class="et-ebtn ghost" type="button" onclick="mhPreviewClose()" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+    </div>
+    <iframe id="mhPreviewFrame" class="mh-prev-frame" sandbox="" title="Vista previa del HTML"></iframe>
   </div>
 </div>
 
@@ -6870,6 +6950,6 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 </div>
 
 <script src="/i18n.js?v=20260805-statusui"></script>
-<script src="/app.js?v=20260817-news2"></script>
+<script src="/app.js?v=20260818-htmlsmvp"></script>
 </body>
 </html>

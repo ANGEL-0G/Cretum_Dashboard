@@ -4579,16 +4579,21 @@ function ventasBackHome() {
   const dash = document.getElementById('ventasDash');
   const umami = document.getElementById('ventasUmami');
   const plant = document.getElementById('ventasPlantillas');
+  const htmls = document.getElementById('ventasHtmls');
   const page = document.getElementById('pageVentas');
   if (menu) menu.style.display = '';
   if (dash) dash.style.display = 'none';
   if (umami) umami.style.display = 'none';
   if (plant) plant.style.display = 'none';
+  if (htmls) htmls.style.display = 'none';
   if (page) page.classList.remove('gvv-full');
   // GVV Dashboard y Web Analytics son de Cretum → ocultos en MVP (solo ve Plantillas).
   const cretumOnly = currentOrg === 'cretum';
   document.querySelectorAll('#ventasMenu .ventas-cretum-only')
     .forEach(el => { el.style.display = cretumOnly ? '' : 'none'; });
+  // HTML's MVP es exclusivo de MVP → oculto en Cretum.
+  document.querySelectorAll('#ventasMenu .ventas-mvp-only')
+    .forEach(el => { el.style.display = currentOrg === 'mvp' ? '' : 'none'; });
 }
 // Embebe el GVV Dashboard (archivo estático servido por cretumdesk).
 // Carga lazy: el iframe (~1.3 MB) no se baja hasta que le piquen.
@@ -5274,6 +5279,188 @@ async function etDeleteById(id) {
 }
 function etDeleteCurrent() { if (etEditingId) etDeleteById(etEditingId); }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   HTML's MVP (Ventas · exclusivo de MVP) — biblioteca simple para copiar/enviar
+   Subes un .html o pegas el código; se listan con vista previa y se copian
+   listos para pegar en Outlook/Gmail. SIN editor: para cambiar uno, se vuelve a
+   subir (lo hace quien lo tenga). Reutiliza etCopyHtml() y el estilo de las
+   plantillas; datos en Supabase (tabla mvp_htmls, sin org → solo MVP).
+═══════════════════════════════════════════════════════════════════════════ */
+let mhData = [];
+let mhPrevId = null;   // id de la vista previa a pantalla completa abierta
+
+function openMvpHtmls() {
+  document.getElementById('ventasMenu').style.display = 'none';
+  document.getElementById('ventasHtmls').style.display = '';
+  mhWireDrop();
+  loadMvpHtmls();
+}
+
+async function loadMvpHtmls() {
+  const grid = document.getElementById('mhGrid');
+  if (!grid) return;
+  grid.innerHTML = `<div class="et-empty"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando…</div>`;
+  try {
+    const { data, error } = await sb.from('mvp_htmls')
+      .select('id,title,html,created_by,created_at,updated_at')
+      .order('updated_at', { ascending: false });
+    if (error) throw error;
+    mhData = data || [];
+    mhRenderGrid();
+  } catch (err) {
+    const falta = /relation|does not exist|schema cache|not find the table|column/i.test(err.message || '');
+    grid.innerHTML = `<div class="et-empty"><div class="et-empty-ico"><i class="fa-solid fa-triangle-exclamation"></i></div><h3>No se pudieron cargar</h3><p>${falta ? 'Falta correr la migración de BD (db/21_mvp_htmls.sql).' : 'Inténtalo de nuevo en un momento.'}</p></div>`;
+  }
+}
+
+function mhRenderGrid() {
+  const grid = document.getElementById('mhGrid');
+  const count = document.getElementById('mhCount');
+  if (count) count.textContent = mhData.length ? (mhData.length + (mhData.length === 1 ? ' HTML' : " HTML's")) : '';
+  if (!mhData.length) {
+    grid.innerHTML = `<div class="et-empty">
+      <div class="et-empty-ico"><i class="fa-solid fa-code"></i></div>
+      <h3>Aún no hay HTML's</h3>
+      <p>Sube un archivo .html o pega el código de un correo. Luego cópialo y pégalo en Outlook o Gmail.</p>
+      <button class="btn-primary" onclick="mhNewOpen()"><i class="fa-solid fa-plus"></i> Nuevo HTML</button>
+    </div>`;
+    return;
+  }
+  grid.innerHTML = mhData.map(t => {
+    const who = USERS[t.created_by]?.name || '';
+    const when = t.updated_at ? fmtCreated(t.updated_at) : '';
+    return `
+    <div class="et-card">
+      <div class="et-card-prev" onclick="mhPreviewOpen('${t.id}')" title="Ver en grande">
+        <iframe id="mhprev-${t.id}" sandbox="" scrolling="no" tabindex="-1" aria-hidden="true"></iframe>
+        <span class="et-openpill"><i class="fa-solid fa-eye"></i> Ver</span>
+      </div>
+      <div class="et-card-body">
+        <div class="et-card-title">${escapeHtml(t.title || 'HTML')}</div>
+        <div class="et-card-meta">Actualizado ${when}${who ? ' · ' + escapeHtml(who) : ''}</div>
+      </div>
+      <div class="et-card-foot">
+        <button class="et-copy" onclick="mhCopy('${t.id}')"><i class="fa-solid fa-copy"></i> Copiar</button>
+        <button class="et-kebab" onclick="mhMenu('${t.id}', this)" aria-label="Más opciones"><i class="fa-solid fa-ellipsis"></i></button>
+      </div>
+    </div>`;
+  }).join('');
+  mhData.forEach(t => {
+    const fr = document.getElementById('mhprev-' + t.id);
+    if (fr) fr.srcdoc = t.html || '<div style="font-family:sans-serif;color:#9aa;padding:16px">(vacío)</div>';
+  });
+}
+
+function mhCopy(id) { const t = mhData.find(x => x.id === id); if (t) etCopyHtml(t.html || ''); }
+function mhDownload(id) {
+  const t = mhData.find(x => x.id === id);
+  if (!t) return;
+  const name = (t.title || 'correo').replace(/[^a-z0-9]+/gi, '_');
+  downloadBlob(new Blob([t.html || ''], { type: 'text/html;charset=utf-8;' }), name + '.html');
+}
+// Menú ⋯ de la card (reusa el popover compartido #etPop y su posicionamiento).
+function mhMenu(id, btn) {
+  etClosePops();
+  const pop = document.getElementById('etPop');
+  pop.innerHTML = `
+    <button class="et-mi" onclick="etClosePops();mhCopy('${id}')"><i class="fa-solid fa-copy"></i> Copiar</button>
+    <button class="et-mi" onclick="etClosePops();mhDownload('${id}')"><i class="fa-solid fa-download"></i> Descargar .html</button>
+    <button class="et-mi danger" onclick="etClosePops();mhDeleteById('${id}')"><i class="fa-solid fa-trash"></i> Eliminar</button>`;
+  etPositionPop(pop, btn);
+}
+
+/* ── Crear pegando código ── */
+function mhNewOpen() {
+  document.getElementById('mhTitle').value = '';
+  document.getElementById('mhCode').value = '';
+  document.getElementById('mhModal').classList.add('show');
+  setTimeout(() => document.getElementById('mhTitle').focus(), 60);
+}
+function mhNewClose() { document.getElementById('mhModal').classList.remove('show'); }
+async function mhNewSave() {
+  const title = (document.getElementById('mhTitle').value || '').trim();
+  const html = document.getElementById('mhCode').value || '';
+  if (!title) { toast('Ponle un nombre'); document.getElementById('mhTitle').focus(); return; }
+  if (!html.trim()) { toast('Pega el código HTML'); document.getElementById('mhCode').focus(); return; }
+  try {
+    const { error } = await sb.from('mvp_htmls').insert({ title, html, created_by: currentUser });
+    if (error) throw error;
+    mhNewClose();
+    toast('HTML guardado');
+    loadMvpHtmls();
+  } catch (err) {
+    const falta = /relation|does not exist|schema cache|column/i.test(err.message || '');
+    toast('No se pudo guardar' + (falta ? ': falta la migración de BD (db/21_mvp_htmls.sql)' : ''));
+  }
+}
+
+/* ── Subir archivo(s) .html (reusa etIsHtmlFile / etReadFile de Plantillas) ── */
+function mhFilePick() { document.getElementById('mhFile').click(); }
+function mhOnFile(ev) { const fs = ev.target.files; if (fs && fs.length) mhImportFiles(fs); ev.target.value = ''; }
+async function mhImportFiles(fileList) {
+  const files = [...(fileList || [])].filter(etIsHtmlFile);
+  if (!files.length) { toast('Sube un archivo .html'); return; }
+  let ok = 0;
+  for (const f of files) {
+    try {
+      const html = await etReadFile(f);
+      const { error } = await sb.from('mvp_htmls')
+        .insert({ title: f.name.replace(/\.html?$/i, ''), html, created_by: currentUser });
+      if (!error) ok++;
+    } catch (e) { /* sigue con los demás */ }
+  }
+  if (ok) { toast(ok === 1 ? 'HTML guardado' : `${ok} HTML's guardados`); loadMvpHtmls(); }
+  else toast('No se pudo subir el archivo');
+}
+// Arrastrar-y-soltar un .html sobre el panel = guardarlo (cablea una sola vez).
+let mhDropWired = false;
+function mhWireDrop() {
+  if (mhDropWired) return;
+  const view = document.getElementById('ventasHtmls');
+  if (!view) return;
+  mhDropWired = true;
+  const active = () => view.style.display !== 'none' && view.offsetParent !== null;
+  const hasFiles = e => e.dataTransfer && [...(e.dataTransfer.types || [])].includes('Files');
+  let depth = 0;
+  view.addEventListener('dragenter', e => { if (!hasFiles(e)) return; e.preventDefault(); depth++; view.classList.add('et-dragging'); });
+  view.addEventListener('dragover', e => { if (!hasFiles(e)) return; e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
+  view.addEventListener('dragleave', e => { if (!hasFiles(e)) return; depth = Math.max(0, depth - 1); if (!depth) view.classList.remove('et-dragging'); });
+  view.addEventListener('drop', e => { if (!hasFiles(e)) return; e.preventDefault(); depth = 0; view.classList.remove('et-dragging'); mhImportFiles(e.dataTransfer.files); });
+  window.addEventListener('dragover', e => { if (active() && hasFiles(e)) e.preventDefault(); });
+  window.addEventListener('drop', e => { if (active() && hasFiles(e)) e.preventDefault(); });
+}
+
+/* ── Eliminar (biblioteca compartida del equipo) ── */
+async function mhDeleteById(id) {
+  const t = mhData.find(x => x.id === id);
+  const ok = await showConfirm('¿Eliminar HTML?', `"${t?.title || ''}" se borrará para todo el equipo. No se puede deshacer.`);
+  if (!ok) return;
+  try {
+    const { error } = await sb.from('mvp_htmls').delete().eq('id', id);
+    if (error) throw error;
+    if (mhPrevId === id) mhPreviewClose();
+    loadMvpHtmls();
+    toast('HTML eliminado');
+  } catch (err) { toast('No se pudo eliminar'); }
+}
+
+/* ── Vista previa a pantalla completa (solo lectura) ── */
+function mhPreviewOpen(id) {
+  const t = mhData.find(x => x.id === id);
+  if (!t) return;
+  mhPrevId = id;
+  document.getElementById('mhPreviewTitle').textContent = t.title || 'Vista previa';
+  document.getElementById('mhPreviewFrame').srcdoc = t.html || '';
+  document.getElementById('mhPreview').classList.add('show');
+}
+function mhPreviewClose() {
+  document.getElementById('mhPreview').classList.remove('show');
+  const fr = document.getElementById('mhPreviewFrame');
+  if (fr) fr.srcdoc = '';
+  mhPrevId = null;
+}
+function mhPreviewCopy() { const t = mhData.find(x => x.id === mhPrevId); if (t) etCopyHtml(t.html || ''); }
+
 /* ── Historial de versiones (14 días) ── */
 let etVersionsFor = null;
 async function etVersionsOpen(id) {
@@ -5503,6 +5690,10 @@ function dismissTopLayer() {
   // 2b) Editor de correo (Ventas / campaña) — overlay a pantalla completa; se cierra
   //     antes que el modal de campaña que puede quedar debajo.
   if (q('etEditor') && !q('etEditor').hidden) { etCloseEditor(); return true; }
+  // 2c) HTML's MVP: vista previa a pantalla completa / modal de "pegar código"
+  //     (limpieza propia: la previa vacía el iframe al cerrar).
+  if (q('mhPreview')?.classList.contains('show')) { mhPreviewClose(); return true; }
+  if (q('mhModal')?.classList.contains('show'))   { mhNewClose();     return true; }
   // 3) Cualquier otro modal/overlay visible (campañas, portal, MFA, confirmaciones…)
   const overlays = document.querySelectorAll('.camp-modal-backdrop.show, .modal-backdrop.show, .mvp-snap-modal.show');
   if (overlays.length) { overlays[overlays.length - 1].classList.remove('show'); return true; }
@@ -5545,6 +5736,10 @@ document.addEventListener('keydown', (e) => {
     closeTaskModal();
   } else if (document.getElementById('assignModal')?.classList.contains('show')) {
     closeAssignModal();
+  } else if (document.getElementById('mhPreview')?.classList.contains('show')) {
+    mhPreviewClose();
+  } else if (document.getElementById('mhModal')?.classList.contains('show')) {
+    mhNewClose();
   } else if (document.getElementById('navDrawer')?.classList.contains('open')) {
     closeNav();
   }
