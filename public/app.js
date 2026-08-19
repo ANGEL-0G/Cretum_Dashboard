@@ -3994,7 +3994,8 @@ function calWidgetBody() {
   const end = calEndOfWeek().getTime();
   const evs = (calEvents || []).filter(ev => { const d = calEvDate(ev); return d && d.getTime() <= end; });
   const list = evs.length ? evs.map(calEventHTML).join('') : `<div class="hb-empty">${t('Sin eventos esta semana.')}</div>`;
-  return list + calFootHTML();
+  const viewall = `<button class="cal-viewall" onclick="switchView('calendario')">${t('Ver calendario completo')} <i class="fa-solid fa-arrow-right"></i></button>`;
+  return list + viewall + calFootHTML();
 }
 // Página Calendario: agenda completa (próximos ~45 días) agrupada por día.
 function calPageBody() {
