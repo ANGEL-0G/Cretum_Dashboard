@@ -1033,6 +1033,8 @@ const EN = {
   'Error al guardar': 'Error saving',
 
   // ── Home modular (vista de ventanas) ──
+  'Vista del home': 'Home view',
+  'Clásica o ventanas modulares redimensionables': 'Classic, or resizable modular windows',
   'Principal': 'Main',
   'Modular': 'Modular',
   'Módulos': 'Modules',

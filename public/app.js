@@ -3750,7 +3750,7 @@ function closeHomePicker() { document.getElementById('homePickerBackdrop')?.clas
 function renderHomeModules() {
   const el = document.getElementById('homeModules');
   if (!el || !currentOrg) return;
-  renderHomeViewSeg();
+  syncHomeViewPref();
 
   // Vista modular (Cretum): las secciones clásicas se ocultan y todo vive en ventanas
   if (hmActive()) {
@@ -4167,16 +4167,16 @@ function hwCfg() {
 }
 function hwSave(cfg) { try { localStorage.setItem(hwCfgKey(), JSON.stringify(cfg)); } catch (e) {} }
 
-function renderHomeViewSeg() {
-  const host = document.getElementById('homeViewSeg');
-  if (!host) return;
-  if (currentOrg !== 'cretum') { host.style.display = 'none'; return; }
+// Sincroniza la fila "Vista del home" del menú del perfil (Preferencias).
+function syncHomeViewPref() {
+  const row = document.getElementById('homeViewRow');
+  if (!row) return;
+  const isCr = currentOrg === 'cretum';
+  row.style.display = isCr ? '' : 'none';
+  if (!isCr) return;
   const mode = homeViewMode();
-  host.style.display = '';
-  host.innerHTML = `<div class="hvs">
-    <button class="hvs-btn${mode === 'classic' ? ' on' : ''}" onclick="setHomeView('classic')">${t('Principal')}</button>
-    <button class="hvs-btn${mode === 'modular' ? ' on' : ''}" onclick="setHomeView('modular')">${t('Modular')}</button>
-  </div>`;
+  document.getElementById('hvBtnClassic')?.classList.toggle('active', mode === 'classic');
+  document.getElementById('hvBtnModular')?.classList.toggle('active', mode === 'modular');
 }
 
 /* ── Contenido de cada ventana ── */

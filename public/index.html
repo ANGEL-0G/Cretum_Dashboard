@@ -2273,12 +2273,9 @@ a.hb-t:hover{color:var(--navy)}
 [data-theme="dark"][data-org="mvp"] .hb-inp{background:#120e0a;border-color:#3d3428}
 [data-theme="dark"][data-org="mvp"] .hb-ev-d{background:#12100a;border-color:#3d3428}
 
-/* ── Home modular (Cretum): ventanas redimensionables ── */
-.home-viewseg{display:flex;justify-content:center;margin:-6px 0 18px}
-.hvs{display:inline-flex;background:var(--gray-100);border-radius:999px;padding:3px;gap:2px}
-.hvs-btn{border:0;background:transparent;padding:6px 16px;border-radius:999px;font-size:12px;font-weight:500;color:var(--gray-500);cursor:pointer;font-family:var(--font);transition:background-color .15s,color .15s}
-.hvs-btn.on{background:var(--white);color:var(--navy);box-shadow:0 1px 3px rgba(0,0,0,.1)}
-[data-theme="dark"] .hvs-btn.on{background:var(--gray-200)}
+/* ── Home modular (Cretum): ventanas redimensionables ──
+   El switch Principal/Modular vive en el menú del perfil (Preferencias). */
+.hv-btn{font-family:var(--font);letter-spacing:.1px}
 .home-modular{display:grid;grid-template-columns:repeat(12,1fr);grid-auto-flow:dense;gap:14px;margin-bottom:24px}
 .hw{position:relative;display:flex;flex-direction:column;min-width:0;background:#fff;border:1px solid var(--gray-200);border-radius:14px}
 [data-theme="dark"] .hw{background:var(--gray-50)}
@@ -4113,6 +4110,17 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
         <button type="button" class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
       </div>
     </div>
+    <!-- Vista del home (solo Cretum por ahora): Principal clásica o ventanas modulares -->
+    <div class="settings-row" id="homeViewRow" style="display:none">
+      <div style="flex:1">
+        <div class="settings-row-lbl" data-i18n>Vista del home</div>
+        <div class="settings-row-sub" data-i18n>Clásica o ventanas modulares redimensionables</div>
+      </div>
+      <div class="lang-switch">
+        <button type="button" class="lang-btn hv-btn" id="hvBtnClassic" onclick="setHomeView('classic')" data-i18n>Principal</button>
+        <button type="button" class="lang-btn hv-btn" id="hvBtnModular" onclick="setHomeView('modular')" data-i18n>Modular</button>
+      </div>
+    </div>
     <div class="settings-row settings-row-install" id="installRow" onclick="installApp()" style="cursor:pointer">
       <div style="flex:1">
         <div class="settings-row-lbl" data-i18n>Instalar app</div>
@@ -4227,10 +4235,8 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
       <div class="home-question" id="homeQuestion" data-i18n>¿Con qué quieres empezar hoy?</div>
     </div>
 
-    <!-- Selector de vista del home (solo Cretum por ahora): Principal | Modular -->
-    <div class="home-viewseg" id="homeViewSeg" style="display:none"></div>
-
-    <!-- Vista modular: ventanas redimensionables (Módulos / Calendario / Noticias) -->
+    <!-- Vista modular: ventanas redimensionables (Módulos / Calendario / Noticias).
+         Se activa desde el menú del perfil → Preferencias → Vista del home. -->
     <div class="home-modular" id="homeModular" style="display:none"></div>
 
     <div class="home-kpis" id="homeKpis" style="display:none"></div>
