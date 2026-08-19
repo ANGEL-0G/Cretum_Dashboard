@@ -3750,6 +3750,28 @@ function closeHomePicker() { document.getElementById('homePickerBackdrop')?.clas
 function renderHomeModules() {
   const el = document.getElementById('homeModules');
   if (!el || !currentOrg) return;
+  renderHomeViewSeg();
+
+  // Vista modular (Cretum): las secciones clásicas se ocultan y todo vive en ventanas
+  if (hmActive()) {
+    el.innerHTML = ''; el.classList.remove('editing');
+    const bar = document.getElementById('homeCustBar'); if (bar) bar.style.display = 'none';
+    const soon = document.querySelector('.home-soon'); if (soon) soon.style.display = 'none';
+    const kpiHost = document.getElementById('homeKpis');
+    if (kpiHost) { kpiHost.style.display = 'none'; kpiHost.innerHTML = ''; }
+    const q = document.getElementById('homeQuestion');
+    if (q) q.textContent = t('¿Con qué quieres empezar hoy?');
+    updateHomeBoard();        // (solo MVP) se oculta solo
+    renderHomeNews();         // guard modular → se ocultan a sí mismos
+    renderHomeEvents();
+    renderHomeModular();
+    return;
+  }
+  const modHost = document.getElementById('homeModular');
+  if (modHost) modHost.style.display = 'none';
+  const custBar = document.getElementById('homeCustBar');
+  if (custBar) custBar.style.display = '';
+
   const { visible, hidden } = homeOrderedModules();
   const editing = homeEditMode;
   const isNew = !homeCustSeen();   // aún no lo usa → brillo + globo
@@ -3803,22 +3825,37 @@ function toggleHomeNews() {
   host.classList.toggle('collapsed', collapsed);
   try { localStorage.setItem('hn-collapsed', collapsed ? '1' : '0'); } catch (e) {}
 }
+function hnAgo(iso) {
+  const dt = new Date(iso); if (isNaN(dt)) return '';
+  const s = (Date.now() - dt.getTime()) / 1000;
+  return s < 3600 ? Math.max(1, Math.round(s / 60)) + ' min' : s < 86400 ? Math.round(s / 3600) + ' h' : Math.round(s / 86400) + ' d';
+}
+// La más reciente por empresa (para variedad), luego las n más nuevas.
+function hnTopItems(n) {
+  const d = homeNewsCache;
+  if (!d || !Array.isArray(d.items)) return [];
+  const perCo = {}; d.items.forEach(i => { if (!perCo[i.company]) perCo[i.company] = i; });
+  return Object.values(perCo).sort((a, b) => (b.published || '').localeCompare(a.published || '')).slice(0, n);
+}
+function hnCardHTML(i) {
+  return `<div class="hn-card">
+    <div class="hn-top"><span class="hn-co">${escapeHtml(i.company)}</span><span class="hn-time">${hnAgo(i.published)}</span></div>
+    <div class="hn-text" title="${escapeHtml(i.title)}">${escapeHtml(currentLang() === 'en' ? (i.title || i.title_es) : (i.title_es || i.title))}</div>
+    <div class="hn-foot"><span class="hn-src">${escapeHtml(i.source)}</span><a class="hn-btn" href="${escapeHtml(i.url)}" target="_blank" rel="noopener">Leer <i class="fa-solid fa-arrow-up-right-from-square"></i></a></div>
+  </div>`;
+}
 async function renderHomeNews() {
   const host = document.getElementById('homeNews');
   if (!host) return;
-  if (currentOrg !== 'cretum') { host.style.display = 'none'; return; }
+  if (currentOrg !== 'cretum' || hmActive()) { host.style.display = 'none'; return; }
   if (!homeNewsCache) {
     try {
       const r = await fetch('/data/company-news.json', { cache: 'no-store' });
       homeNewsCache = await r.json();
     } catch (e) { host.style.display = 'none'; return; }
   }
-  const d = homeNewsCache;
-  if (!d || !Array.isArray(d.items) || !d.items.length || currentView !== 'home') { host.style.display = 'none'; return; }
-  const ago = (iso) => { const dt = new Date(iso); if (isNaN(dt)) return ''; const s = (Date.now() - dt.getTime()) / 1000; return s < 3600 ? Math.max(1, Math.round(s / 60)) + ' min' : s < 86400 ? Math.round(s / 3600) + ' h' : Math.round(s / 86400) + ' d'; };
-  // La más reciente por empresa (para variedad), luego las 4 más nuevas.
-  const perCo = {}; d.items.forEach(i => { if (!perCo[i.company]) perCo[i.company] = i; });
-  const top = Object.values(perCo).sort((a, b) => (b.published || '').localeCompare(a.published || '')).slice(0, 4);
+  const top = hnTopItems(4);
+  if (!top.length || currentView !== 'home' || hmActive()) { host.style.display = 'none'; return; }
   host.classList.toggle('collapsed', homeNewsCollapsed());
   host.innerHTML = `
     <button class="hn-bar" type="button" onclick="toggleHomeNews()" aria-label="Mostrar u ocultar noticias">
@@ -3826,14 +3863,7 @@ async function renderHomeNews() {
       <span class="hn-bar-right"><span class="hn-count">${top.length}</span><i class="fa-solid fa-chevron-down hn-chev"></i></span>
     </button>
     <div class="hn-body"><div class="hn-inner">
-      <div class="hn-grid">
-        ${top.map(i => `
-          <div class="hn-card">
-            <div class="hn-top"><span class="hn-co">${escapeHtml(i.company)}</span><span class="hn-time">${ago(i.published)}</span></div>
-            <div class="hn-text" title="${escapeHtml(i.title)}">${escapeHtml(currentLang() === 'en' ? (i.title || i.title_es) : (i.title_es || i.title))}</div>
-            <div class="hn-foot"><span class="hn-src">${escapeHtml(i.source)}</span><a class="hn-btn" href="${escapeHtml(i.url)}" target="_blank" rel="noopener">Leer <i class="fa-solid fa-arrow-up-right-from-square"></i></a></div>
-          </div>`).join('')}
-      </div>
+      <div class="hn-grid">${top.map(hnCardHTML).join('')}</div>
       <div class="hn-more"><button type="button" class="hn-viewall" onclick="window.open('/blog','_blank','noopener')">Ver todas las noticias <i class="fa-solid fa-arrow-right"></i></button></div>
     </div></div>`;
   host.style.display = '';
@@ -4082,7 +4112,7 @@ function calMonthGridHTML() {
 function renderHomeEvents() {
   const host = document.getElementById('homeEvents');
   if (!host) return;
-  if (currentOrg !== 'cretum' || currentView !== 'home') { host.style.display = 'none'; return; }
+  if (currentOrg !== 'cretum' || currentView !== 'home' || hmActive()) { host.style.display = 'none'; return; }
   host.style.display = '';
   if (calOn() && calState === 'idle') { calState = 'loading'; calBootstrap(); }
   const collapsed = calCollapsed();
@@ -4101,7 +4131,151 @@ function renderCalPage() {
   if (calOn() && calState === 'idle') { calState = 'loading'; calBootstrap(); }
   host.innerHTML = `<div class="hb-card cal-card">${calMonthGridHTML()}</div>`;
 }
-function calRender() { renderHomeEvents(); renderCalPage(); }
+function calRender() { renderHomeEvents(); renderCalPage(); renderHomeModular(); }
+
+/* ═══════════════════════════════════════════
+   HOME MODULAR (Cretum): vista alternativa del home en ventanas
+   Cada ventana (Módulos / Calendario / Noticias) se puede ocultar y
+   redimensionar (retícula de 12 columnas + alto libre); si el contenido
+   no cabe, la ventana scrollea por dentro. Config por usuario+org en
+   localStorage. La vista "Principal" queda intacta.
+═══════════════════════════════════════════ */
+const HW_DEF = {
+  modules:  { on: 1, icons: 1, w: 12, h: 300 },
+  calendar: { on: 1, w: 6, h: 340 },
+  news:     { on: 1, w: 6, h: 340 },
+};
+const HW_META = {
+  modules:  { title: 'Módulos',    ico: 'fa-table-cells-large' },
+  calendar: { title: 'Calendario', ico: 'fa-calendar-days' },
+  news:     { title: 'Noticias',   ico: 'fa-newspaper' },
+};
+function homeViewKey() { return `cretum_home_view_${currentUser || 'anon'}_${currentOrg}`; }
+function homeViewMode() { try { return localStorage.getItem(homeViewKey()) === 'modular' ? 'modular' : 'classic'; } catch (e) { return 'classic'; } }
+function hmActive() { return currentOrg === 'cretum' && homeViewMode() === 'modular'; }
+function setHomeView(mode) {
+  try { localStorage.setItem(homeViewKey(), mode); } catch (e) {}
+  renderHomeModules();
+}
+function hwCfgKey() { return `cretum_home_windows_${currentUser || 'anon'}_${currentOrg}`; }
+function hwCfg() {
+  let c = {};
+  try { c = JSON.parse(localStorage.getItem(hwCfgKey()) || '{}'); } catch (e) {}
+  const out = {};
+  for (const k of Object.keys(HW_DEF)) out[k] = { ...HW_DEF[k], ...(c[k] || {}) };
+  return out;
+}
+function hwSave(cfg) { try { localStorage.setItem(hwCfgKey(), JSON.stringify(cfg)); } catch (e) {} }
+
+function renderHomeViewSeg() {
+  const host = document.getElementById('homeViewSeg');
+  if (!host) return;
+  if (currentOrg !== 'cretum') { host.style.display = 'none'; return; }
+  const mode = homeViewMode();
+  host.style.display = '';
+  host.innerHTML = `<div class="hvs">
+    <button class="hvs-btn${mode === 'classic' ? ' on' : ''}" onclick="setHomeView('classic')">${t('Principal')}</button>
+    <button class="hvs-btn${mode === 'modular' ? ' on' : ''}" onclick="setHomeView('modular')">${t('Modular')}</button>
+  </div>`;
+}
+
+/* ── Contenido de cada ventana ── */
+function hwModulesBody(cfg) {
+  const { visible } = homeOrderedModules();
+  if (!visible.length) return `<div class="hb-empty">${t('Todos los módulos están ocultos. Agrégalos desde la vista Principal.')}</div>`;
+  const icons = cfg.modules.icons;
+  return `<div class="hw-mods${icons ? '' : ' noico'}">` + visible.map(m => {
+    const pulse = (m.view === 'tasks' && pendingInviteCount() > 0) ? '<span class="hw-mod-pulse"></span>' : '';
+    const ico = icons ? `<span class="hw-mod-ico"><i class="${m.iconBrand ? 'fa-brands' : 'fa-solid'} ${m.icon}"></i></span>` : '';
+    return `<button class="hw-mod" onclick="switchView('${m.view}')">${ico}<span class="hw-mod-t">${t(m.title)}</span>${pulse}</button>`;
+  }).join('') + '</div>';
+}
+function hwNewsBody() {
+  if (!homeNewsCache) {
+    hnEnsureNews();
+    return `<div class="hb-empty"><i class="fa-solid fa-circle-notch fa-spin"></i> ${t('Cargando noticias…')}</div>`;
+  }
+  const top = hnTopItems(8);
+  if (!top.length) return `<div class="hb-empty">${t('Sin noticias por ahora.')}</div>`;
+  return `<div class="hn-grid">${top.map(hnCardHTML).join('')}</div>
+    <div class="hn-more"><button type="button" class="hn-viewall" onclick="window.open('/blog','_blank','noopener')">${t('Ver todas las noticias')} <i class="fa-solid fa-arrow-right"></i></button></div>`;
+}
+async function hnEnsureNews() {
+  if (homeNewsCache) return;
+  try { const r = await fetch('/data/company-news.json', { cache: 'no-store' }); homeNewsCache = await r.json(); }
+  catch (e) { homeNewsCache = { items: [] }; }
+  renderHomeModular();
+}
+function hwCalBody() {
+  if (calOn() && calState === 'idle') { calState = 'loading'; calBootstrap(); }
+  return calWidgetBody();
+}
+
+function hwWindowHTML(key, cfg) {
+  const c = cfg[key], meta = HW_META[key];
+  const acts = [];
+  if (key === 'modules') {
+    acts.push(`<button class="hw-act${c.icons ? ' on' : ''}" onclick="hwToggleIcons()" title="${c.icons ? t('Solo nombres') : t('Mostrar iconos')}"><i class="fa-solid fa-shapes"></i></button>`);
+  }
+  acts.push(`<button class="hw-act" onclick="hwToggle('${key}')" title="${t('Ocultar ventana')}" aria-label="${t('Ocultar ventana')}"><i class="fa-regular fa-eye-slash"></i></button>`);
+  const body = key === 'modules' ? hwModulesBody(cfg) : key === 'news' ? hwNewsBody() : hwCalBody();
+  return `<section class="hw" data-hw="${key}" style="grid-column:span ${c.w};height:${c.h}px">
+    <div class="hw-head"><i class="fa-solid ${meta.ico} hw-hico"></i><span class="hw-title">${t(meta.title)}</span><div class="hw-acts">${acts.join('')}</div></div>
+    <div class="hw-body">${body}</div>
+    <div class="hw-grip" title="${t('Redimensionar')}" onpointerdown="hwResizeStart(event,'${key}')"></div>
+  </section>`;
+}
+
+function renderHomeModular() {
+  const host = document.getElementById('homeModular');
+  if (!host) return;
+  if (!hmActive() || currentView !== 'home') { host.style.display = 'none'; return; }
+  const cfg = hwCfg();
+  const keys = ['modules', 'calendar', 'news'];
+  const on = keys.filter(k => cfg[k].on);
+  const off = keys.filter(k => !cfg[k].on);
+  const offRow = off.length
+    ? `<div class="hw-off-row">${off.map(k => `<button class="hw-off" onclick="hwToggle('${k}')"><i class="fa-solid fa-plus"></i> ${t(HW_META[k].title)}</button>`).join('')}</div>`
+    : '';
+  host.style.display = '';
+  host.innerHTML = on.map(k => hwWindowHTML(k, cfg)).join('') + offRow;
+}
+
+function hwToggle(key) { const cfg = hwCfg(); cfg[key].on = cfg[key].on ? 0 : 1; hwSave(cfg); renderHomeModular(); }
+function hwToggleIcons() { const cfg = hwCfg(); cfg.modules.icons = cfg.modules.icons ? 0 : 1; hwSave(cfg); renderHomeModular(); }
+
+/* Resize con Pointer Events: snap a la retícula de 12 columnas, alto libre 200–720px */
+let hwRz = null;
+function hwResizeStart(e, key) {
+  e.preventDefault();
+  const el = e.target.closest('.hw');
+  const grid = document.getElementById('homeModular');
+  if (!el || !grid) return;
+  const cfg = hwCfg();
+  hwRz = { key, el, cfg, colW: grid.getBoundingClientRect().width / 12, x0: e.clientX, y0: e.clientY, w0: cfg[key].w, h0: cfg[key].h, w: cfg[key].w, h: cfg[key].h };
+  el.classList.add('resizing');
+  document.body.classList.add('hw-noselect');
+  document.addEventListener('pointermove', hwResizeMove);
+  document.addEventListener('pointerup', hwResizeEnd, { once: true });
+}
+function hwResizeMove(e) {
+  if (!hwRz) return;
+  hwRz.w = Math.min(12, Math.max(3, hwRz.w0 + Math.round((e.clientX - hwRz.x0) / hwRz.colW)));
+  hwRz.h = Math.round(Math.min(720, Math.max(200, hwRz.h0 + (e.clientY - hwRz.y0))));
+  hwRz.el.style.gridColumn = 'span ' + hwRz.w;
+  hwRz.el.style.height = hwRz.h + 'px';
+}
+function hwResizeEnd() {
+  document.removeEventListener('pointermove', hwResizeMove);
+  document.body.classList.remove('hw-noselect');
+  if (!hwRz) return;
+  hwRz.el.classList.remove('resizing');
+  const cfg = hwRz.cfg;
+  cfg[hwRz.key].w = hwRz.w;
+  cfg[hwRz.key].h = hwRz.h;
+  hwSave(cfg);
+  hwRz = null;
+}
 
 /* ── Detalle de un día (al picar una celda del calendario) ── */
 function calDayEventHTML(ev) {

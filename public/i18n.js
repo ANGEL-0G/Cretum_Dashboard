@@ -1032,6 +1032,18 @@ const EN = {
   'Vacía': 'Empty',
   'Error al guardar': 'Error saving',
 
+  // ── Home modular (vista de ventanas) ──
+  'Principal': 'Main',
+  'Modular': 'Modular',
+  'Módulos': 'Modules',
+  'Ocultar ventana': 'Hide window',
+  'Solo nombres': 'Names only',
+  'Mostrar iconos': 'Show icons',
+  'Redimensionar': 'Resize',
+  'Cargando noticias…': 'Loading news…',
+  'Sin noticias por ahora.': 'No news yet.',
+  'Todos los módulos están ocultos. Agrégalos desde la vista Principal.': 'All modules are hidden. Add them back from the Main view.',
+
   // ── Tablero del equipo (home MVP) ──
   'Tablero del equipo': 'Team board',
   'Tablero Slack MVP': 'MVP Slack Board',

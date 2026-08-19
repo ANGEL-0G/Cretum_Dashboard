@@ -2273,6 +2273,51 @@ a.hb-t:hover{color:var(--navy)}
 [data-theme="dark"][data-org="mvp"] .hb-inp{background:#120e0a;border-color:#3d3428}
 [data-theme="dark"][data-org="mvp"] .hb-ev-d{background:#12100a;border-color:#3d3428}
 
+/* ── Home modular (Cretum): ventanas redimensionables ── */
+.home-viewseg{display:flex;justify-content:center;margin:-6px 0 18px}
+.hvs{display:inline-flex;background:var(--gray-100);border-radius:999px;padding:3px;gap:2px}
+.hvs-btn{border:0;background:transparent;padding:6px 16px;border-radius:999px;font-size:12px;font-weight:500;color:var(--gray-500);cursor:pointer;font-family:var(--font);transition:background-color .15s,color .15s}
+.hvs-btn.on{background:var(--white);color:var(--navy);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+[data-theme="dark"] .hvs-btn.on{background:var(--gray-200)}
+.home-modular{display:grid;grid-template-columns:repeat(12,1fr);grid-auto-flow:dense;gap:14px;margin-bottom:24px}
+.hw{position:relative;display:flex;flex-direction:column;min-width:0;background:#fff;border:1px solid var(--gray-200);border-radius:14px}
+[data-theme="dark"] .hw{background:var(--gray-50)}
+.hw.resizing{border-color:var(--navy);box-shadow:0 0 0 3px var(--navy-pale)}
+.hw-head{display:flex;align-items:center;gap:8px;padding:11px 16px 8px;flex:0 0 auto}
+.hw-hico{font-size:12px;color:var(--navy)}
+.hw-title{font-size:12px;font-weight:600;color:var(--gray-700);text-transform:uppercase;letter-spacing:.5px}
+.hw-acts{margin-left:auto;display:flex;gap:2px}
+.hw-act{border:0;background:transparent;color:var(--gray-400);width:28px;height:28px;border-radius:7px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;transition:background-color .15s,color .15s}
+.hw-act:hover{background:var(--gray-100);color:var(--gray-800)}
+.hw-act.on{color:var(--navy)}
+.hw-body{flex:1;min-height:0;overflow:auto;padding:2px 16px 14px}
+/* Grip de resize: esquina inferior derecha, rayas diagonales */
+.hw-grip{position:absolute;right:0;bottom:0;width:20px;height:20px;cursor:nwse-resize;touch-action:none;
+  background:linear-gradient(135deg,transparent 55%,var(--gray-300) 55%,var(--gray-300) 62%,transparent 62%,transparent 72%,var(--gray-300) 72%,var(--gray-300) 79%,transparent 79%);
+  border-bottom-right-radius:13px;opacity:.75;transition:opacity .15s}
+.hw-grip:hover{opacity:1}
+.hw-noselect{user-select:none!important}
+/* Chips para reactivar ventanas ocultas */
+.hw-off-row{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap}
+.hw-off{display:inline-flex;align-items:center;gap:6px;border:1px dashed var(--gray-300);background:transparent;color:var(--gray-500);font-size:12px;font-weight:500;font-family:var(--font);padding:7px 13px;border-radius:999px;cursor:pointer;transition:border-color .15s,color .15s}
+.hw-off:hover{border-color:var(--navy-light);color:var(--navy)}
+/* Módulos compactos dentro de la ventana (con o sin iconos) */
+.hw-mods{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.hw-mods.noico{grid-template-columns:repeat(auto-fill,minmax(128px,1fr))}
+.hw-mod{position:relative;display:flex;align-items:center;gap:9px;padding:9px 11px;border:1px solid var(--gray-100);border-radius:10px;background:var(--white);cursor:pointer;font-family:var(--font);text-align:left;min-width:0;transition:border-color .15s,background-color .15s,transform .16s cubic-bezier(.23,1,.32,1)}
+.hw-mod:hover{border-color:var(--navy-light);background:var(--navy-ghost)}
+.hw-mod:active{transform:scale(.97)}
+[data-theme="dark"] .hw-mod{background:var(--gray-100);border-color:var(--gray-200)}
+.hw-mod-ico{width:28px;height:28px;border-radius:8px;background:var(--navy-pale);color:var(--navy);display:flex;align-items:center;justify-content:center;font-size:12px;flex:0 0 auto}
+.hw-mod-t{font-size:12.5px;font-weight:500;color:var(--gray-900);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hw-mod-pulse{position:absolute;top:7px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--red)}
+/* Móvil: apilado a lo ancho, sin resize (el alto elegido se respeta con scroll interno) */
+@media (max-width:760px){
+  .home-modular{grid-template-columns:1fr;gap:12px}
+  .home-modular .hw{grid-column:span 1!important}
+  .hw-grip{display:none}
+}
+
 /* Botón + modal Full LATAM MVP Snapshot */
 .db-snap-btn{margin-left:auto;display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border:none;border-radius:10px;background:var(--navy);color:#fff;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:filter .15s}
 .db-snap-btn:hover{filter:brightness(1.08)}
@@ -4181,6 +4226,12 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
       <div class="home-greeting"><span id="homeGreet">Hola</span>, <span id="homeUserName">—</span></div>
       <div class="home-question" id="homeQuestion" data-i18n>¿Con qué quieres empezar hoy?</div>
     </div>
+
+    <!-- Selector de vista del home (solo Cretum por ahora): Principal | Modular -->
+    <div class="home-viewseg" id="homeViewSeg" style="display:none"></div>
+
+    <!-- Vista modular: ventanas redimensionables (Módulos / Calendario / Noticias) -->
+    <div class="home-modular" id="homeModular" style="display:none"></div>
 
     <div class="home-kpis" id="homeKpis" style="display:none"></div>
 
