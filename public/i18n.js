@@ -1141,6 +1141,7 @@ const EN = {
   '+{n} más': '+{n} more',
   'Mes anterior': 'Previous month',
   'Mes siguiente': 'Next month',
+  'Sin eventos este día.': 'No events on this day.',
 };
 
 let LANG = 'es';

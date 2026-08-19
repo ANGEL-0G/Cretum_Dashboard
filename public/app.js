@@ -4058,13 +4058,10 @@ function calMonthGridHTML() {
       const dt = calEvDate(ev);
       const hora = (dt && !ev.isAllDay) ? dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' ' : '';
       const subj = escapeHtml(ev.subject || t('(sin título)'));
-      const cls = 'cg-ev' + (ev.isAllDay ? ' allday' : '');
-      return ev.webLink
-        ? `<a class="${cls}" href="${escapeHtml(ev.webLink)}" target="_blank" rel="noopener" title="${subj}"><span class="cg-ev-h">${hora}</span>${subj}</a>`
-        : `<span class="${cls}" title="${subj}"><span class="cg-ev-h">${hora}</span>${subj}</span>`;
+      return `<span class="cg-ev${ev.isAllDay ? ' allday' : ''}" title="${subj}"><span class="cg-ev-h">${hora}</span>${subj}</span>`;
     }).join('');
     const moreHtml = more > 0 ? `<span class="cg-more">${t('+{n} más', { n: more })}</span>` : '';
-    cells += `<div class="cg-cell${d.getMonth() !== curMonth ? ' out' : ''}${calDayKey(d) === todayKey ? ' today' : ''}"><div class="cg-daynum">${d.getDate()}</div><div class="cg-evs">${chips}${moreHtml}</div></div>`;
+    cells += `<div class="cg-cell${d.getMonth() !== curMonth ? ' out' : ''}${calDayKey(d) === todayKey ? ' today' : ''}" onclick="calDayOpen(${d.getFullYear()},${d.getMonth()},${d.getDate()})"><div class="cg-daynum">${d.getDate()}</div><div class="cg-evs">${chips}${moreHtml}</div></div>`;
   }
   const badge = (cell && cell.state === 'loading') ? `<span class="cg-loading"><i class="fa-solid fa-circle-notch fa-spin"></i></span>`
     : (cell && cell.state === 'error') ? `<span class="cg-err">${t('No se pudieron cargar tus eventos.')}</span>` : '';
@@ -4105,6 +4102,34 @@ function renderCalPage() {
   host.innerHTML = `<div class="hb-card cal-card">${calMonthGridHTML()}</div>`;
 }
 function calRender() { renderHomeEvents(); renderCalPage(); }
+
+/* ── Detalle de un día (al picar una celda del calendario) ── */
+function calDayEventHTML(ev) {
+  const dt = calEvDate(ev);
+  const et = ev.end && ev.end.dateTime ? new Date(String(ev.end.dateTime).replace(/(\.\d{3})\d+$/, '$1')) : null;
+  const timeStr = ev.isAllDay ? t('Todo el día')
+    : (dt ? dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + (et && !isNaN(et) ? ' – ' + et.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '') : '');
+  const loc = ev.location && ev.location.displayName ? ev.location.displayName : '';
+  const subj = escapeHtml(ev.subject || t('(sin título)'));
+  const link = ev.webLink ? `<a class="cdm-open" href="${escapeHtml(ev.webLink)}" target="_blank" rel="noopener">${t('Abrir')} <i class="fa-solid fa-arrow-up-right-from-square"></i></a>` : '';
+  return `<div class="cdm-ev"><div class="cdm-ev-time">${escapeHtml(timeStr)}</div><div class="cdm-ev-body"><div class="cdm-ev-t">${subj}</div>${loc ? `<div class="cdm-ev-loc"><i class="fa-solid fa-location-dot"></i> ${escapeHtml(loc)}</div>` : ''}</div>${link}</div>`;
+}
+function calDayOpen(y, m, d) {
+  const date = new Date(y, m, d);
+  const cur = calMonthCache[calMonthKey(calMonthDate)];
+  const evs = (cur && cur.state === 'ready' ? cur.events : []).filter(ev => {
+    const dd = calEvDate(ev); return dd && dd.getFullYear() === y && dd.getMonth() === m && dd.getDate() === d;
+  });
+  const loc = currentLang() === 'en' ? 'en-US' : 'es-MX';
+  let hdr = date.toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  hdr = hdr.charAt(0).toUpperCase() + hdr.slice(1);   // capitaliza el día de la semana
+  document.getElementById('calDayTitle').textContent = hdr;
+  document.getElementById('calDayList').innerHTML = evs.length
+    ? evs.map(calDayEventHTML).join('')
+    : `<div class="hb-empty">${t('Sin eventos este día.')}</div>`;
+  document.getElementById('calDayModal').classList.add('show');
+}
+function calDayClose() { document.getElementById('calDayModal').classList.remove('show'); }
 
 /* ═══════════════════════════════════════════
    TABLERO DEL EQUIPO (home MVP)
@@ -6035,6 +6060,8 @@ document.addEventListener('keydown', (e) => {
     mhPreviewClose();
   } else if (document.getElementById('mhModal')?.classList.contains('show')) {
     mhNewClose();
+  } else if (document.getElementById('calDayModal')?.classList.contains('show')) {
+    calDayClose();
   } else if (document.getElementById('navDrawer')?.classList.contains('open')) {
     closeNav();
   }

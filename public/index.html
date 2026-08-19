@@ -2210,7 +2210,9 @@ a.hb-t:hover{color:var(--navy)}
 .cg-grid{display:grid;grid-template-columns:repeat(7,1fr)}
 .cg-dow{font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.03em;text-align:center;padding:6px 2px}
 .cg-body{gap:1px;background:var(--gray-200);border:1px solid var(--gray-200);border-radius:10px;overflow:hidden}
-.cg-cell{background:#fff;min-height:96px;padding:5px 6px;display:flex;flex-direction:column;gap:3px;min-width:0}
+.cg-cell{background:#fff;min-height:96px;padding:5px 6px;display:flex;flex-direction:column;gap:3px;min-width:0;cursor:pointer;transition:filter .12s}
+@media (hover:hover){.cg-cell:hover{filter:brightness(.97)}}
+.cg-cell:active{filter:brightness(.94)}
 .cg-cell.out{background:var(--gray-50)}
 [data-theme="dark"] .cg-cell{background:#1a1a1a}
 [data-theme="dark"] .cg-cell.out{background:#111}
@@ -2223,6 +2225,19 @@ a.hb-t:hover{color:var(--navy)}
 .cg-ev.allday{color:var(--green);background:rgba(26,140,91,.12)}
 .cg-ev-h{font-variant-numeric:tabular-nums;opacity:.7}
 .cg-more{font-size:10.5px;color:var(--gray-400);padding:0 4px}
+/* Detalle de un día (modal) */
+.cal-day-modal{width:min(460px,94vw)}
+#calDayTitle{text-transform:capitalize}
+.cdm-list{padding:6px 18px 18px;overflow-y:auto;max-height:70vh}
+.cdm-ev{display:flex;gap:12px;align-items:flex-start;padding:11px 0;border-top:1px solid var(--gray-100)}
+.cdm-ev:first-child{border-top:0}
+.cdm-ev-time{flex:0 0 auto;width:104px;font-size:12.5px;color:var(--gray-500);font-variant-numeric:tabular-nums;padding-top:1px}
+.cdm-ev-body{flex:1;min-width:0}
+.cdm-ev-t{font-size:14px;font-weight:600;color:var(--gray-900);line-height:1.35;word-break:break-word}
+.cdm-ev-loc{font-size:12px;color:var(--gray-400);margin-top:3px;display:flex;align-items:center;gap:5px}
+.cdm-ev-loc i{font-size:10px}
+.cdm-open{flex:0 0 auto;font-size:12px;font-weight:600;color:var(--navy);text-decoration:none;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;padding-top:2px}
+.cdm-open:hover{text-decoration:underline}
 @media (max-width:640px){
   .cg-cell{min-height:58px;padding:3px}
   .cg-ev{font-size:9.5px;padding:1px 3px}
@@ -6548,6 +6563,17 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   </div>
 </div>
 
+<!-- Calendario: detalle de un día -->
+<div class="modal-backdrop notes-modal" id="calDayModal" onclick="if(event.target===this)calDayClose()">
+  <div class="et-vmodal cal-day-modal">
+    <div class="et-vmodal-head">
+      <div class="fm-title" id="calDayTitle">—</div>
+      <button class="fm-x" onclick="calDayClose()" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="cdm-list" id="calDayList"></div>
+  </div>
+</div>
+
 <!-- Popover: asignar personas (con buscador) -->
 <div class="tk-pop" id="tkAssignPop" hidden>
   <input type="text" id="tkAssignSearch" class="tk-pop-search" placeholder="Escribe un nombre…" autocomplete="off" oninput="tkAssignFilter(this.value)">
@@ -7090,7 +7116,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   </div>
 </div>
 
-<script src="/i18n.js?v=20260819-cal4"></script>
-<script src="/app.js?v=20260819-cal4"></script>
+<script src="/i18n.js?v=20260819-cal5"></script>
+<script src="/app.js?v=20260819-cal5"></script>
 </body>
 </html>
