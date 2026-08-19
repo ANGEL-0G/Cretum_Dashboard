@@ -837,6 +837,34 @@ select.camp-f-inp::-ms-expand,select.form-input::-ms-expand{display:none}
 .et-ebtn.primary:hover{filter:brightness(1.08);color:#fff}
 .et-ebtn.ghost{border-color:transparent;background:none;color:var(--gray-500);width:38px;height:38px;justify-content:center;padding:0}
 .et-ebtn.ghost:hover{background:var(--gray-100);color:var(--gray-800)}
+
+/* ── Botones del header de HTML's MVP: par primario/secundario coherente ──
+   Primario (acento MVP) = Subir HTML, a la derecha; secundario = Nuevo HTML. */
+.mh-btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  min-width:150px;padding:10px 20px;border-radius:10px;
+  font-family:var(--font);font-size:13px;font-weight:600;letter-spacing:.1px;
+  cursor:pointer;white-space:nowrap;
+  transition:transform .16s cubic-bezier(.23,1,.32,1),box-shadow .18s ease,
+             background-color .15s,border-color .15s,color .15s,filter .15s;
+}
+.mh-btn i{font-size:12px}
+.mh-btn:active{transform:scale(.97)}
+.mh-primary{border:none;background:var(--navy);color:#fff;box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.mh-primary:hover{filter:brightness(1.07);box-shadow:0 5px 16px rgba(237,120,36,.28)}
+.mh-sec{border:1px solid var(--gray-200);background:var(--white);color:var(--gray-700)}
+.mh-sec:hover{border-color:var(--navy-light);color:var(--navy);background:var(--navy-ghost)}
+[data-theme="dark"] .mh-sec{background:#181818;border-color:#333;color:#ccc}
+[data-theme="dark"] .mh-sec:hover{color:var(--navy);border-color:var(--navy)}
+/* MVP oscuro: el acento se aclara demasiado para texto blanco → naranja de marca fijo */
+[data-theme="dark"][data-org="mvp"] .mh-primary{background:#ED7824;color:#fff}
+/* Móvil: los dos botones en su propia fila, mitad y mitad, target ≥44px */
+@media (max-width:640px){
+  #ventasHtmls .et-top-r{flex-wrap:wrap;flex-basis:100%;gap:10px}
+  #ventasHtmls .et-count{flex-basis:100%}
+  .mh-btn{flex:1 1 0;min-width:0;padding:13px 12px;font-size:13.5px}
+}
+@media (prefers-reduced-motion:reduce){.mh-btn:active{transform:none}}
 .et-tools{display:flex;align-items:center;gap:3px;padding:8px 14px;background:var(--white);border-bottom:1px solid var(--gray-200);flex-shrink:0;overflow-x:auto;scrollbar-width:thin}
 .et-tool{flex:0 0 auto;width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;border-radius:var(--r-sm);border:0;background:none;color:var(--gray-600);cursor:pointer;font-size:13px;transition:background .12s,color .12s,transform .12s var(--et-ease)}
 .et-tool:hover{background:var(--gray-100);color:var(--navy)}
@@ -6076,8 +6104,8 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
       <button class="fm-back" type="button" onclick="ventasBackHome()" style="margin:0"><i class="fa-solid fa-arrow-left"></i> Ventas</button>
       <div class="et-top-r">
         <span class="et-count" id="mhCount"></span>
-        <button class="et-ebtn" type="button" onclick="mhFilePick()"><i class="fa-solid fa-file-arrow-up"></i> <span class="et-ebtn-tx">Subir HTML</span></button>
-        <button class="btn-primary" type="button" onclick="mhNewOpen()"><i class="fa-solid fa-plus"></i> Nuevo HTML</button>
+        <button class="mh-btn mh-sec" type="button" onclick="mhNewOpen()"><i class="fa-solid fa-plus"></i> <span data-i18n>Nuevo HTML</span></button>
+        <button class="mh-btn mh-primary" type="button" onclick="mhFilePick()"><i class="fa-solid fa-file-arrow-up"></i> <span data-i18n>Subir HTML</span></button>
         <input type="file" id="mhFile" accept=".html,text/html" multiple hidden onchange="mhOnFile(event)">
       </div>
     </div>
