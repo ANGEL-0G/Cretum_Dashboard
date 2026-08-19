@@ -2276,8 +2276,10 @@ a.hb-t:hover{color:var(--navy)}
 /* ── Home modular (Cretum): ventanas redimensionables ──
    El switch Principal/Modular vive en el menú del perfil (Preferencias). */
 .hv-btn{font-family:var(--font);letter-spacing:.1px}
-.home-modular{display:grid;grid-template-columns:repeat(12,1fr);grid-auto-flow:dense;gap:14px;margin-bottom:24px}
-.hw{position:relative;display:flex;flex-direction:column;min-width:0;background:#fff;border:1px solid var(--gray-200);border-radius:14px}
+/* Filas finas de 8px + flow dense: las ventanas ocupan N filas según su alto
+   y los huecos de la retícula se rellenan solos (empacado tipo dashboard). */
+.home-modular{display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:8px;grid-auto-flow:dense;gap:14px;margin-bottom:24px}
+.hw{position:relative;display:flex;flex-direction:column;min-width:0;overflow:hidden;background:#fff;border:1px solid var(--gray-200);border-radius:14px}
 [data-theme="dark"] .hw{background:var(--gray-50)}
 .hw.resizing{border-color:var(--navy);box-shadow:0 0 0 3px var(--navy-pale)}
 .hw-head{display:flex;align-items:center;gap:8px;padding:11px 16px 8px;flex:0 0 auto;cursor:grab;touch-action:none}
@@ -2298,7 +2300,7 @@ body.hw-noselect{cursor:grabbing}
 .hw-grip:hover{opacity:1}
 .hw-noselect{user-select:none!important}
 /* Chips para reactivar ventanas ocultas */
-.hw-off-row{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap}
+.hw-off-row{grid-column:1/-1;grid-row:span 3;display:flex;gap:8px;flex-wrap:wrap;align-content:flex-start}
 .hw-off{display:inline-flex;align-items:center;gap:6px;border:1px dashed var(--gray-300);background:transparent;color:var(--gray-500);font-size:12px;font-weight:500;font-family:var(--font);padding:7px 13px;border-radius:999px;cursor:pointer;transition:border-color .15s,color .15s}
 .hw-off:hover{border-color:var(--navy-light);color:var(--navy)}
 /* Módulos compactos dentro de la ventana (con o sin iconos) */
@@ -2322,6 +2324,9 @@ body.hw-noselect{cursor:grabbing}
 .hw-mods.sz3 .hw-mod-t{font-size:14.5px}
 .hw-mods.noico.sz2{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
 .hw-mods.noico.sz3{grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}
+/* Calendario mensual compacto dentro de una ventana modular */
+.hw-cal-mes .cg-cell{min-height:52px;padding:3px 4px}
+.hw-cal-mes .cg-top{margin-bottom:6px}
 /* Móvil: apilado a lo ancho, sin resize (el alto elegido se respeta con scroll interno) */
 @media (max-width:760px){
   .home-modular{grid-template-columns:1fr;gap:12px}

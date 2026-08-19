@@ -3944,20 +3944,20 @@ async function calLoadMonth(monthDate) {
   const cur = calMonthCache[key];
   if (cur && (cur.state === 'ready' || cur.state === 'loading')) return;
   calMonthCache[key] = { state: 'loading', events: [] };
-  renderCalPage();
+  calRender();
   try {
     const { start, end } = calGridRange(monthDate);
     const evs = await calFetchRange(start, end, 200);
     calMonthCache[key] = { state: 'ready', events: evs };
   } catch (e) { console.error('[cal month]', e); calMonthCache[key] = { state: 'error', events: [] }; }
-  renderCalPage();
+  calRender();
 }
 function calMonthNav(delta) {
   if (!calMonthDate) calMonthDate = new Date();
   calMonthDate = new Date(calMonthDate.getFullYear(), calMonthDate.getMonth() + delta, 1);
-  renderCalPage();
+  calRender();
 }
-function calMonthToday() { const d = new Date(); calMonthDate = new Date(d.getFullYear(), d.getMonth(), 1); renderCalPage(); }
+function calMonthToday() { const d = new Date(); calMonthDate = new Date(d.getFullYear(), d.getMonth(), 1); calRender(); }
 async function calRefresh() {
   calState = 'loading'; calRender();
   try { calEvents = await calFetch(); calState = 'ready'; }
@@ -4210,10 +4210,19 @@ async function hnEnsureNews() {
   catch (e) { homeNewsCache = { items: [] }; }
   renderHomeModular();
 }
-function hwCalBody() {
+// Calendario adaptativo: reducido = lista de la semana; expandido (≥7 cols y
+// ≥380px de alto) = cuadrícula mensual completa (la misma de la página Calendario).
+function hwCalBody(c) {
   if (calOn() && calState === 'idle') { calState = 'loading'; calBootstrap(); }
-  return calWidgetBody();
+  const wide = c.w >= 7 && c.h >= 380;
+  if (!wide) return calWidgetBody();
+  return `<div class="hw-cal-mes">${calMonthGridHTML()}</div>`;
 }
+
+/* La retícula usa filas finas (8px) + flow dense: cada ventana ocupa
+   round((alto+gap)/(8+gap)) filas y los huecos se rellenan solos. */
+const HW_ROW = 8, HW_GAP = 14;
+function hwRows(h) { return Math.max(9, Math.round((h + HW_GAP) / (HW_ROW + HW_GAP))); }
 
 function hwWindowHTML(key, cfg) {
   const c = cfg[key], meta = HW_META[key];
@@ -4223,8 +4232,8 @@ function hwWindowHTML(key, cfg) {
     acts.push(`<button class="hw-act${c.icons ? ' on' : ''}" onclick="hwToggleIcons()" title="${c.icons ? t('Solo nombres') : t('Mostrar iconos')}"><i class="fa-solid fa-shapes"></i></button>`);
   }
   acts.push(`<button class="hw-act" onclick="hwToggle('${key}')" title="${t('Ocultar ventana')}" aria-label="${t('Ocultar ventana')}"><i class="fa-regular fa-eye-slash"></i></button>`);
-  const body = key === 'modules' ? hwModulesBody(cfg) : key === 'news' ? hwNewsBody() : hwCalBody();
-  return `<section class="hw" data-hw="${key}" style="grid-column:span ${c.w};height:${c.h}px">
+  const body = key === 'modules' ? hwModulesBody(cfg) : key === 'news' ? hwNewsBody() : hwCalBody(c);
+  return `<section class="hw" data-hw="${key}" style="grid-column:span ${c.w};grid-row:span ${hwRows(c.h)}">
     <div class="hw-head" title="${t('Arrastra para mover')}" onpointerdown="hwDragStart(event)"><i class="fa-solid ${meta.ico} hw-hico"></i><span class="hw-title">${t(meta.title)}</span><div class="hw-acts">${acts.join('')}</div></div>
     <div class="hw-body">${body}</div>
     <div class="hw-grip" title="${t('Redimensionar')}" onpointerdown="hwResizeStart(event,'${key}')"></div>
@@ -4315,7 +4324,7 @@ function hwResizeMove(e) {
   hwRz.w = Math.min(12, Math.max(3, hwRz.w0 + Math.round((e.clientX - hwRz.x0) / hwRz.colW)));
   hwRz.h = Math.round(Math.min(720, Math.max(200, hwRz.h0 + (e.clientY - hwRz.y0))));
   hwRz.el.style.gridColumn = 'span ' + hwRz.w;
-  hwRz.el.style.height = hwRz.h + 'px';
+  hwRz.el.style.gridRow = 'span ' + hwRows(hwRz.h);
 }
 function hwResizeEnd() {
   document.removeEventListener('pointermove', hwResizeMove);
@@ -4327,6 +4336,7 @@ function hwResizeEnd() {
   cfg[hwRz.key].h = hwRz.h;
   hwSave(cfg);
   hwRz = null;
+  renderHomeModular();   // reempaca la retícula y deja que el calendario cambie de modo
 }
 
 /* ── Detalle de un día (al picar una celda del calendario) ── */
