@@ -1138,6 +1138,9 @@ const EN = {
   'Esta semana · privado': 'This week · private',
   'Sin eventos esta semana.': 'No events this week.',
   'Ver calendario completo': 'View full calendar',
+  '+{n} más': '+{n} more',
+  'Mes anterior': 'Previous month',
+  'Mes siguiente': 'Next month',
 };
 
 let LANG = 'es';

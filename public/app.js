@@ -3879,19 +3879,55 @@ async function calToken() {
   try { const r = await calMsal.acquireTokenSilent(req); return r.accessToken; }
   catch (e) { const r = await calMsal.acquireTokenPopup(req); calAccount = r.account; return r.accessToken; }
 }
-async function calFetch() {
+async function calFetchRange(startDate, endDate, top) {
   const token = await calToken();
-  const now = new Date();
-  const end = new Date(now.getTime() + 45 * 864e5);
   const url = 'https://graph.microsoft.com/v1.0/me/calendarView'
-    + '?startDateTime=' + encodeURIComponent(now.toISOString())
-    + '&endDateTime=' + encodeURIComponent(end.toISOString())
-    + '&$select=subject,start,end,location,isAllDay,webLink&$orderby=start/dateTime&$top=12';
+    + '?startDateTime=' + encodeURIComponent(startDate.toISOString())
+    + '&endDateTime=' + encodeURIComponent(endDate.toISOString())
+    + '&$select=subject,start,end,location,isAllDay,webLink&$orderby=start/dateTime&$top=' + (top || 50);
   const r = await fetch(url, { headers: { Authorization: 'Bearer ' + token, Prefer: 'outlook.timezone="America/Mexico_City"' } });
   if (!r.ok) throw new Error('graph ' + r.status);
   const j = await r.json();
   return j.value || [];
 }
+// Widget del home: próximos 45 días (de ahí se filtra "esta semana").
+async function calFetch() {
+  const now = new Date();
+  return calFetchRange(now, new Date(now.getTime() + 45 * 864e5), 30);
+}
+
+/* ── Vista mensual (página Calendario), estilo Outlook ── */
+let calMonthDate = null;          // primer día del mes mostrado
+const calMonthCache = {};         // 'YYYY-M' -> { state:'loading'|'ready'|'error', events:[] }
+function calMonthKey(d) { return d.getFullYear() + '-' + d.getMonth(); }
+function calDayKey(d) { return d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate(); }
+// Rango de la cuadrícula (semana inicia lunes): del lunes previo al día 1 al domingo tras el último día.
+function calGridRange(monthDate) {
+  const first = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+  const start = new Date(first); start.setDate(1 - ((first.getDay() + 6) % 7));
+  const last = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
+  const end = new Date(last); end.setDate(last.getDate() + (6 - ((last.getDay() + 6) % 7))); end.setHours(23, 59, 59, 999);
+  return { start, end };
+}
+async function calLoadMonth(monthDate) {
+  const key = calMonthKey(monthDate);
+  const cur = calMonthCache[key];
+  if (cur && (cur.state === 'ready' || cur.state === 'loading')) return;
+  calMonthCache[key] = { state: 'loading', events: [] };
+  renderCalPage();
+  try {
+    const { start, end } = calGridRange(monthDate);
+    const evs = await calFetchRange(start, end, 200);
+    calMonthCache[key] = { state: 'ready', events: evs };
+  } catch (e) { console.error('[cal month]', e); calMonthCache[key] = { state: 'error', events: [] }; }
+  renderCalPage();
+}
+function calMonthNav(delta) {
+  if (!calMonthDate) calMonthDate = new Date();
+  calMonthDate = new Date(calMonthDate.getFullYear(), calMonthDate.getMonth() + delta, 1);
+  renderCalPage();
+}
+function calMonthToday() { const d = new Date(); calMonthDate = new Date(d.getFullYear(), d.getMonth(), 1); renderCalPage(); }
 async function calRefresh() {
   calState = 'loading'; calRender();
   try { calEvents = await calFetch(); calState = 'ready'; }
@@ -3997,25 +4033,53 @@ function calWidgetBody() {
   const viewall = `<button class="cal-viewall" onclick="switchView('calendario')">${t('Ver calendario completo')} <i class="fa-solid fa-arrow-right"></i></button>`;
   return list + viewall + calFootHTML();
 }
-// Página Calendario: agenda completa (próximos ~45 días) agrupada por día.
-function calPageBody() {
-  const nr = calNonReadyHTML(); if (nr !== null) return nr;
-  const evs = calEvents || [];
-  if (!evs.length) return `<div class="hb-empty">${t('Sin eventos próximos.')}</div>` + calFootHTML();
-  const groups = [], byKey = {};
-  evs.forEach(ev => {
-    const d = calEvDate(ev);
-    const key = d ? d.toISOString().slice(0, 10) : 'sin';
-    if (!byKey[key]) { byKey[key] = { d, items: [] }; groups.push(key); }
-    byKey[key].items.push(ev);
-  });
+// Página Calendario: cuadrícula mensual estilo Outlook (recuadro con los días).
+function calMonthGridHTML() {
+  const nr = calNonReadyHTML(); if (nr !== null) return nr;   // conectar / cargando / expiró / error de token
+  if (!calMonthDate) { const d = new Date(); calMonthDate = new Date(d.getFullYear(), d.getMonth(), 1); }
+  const key = calMonthKey(calMonthDate);
+  const cell = calMonthCache[key];
+  if (!cell) calLoadMonth(calMonthDate);   // dispara la carga del mes (async)
   const loc = currentLang() === 'en' ? 'en-US' : 'es-MX';
-  const html = groups.map(k => {
-    const g = byKey[k];
-    const hdr = g.d ? g.d.toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' }) : t('Sin fecha');
-    return `<div class="cal-day"><div class="cal-day-h">${escapeHtml(hdr)}</div>${g.items.map(calEventHTML).join('')}</div>`;
-  }).join('');
-  return html + calFootHTML();
+  const monthLbl = calMonthDate.toLocaleDateString(loc, { month: 'long', year: 'numeric' });
+  const dows = currentLang() === 'en' ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] : ['lun', 'mar', 'mié', 'jue', 'vie', 'sáb', 'dom'];
+  const { start } = calGridRange(calMonthDate);
+  const byDay = {};
+  if (cell && cell.state === 'ready') cell.events.forEach(ev => { const d = calEvDate(ev); if (d) { const k = calDayKey(d); (byDay[k] = byDay[k] || []).push(ev); } });
+  const todayKey = calDayKey(new Date());
+  const curMonth = calMonthDate.getMonth();
+  let cells = '';
+  for (let i = 0; i < 42; i++) {
+    const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+    const evs = byDay[calDayKey(d)] || [];
+    const shown = evs.slice(0, 3);
+    const more = evs.length - shown.length;
+    const chips = shown.map(ev => {
+      const dt = calEvDate(ev);
+      const hora = (dt && !ev.isAllDay) ? dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' ' : '';
+      const subj = escapeHtml(ev.subject || t('(sin título)'));
+      const cls = 'cg-ev' + (ev.isAllDay ? ' allday' : '');
+      return ev.webLink
+        ? `<a class="${cls}" href="${escapeHtml(ev.webLink)}" target="_blank" rel="noopener" title="${subj}"><span class="cg-ev-h">${hora}</span>${subj}</a>`
+        : `<span class="${cls}" title="${subj}"><span class="cg-ev-h">${hora}</span>${subj}</span>`;
+    }).join('');
+    const moreHtml = more > 0 ? `<span class="cg-more">${t('+{n} más', { n: more })}</span>` : '';
+    cells += `<div class="cg-cell${d.getMonth() !== curMonth ? ' out' : ''}${calDayKey(d) === todayKey ? ' today' : ''}"><div class="cg-daynum">${d.getDate()}</div><div class="cg-evs">${chips}${moreHtml}</div></div>`;
+  }
+  const badge = (cell && cell.state === 'loading') ? `<span class="cg-loading"><i class="fa-solid fa-circle-notch fa-spin"></i></span>`
+    : (cell && cell.state === 'error') ? `<span class="cg-err">${t('No se pudieron cargar tus eventos.')}</span>` : '';
+  return `<div class="cg-top">
+      <div class="cg-nav">
+        <button class="cg-navbtn" onclick="calMonthNav(-1)" aria-label="${t('Mes anterior')}"><i class="fa-solid fa-chevron-left"></i></button>
+        <div class="cg-month">${escapeHtml(monthLbl)}</div>
+        <button class="cg-navbtn" onclick="calMonthNav(1)" aria-label="${t('Mes siguiente')}"><i class="fa-solid fa-chevron-right"></i></button>
+        <button class="cg-today" onclick="calMonthToday()">${t('Hoy')}</button>
+        ${badge}
+      </div>
+    </div>
+    <div class="cg-grid cg-head">${dows.map(w => `<div class="cg-dow">${w}</div>`).join('')}</div>
+    <div class="cg-grid cg-body">${cells}</div>
+    ${calFootHTML()}`;
 }
 
 function renderHomeEvents() {
@@ -4038,7 +4102,7 @@ function renderCalPage() {
   const host = document.getElementById('calPage');
   if (!host || currentView !== 'calendario') return;
   if (calOn() && calState === 'idle') { calState = 'loading'; calBootstrap(); }
-  host.innerHTML = `<div class="hb-card cal-card">${calPageBody()}</div>`;
+  host.innerHTML = `<div class="hb-card cal-card">${calMonthGridHTML()}</div>`;
 }
 function calRender() { renderHomeEvents(); renderCalPage(); }
 
