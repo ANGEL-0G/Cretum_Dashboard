@@ -554,7 +554,7 @@ const SUMMARY = ${JSON.stringify(summaryText)};
   fetch('/data/company-news.json', { cache: 'no-store' }).then(function(r){ if(!r.ok) throw 0; return r.json(); }).then(function(d){
     newsData = d;
     renderMeta(); renderFilter(); renderNews();
-  }).catch(function(){ if (grid) grid.innerHTML = '<div class="news-empty">' + NT('No se pudieron cargar las noticias. Reintenta en un momento.', 'Couldn\'t load the news. Try again in a moment.') + '</div>'; });
+  }).catch(function(){ if (grid) grid.innerHTML = '<div class="news-empty">' + NT('No se pudieron cargar las noticias. Reintenta en un momento.', "Couldn't load the news. Try again in a moment.") + '</div>'; });
   function renderFilter(){
     var f = document.getElementById('newsFilter'); if (!f || !newsData) return;
     var cos = Object.keys(newsData.items.reduce(function(a, i){ a[i.company] = 1; return a; }, {})).sort();
