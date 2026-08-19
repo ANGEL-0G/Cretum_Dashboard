@@ -4296,8 +4296,9 @@ function renderHomeModular() {
   const offRow = (!cfg.locked && off.length)
     ? `<div class="hw-off-row">${off.map(k => `<button class="hw-off" onclick="hwToggle('${k}')"><i class="fa-solid fa-plus"></i> ${t(HW_META[k].title)}</button>`).join('')}</div>`
     : '';
-  const lockLbl = cfg.locked ? t('Diseño fijado · toca para editar') : t('Fijar diseño');
-  const lockBar = `<div class="hw-lockbar"><button class="hw-lock${cfg.locked ? ' locked' : ''}" onclick="hwToggleLock()" title="${lockLbl}" aria-label="${lockLbl}"><i class="fa-solid ${cfg.locked ? 'fa-lock' : 'fa-lock-open'}"></i></button></div>`;
+  // La etiqueta dice la ACCIÓN: fijado → "Editar módulos"; editable → "Fijar módulos"
+  const lockLbl = cfg.locked ? t('Editar módulos') : t('Fijar módulos');
+  const lockBar = `<div class="hw-lockbar"><button class="hw-lock${cfg.locked ? ' locked' : ''}" onclick="hwToggleLock()" aria-label="${lockLbl}"><i class="fa-solid ${cfg.locked ? 'fa-lock' : 'fa-lock-open'}"></i> <span>${lockLbl}</span></button></div>`;
   host.classList.toggle('locked', !!cfg.locked);
   host.style.display = '';
   host.innerHTML = lockBar + on.map(k => hwWindowHTML(k, cfg)).join('') + offRow;

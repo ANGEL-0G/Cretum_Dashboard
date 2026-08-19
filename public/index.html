@@ -2302,11 +2302,13 @@ body.hw-noselect{cursor:grabbing}
 /* Candado: fija el diseño (oculta toda la edición) */
 .hw-lockbar{grid-column:1/-1;grid-row:span 2;display:flex;justify-content:flex-end;align-items:center}
 .hw-lock{
-  border:1px solid var(--gray-200);background:var(--white);color:var(--gray-400);
-  width:30px;height:30px;border-radius:999px;cursor:pointer;font-size:12px;
-  display:flex;align-items:center;justify-content:center;
+  border:1px solid var(--gray-200);background:var(--white);color:var(--gray-500);
+  padding:6px 14px;border-radius:999px;cursor:pointer;
+  font-family:var(--font);font-size:12px;font-weight:500;
+  display:inline-flex;align-items:center;gap:7px;
   transition:color .15s,border-color .15s,background-color .15s,transform .16s cubic-bezier(.23,1,.32,1);
 }
+.hw-lock i{font-size:11px}
 .hw-lock:hover{border-color:var(--navy-light);color:var(--navy)}
 .hw-lock:active{transform:scale(.94)}
 .hw-lock.locked{background:var(--navy);border-color:var(--navy);color:#fff}
