@@ -4141,7 +4141,8 @@ function calRender() { renderHomeEvents(); renderCalPage(); renderHomeModular();
    localStorage. La vista "Principal" queda intacta.
 ═══════════════════════════════════════════ */
 const HW_DEF = {
-  modules:  { on: 1, icons: 1, size: 1, w: 12, h: 300 },
+  // mode: 'both' (iconos y nombres) | 'icons' (solo iconos, nombre al hover) | 'names' (solo nombres)
+  modules:  { on: 1, mode: 'both', size: 1, w: 12, h: 300 },
   calendar: { on: 1, w: 6, h: 340 },
   news:     { on: 1, w: 6, h: 340 },
 };
@@ -4163,6 +4164,9 @@ function hwCfg() {
   try { c = JSON.parse(localStorage.getItem(hwCfgKey()) || '{}'); } catch (e) {}
   const out = {};
   for (const k of Object.keys(HW_DEF)) out[k] = { ...HW_DEF[k], ...(c[k] || {}) };
+  // Migración del viejo flag icons (0 = solo nombres) al campo mode
+  if (c.modules && c.modules.icons === 0 && !c.modules.mode) out.modules.mode = 'names';
+  if (!['both', 'icons', 'names'].includes(out.modules.mode)) out.modules.mode = 'both';
   // Orden de las ventanas (drag para mover): claves válidas guardadas + las que falten
   const saved = Array.isArray(c.order) ? c.order.filter(k => HW_DEF[k]) : [];
   out.order = [...saved, ...Object.keys(HW_DEF).filter(k => !saved.includes(k))];
@@ -4186,11 +4190,17 @@ function syncHomeViewPref() {
 function hwModulesBody(cfg) {
   const { visible } = homeOrderedModules();
   if (!visible.length) return `<div class="hb-empty">${t('Todos los módulos están ocultos. Agrégalos desde la vista Principal.')}</div>`;
-  const icons = cfg.modules.icons;
+  const mode = cfg.modules.mode;
   const sz = cfg.modules.size === 2 ? ' sz2' : cfg.modules.size === 3 ? ' sz3' : '';
-  return `<div class="hw-mods${icons ? '' : ' noico'}${sz}">` + visible.map(m => {
+  const cls = mode === 'names' ? ' noico' : mode === 'icons' ? ' ico-only' : '';
+  return `<div class="hw-mods${cls}${sz}">` + visible.map(m => {
     const pulse = (m.view === 'tasks' && pendingInviteCount() > 0) ? '<span class="hw-mod-pulse"></span>' : '';
-    const ico = icons ? `<span class="hw-mod-ico"><i class="${m.iconBrand ? 'fa-brands' : 'fa-solid'} ${m.icon}"></i></span>` : '';
+    const ico = mode !== 'names' ? `<span class="hw-mod-ico"><i class="${m.iconBrand ? 'fa-brands' : 'fa-solid'} ${m.icon}"></i></span>` : '';
+    if (mode === 'icons') {
+      // Solo iconos: el nombre vive dentro del tile y aparece al hover
+      return `<button class="hw-mod hw-mod-io" onclick="switchView('${m.view}')" title="${t(m.title)}" aria-label="${t(m.title)}">
+        ${ico}<span class="hw-mod-io-t">${t(m.title)}</span>${pulse}</button>`;
+    }
     return `<button class="hw-mod" onclick="switchView('${m.view}')">${ico}<span class="hw-mod-t">${t(m.title)}</span>${pulse}</button>`;
   }).join('') + '</div>';
 }
@@ -4229,7 +4239,9 @@ function hwWindowHTML(key, cfg) {
   const acts = [];
   if (key === 'modules') {
     acts.push(`<button class="hw-act" onclick="hwCycleSize()" title="${t('Tamaño de iconos')}" aria-label="${t('Tamaño de iconos')}"><i class="fa-solid fa-magnifying-glass-plus"></i></button>`);
-    acts.push(`<button class="hw-act${c.icons ? ' on' : ''}" onclick="hwToggleIcons()" title="${c.icons ? t('Solo nombres') : t('Mostrar iconos')}"><i class="fa-solid fa-shapes"></i></button>`);
+    const modeIco = c.mode === 'icons' ? 'fa-icons' : c.mode === 'names' ? 'fa-font' : 'fa-shapes';
+    const modeLbl = c.mode === 'icons' ? t('Solo iconos') : c.mode === 'names' ? t('Solo nombres') : t('Iconos y nombres');
+    acts.push(`<button class="hw-act${c.mode !== 'both' ? ' on' : ''}" onclick="hwCycleMode()" title="${modeLbl}" aria-label="${modeLbl}"><i class="fa-solid ${modeIco}"></i></button>`);
   }
   acts.push(`<button class="hw-act" onclick="hwToggle('${key}')" title="${t('Ocultar ventana')}" aria-label="${t('Ocultar ventana')}"><i class="fa-regular fa-eye-slash"></i></button>`);
   const body = key === 'modules' ? hwModulesBody(cfg) : key === 'news' ? hwNewsBody() : hwCalBody(c);
@@ -4256,7 +4268,12 @@ function renderHomeModular() {
 }
 
 function hwToggle(key) { const cfg = hwCfg(); cfg[key].on = cfg[key].on ? 0 : 1; hwSave(cfg); renderHomeModular(); }
-function hwToggleIcons() { const cfg = hwCfg(); cfg.modules.icons = cfg.modules.icons ? 0 : 1; hwSave(cfg); renderHomeModular(); }
+// Modo de los módulos: iconos y nombres → solo iconos (nombre al hover) → solo nombres
+function hwCycleMode() {
+  const cfg = hwCfg();
+  cfg.modules.mode = cfg.modules.mode === 'both' ? 'icons' : cfg.modules.mode === 'icons' ? 'names' : 'both';
+  hwSave(cfg); renderHomeModular();
+}
 // Tamaño de los módulos dentro de la ventana: chico → mediano → grande → chico
 function hwCycleSize() { const cfg = hwCfg(); cfg.modules.size = (cfg.modules.size % 3) + 1; hwSave(cfg); renderHomeModular(); }
 

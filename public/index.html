@@ -2313,6 +2313,38 @@ body.hw-noselect{cursor:grabbing}
 .hw-mod-ico{width:28px;height:28px;border-radius:8px;background:var(--navy-pale);color:var(--navy);display:flex;align-items:center;justify-content:center;font-size:12px;flex:0 0 auto}
 .hw-mod-t{font-size:12.5px;font-weight:500;color:var(--gray-900);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .hw-mod-pulse{position:absolute;top:7px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--red)}
+/* Solo iconos: tiles cuadrados; al hover el icono sube y el nombre aparece dentro */
+.hw-mods.ico-only{grid-template-columns:repeat(auto-fill,minmax(66px,1fr))}
+.hw-mod-io{flex-direction:column;justify-content:center;gap:0;aspect-ratio:1;padding:6px}
+.hw-mod-io .hw-mod-ico{transition:transform .2s cubic-bezier(.23,1,.32,1)}
+.hw-mod-io-t{
+  position:absolute;left:5px;right:5px;bottom:7px;
+  font-size:9.5px;font-weight:600;color:var(--navy);text-align:center;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  opacity:0;transform:translateY(5px);
+  transition:opacity .2s ease,transform .2s cubic-bezier(.23,1,.32,1);
+}
+@media (hover:hover) and (pointer:fine){
+  .hw-mod-io:hover .hw-mod-ico{transform:translateY(-8px) scale(.9)}
+  .hw-mod-io:hover .hw-mod-io-t{opacity:1;transform:translateY(0)}
+}
+/* Touch: sin hover no hay reveal → nombre mini siempre visible */
+@media (hover:none){
+  .hw-mod-io .hw-mod-ico{transform:translateY(-7px) scale(.9)}
+  .hw-mod-io-t{opacity:1;transform:translateY(0)}
+}
+@media (prefers-reduced-motion:reduce){
+  .hw-mod-io .hw-mod-ico{transition:none}
+  .hw-mod-io-t{transition:opacity .15s ease;transform:none}
+  .hw-mod-io:hover .hw-mod-ico{transform:none}
+}
+/* Tamaños del modo solo iconos */
+.hw-mods.ico-only.sz2{grid-template-columns:repeat(auto-fill,minmax(80px,1fr))}
+.hw-mods.ico-only.sz2 .hw-mod-io-t{font-size:10.5px}
+.hw-mods.ico-only.sz3{grid-template-columns:repeat(auto-fill,minmax(96px,1fr))}
+.hw-mods.ico-only.sz3 .hw-mod-io-t{font-size:11.5px;bottom:9px}
+.hw-mods.ico-only.sz3 .hw-mod-io:hover .hw-mod-ico{transform:translateY(-11px) scale(.9)}
+
 /* Tamaños de los módulos (botón lupa del header): sz2 mediano, sz3 grande */
 .hw-mods.sz2{grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
 .hw-mods.sz2 .hw-mod{padding:12px 14px;gap:11px}
