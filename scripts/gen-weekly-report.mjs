@@ -332,18 +332,28 @@ ${STYLE()}
   <section class="pane on" id="pane-noticias">
     <header class="hero-news">
       <div class="wrap">
-        <p class="eyebrow reveal" style="--d:40ms"><span class="pulse"></span> Novedades del portafolio</p>
-        <h1 class="type" data-type="load">Noticias de las empresas en seguimiento</h1>
-        <p class="lede reveal" style="--d:180ms">Titulares recientes de las compañías donde invierte el portafolio, filtrados a <b>medios confiables</b> (Reuters, Bloomberg, TechCrunch, CNBC, FT…). Se actualiza varias veces al día.</p>
+        <p class="eyebrow reveal" style="--d:40ms"><span class="pulse"></span> <span id="newsEyebrowTx">Novedades del portafolio</span></p>
+        <h1 class="hnews-title reveal" id="newsH1" style="--d:110ms">Noticias de las empresas en seguimiento</h1>
+        <p class="lede reveal" id="newsLede" style="--d:180ms">Titulares recientes de las compañías donde invierte el portafolio, de <b>medios confiables</b> (Reuters, Bloomberg, TechCrunch, CNBC, FT…). Se actualiza varias veces al día.</p>
         <div class="meta-row reveal" style="--d:280ms">
           <span class="tag">${ICON('globe', 'ti')} <b id="newsMetaCount">cargando…</b></span>
-          <span class="tag">${ICON('clock', 'ti')} actualizado <b id="newsMetaWhen">—</b></span>
+          <span class="tag">${ICON('clock', 'ti')} <span id="newsMetaWhenLbl">actualizado</span> <b id="newsMetaWhen">—</b></span>
         </div>
       </div>
     </header>
     <div class="wrap sec">
       <div class="news-bar">
-        <div class="news-filter" id="newsFilter" role="group" aria-label="Filtrar por empresa"></div>
+        <div class="news-cddf" id="newsCddf">
+          <button type="button" class="news-cddf-btn" id="newsFilterBtn" aria-haspopup="true" aria-expanded="false" onclick="toggleNewsFilter(event)">
+            ${ICON('globe', 'ti')} <span id="newsFilterLabel">Todas las empresas</span> <span class="news-cddf-chev" aria-hidden="true">▾</span>
+          </button>
+          <div class="news-cddf-panel" id="newsFilterPanel" role="menu">
+            <p class="news-cddf-hint" id="newsFilterHint">Filtra según la(s) empresa(s) que sean de tu interés.</p>
+            <div class="news-cddf-search"><input type="text" id="newsFilterSearch" placeholder="Buscar empresa…" autocomplete="off" oninput="filterNewsFilterList(this.value)"></div>
+            <div class="news-cddf-list" id="newsFilterList"></div>
+            <div class="news-cddf-foot"><button type="button" class="news-cddf-clear" id="newsFilterClear" onclick="newsFilterClear()">Limpiar</button></div>
+          </div>
+        </div>
         <div class="news-lang" id="newsLang" role="group" aria-label="Idioma de las noticias">
           <button type="button" class="nl-btn" data-nlang="es">ES</button>
           <button type="button" class="nl-btn" data-nlang="en">EN</button>
@@ -528,12 +538,16 @@ const SUMMARY = ${JSON.stringify(summaryText)};
   // ── Noticias del portafolio (lee /data/company-news.json) ──
   function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
   function ago(iso){ var d = new Date(iso); if (isNaN(d)) return ''; var s = (Date.now() - d.getTime())/1000; if (s < 3600) return Math.max(1, Math.round(s/60)) + ' min'; if (s < 86400) return Math.round(s/3600) + ' h'; return Math.round(s/86400) + ' d'; }
-  var newsData = null, newsCo = 'all';
-  // Idioma de las noticias: comparte la llave 'lang' con el dashboard. Las notas traen
-  // title (original en inglés) y title_es (traducido) → el toggle elige cuál mostrar.
+  var newsData = null;
+  var newsSel = {};   // multi-selección de empresas {empresa:true}; vacío = todas
+  // Idioma: comparte la llave 'lang' con el dashboard. Cada nota trae title (inglés
+  // original) y title_es (traducido) → el toggle elige cuál mostrar.
   var newsLang = (function(){ try { return localStorage.getItem('lang') === 'en' ? 'en' : 'es'; } catch(e){ return 'es'; } })();
   function NT(es, en){ return newsLang === 'en' ? en : es; }
+  function setTx(id, tx){ var el = document.getElementById(id); if (el) el.textContent = tx; }
   var grid = document.getElementById('newsGrid');
+
+  // ── Idioma ES/EN ──
   (function wireNewsLang(){
     var lb = document.getElementById('newsLang'); if (!lb) return;
     lb.querySelectorAll('.nl-btn').forEach(function(b){
@@ -542,38 +556,114 @@ const SUMMARY = ${JSON.stringify(summaryText)};
         newsLang = b.getAttribute('data-nlang');
         try { localStorage.setItem('lang', newsLang); } catch(e){}
         lb.querySelectorAll('.nl-btn').forEach(function(x){ x.classList.toggle('on', x === b); });
-        renderMeta(); renderFilter(); renderNews();
+        renderNewsHero(); renderMeta(); buildFilterList(); updateFilterBtn(); renderNews();
       });
     });
   })();
+
+  // ── Hero (traducible) ──
+  function renderNewsHero(){
+    setTx('newsEyebrowTx', NT('Novedades del portafolio', 'Portfolio news'));
+    setTx('newsH1', NT('Noticias de las empresas en seguimiento', 'News from the companies we track'));
+    var lede = document.getElementById('newsLede');
+    if (lede) lede.innerHTML = NT(
+      'Titulares recientes de las compañías donde invierte el portafolio, de <b>medios confiables</b> (Reuters, Bloomberg, TechCrunch, CNBC, FT…). Se actualiza varias veces al día.',
+      'Recent headlines from the companies the portfolio invests in, from <b>trusted outlets</b> (Reuters, Bloomberg, TechCrunch, CNBC, FT…). Updated several times a day.'
+    );
+  }
   function renderMeta(){
     if (!newsData) return;
-    var mc = document.getElementById('newsMetaCount'); if (mc) mc.textContent = newsData.count + NT(' notas · ', ' stories · ') + (newsData.companies ? newsData.companies.length : 0) + NT(' empresas', ' companies');
-    var mw = document.getElementById('newsMetaWhen'); if (mw) mw.textContent = ago(newsData.generated) + NT(' atrás', ' ago');
+    setTx('newsMetaCount', newsData.count + NT(' notas · ', ' stories · ') + (newsData.companies ? newsData.companies.length : 0) + NT(' empresas', ' companies'));
+    setTx('newsMetaWhenLbl', NT('actualizado', 'updated'));
+    setTx('newsMetaWhen', ago(newsData.generated) + NT(' atrás', ' ago'));
   }
+
+  // ── Filtro desplegable (multi-empresa) ──
+  function newsCompanies(){ return Object.keys(newsData.items.reduce(function(a, i){ a[i.company] = 1; return a; }, {})).sort(); }
+  function selCount(){ return Object.keys(newsSel).length; }
+  function updateFilterBtn(){
+    var lbl = document.getElementById('newsFilterLabel'); if (!lbl) return;
+    var n = selCount();
+    if (!n) lbl.textContent = NT('Todas las empresas', 'All companies');
+    else if (n === 1) lbl.textContent = Object.keys(newsSel)[0];
+    else lbl.textContent = n + NT(' empresas', ' companies');
+    var clr = document.getElementById('newsFilterClear'); if (clr) clr.style.visibility = n ? 'visible' : 'hidden';
+  }
+  function buildFilterList(){
+    var box = document.getElementById('newsFilterList'); if (!box || !newsData) return;
+    setTx('newsFilterHint', NT('Filtra según la(s) empresa(s) que sean de tu interés.', 'Filter by the companies you care about.'));
+    var srch = document.getElementById('newsFilterSearch'); if (srch) srch.placeholder = NT('Buscar empresa…', 'Search company…');
+    setTx('newsFilterClear', NT('Limpiar', 'Clear'));
+    box.innerHTML = newsCompanies().map(function(co){
+      return '<div class="ncf-opt' + (newsSel[co] ? ' on' : '') + '" data-co="' + esc(co) + '"><span class="ncf-check">' + (newsSel[co] ? '✓' : '') + '</span><span class="ncf-nm">' + esc(co) + '</span></div>';
+    }).join('');
+    box.querySelectorAll('.ncf-opt').forEach(function(o){
+      o.addEventListener('click', function(){
+        var co = o.getAttribute('data-co');
+        if (newsSel[co]) delete newsSel[co]; else newsSel[co] = true;
+        o.classList.toggle('on', !!newsSel[co]);
+        var c = o.querySelector('.ncf-check'); if (c) c.textContent = newsSel[co] ? '✓' : '';
+        updateFilterBtn(); renderNews();
+      });
+    });
+  }
+  window.filterNewsFilterList = function(q){
+    q = (q || '').toLowerCase();
+    document.querySelectorAll('#newsFilterList .ncf-opt').forEach(function(o){
+      o.style.display = o.getAttribute('data-co').toLowerCase().indexOf(q) >= 0 ? '' : 'none';
+    });
+  };
+  window.newsFilterClear = function(){
+    newsSel = {};
+    document.querySelectorAll('#newsFilterList .ncf-opt').forEach(function(o){ o.classList.remove('on'); var c = o.querySelector('.ncf-check'); if (c) c.textContent = ''; });
+    updateFilterBtn(); renderNews();
+  };
+  window.toggleNewsFilter = function(e){
+    if (e) e.stopPropagation();
+    var d = document.getElementById('newsCddf'); if (!d) return;
+    var open = d.classList.toggle('open');
+    var btn = document.getElementById('newsFilterBtn'); if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  };
+  document.addEventListener('click', function(e){
+    var d = document.getElementById('newsCddf');
+    if (d && d.classList.contains('open') && !d.contains(e.target)) { d.classList.remove('open'); var btn = document.getElementById('newsFilterBtn'); if (btn) btn.setAttribute('aria-expanded', 'false'); }
+  });
+
+  // ── Carga ──
   fetch('/data/company-news.json', { cache: 'no-store' }).then(function(r){ if(!r.ok) throw 0; return r.json(); }).then(function(d){
     newsData = d;
-    renderMeta(); renderFilter(); renderNews();
+    renderNewsHero(); renderMeta(); buildFilterList(); updateFilterBtn(); renderNews();
   }).catch(function(){ if (grid) grid.innerHTML = '<div class="news-empty">' + NT('No se pudieron cargar las noticias. Reintenta en un momento.', "Couldn't load the news. Try again in a moment.") + '</div>'; });
-  function renderFilter(){
-    var f = document.getElementById('newsFilter'); if (!f || !newsData) return;
-    var cos = Object.keys(newsData.items.reduce(function(a, i){ a[i.company] = 1; return a; }, {})).sort();
-    f.innerHTML = '<button class="nf-chip' + (newsCo === 'all' ? ' on' : '') + '" data-co="all">' + NT('Todas', 'All') + '</button>' + cos.map(function(co){ return '<button class="nf-chip' + (newsCo === co ? ' on' : '') + '" data-co="' + esc(co) + '">' + esc(co) + '</button>'; }).join('');
-    f.querySelectorAll('.nf-chip').forEach(function(b){ b.addEventListener('click', function(){ newsCo = b.getAttribute('data-co'); f.querySelectorAll('.nf-chip').forEach(function(x){ x.classList.toggle('on', x === b); }); renderNews(); }); });
+
+  // ── Tarjetas (con destacada = la más reciente) ──
+  function titleOf(i){ return newsLang === 'en' ? (i.title || i.title_es) : (i.title_es || i.title); }
+  function cardHtml(i, idx){
+    return '<article class="news-card" style="--i:' + Math.min(idx, 24) + '" title="' + esc(i.title) + '">'
+      + '<div class="news-top"><span class="news-co">' + esc(i.company) + '</span><span class="news-time">' + ago(i.published) + '</span></div>'
+      + '<div class="news-title">' + esc(titleOf(i)) + '</div>'
+      + '<div class="news-foot"><span class="news-src">' + esc(i.source) + '</span>'
+      + '<a class="news-btn" href="' + esc(i.url) + '" target="_blank" rel="noopener">' + NT('Leer noticia', 'Read the story') + ' <span aria-hidden="true">↗</span></a></div>'
+      + '</article>';
+  }
+  function featHtml(i){
+    return '<article class="news-card feat" title="' + esc(i.title) + '">'
+      + '<div class="news-feat-head"><span class="news-feat-tag"><span class="fdot"></span>' + NT('Lo más reciente', 'Latest') + '</span><span class="news-time">' + ago(i.published) + '</span></div>'
+      + '<div class="news-top"><span class="news-co">' + esc(i.company) + '</span></div>'
+      + '<div class="news-title">' + esc(titleOf(i)) + '</div>'
+      + '<div class="news-foot"><span class="news-src">' + esc(i.source) + '</span>'
+      + '<a class="news-btn" href="' + esc(i.url) + '" target="_blank" rel="noopener">' + NT('Leer noticia', 'Read the story') + ' <span aria-hidden="true">↗</span></a></div>'
+      + '</article>';
   }
   function renderNews(){
     if (!grid || !newsData) return;
-    var items = newsData.items;
-    if (newsCo !== 'all') items = items.filter(function(i){ return i.company === newsCo; });
+    var items = newsData.items.slice().sort(function(a, b){ return new Date(b.published) - new Date(a.published); });
+    var sel = Object.keys(newsSel);
+    if (sel.length) items = items.filter(function(i){ return newsSel[i.company]; });
     if (!items.length){ grid.innerHTML = '<div class="news-empty">' + NT('Sin noticias para este filtro por ahora.', 'No news for this filter yet.') + '</div>'; return; }
-    grid.innerHTML = items.map(function(i, idx){
-      return '<article class="news-card" style="--i:' + Math.min(idx, 24) + '" title="' + esc(i.title) + '">'
-        + '<div class="news-top"><span class="news-co">' + esc(i.company) + '</span><span class="news-time">' + ago(i.published) + '</span></div>'
-        + '<div class="news-title">' + esc(newsLang === 'en' ? (i.title || i.title_es) : (i.title_es || i.title)) + '</div>'
-        + '<div class="news-foot"><span class="news-src">' + esc(i.source) + '</span>'
-        + '<a class="news-btn" href="' + esc(i.url) + '" target="_blank" rel="noopener">' + NT('Leer noticia', 'Read the story') + ' <span aria-hidden="true">↗</span></a></div>'
-        + '</article>';
-    }).join('');
+    var html = '';
+    if (items.length >= 4) { html = featHtml(items[0]) + items.slice(1).map(function(i, k){ return cardHtml(i, k); }).join(''); }
+    else { html = items.map(function(i, k){ return cardHtml(i, k); }).join(''); }
+    grid.innerHTML = html;
   }
 })();
 </script>
@@ -818,24 +908,41 @@ function STYLE() {
   .tab.on{color:var(--navy-2);background:var(--navy-pale)}
   .tab:active{transform:scale(.98)}
   #pane-avances .snav{top:54px}   /* la sub-nav del reporte, bajo la barra de pestañas */
-  .hero-news{padding:42px 0 20px}
-  /* ── Filtro por empresa ── */
-  .news-filter{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px}
-  .nf-chip{font-size:12.5px;font-weight:500;padding:6px 13px;border-radius:999px;cursor:pointer;background:var(--surface);border:1px solid var(--line);color:var(--ink-soft);font-family:inherit;transition:transform .14s var(--ease-out),border-color .14s ease,color .14s ease,background .14s ease}
-  @media (hover:hover){.nf-chip:hover{border-color:var(--navy-2);color:var(--ink)}}
-  .nf-chip:active{transform:scale(.96)}
-  .nf-chip.on{background:var(--navy);border-color:var(--navy);color:#fff}
-  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .nf-chip.on{color:#0C121E}}
-  :root[data-theme="dark"] .nf-chip.on{color:#0C121E}
-  /* ── Rejilla de noticias ── */
-  .news-bar{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;margin-bottom:22px}
-  .news-bar .news-filter{margin-bottom:0;flex:1 1 260px}
-  .news-lang{display:inline-flex;flex:0 0 auto;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px;gap:3px}
-  .nl-btn{font-size:12px;font-weight:600;letter-spacing:.03em;padding:6px 15px;border-radius:999px;cursor:pointer;background:none;border:0;color:var(--ink-mute);font-family:inherit;transition:background .15s ease,color .15s ease}
+  .hero-news{padding:52px 0 26px}
+  /* Título editorial de Noticias (sin typewriter): grande, confiado */
+  .hnews-title{font-size:clamp(30px,5.4vw,50px);line-height:1.05;letter-spacing:-.03em;font-weight:700;margin:0 0 16px;text-wrap:balance;color:var(--ink)}
+  /* ── Barra: filtro desplegable (multi-empresa) + idioma ── */
+  .news-bar{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center;justify-content:space-between;margin-bottom:24px}
+  .news-cddf{position:relative;flex:0 1 auto;min-width:0}
+  .news-cddf-btn{display:inline-flex;align-items:center;gap:9px;max-width:100%;font-family:inherit;font-size:13.5px;font-weight:600;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 14px;cursor:pointer;box-shadow:var(--raise);transition:border-color .15s ease,transform .12s var(--ease-out)}
+  .news-cddf-btn .ti{color:var(--navy-2);flex:0 0 auto}
+  .news-cddf-btn #newsFilterLabel{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  @media (hover:hover){.news-cddf-btn:hover{border-color:var(--navy-2)}}
+  .news-cddf-btn:active{transform:scale(.98)}
+  .news-cddf-chev{color:var(--ink-mute);font-size:11px;flex:0 0 auto;transition:transform .18s var(--ease-out)}
+  .news-cddf.open .news-cddf-chev{transform:rotate(180deg)}
+  .news-cddf-panel{position:absolute;top:calc(100% + 8px);left:0;z-index:40;width:min(360px,88vw);background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:0 18px 50px rgba(18,30,54,.20);padding:14px;opacity:0;visibility:hidden;transform:translateY(-6px) scale(.98);transform-origin:top left;transition:opacity .16s var(--ease-out),transform .16s var(--ease-out),visibility 0s linear .16s}
+  .news-cddf.open .news-cddf-panel{opacity:1;visibility:visible;transform:none;transition:opacity .18s var(--ease-out),transform .18s var(--ease-out)}
+  .news-cddf-hint{margin:0 2px 12px;font-size:13px;line-height:1.45;color:var(--ink-soft)}
+  .news-cddf-search input{width:100%;font:inherit;font-size:13.5px;color:var(--ink);background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:9px 12px;outline:none;margin-bottom:8px}
+  .news-cddf-search input:focus{border-color:var(--navy-2)}
+  .news-cddf-list{max-height:264px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;margin:0 -4px;padding:0 4px}
+  .ncf-opt{display:flex;align-items:center;gap:10px;padding:8px 9px;border-radius:9px;cursor:pointer;font-size:13.5px;color:var(--ink-soft);transition:background .12s ease,color .12s ease}
+  @media (hover:hover){.ncf-opt:hover{background:var(--surface-2);color:var(--ink)}}
+  .ncf-check{width:17px;height:17px;flex:0 0 auto;border:1.5px solid var(--line);border-radius:5px;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:11px;line-height:1;transition:background .12s ease,border-color .12s ease}
+  .ncf-opt.on{color:var(--ink);font-weight:600}
+  .ncf-opt.on .ncf-check{background:var(--navy);border-color:var(--navy)}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .ncf-opt.on .ncf-check{color:#0C121E}}
+  :root[data-theme="dark"] .ncf-opt.on .ncf-check{color:#0C121E}
+  .news-cddf-foot{display:flex;justify-content:flex-end;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+  .news-cddf-clear{font:inherit;font-size:12.5px;font-weight:600;color:var(--navy-2);background:none;border:0;cursor:pointer;padding:5px 9px;border-radius:8px}
+  @media (hover:hover){.news-cddf-clear:hover{background:var(--navy-pale)}}
+  .news-lang{display:inline-flex;flex:0 0 auto;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px;gap:3px;box-shadow:var(--raise)}
+  .nl-btn{font-size:12px;font-weight:600;letter-spacing:.03em;padding:7px 15px;border-radius:999px;cursor:pointer;background:none;border:0;color:var(--ink-mute);font-family:inherit;transition:background .15s ease,color .15s ease}
   .nl-btn.on{background:var(--navy);color:#fff}
   @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .nl-btn.on{color:#0C121E}}
   :root[data-theme="dark"] .nl-btn.on{color:#0C121E}
-  .news-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+  .news-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:15px}
   .news-card{display:flex;flex-direction:column;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:15px;padding:17px 18px;box-shadow:var(--raise);text-decoration:none;color:inherit;transition:transform .18s var(--ease-out),border-color .18s var(--ease-out),box-shadow .18s var(--ease-out);animation:newsIn .5s var(--ease-out) both;animation-delay:calc(var(--i,0) * 32ms)}
   @media (hover:hover){.news-card:hover{transform:translateY(-3px);border-color:var(--navy-pale);box-shadow:0 8px 26px rgba(18,30,54,.08)}}
   @keyframes newsIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
@@ -851,6 +958,14 @@ function STYLE() {
   :root[data-theme="dark"] .news-btn:hover{color:#0C121E}
   @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .news-btn:hover{color:#0C121E}}
   .news-btn:active{transform:scale(.96)}
+  /* Tarjeta destacada: la nota más reciente, a todo lo ancho */
+  .news-card.feat{grid-column:1/-1;gap:12px;padding:22px 24px;background:linear-gradient(180deg,var(--navy-pale),var(--surface) 64%);border-color:var(--navy-pale)}
+  .news-card.feat .news-title{font-size:clamp(19px,2.6vw,25px);line-height:1.24;font-weight:700;letter-spacing:-.02em}
+  .news-feat-tag{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--navy-2)}
+  .news-feat-tag .fdot{width:7px;height:7px;border-radius:50%;background:var(--navy-2);position:relative}
+  .news-feat-tag .fdot::after{content:"";position:absolute;inset:0;border-radius:50%;background:var(--navy-2);animation:pulse 2.4s var(--ease-out) infinite}
+  @media (prefers-reduced-motion:reduce){.news-feat-tag .fdot::after{animation:none}}
+  .news-feat-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
   .news-empty{grid-column:1/-1;padding:40px 20px;text-align:center;color:var(--ink-mute);font-size:14px;border:1px dashed var(--line);border-radius:14px}
   footer{border-top:1px solid var(--line);padding:28px 0 60px;color:var(--ink-mute);font-size:13px;margin-top:24px}
   footer .wrap{display:flex;flex-wrap:wrap;gap:6px 14px;justify-content:space-between;align-items:center} footer b{color:var(--ink-soft)}

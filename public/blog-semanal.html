@@ -241,24 +241,41 @@
   .tab.on{color:var(--navy-2);background:var(--navy-pale)}
   .tab:active{transform:scale(.98)}
   #pane-avances .snav{top:54px}   /* la sub-nav del reporte, bajo la barra de pestañas */
-  .hero-news{padding:42px 0 20px}
-  /* ── Filtro por empresa ── */
-  .news-filter{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px}
-  .nf-chip{font-size:12.5px;font-weight:500;padding:6px 13px;border-radius:999px;cursor:pointer;background:var(--surface);border:1px solid var(--line);color:var(--ink-soft);font-family:inherit;transition:transform .14s var(--ease-out),border-color .14s ease,color .14s ease,background .14s ease}
-  @media (hover:hover){.nf-chip:hover{border-color:var(--navy-2);color:var(--ink)}}
-  .nf-chip:active{transform:scale(.96)}
-  .nf-chip.on{background:var(--navy);border-color:var(--navy);color:#fff}
-  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .nf-chip.on{color:#0C121E}}
-  :root[data-theme="dark"] .nf-chip.on{color:#0C121E}
-  /* ── Rejilla de noticias ── */
-  .news-bar{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;margin-bottom:22px}
-  .news-bar .news-filter{margin-bottom:0;flex:1 1 260px}
-  .news-lang{display:inline-flex;flex:0 0 auto;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px;gap:3px}
-  .nl-btn{font-size:12px;font-weight:600;letter-spacing:.03em;padding:6px 15px;border-radius:999px;cursor:pointer;background:none;border:0;color:var(--ink-mute);font-family:inherit;transition:background .15s ease,color .15s ease}
+  .hero-news{padding:52px 0 26px}
+  /* Título editorial de Noticias (sin typewriter): grande, confiado */
+  .hnews-title{font-size:clamp(30px,5.4vw,50px);line-height:1.05;letter-spacing:-.03em;font-weight:700;margin:0 0 16px;text-wrap:balance;color:var(--ink)}
+  /* ── Barra: filtro desplegable (multi-empresa) + idioma ── */
+  .news-bar{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center;justify-content:space-between;margin-bottom:24px}
+  .news-cddf{position:relative;flex:0 1 auto;min-width:0}
+  .news-cddf-btn{display:inline-flex;align-items:center;gap:9px;max-width:100%;font-family:inherit;font-size:13.5px;font-weight:600;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 14px;cursor:pointer;box-shadow:var(--raise);transition:border-color .15s ease,transform .12s var(--ease-out)}
+  .news-cddf-btn .ti{color:var(--navy-2);flex:0 0 auto}
+  .news-cddf-btn #newsFilterLabel{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  @media (hover:hover){.news-cddf-btn:hover{border-color:var(--navy-2)}}
+  .news-cddf-btn:active{transform:scale(.98)}
+  .news-cddf-chev{color:var(--ink-mute);font-size:11px;flex:0 0 auto;transition:transform .18s var(--ease-out)}
+  .news-cddf.open .news-cddf-chev{transform:rotate(180deg)}
+  .news-cddf-panel{position:absolute;top:calc(100% + 8px);left:0;z-index:40;width:min(360px,88vw);background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:0 18px 50px rgba(18,30,54,.20);padding:14px;opacity:0;visibility:hidden;transform:translateY(-6px) scale(.98);transform-origin:top left;transition:opacity .16s var(--ease-out),transform .16s var(--ease-out),visibility 0s linear .16s}
+  .news-cddf.open .news-cddf-panel{opacity:1;visibility:visible;transform:none;transition:opacity .18s var(--ease-out),transform .18s var(--ease-out)}
+  .news-cddf-hint{margin:0 2px 12px;font-size:13px;line-height:1.45;color:var(--ink-soft)}
+  .news-cddf-search input{width:100%;font:inherit;font-size:13.5px;color:var(--ink);background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:9px 12px;outline:none;margin-bottom:8px}
+  .news-cddf-search input:focus{border-color:var(--navy-2)}
+  .news-cddf-list{max-height:264px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;margin:0 -4px;padding:0 4px}
+  .ncf-opt{display:flex;align-items:center;gap:10px;padding:8px 9px;border-radius:9px;cursor:pointer;font-size:13.5px;color:var(--ink-soft);transition:background .12s ease,color .12s ease}
+  @media (hover:hover){.ncf-opt:hover{background:var(--surface-2);color:var(--ink)}}
+  .ncf-check{width:17px;height:17px;flex:0 0 auto;border:1.5px solid var(--line);border-radius:5px;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:11px;line-height:1;transition:background .12s ease,border-color .12s ease}
+  .ncf-opt.on{color:var(--ink);font-weight:600}
+  .ncf-opt.on .ncf-check{background:var(--navy);border-color:var(--navy)}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .ncf-opt.on .ncf-check{color:#0C121E}}
+  :root[data-theme="dark"] .ncf-opt.on .ncf-check{color:#0C121E}
+  .news-cddf-foot{display:flex;justify-content:flex-end;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+  .news-cddf-clear{font:inherit;font-size:12.5px;font-weight:600;color:var(--navy-2);background:none;border:0;cursor:pointer;padding:5px 9px;border-radius:8px}
+  @media (hover:hover){.news-cddf-clear:hover{background:var(--navy-pale)}}
+  .news-lang{display:inline-flex;flex:0 0 auto;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px;gap:3px;box-shadow:var(--raise)}
+  .nl-btn{font-size:12px;font-weight:600;letter-spacing:.03em;padding:7px 15px;border-radius:999px;cursor:pointer;background:none;border:0;color:var(--ink-mute);font-family:inherit;transition:background .15s ease,color .15s ease}
   .nl-btn.on{background:var(--navy);color:#fff}
   @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .nl-btn.on{color:#0C121E}}
   :root[data-theme="dark"] .nl-btn.on{color:#0C121E}
-  .news-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+  .news-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:15px}
   .news-card{display:flex;flex-direction:column;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:15px;padding:17px 18px;box-shadow:var(--raise);text-decoration:none;color:inherit;transition:transform .18s var(--ease-out),border-color .18s var(--ease-out),box-shadow .18s var(--ease-out);animation:newsIn .5s var(--ease-out) both;animation-delay:calc(var(--i,0) * 32ms)}
   @media (hover:hover){.news-card:hover{transform:translateY(-3px);border-color:var(--navy-pale);box-shadow:0 8px 26px rgba(18,30,54,.08)}}
   @keyframes newsIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
@@ -274,6 +291,14 @@
   :root[data-theme="dark"] .news-btn:hover{color:#0C121E}
   @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .news-btn:hover{color:#0C121E}}
   .news-btn:active{transform:scale(.96)}
+  /* Tarjeta destacada: la nota más reciente, a todo lo ancho */
+  .news-card.feat{grid-column:1/-1;gap:12px;padding:22px 24px;background:linear-gradient(180deg,var(--navy-pale),var(--surface) 64%);border-color:var(--navy-pale)}
+  .news-card.feat .news-title{font-size:clamp(19px,2.6vw,25px);line-height:1.24;font-weight:700;letter-spacing:-.02em}
+  .news-feat-tag{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--navy-2)}
+  .news-feat-tag .fdot{width:7px;height:7px;border-radius:50%;background:var(--navy-2);position:relative}
+  .news-feat-tag .fdot::after{content:"";position:absolute;inset:0;border-radius:50%;background:var(--navy-2);animation:pulse 2.4s var(--ease-out) infinite}
+  @media (prefers-reduced-motion:reduce){.news-feat-tag .fdot::after{animation:none}}
+  .news-feat-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
   .news-empty{grid-column:1/-1;padding:40px 20px;text-align:center;color:var(--ink-mute);font-size:14px;border:1px dashed var(--line);border-radius:14px}
   footer{border-top:1px solid var(--line);padding:28px 0 60px;color:var(--ink-mute);font-size:13px;margin-top:24px}
   footer .wrap{display:flex;flex-wrap:wrap;gap:6px 14px;justify-content:space-between;align-items:center} footer b{color:var(--ink-soft)}
@@ -302,18 +327,28 @@
   <section class="pane on" id="pane-noticias">
     <header class="hero-news">
       <div class="wrap">
-        <p class="eyebrow reveal" style="--d:40ms"><span class="pulse"></span> Novedades del portafolio</p>
-        <h1 class="type" data-type="load">Noticias de las empresas en seguimiento</h1>
-        <p class="lede reveal" style="--d:180ms">Titulares recientes de las compañías donde invierte el portafolio, filtrados a <b>medios confiables</b> (Reuters, Bloomberg, TechCrunch, CNBC, FT…). Se actualiza varias veces al día.</p>
+        <p class="eyebrow reveal" style="--d:40ms"><span class="pulse"></span> <span id="newsEyebrowTx">Novedades del portafolio</span></p>
+        <h1 class="hnews-title reveal" id="newsH1" style="--d:110ms">Noticias de las empresas en seguimiento</h1>
+        <p class="lede reveal" id="newsLede" style="--d:180ms">Titulares recientes de las compañías donde invierte el portafolio, de <b>medios confiables</b> (Reuters, Bloomberg, TechCrunch, CNBC, FT…). Se actualiza varias veces al día.</p>
         <div class="meta-row reveal" style="--d:280ms">
           <span class="tag"><svg class="ic ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.4"/><path d="M3.6 12h16.8M12 3.6c2.6 2.3 2.6 14.5 0 16.8M12 3.6c-2.6 2.3-2.6 14.5 0 16.8"/></svg> <b id="newsMetaCount">cargando…</b></span>
-          <span class="tag"><svg class="ic ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.4"/><path d="M12 7.4V12l3.1 2"/></svg> actualizado <b id="newsMetaWhen">—</b></span>
+          <span class="tag"><svg class="ic ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.4"/><path d="M12 7.4V12l3.1 2"/></svg> <span id="newsMetaWhenLbl">actualizado</span> <b id="newsMetaWhen">—</b></span>
         </div>
       </div>
     </header>
     <div class="wrap sec">
       <div class="news-bar">
-        <div class="news-filter" id="newsFilter" role="group" aria-label="Filtrar por empresa"></div>
+        <div class="news-cddf" id="newsCddf">
+          <button type="button" class="news-cddf-btn" id="newsFilterBtn" aria-haspopup="true" aria-expanded="false" onclick="toggleNewsFilter(event)">
+            <svg class="ic ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.4"/><path d="M3.6 12h16.8M12 3.6c2.6 2.3 2.6 14.5 0 16.8M12 3.6c-2.6 2.3-2.6 14.5 0 16.8"/></svg> <span id="newsFilterLabel">Todas las empresas</span> <span class="news-cddf-chev" aria-hidden="true">▾</span>
+          </button>
+          <div class="news-cddf-panel" id="newsFilterPanel" role="menu">
+            <p class="news-cddf-hint" id="newsFilterHint">Filtra según la(s) empresa(s) que sean de tu interés.</p>
+            <div class="news-cddf-search"><input type="text" id="newsFilterSearch" placeholder="Buscar empresa…" autocomplete="off" oninput="filterNewsFilterList(this.value)"></div>
+            <div class="news-cddf-list" id="newsFilterList"></div>
+            <div class="news-cddf-foot"><button type="button" class="news-cddf-clear" id="newsFilterClear" onclick="newsFilterClear()">Limpiar</button></div>
+          </div>
+        </div>
         <div class="news-lang" id="newsLang" role="group" aria-label="Idioma de las noticias">
           <button type="button" class="nl-btn" data-nlang="es">ES</button>
           <button type="button" class="nl-btn" data-nlang="en">EN</button>
@@ -336,8 +371,8 @@
           <span class="tag"><svg class="ic ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.4"/><path d="M3.6 12h16.8M12 3.6c2.6 2.3 2.6 14.5 0 16.8M12 3.6c-2.6 2.3-2.6 14.5 0 16.8"/></svg> <b>cretumdesk.com</b></span>
         </div>
         <div class="hstats reveal" style="--d:360ms">
-          <div class="hstat"><div class="n" data-count="62">0</div><div class="k">commits</div></div>
-          <div class="hstat"><div class="n" data-count="42">0</div><div class="k"><span class="swatch sw-navy"></span>Angel</div></div>
+          <div class="hstat"><div class="n" data-count="64">0</div><div class="k">commits</div></div>
+          <div class="hstat"><div class="n" data-count="44">0</div><div class="k"><span class="swatch sw-navy"></span>Angel</div></div>
           <div class="hstat"><div class="n" data-count="11">0</div><div class="k"><span class="swatch sw-auto"></span>Automatización</div></div>
           <div class="hstat"><div class="n" data-count="9">0</div><div class="k"><span class="swatch sw-eug"></span>Eugenio</div></div>
         </div>
@@ -399,8 +434,8 @@
     <div class="adow">M<span class="adate">18</span></div>
   </div>
   <div class="acol" style="--i:6">
-    <div class="aval">5</div>
-    <div class="abar"><div class="afill" style="--h:22.7%" title="M 19 ago · 5 commits"></div></div>
+    <div class="aval">7</div>
+    <div class="abar"><div class="afill" style="--h:31.8%" title="M 19 ago · 7 commits"></div></div>
     <div class="adow">M<span class="adate">19</span></div>
   </div></div>
       </div>
@@ -408,18 +443,18 @@
         <div class="chart-lbl">Reparto por persona</div>
         <div class="donut-wrap"><svg class="donut" viewBox="0 0 104 104" role="img" aria-label="Reparto de commits por persona">
     <circle cx="52" cy="52" r="40" fill="none" stroke="var(--surface-2)" stroke-width="15"/>
-    <g transform="rotate(-90 52 52)"><circle class="a-navy" cx="52" cy="52" r="40" fill="none" stroke-width="15" stroke-dasharray="170.25 81.07" stroke-dashoffset="0.00"/><circle class="a-auto" cx="52" cy="52" r="40" fill="none" stroke-width="15" stroke-dasharray="44.59 206.74" stroke-dashoffset="-170.25"/><circle class="a-eug" cx="52" cy="52" r="40" fill="none" stroke-width="15" stroke-dasharray="36.48 214.84" stroke-dashoffset="-214.84"/></g>
-    <text x="52" y="51" class="don-n">62</text>
+    <g transform="rotate(-90 52 52)"><circle class="a-navy" cx="52" cy="52" r="40" fill="none" stroke-width="15" stroke-dasharray="172.79 78.54" stroke-dashoffset="0.00"/><circle class="a-auto" cx="52" cy="52" r="40" fill="none" stroke-width="15" stroke-dasharray="43.20 208.13" stroke-dashoffset="-172.79"/><circle class="a-eug" cx="52" cy="52" r="40" fill="none" stroke-width="15" stroke-dasharray="35.34 215.98" stroke-dashoffset="-215.98"/></g>
+    <text x="52" y="51" class="don-n">64</text>
     <text x="52" y="66" class="don-k">commits</text>
   </svg></div>
-        <div class="legend"><span class="lg"><span class="swatch sw-navy"></span>Angel <b>42</b></span><span class="lg"><span class="swatch sw-auto"></span>Automatización <b>11</b></span><span class="lg"><span class="swatch sw-eug"></span>Eugenio <b>9</b></span></div>
+        <div class="legend"><span class="lg"><span class="swatch sw-navy"></span>Angel <b>44</b></span><span class="lg"><span class="swatch sw-auto"></span>Automatización <b>11</b></span><span class="lg"><span class="swatch sw-eug"></span>Eugenio <b>9</b></span></div>
         <div class="dist-note">7 módulos tocados · 6 días activos</div>
       </div>
     </div>
     <div class="heat-card reveal">
       <div class="heat-top"><div class="chart-lbl">Actividad de las últimas 13 semanas</div>
         <div class="heat-legend"><span>Menos</span><span class="hc h0"></span><span class="hc h1"></span><span class="hc h2"></span><span class="hc h3"></span><span class="hc h4"></span><span>Más</span></div></div>
-      <div class="heat-scroll"><div class="heat" role="img" aria-label="Mapa de calor de commits por día (últimas 13 semanas)"><span class="hc h0" title="18 may · 0 commits"></span><span class="hc h0" title="19 may · 0 commits"></span><span class="hc h1" title="20 may · 4 commits"></span><span class="hc h0" title="21 may · 0 commits"></span><span class="hc h1" title="22 may · 1 commit"></span><span class="hc h0" title="23 may · 0 commits"></span><span class="hc h0" title="24 may · 0 commits"></span><span class="hc h0" title="25 may · 0 commits"></span><span class="hc h0" title="26 may · 0 commits"></span><span class="hc h1" title="27 may · 9 commits"></span><span class="hc h0" title="28 may · 0 commits"></span><span class="hc h1" title="29 may · 8 commits"></span><span class="hc h0" title="30 may · 0 commits"></span><span class="hc h0" title="31 may · 0 commits"></span><span class="hc h1" title="1 jun · 1 commit"></span><span class="hc h0" title="2 jun · 0 commits"></span><span class="hc h1" title="3 jun · 1 commit"></span><span class="hc h0" title="4 jun · 0 commits"></span><span class="hc h1" title="5 jun · 9 commits"></span><span class="hc h0" title="6 jun · 0 commits"></span><span class="hc h0" title="7 jun · 0 commits"></span><span class="hc h2" title="8 jun · 14 commits"></span><span class="hc h1" title="9 jun · 3 commits"></span><span class="hc h2" title="10 jun · 12 commits"></span><span class="hc h1" title="11 jun · 6 commits"></span><span class="hc h1" title="12 jun · 6 commits"></span><span class="hc h0" title="13 jun · 0 commits"></span><span class="hc h0" title="14 jun · 0 commits"></span><span class="hc h2" title="15 jun · 12 commits"></span><span class="hc h1" title="16 jun · 3 commits"></span><span class="hc h2" title="17 jun · 16 commits"></span><span class="hc h0" title="18 jun · 0 commits"></span><span class="hc h1" title="19 jun · 5 commits"></span><span class="hc h0" title="20 jun · 0 commits"></span><span class="hc h0" title="21 jun · 0 commits"></span><span class="hc h0" title="22 jun · 0 commits"></span><span class="hc h3" title="23 jun · 29 commits"></span><span class="hc h4" title="24 jun · 35 commits"></span><span class="hc h2" title="25 jun · 12 commits"></span><span class="hc h1" title="26 jun · 3 commits"></span><span class="hc h0" title="27 jun · 0 commits"></span><span class="hc h0" title="28 jun · 0 commits"></span><span class="hc h3" title="29 jun · 25 commits"></span><span class="hc h1" title="30 jun · 1 commit"></span><span class="hc h2" title="1 jul · 14 commits"></span><span class="hc h2" title="2 jul · 18 commits"></span><span class="hc h2" title="3 jul · 16 commits"></span><span class="hc h0" title="4 jul · 0 commits"></span><span class="hc h0" title="5 jul · 0 commits"></span><span class="hc h1" title="6 jul · 2 commits"></span><span class="hc h1" title="7 jul · 6 commits"></span><span class="hc h1" title="8 jul · 6 commits"></span><span class="hc h2" title="9 jul · 17 commits"></span><span class="hc h1" title="10 jul · 9 commits"></span><span class="hc h1" title="11 jul · 1 commit"></span><span class="hc h0" title="12 jul · 0 commits"></span><span class="hc h1" title="13 jul · 9 commits"></span><span class="hc h1" title="14 jul · 4 commits"></span><span class="hc h2" title="15 jul · 17 commits"></span><span class="hc h1" title="16 jul · 9 commits"></span><span class="hc h2" title="17 jul · 16 commits"></span><span class="hc h0" title="18 jul · 0 commits"></span><span class="hc h0" title="19 jul · 0 commits"></span><span class="hc h1" title="20 jul · 3 commits"></span><span class="hc h1" title="21 jul · 7 commits"></span><span class="hc h1" title="22 jul · 9 commits"></span><span class="hc h1" title="23 jul · 7 commits"></span><span class="hc h2" title="24 jul · 12 commits"></span><span class="hc h0" title="25 jul · 0 commits"></span><span class="hc h0" title="26 jul · 0 commits"></span><span class="hc h0" title="27 jul · 0 commits"></span><span class="hc h1" title="28 jul · 4 commits"></span><span class="hc h1" title="29 jul · 1 commit"></span><span class="hc h2" title="30 jul · 11 commits"></span><span class="hc h2" title="31 jul · 14 commits"></span><span class="hc h0" title="1 ago · 0 commits"></span><span class="hc h1" title="2 ago · 1 commit"></span><span class="hc h4" title="3 ago · 40 commits"></span><span class="hc h2" title="4 ago · 15 commits"></span><span class="hc h1" title="5 ago · 9 commits"></span><span class="hc h1" title="6 ago · 5 commits"></span><span class="hc h2" title="7 ago · 19 commits"></span><span class="hc h1" title="8 ago · 4 commits"></span><span class="hc h0" title="9 ago · 0 commits"></span><span class="hc h2" title="10 ago · 20 commits"></span><span class="hc h1" title="11 ago · 6 commits"></span><span class="hc h1" title="12 ago · 8 commits"></span><span class="hc h1" title="13 ago · 5 commits"></span><span class="hc h2" title="14 ago · 11 commits"></span><span class="hc h0" title="15 ago · 0 commits"></span><span class="hc h0" title="16 ago · 0 commits"></span><span class="hc h3" title="17 ago · 22 commits"></span><span class="hc h2" title="18 ago · 16 commits"></span><span class="hc h1" title="19 ago · 5 commits"></span></div></div>
+      <div class="heat-scroll"><div class="heat" role="img" aria-label="Mapa de calor de commits por día (últimas 13 semanas)"><span class="hc h0" title="18 may · 0 commits"></span><span class="hc h0" title="19 may · 0 commits"></span><span class="hc h1" title="20 may · 4 commits"></span><span class="hc h0" title="21 may · 0 commits"></span><span class="hc h1" title="22 may · 1 commit"></span><span class="hc h0" title="23 may · 0 commits"></span><span class="hc h0" title="24 may · 0 commits"></span><span class="hc h0" title="25 may · 0 commits"></span><span class="hc h0" title="26 may · 0 commits"></span><span class="hc h1" title="27 may · 9 commits"></span><span class="hc h0" title="28 may · 0 commits"></span><span class="hc h1" title="29 may · 8 commits"></span><span class="hc h0" title="30 may · 0 commits"></span><span class="hc h0" title="31 may · 0 commits"></span><span class="hc h1" title="1 jun · 1 commit"></span><span class="hc h0" title="2 jun · 0 commits"></span><span class="hc h1" title="3 jun · 1 commit"></span><span class="hc h0" title="4 jun · 0 commits"></span><span class="hc h1" title="5 jun · 9 commits"></span><span class="hc h0" title="6 jun · 0 commits"></span><span class="hc h0" title="7 jun · 0 commits"></span><span class="hc h2" title="8 jun · 14 commits"></span><span class="hc h1" title="9 jun · 3 commits"></span><span class="hc h2" title="10 jun · 12 commits"></span><span class="hc h1" title="11 jun · 6 commits"></span><span class="hc h1" title="12 jun · 6 commits"></span><span class="hc h0" title="13 jun · 0 commits"></span><span class="hc h0" title="14 jun · 0 commits"></span><span class="hc h2" title="15 jun · 12 commits"></span><span class="hc h1" title="16 jun · 3 commits"></span><span class="hc h2" title="17 jun · 16 commits"></span><span class="hc h0" title="18 jun · 0 commits"></span><span class="hc h1" title="19 jun · 5 commits"></span><span class="hc h0" title="20 jun · 0 commits"></span><span class="hc h0" title="21 jun · 0 commits"></span><span class="hc h0" title="22 jun · 0 commits"></span><span class="hc h3" title="23 jun · 29 commits"></span><span class="hc h4" title="24 jun · 35 commits"></span><span class="hc h2" title="25 jun · 12 commits"></span><span class="hc h1" title="26 jun · 3 commits"></span><span class="hc h0" title="27 jun · 0 commits"></span><span class="hc h0" title="28 jun · 0 commits"></span><span class="hc h3" title="29 jun · 25 commits"></span><span class="hc h1" title="30 jun · 1 commit"></span><span class="hc h2" title="1 jul · 14 commits"></span><span class="hc h2" title="2 jul · 18 commits"></span><span class="hc h2" title="3 jul · 16 commits"></span><span class="hc h0" title="4 jul · 0 commits"></span><span class="hc h0" title="5 jul · 0 commits"></span><span class="hc h1" title="6 jul · 2 commits"></span><span class="hc h1" title="7 jul · 6 commits"></span><span class="hc h1" title="8 jul · 6 commits"></span><span class="hc h2" title="9 jul · 17 commits"></span><span class="hc h1" title="10 jul · 9 commits"></span><span class="hc h1" title="11 jul · 1 commit"></span><span class="hc h0" title="12 jul · 0 commits"></span><span class="hc h1" title="13 jul · 9 commits"></span><span class="hc h1" title="14 jul · 4 commits"></span><span class="hc h2" title="15 jul · 17 commits"></span><span class="hc h1" title="16 jul · 9 commits"></span><span class="hc h2" title="17 jul · 16 commits"></span><span class="hc h0" title="18 jul · 0 commits"></span><span class="hc h0" title="19 jul · 0 commits"></span><span class="hc h1" title="20 jul · 3 commits"></span><span class="hc h1" title="21 jul · 7 commits"></span><span class="hc h1" title="22 jul · 9 commits"></span><span class="hc h1" title="23 jul · 7 commits"></span><span class="hc h2" title="24 jul · 12 commits"></span><span class="hc h0" title="25 jul · 0 commits"></span><span class="hc h0" title="26 jul · 0 commits"></span><span class="hc h0" title="27 jul · 0 commits"></span><span class="hc h1" title="28 jul · 4 commits"></span><span class="hc h1" title="29 jul · 1 commit"></span><span class="hc h2" title="30 jul · 11 commits"></span><span class="hc h2" title="31 jul · 14 commits"></span><span class="hc h0" title="1 ago · 0 commits"></span><span class="hc h1" title="2 ago · 1 commit"></span><span class="hc h4" title="3 ago · 40 commits"></span><span class="hc h2" title="4 ago · 15 commits"></span><span class="hc h1" title="5 ago · 9 commits"></span><span class="hc h1" title="6 ago · 5 commits"></span><span class="hc h2" title="7 ago · 19 commits"></span><span class="hc h1" title="8 ago · 4 commits"></span><span class="hc h0" title="9 ago · 0 commits"></span><span class="hc h2" title="10 ago · 20 commits"></span><span class="hc h1" title="11 ago · 6 commits"></span><span class="hc h1" title="12 ago · 8 commits"></span><span class="hc h1" title="13 ago · 5 commits"></span><span class="hc h2" title="14 ago · 11 commits"></span><span class="hc h0" title="15 ago · 0 commits"></span><span class="hc h0" title="16 ago · 0 commits"></span><span class="hc h3" title="17 ago · 22 commits"></span><span class="hc h2" title="18 ago · 16 commits"></span><span class="hc h1" title="19 ago · 7 commits"></span></div></div>
     </div>
   </section>
 
@@ -434,10 +469,10 @@
     <div class="card-top">
       <span class="card-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="currentColor" stroke="none"><circle cx="6" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="18" cy="12" r="1.5"/></g></svg></span>
       <div class="card-h"><h3>Otros</h3><div class="card-who"><span class="who angel"><span class="swatch sw-navy"></span>Angel</span><span class="who auto"><span class="swatch sw-auto"></span>Automatización</span><span class="who eug"><span class="swatch sw-eug"></span>Eugenio</span></div></div>
-      <span class="card-n">27<span>commits</span></span>
+      <span class="card-n">29<span>commits</span></span>
     </div>
-    <svg class="spark" viewBox="0 0 108 26" preserveAspectRatio="none" aria-hidden="true"><path class="spark-a" d="M0 26 L0.0 22.5 L8.3 18.8 L16.6 20.6 L24.9 11.6 L33.2 12.9 L41.5 4.9 L49.8 3.0 L58.2 20.0 L66.5 9.8 L74.8 16.6 L83.1 18.4 L91.4 12.6 L99.7 22.8 L108.0 16.3 L108 26 Z"/><path class="spark-l" d="M0.0 22.5 L8.3 18.8 L16.6 20.6 L24.9 11.6 L33.2 12.9 L41.5 4.9 L49.8 3.0 L58.2 20.0 L66.5 9.8 L74.8 16.6 L83.1 18.4 L91.4 12.6 L99.7 22.8 L108.0 16.3"/></svg>
-    <ul><li style="--li:0">toggle ES/EN <span class="lh">5b07a3e</span></li><li style="--li:1">reposicionar el indicador segmentado en cualquier ancho <span class="lh">8927003</span></li><li style="--li:2">traducción EN/ES de los botones y textos <span class="lh">6e6a5f7</span></li><li style="--li:3">Noticias del portafolio (auto) <span class="lh">6413128</span></li><li style="--li:4">Noticias del portafolio (auto) <span class="lh">0a62e57</span></li><li style="--li:5">Descargar como acción principal (naranja) + abrir en pestaña <span class="lh">7c40642</span></li><li style="--li:6">tarjetas desplegables (nombre visible, preview al hover) <span class="lh">112fd5e</span></li><li style="--li:7">botón Descargar visible en tarjeta y vista previa <span class="lh">cd9cfa8</span></li><li style="--li:8">permitir scripts en la vista previa (allow-scripts) <span class="lh">134d3c9</span></li><li style="--li:9">la ruta es enlace — clic navega a esa carpeta <span class="lh">c7c4057</span></li><li style="--li:10">Noticias del portafolio (auto) <span class="lh">b6749ae</span></li><li style="--li:11">cadencia horaria <span class="lh">635d5ba</span></li><li style="--li:12">Noticias del portafolio (auto) <span class="lh">85edccb</span></li><li style="--li:12">restaurar desglose fila-por-bloque en SPX_STRUCTURES (formato original) <span class="lh">722a94b</span></li><li style="--li:12">Noticias del portafolio (auto) <span class="lh">1dfd5ad</span></li><li style="--li:12">fuera tambien el bono del export Liquidez y del Reporte SpaceX (textos y fila condicional) <span class="lh">95534d2</span></li><li style="--li:12">eliminar bono +10% de estructuras y Reporte SpaceX (no se activo) <span class="lh">c63a6ae</span></li><li style="--li:12">calendarios cuadrados al doc oficial Release Dates 22J/22K (29-jul-2026) <span class="lh">bd895c7</span></li><li style="--li:12">Noticias del portafolio (auto) <span class="lh">7c47d7d</span></li><li style="--li:12">cabecera como botón naranja con texto y flecha en blanco <span class="lh">40f655c</span></li><li style="--li:12">cabecera desplegable con flecha, colapsado por defecto <span class="lh">b6bd7e4</span></li><li style="--li:12">resumen en español + botón &quot;Leer noticia&quot; + widget en el home Cretum <span class="lh">0cc8c49</span></li><li style="--li:12">/blog en pestañas (Noticias principal + Avances) <span class="lh">0bd0875</span></li><li style="--li:12">Tablero del equipo en home MVP: avisos/noticias/eventos de Slack + notas manuales <span class="lh">da68cd5</span></li><li style="--li:12">cache 60s (antes 300) — el deck de casos de estudio ahora refresca cada minuto <span class="lh">53fff7f</span></li><li style="--li:12">arreglar corte a 1000 filas (días recientes se perdían) <span class="lh">c37857c</span></li><li style="--li:12">Ordenar pegado a Filtrar (quita margin-left:auto) <span class="lh">fb3d56e</span></li></ul>
+    <svg class="spark" viewBox="0 0 108 26" preserveAspectRatio="none" aria-hidden="true"><path class="spark-a" d="M0 26 L0.0 22.5 L8.3 18.8 L16.6 20.6 L24.9 11.6 L33.2 12.9 L41.5 4.9 L49.8 3.0 L58.2 20.0 L66.5 9.8 L74.8 16.6 L83.1 18.4 L91.4 12.6 L99.7 22.8 L108.0 15.7 L108 26 Z"/><path class="spark-l" d="M0.0 22.5 L8.3 18.8 L16.6 20.6 L24.9 11.6 L33.2 12.9 L41.5 4.9 L49.8 3.0 L58.2 20.0 L66.5 9.8 L74.8 16.6 L83.1 18.4 L91.4 12.6 L99.7 22.8 L108.0 15.7"/></svg>
+    <ul><li style="--li:0">rediseño del par de botones del header <span class="lh">fb93c29</span></li><li style="--li:1">corrige carga atascada por apóstrofe en el JS generado <span class="lh">0168635</span></li><li style="--li:2">toggle ES/EN <span class="lh">5b07a3e</span></li><li style="--li:3">reposicionar el indicador segmentado en cualquier ancho <span class="lh">8927003</span></li><li style="--li:4">traducción EN/ES de los botones y textos <span class="lh">6e6a5f7</span></li><li style="--li:5">Noticias del portafolio (auto) <span class="lh">6413128</span></li><li style="--li:6">Noticias del portafolio (auto) <span class="lh">0a62e57</span></li><li style="--li:7">Descargar como acción principal (naranja) + abrir en pestaña <span class="lh">7c40642</span></li><li style="--li:8">tarjetas desplegables (nombre visible, preview al hover) <span class="lh">112fd5e</span></li><li style="--li:9">botón Descargar visible en tarjeta y vista previa <span class="lh">cd9cfa8</span></li><li style="--li:10">permitir scripts en la vista previa (allow-scripts) <span class="lh">134d3c9</span></li><li style="--li:11">la ruta es enlace — clic navega a esa carpeta <span class="lh">c7c4057</span></li><li style="--li:12">Noticias del portafolio (auto) <span class="lh">b6749ae</span></li><li style="--li:12">cadencia horaria <span class="lh">635d5ba</span></li><li style="--li:12">Noticias del portafolio (auto) <span class="lh">85edccb</span></li><li style="--li:12">restaurar desglose fila-por-bloque en SPX_STRUCTURES (formato original) <span class="lh">722a94b</span></li><li style="--li:12">Noticias del portafolio (auto) <span class="lh">1dfd5ad</span></li><li style="--li:12">fuera tambien el bono del export Liquidez y del Reporte SpaceX (textos y fila condicional) <span class="lh">95534d2</span></li><li style="--li:12">eliminar bono +10% de estructuras y Reporte SpaceX (no se activo) <span class="lh">c63a6ae</span></li><li style="--li:12">calendarios cuadrados al doc oficial Release Dates 22J/22K (29-jul-2026) <span class="lh">bd895c7</span></li><li style="--li:12">Noticias del portafolio (auto) <span class="lh">7c47d7d</span></li><li style="--li:12">cabecera como botón naranja con texto y flecha en blanco <span class="lh">40f655c</span></li><li style="--li:12">cabecera desplegable con flecha, colapsado por defecto <span class="lh">b6bd7e4</span></li><li style="--li:12">resumen en español + botón &quot;Leer noticia&quot; + widget en el home Cretum <span class="lh">0cc8c49</span></li><li style="--li:12">/blog en pestañas (Noticias principal + Avances) <span class="lh">0bd0875</span></li><li style="--li:12">Tablero del equipo en home MVP: avisos/noticias/eventos de Slack + notas manuales <span class="lh">da68cd5</span></li><li style="--li:12">cache 60s (antes 300) — el deck de casos de estudio ahora refresca cada minuto <span class="lh">53fff7f</span></li><li style="--li:12">arreglar corte a 1000 filas (días recientes se perdían) <span class="lh">c37857c</span></li><li style="--li:12">Ordenar pegado a Filtrar (quita margin-left:auto) <span class="lh">fb3d56e</span></li></ul>
   </article>
 <article class="card reveal" data-owner="angel auto">
     <div class="card-top">
@@ -498,28 +533,28 @@
   <section id="personas" class="wrap sec">
     <div class="sec-head"><h2 class="type">Qué hizo cada quien</h2></div>
     <div class="ppl"><div class="prow reveal">
-    <div class="phead"><span class="swatch sw-navy"></span><span class="pname">Angel · producto</span><span class="pcount">42</span></div>
+    <div class="phead"><span class="swatch sw-navy"></span><span class="pname">Angel · producto</span><span class="pcount">44</span></div>
     <div class="pbar"><div class="pbar-fill fill-angel" style="--s:1.000"></div></div>
-    <div class="pcommits"><div class="cl" style="--li:0"><span class="h">5b07a3e</span><span>toggle ES/EN</span></div><div class="cl" style="--li:1"><span class="h">741caa3</span><span>importar por CSV/Excel + más traducciones EN/ES</span></div><div class="cl" style="--li:2"><span class="h">8927003</span><span>reposicionar el indicador segmentado en cualquier ancho</span></div><div class="cl" style="--li:3"><span class="h">6e6a5f7</span><span>traducción EN/ES de los botones y textos</span></div><div class="cl" style="--li:4"><span class="h">7c40642</span><span>Descargar como acción principal (naranja) + abrir en pestaña</span></div><div class="cl" style="--li:5"><span class="h">112fd5e</span><span>tarjetas desplegables (nombre visible, preview al hover)</span></div><div class="pmore">+36 más</div></div>
+    <div class="pcommits"><div class="cl" style="--li:0"><span class="h">fb93c29</span><span>rediseño del par de botones del header</span></div><div class="cl" style="--li:1"><span class="h">0168635</span><span>corrige carga atascada por apóstrofe en el JS generado</span></div><div class="cl" style="--li:2"><span class="h">5b07a3e</span><span>toggle ES/EN</span></div><div class="cl" style="--li:3"><span class="h">741caa3</span><span>importar por CSV/Excel + más traducciones EN/ES</span></div><div class="cl" style="--li:4"><span class="h">8927003</span><span>reposicionar el indicador segmentado en cualquier ancho</span></div><div class="cl" style="--li:5"><span class="h">6e6a5f7</span><span>traducción EN/ES de los botones y textos</span></div><div class="pmore">+38 más</div></div>
   </div>
 <div class="prow reveal">
     <div class="phead"><span class="swatch sw-auto"></span><span class="pname">Automatización GVV</span><span class="pcount">11</span></div>
-    <div class="pbar"><div class="pbar-fill fill-auto" style="--s:0.262"></div></div>
+    <div class="pbar"><div class="pbar-fill fill-auto" style="--s:0.250"></div></div>
     <div class="pcommits"><div class="cl" style="--li:0"><span class="h">6413128</span><span>Noticias del portafolio (auto)</span></div><div class="cl" style="--li:1"><span class="h">0a62e57</span><span>Noticias del portafolio (auto)</span></div><div class="cl" style="--li:2"><span class="h">b6749ae</span><span>Noticias del portafolio (auto)</span></div><div class="cl" style="--li:3"><span class="h">85edccb</span><span>Noticias del portafolio (auto)</span></div><div class="cl" style="--li:4"><span class="h">1dfd5ad</span><span>Noticias del portafolio (auto)</span></div><div class="cl" style="--li:5"><span class="h">246ab2d</span><span>cierre automatico Julio 2026</span></div><div class="pmore">+5 más</div></div>
   </div>
 <div class="prow reveal">
     <div class="phead"><span class="swatch sw-eug"></span><span class="pname">Eugenio</span><span class="pcount">9</span></div>
-    <div class="pbar"><div class="pbar-fill fill-eug" style="--s:0.214"></div></div>
+    <div class="pbar"><div class="pbar-fill fill-eug" style="--s:0.205"></div></div>
     <div class="pcommits"><div class="cl" style="--li:0"><span class="h">722a94b</span><span>restaurar desglose fila-por-bloque en SPX_STRUCTURES (formato original)</span></div><div class="cl" style="--li:1"><span class="h">6206330</span><span>calendario combinado por ANCLA (directos 6-ago vs fondos 9-sep)</span></div><div class="cl" style="--li:2"><span class="h">95534d2</span><span>fuera tambien el bono del export Liquidez y del Reporte SpaceX (textos y fila condicional)</span></div><div class="cl" style="--li:3"><span class="h">c63a6ae</span><span>eliminar bono +10% de estructuras y Reporte SpaceX (no se activo)</span></div><div class="cl" style="--li:4"><span class="h">bd895c7</span><span>calendarios cuadrados al doc oficial Release Dates 22J/22K (29-jul-2026)</span></div><div class="cl" style="--li:5"><span class="h">e1ad5f1</span><span>cifras de las notas verificadas contra paginas oficiales (2026-08-17)</span></div><div class="pmore">+3 más</div></div>
   </div></div>
   </section>
 
   <section id="registro" class="wrap sec">
-    <div class="sec-head"><h2 class="type">Registro de GitHub</h2><span class="sec-meta">62 commits</span></div>
+    <div class="sec-head"><h2 class="type">Registro de GitHub</h2><span class="sec-meta">64 commits</span></div>
     <div class="search reveal"><svg class="ic ic-s" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="q" type="search" placeholder="Buscar en los commits (módulo, texto, hash…)" autocomplete="off" aria-label="Buscar commits"></div>
     <div class="logbody reveal" id="logbody">
-  <div class="day"><p class="day-h">19 ago · 5 commits</p>
-    <div class="lrow" style="--li:0"><span class="lw sw-navy"></span><span class="lh">5b07a3e</span><span>Noticias (/blog): toggle ES/EN</span></div><div class="lrow" style="--li:1"><span class="lw sw-navy"></span><span class="lh">741caa3</span><span>Contactos: importar por CSV/Excel + más traducciones EN/ES</span></div><div class="lrow" style="--li:2"><span class="lw sw-navy"></span><span class="lh">8927003</span><span>Tabs: reposicionar el indicador segmentado en cualquier ancho</span></div><div class="lrow" style="--li:3"><span class="lw sw-navy"></span><span class="lh">6e6a5f7</span><span>HTML&#39;s MVP: traducción EN/ES de los botones y textos</span></div><div class="lrow" style="--li:4"><span class="lw sw-auto"></span><span class="lh">6413128</span><span>Noticias del portafolio (auto)</span></div>
+  <div class="day"><p class="day-h">19 ago · 7 commits</p>
+    <div class="lrow" style="--li:0"><span class="lw sw-navy"></span><span class="lh">fb93c29</span><span>HTML&#39;s MVP: rediseño del par de botones del header</span></div><div class="lrow" style="--li:1"><span class="lw sw-navy"></span><span class="lh">0168635</span><span>Noticias (/blog): corrige carga atascada por apóstrofe en el JS generado</span></div><div class="lrow" style="--li:2"><span class="lw sw-navy"></span><span class="lh">5b07a3e</span><span>Noticias (/blog): toggle ES/EN</span></div><div class="lrow" style="--li:3"><span class="lw sw-navy"></span><span class="lh">741caa3</span><span>Contactos: importar por CSV/Excel + más traducciones EN/ES</span></div><div class="lrow" style="--li:4"><span class="lw sw-navy"></span><span class="lh">8927003</span><span>Tabs: reposicionar el indicador segmentado en cualquier ancho</span></div><div class="lrow" style="--li:5"><span class="lw sw-navy"></span><span class="lh">6e6a5f7</span><span>HTML&#39;s MVP: traducción EN/ES de los botones y textos</span></div><div class="lrow" style="--li:6"><span class="lw sw-auto"></span><span class="lh">6413128</span><span>Noticias del portafolio (auto)</span></div>
   </div>
   <div class="day"><p class="day-h">18 ago · 16 commits</p>
     <div class="lrow" style="--li:0"><span class="lw sw-auto"></span><span class="lh">0a62e57</span><span>Noticias del portafolio (auto)</span></div><div class="lrow" style="--li:1"><span class="lw sw-navy"></span><span class="lh">7c40642</span><span>HTML&#39;s MVP: Descargar como acción principal (naranja) + abrir en pestaña</span></div><div class="lrow" style="--li:2"><span class="lw sw-navy"></span><span class="lh">112fd5e</span><span>HTML&#39;s MVP: tarjetas desplegables (nombre visible, preview al hover)</span></div><div class="lrow" style="--li:3"><span class="lw sw-navy"></span><span class="lh">cd9cfa8</span><span>HTML&#39;s MVP: botón Descargar visible en tarjeta y vista previa</span></div><div class="lrow" style="--li:4"><span class="lw sw-navy"></span><span class="lh">134d3c9</span><span>HTML&#39;s MVP: permitir scripts en la vista previa (allow-scripts)</span></div><div class="lrow" style="--li:5"><span class="lw sw-navy"></span><span class="lh">37f955a</span><span>Ventas (MVP): nueva sección &quot;HTML&#39;s MVP&quot; para subir/pegar HTML y copiar</span></div><div class="lrow" style="--li:6"><span class="lw sw-navy"></span><span class="lh">c7c4057</span><span>Actividad de Dropbox: la ruta es enlace — clic navega a esa carpeta</span></div><div class="lrow" style="--li:7"><span class="lw sw-auto"></span><span class="lh">b6749ae</span><span>Noticias del portafolio (auto)</span></div><div class="lrow" style="--li:8"><span class="lw sw-navy"></span><span class="lh">12cd25a</span><span>Dropbox: renombrar archivos desde el desk (editor/admin, con registro)</span></div><div class="lrow" style="--li:9"><span class="lw sw-navy"></span><span class="lh">635d5ba</span><span>Tablero Slack MVP: cadencia horaria</span></div><div class="lrow" style="--li:10"><span class="lw sw-navy"></span><span class="lh">92b5b61</span><span>Dropbox: action=diag (candado CRON_SECRET) para depurar cuenta/namespace</span></div><div class="lrow" style="--li:11"><span class="lw sw-navy"></span><span class="lh">4b29e6c</span><span>Dropbox: eliminar archivos desde el desk (editor/admin, con registro)</span></div><div class="lrow" style="--li:12"><span class="lw sw-navy"></span><span class="lh">9ed2812</span><span>Dropbox: llave de caché del access token ligada al refresh token</span></div><div class="lrow" style="--li:13"><span class="lw sw-navy"></span><span class="lh">d0f8b92</span><span>Dropbox: recordar la carpeta actual entre recargas</span></div><div class="lrow" style="--li:14"><span class="lw sw-navy"></span><span class="lh">2a1f1f6</span><span>Dropbox: subir archivos desde el desk + registro interno de actividad</span></div><div class="lrow" style="--li:14"><span class="lw sw-auto"></span><span class="lh">85edccb</span><span>Noticias del portafolio (auto)</span></div>
@@ -547,7 +582,7 @@
 </footer>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>
-const SUMMARY = "Blog semanal · Cretum Desk (12 ago 2026 – 19 ago 2026)\n62 commits — Angel 42 · Automatización 11 · Eugenio 9\n\nPor módulo:\n• Otros: 27\n• Plataforma: 12\n• Dropbox: 7\n• Campañas · Carta: 7\n• GVV · Datos: 5\n• Reportes: 3\n• Ventas · Plantillas: 1";
+const SUMMARY = "Blog semanal · Cretum Desk (12 ago 2026 – 19 ago 2026)\n64 commits — Angel 44 · Automatización 11 · Eugenio 9\n\nPor módulo:\n• Otros: 29\n• Plataforma: 12\n• Dropbox: 7\n• Campañas · Carta: 7\n• GVV · Datos: 5\n• Reportes: 3\n• Ventas · Plantillas: 1";
 (function(){
   "use strict";
   var reduce = matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -691,12 +726,16 @@ const SUMMARY = "Blog semanal · Cretum Desk (12 ago 2026 – 19 ago 2026)\n62 c
   // ── Noticias del portafolio (lee /data/company-news.json) ──
   function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
   function ago(iso){ var d = new Date(iso); if (isNaN(d)) return ''; var s = (Date.now() - d.getTime())/1000; if (s < 3600) return Math.max(1, Math.round(s/60)) + ' min'; if (s < 86400) return Math.round(s/3600) + ' h'; return Math.round(s/86400) + ' d'; }
-  var newsData = null, newsCo = 'all';
-  // Idioma de las noticias: comparte la llave 'lang' con el dashboard. Las notas traen
-  // title (original en inglés) y title_es (traducido) → el toggle elige cuál mostrar.
+  var newsData = null;
+  var newsSel = {};   // multi-selección de empresas {empresa:true}; vacío = todas
+  // Idioma: comparte la llave 'lang' con el dashboard. Cada nota trae title (inglés
+  // original) y title_es (traducido) → el toggle elige cuál mostrar.
   var newsLang = (function(){ try { return localStorage.getItem('lang') === 'en' ? 'en' : 'es'; } catch(e){ return 'es'; } })();
   function NT(es, en){ return newsLang === 'en' ? en : es; }
+  function setTx(id, tx){ var el = document.getElementById(id); if (el) el.textContent = tx; }
   var grid = document.getElementById('newsGrid');
+
+  // ── Idioma ES/EN ──
   (function wireNewsLang(){
     var lb = document.getElementById('newsLang'); if (!lb) return;
     lb.querySelectorAll('.nl-btn').forEach(function(b){
@@ -705,38 +744,114 @@ const SUMMARY = "Blog semanal · Cretum Desk (12 ago 2026 – 19 ago 2026)\n62 c
         newsLang = b.getAttribute('data-nlang');
         try { localStorage.setItem('lang', newsLang); } catch(e){}
         lb.querySelectorAll('.nl-btn').forEach(function(x){ x.classList.toggle('on', x === b); });
-        renderMeta(); renderFilter(); renderNews();
+        renderNewsHero(); renderMeta(); buildFilterList(); updateFilterBtn(); renderNews();
       });
     });
   })();
+
+  // ── Hero (traducible) ──
+  function renderNewsHero(){
+    setTx('newsEyebrowTx', NT('Novedades del portafolio', 'Portfolio news'));
+    setTx('newsH1', NT('Noticias de las empresas en seguimiento', 'News from the companies we track'));
+    var lede = document.getElementById('newsLede');
+    if (lede) lede.innerHTML = NT(
+      'Titulares recientes de las compañías donde invierte el portafolio, de <b>medios confiables</b> (Reuters, Bloomberg, TechCrunch, CNBC, FT…). Se actualiza varias veces al día.',
+      'Recent headlines from the companies the portfolio invests in, from <b>trusted outlets</b> (Reuters, Bloomberg, TechCrunch, CNBC, FT…). Updated several times a day.'
+    );
+  }
   function renderMeta(){
     if (!newsData) return;
-    var mc = document.getElementById('newsMetaCount'); if (mc) mc.textContent = newsData.count + NT(' notas · ', ' stories · ') + (newsData.companies ? newsData.companies.length : 0) + NT(' empresas', ' companies');
-    var mw = document.getElementById('newsMetaWhen'); if (mw) mw.textContent = ago(newsData.generated) + NT(' atrás', ' ago');
+    setTx('newsMetaCount', newsData.count + NT(' notas · ', ' stories · ') + (newsData.companies ? newsData.companies.length : 0) + NT(' empresas', ' companies'));
+    setTx('newsMetaWhenLbl', NT('actualizado', 'updated'));
+    setTx('newsMetaWhen', ago(newsData.generated) + NT(' atrás', ' ago'));
   }
+
+  // ── Filtro desplegable (multi-empresa) ──
+  function newsCompanies(){ return Object.keys(newsData.items.reduce(function(a, i){ a[i.company] = 1; return a; }, {})).sort(); }
+  function selCount(){ return Object.keys(newsSel).length; }
+  function updateFilterBtn(){
+    var lbl = document.getElementById('newsFilterLabel'); if (!lbl) return;
+    var n = selCount();
+    if (!n) lbl.textContent = NT('Todas las empresas', 'All companies');
+    else if (n === 1) lbl.textContent = Object.keys(newsSel)[0];
+    else lbl.textContent = n + NT(' empresas', ' companies');
+    var clr = document.getElementById('newsFilterClear'); if (clr) clr.style.visibility = n ? 'visible' : 'hidden';
+  }
+  function buildFilterList(){
+    var box = document.getElementById('newsFilterList'); if (!box || !newsData) return;
+    setTx('newsFilterHint', NT('Filtra según la(s) empresa(s) que sean de tu interés.', 'Filter by the companies you care about.'));
+    var srch = document.getElementById('newsFilterSearch'); if (srch) srch.placeholder = NT('Buscar empresa…', 'Search company…');
+    setTx('newsFilterClear', NT('Limpiar', 'Clear'));
+    box.innerHTML = newsCompanies().map(function(co){
+      return '<div class="ncf-opt' + (newsSel[co] ? ' on' : '') + '" data-co="' + esc(co) + '"><span class="ncf-check">' + (newsSel[co] ? '✓' : '') + '</span><span class="ncf-nm">' + esc(co) + '</span></div>';
+    }).join('');
+    box.querySelectorAll('.ncf-opt').forEach(function(o){
+      o.addEventListener('click', function(){
+        var co = o.getAttribute('data-co');
+        if (newsSel[co]) delete newsSel[co]; else newsSel[co] = true;
+        o.classList.toggle('on', !!newsSel[co]);
+        var c = o.querySelector('.ncf-check'); if (c) c.textContent = newsSel[co] ? '✓' : '';
+        updateFilterBtn(); renderNews();
+      });
+    });
+  }
+  window.filterNewsFilterList = function(q){
+    q = (q || '').toLowerCase();
+    document.querySelectorAll('#newsFilterList .ncf-opt').forEach(function(o){
+      o.style.display = o.getAttribute('data-co').toLowerCase().indexOf(q) >= 0 ? '' : 'none';
+    });
+  };
+  window.newsFilterClear = function(){
+    newsSel = {};
+    document.querySelectorAll('#newsFilterList .ncf-opt').forEach(function(o){ o.classList.remove('on'); var c = o.querySelector('.ncf-check'); if (c) c.textContent = ''; });
+    updateFilterBtn(); renderNews();
+  };
+  window.toggleNewsFilter = function(e){
+    if (e) e.stopPropagation();
+    var d = document.getElementById('newsCddf'); if (!d) return;
+    var open = d.classList.toggle('open');
+    var btn = document.getElementById('newsFilterBtn'); if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  };
+  document.addEventListener('click', function(e){
+    var d = document.getElementById('newsCddf');
+    if (d && d.classList.contains('open') && !d.contains(e.target)) { d.classList.remove('open'); var btn = document.getElementById('newsFilterBtn'); if (btn) btn.setAttribute('aria-expanded', 'false'); }
+  });
+
+  // ── Carga ──
   fetch('/data/company-news.json', { cache: 'no-store' }).then(function(r){ if(!r.ok) throw 0; return r.json(); }).then(function(d){
     newsData = d;
-    renderMeta(); renderFilter(); renderNews();
+    renderNewsHero(); renderMeta(); buildFilterList(); updateFilterBtn(); renderNews();
   }).catch(function(){ if (grid) grid.innerHTML = '<div class="news-empty">' + NT('No se pudieron cargar las noticias. Reintenta en un momento.', "Couldn't load the news. Try again in a moment.") + '</div>'; });
-  function renderFilter(){
-    var f = document.getElementById('newsFilter'); if (!f || !newsData) return;
-    var cos = Object.keys(newsData.items.reduce(function(a, i){ a[i.company] = 1; return a; }, {})).sort();
-    f.innerHTML = '<button class="nf-chip' + (newsCo === 'all' ? ' on' : '') + '" data-co="all">' + NT('Todas', 'All') + '</button>' + cos.map(function(co){ return '<button class="nf-chip' + (newsCo === co ? ' on' : '') + '" data-co="' + esc(co) + '">' + esc(co) + '</button>'; }).join('');
-    f.querySelectorAll('.nf-chip').forEach(function(b){ b.addEventListener('click', function(){ newsCo = b.getAttribute('data-co'); f.querySelectorAll('.nf-chip').forEach(function(x){ x.classList.toggle('on', x === b); }); renderNews(); }); });
+
+  // ── Tarjetas (con destacada = la más reciente) ──
+  function titleOf(i){ return newsLang === 'en' ? (i.title || i.title_es) : (i.title_es || i.title); }
+  function cardHtml(i, idx){
+    return '<article class="news-card" style="--i:' + Math.min(idx, 24) + '" title="' + esc(i.title) + '">'
+      + '<div class="news-top"><span class="news-co">' + esc(i.company) + '</span><span class="news-time">' + ago(i.published) + '</span></div>'
+      + '<div class="news-title">' + esc(titleOf(i)) + '</div>'
+      + '<div class="news-foot"><span class="news-src">' + esc(i.source) + '</span>'
+      + '<a class="news-btn" href="' + esc(i.url) + '" target="_blank" rel="noopener">' + NT('Leer noticia', 'Read the story') + ' <span aria-hidden="true">↗</span></a></div>'
+      + '</article>';
+  }
+  function featHtml(i){
+    return '<article class="news-card feat" title="' + esc(i.title) + '">'
+      + '<div class="news-feat-head"><span class="news-feat-tag"><span class="fdot"></span>' + NT('Lo más reciente', 'Latest') + '</span><span class="news-time">' + ago(i.published) + '</span></div>'
+      + '<div class="news-top"><span class="news-co">' + esc(i.company) + '</span></div>'
+      + '<div class="news-title">' + esc(titleOf(i)) + '</div>'
+      + '<div class="news-foot"><span class="news-src">' + esc(i.source) + '</span>'
+      + '<a class="news-btn" href="' + esc(i.url) + '" target="_blank" rel="noopener">' + NT('Leer noticia', 'Read the story') + ' <span aria-hidden="true">↗</span></a></div>'
+      + '</article>';
   }
   function renderNews(){
     if (!grid || !newsData) return;
-    var items = newsData.items;
-    if (newsCo !== 'all') items = items.filter(function(i){ return i.company === newsCo; });
+    var items = newsData.items.slice().sort(function(a, b){ return new Date(b.published) - new Date(a.published); });
+    var sel = Object.keys(newsSel);
+    if (sel.length) items = items.filter(function(i){ return newsSel[i.company]; });
     if (!items.length){ grid.innerHTML = '<div class="news-empty">' + NT('Sin noticias para este filtro por ahora.', 'No news for this filter yet.') + '</div>'; return; }
-    grid.innerHTML = items.map(function(i, idx){
-      return '<article class="news-card" style="--i:' + Math.min(idx, 24) + '" title="' + esc(i.title) + '">'
-        + '<div class="news-top"><span class="news-co">' + esc(i.company) + '</span><span class="news-time">' + ago(i.published) + '</span></div>'
-        + '<div class="news-title">' + esc(newsLang === 'en' ? (i.title || i.title_es) : (i.title_es || i.title)) + '</div>'
-        + '<div class="news-foot"><span class="news-src">' + esc(i.source) + '</span>'
-        + '<a class="news-btn" href="' + esc(i.url) + '" target="_blank" rel="noopener">' + NT('Leer noticia', 'Read the story') + ' <span aria-hidden="true">↗</span></a></div>'
-        + '</article>';
-    }).join('');
+    var html = '';
+    if (items.length >= 4) { html = featHtml(items[0]) + items.slice(1).map(function(i, k){ return cardHtml(i, k); }).join(''); }
+    else { html = items.map(function(i, k){ return cardHtml(i, k); }).join(''); }
+    grid.innerHTML = html;
   }
 })();
 </script>
