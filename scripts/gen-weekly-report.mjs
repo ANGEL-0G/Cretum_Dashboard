@@ -323,6 +323,10 @@ ${STYLE()}
       <button class="tab on" data-pane="noticias" role="tab" aria-selected="true">Noticias</button>
       <button class="tab" data-pane="avances" role="tab" aria-selected="false">Avances del desk</button>
     </div>
+    <div class="news-lang" id="newsLang" role="group" aria-label="Idioma de las noticias">
+      <button type="button" class="nl-btn" data-nlang="es">ES</button>
+      <button type="button" class="nl-btn" data-nlang="en">EN</button>
+    </div>
     <button class="iconbtn only-ic" id="themeBtn" title="Cambiar tema" aria-label="Cambiar tema">${ICON('moon', 'ic-moon')}${ICON('sun', 'ic-sun')}</button>
   </div>
 </nav>
@@ -353,10 +357,6 @@ ${STYLE()}
             <div class="news-cddf-list" id="newsFilterList"></div>
             <div class="news-cddf-foot"><button type="button" class="news-cddf-clear" id="newsFilterClear" onclick="newsFilterClear()">Limpiar</button></div>
           </div>
-        </div>
-        <div class="news-lang" id="newsLang" role="group" aria-label="Idioma de las noticias">
-          <button type="button" class="nl-btn" data-nlang="es">ES</button>
-          <button type="button" class="nl-btn" data-nlang="en">EN</button>
         </div>
       </div>
       <div class="news-grid" id="newsGrid"><div class="news-empty">Cargando noticias…</div></div>
@@ -527,6 +527,7 @@ const SUMMARY = ${JSON.stringify(summaryText)};
     if (!panes[name]) return;
     tabs.forEach(function(t){ var on = t.getAttribute('data-pane') === name; t.classList.toggle('on', on); t.setAttribute('aria-selected', on ? 'true' : 'false'); });
     Object.keys(panes).forEach(function(k){ panes[k].hidden = (k !== name); });
+    var nl = document.getElementById('newsLang'); if (nl) nl.style.display = (name === 'noticias') ? '' : 'none';   // el idioma solo aplica a Noticias
     // Revela lo que quedó oculto por vivir en una pestaña no visible.
     panes[name].querySelectorAll('.reveal').forEach(function(r){ r.classList.add('in'); });
     window.scrollTo(0, 0);
@@ -912,7 +913,7 @@ function STYLE() {
   /* Título editorial de Noticias (sin typewriter): grande, confiado */
   .hnews-title{font-size:clamp(30px,5.4vw,50px);line-height:1.05;letter-spacing:-.03em;font-weight:700;margin:0 0 16px;text-wrap:balance;color:var(--ink)}
   /* ── Barra: filtro desplegable (multi-empresa) + idioma ── */
-  .news-bar{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center;justify-content:space-between;margin-bottom:24px}
+  .news-bar{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center;justify-content:flex-start;margin-bottom:24px}
   .news-cddf{position:relative;flex:0 1 auto;min-width:0}
   .news-cddf-btn{display:inline-flex;align-items:center;gap:9px;max-width:100%;font-family:inherit;font-size:13.5px;font-weight:600;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 14px;cursor:pointer;box-shadow:var(--raise);transition:border-color .15s ease,transform .12s var(--ease-out)}
   .news-cddf-btn .ti{color:var(--navy-2);flex:0 0 auto}
@@ -937,8 +938,8 @@ function STYLE() {
   .news-cddf-foot{display:flex;justify-content:flex-end;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
   .news-cddf-clear{font:inherit;font-size:12.5px;font-weight:600;color:var(--navy-2);background:none;border:0;cursor:pointer;padding:5px 9px;border-radius:8px}
   @media (hover:hover){.news-cddf-clear:hover{background:var(--navy-pale)}}
-  .news-lang{display:inline-flex;flex:0 0 auto;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px;gap:3px;box-shadow:var(--raise)}
-  .nl-btn{font-size:12px;font-weight:600;letter-spacing:.03em;padding:7px 15px;border-radius:999px;cursor:pointer;background:none;border:0;color:var(--ink-mute);font-family:inherit;transition:background .15s ease,color .15s ease}
+  .news-lang{display:inline-flex;flex:0 0 auto;background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:2px;gap:2px}
+  .nl-btn{font-size:11.5px;font-weight:600;letter-spacing:.03em;padding:5px 12px;border-radius:999px;cursor:pointer;background:none;border:0;color:var(--ink-mute);font-family:inherit;transition:background .15s ease,color .15s ease}
   .nl-btn.on{background:var(--navy);color:#fff}
   @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .nl-btn.on{color:#0C121E}}
   :root[data-theme="dark"] .nl-btn.on{color:#0C121E}
