@@ -1170,6 +1170,10 @@ const EN = {
   'Mes anterior': 'Previous month',
   'Mes siguiente': 'Next month',
   'Sin eventos este día.': 'No events on this day.',
+  'Conecta tu calendario para ver aquí tus próximos eventos. Es privado: solo tú ves tu calendario.': 'Connect your calendar to see your upcoming events here. It’s private: only you can see your calendar.',
+  'Conectar Google': 'Connect Google',
+  'Reconectar Outlook': 'Reconnect Outlook',
+  'Reconectar Google': 'Reconnect Google',
 };
 
 let LANG = 'es';

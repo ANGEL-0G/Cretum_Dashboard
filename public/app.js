@@ -3881,8 +3881,14 @@ const CAL_SCOPES = ['Calendars.Read'];
 let calMsal = null, calAccount = null, calEvents = null;
 let calState = 'idle';   // idle | loading | ready | error | needlogin
 const CAL_MES = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+// Google Calendar (Workspace, p. ej. MVP) — segundo proveedor opcional; se fusiona con Outlook.
+const GCAL_CLIENT_ID = '553388476798-2gqc2i72rt6k1peja7q9og6h91qapt0m.apps.googleusercontent.com';
+const GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly';
+let gcalTokenClient = null, gcalToken = null, gcalTokenExp = 0, gcalNeed = false, calMsNeed = false;
 
 function calOn() { try { return localStorage.getItem('cal-on') === '1'; } catch (e) { return false; } }
+function calGOn() { try { return localStorage.getItem('gcal-on') === '1'; } catch (e) { return false; } }
+function calAnyOn() { return calOn() || calGOn(); }
 function calCollapsed() { try { return localStorage.getItem('ce-collapsed') === '1'; } catch (e) { return false; } }
 function calToggleCollapse() {
   const host = document.getElementById('homeEvents'); const card = host && host.querySelector('.hb-card');
@@ -3909,7 +3915,9 @@ async function calToken() {
   try { const r = await calMsal.acquireTokenSilent(req); return r.accessToken; }
   catch (e) { const r = await calMsal.acquireTokenPopup(req); calAccount = r.account; return r.accessToken; }
 }
-async function calFetchRange(startDate, endDate, top) {
+// ── Outlook (Microsoft Graph) ──
+async function calFetchMS(startDate, endDate, top) {
+  await calInit();
   const token = await calToken();
   const url = 'https://graph.microsoft.com/v1.0/me/calendarView'
     + '?startDateTime=' + encodeURIComponent(startDate.toISOString())
@@ -3919,6 +3927,55 @@ async function calFetchRange(startDate, endDate, top) {
   if (!r.ok) throw new Error('graph ' + r.status);
   const j = await r.json();
   return j.value || [];
+}
+// ── Google (Google Calendar API vía GIS token client) ──
+async function gcalInit() {
+  if (gcalTokenClient) return;
+  await loadScript('https://accounts.google.com/gsi/client');
+  gcalTokenClient = google.accounts.oauth2.initTokenClient({ client_id: GCAL_CLIENT_ID, scope: GCAL_SCOPE, callback: () => {} });
+}
+function gcalGetToken(interactive) {
+  return new Promise((resolve, reject) => {
+    if (gcalToken && Date.now() < gcalTokenExp) return resolve(gcalToken);
+    gcalTokenClient.callback = (resp) => {
+      if (resp && resp.access_token) {
+        gcalToken = resp.access_token; gcalTokenExp = Date.now() + ((resp.expires_in || 3600) * 1000) - 60000; gcalNeed = false; resolve(resp.access_token);
+      } else { gcalNeed = true; reject(new Error('gcal token')); }
+    };
+    gcalTokenClient.error_callback = (err) => { gcalNeed = true; reject(err || new Error('gcal error')); };
+    try { gcalTokenClient.requestAccessToken({ prompt: interactive ? 'consent' : '' }); }
+    catch (e) { gcalNeed = true; reject(e); }
+  });
+}
+// Normaliza un evento de Google a la MISMA forma que Outlook (subject/start/end/location/isAllDay/webLink).
+function gcalNormalize(g) {
+  const allday = !!(g.start && g.start.date && !g.start.dateTime);
+  const s = g.start && (g.start.dateTime || (g.start.date ? g.start.date + 'T00:00:00' : null));
+  const e = g.end && (g.end.dateTime || (g.end.date ? g.end.date + 'T00:00:00' : null));
+  return { subject: g.summary || '', start: { dateTime: s }, end: { dateTime: e }, location: { displayName: g.location || '' }, isAllDay: allday, webLink: g.htmlLink || '' };
+}
+async function calFetchGoogle(startDate, endDate, top) {
+  await gcalInit();
+  const token = await gcalGetToken(false);
+  const url = 'https://www.googleapis.com/calendar/v3/calendars/primary/events'
+    + '?timeMin=' + encodeURIComponent(startDate.toISOString())
+    + '&timeMax=' + encodeURIComponent(endDate.toISOString())
+    + '&singleEvents=true&orderBy=startTime&maxResults=' + (top || 50);
+  const r = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+  if (r.status === 401) { gcalToken = null; gcalNeed = true; throw new Error('gcal 401'); }
+  if (!r.ok) throw new Error('gcal ' + r.status);
+  const j = await r.json();
+  return (j.items || []).map(gcalNormalize);
+}
+// Fusiona los proveedores conectados; el error de uno no tumba al otro.
+async function calFetchRange(startDate, endDate, top) {
+  const parts = [];
+  if (calOn()) parts.push(calFetchMS(startDate, endDate, top).catch(e => { console.error('[cal MS]', e); calMsNeed = true; return []; }));
+  if (calGOn()) parts.push(calFetchGoogle(startDate, endDate, top).catch(e => { console.error('[cal Google]', e); return []; }));
+  const results = await Promise.all(parts);
+  const merged = [].concat.apply([], results);
+  merged.sort((a, b) => { const da = calEvDate(a), db = calEvDate(b); return (da ? da.getTime() : 0) - (db ? db.getTime() : 0); });
+  return merged;
 }
 // Widget del home: próximos 45 días (de ahí se filtra "esta semana").
 async function calFetch() {
@@ -3969,8 +4026,8 @@ let calBooting = false;
 async function calBootstrap() {
   if (calBooting) return; calBooting = true;
   try {
-    await calInit();
-    if (!calAccount) { calState = 'needlogin'; calRender(); return; }
+    if (calOn()) { try { await calInit(); if (!calAccount) calMsNeed = true; } catch (e) { console.error('[cal MS init]', e); calMsNeed = true; } }
+    if (calGOn()) { try { await gcalInit(); } catch (e) { console.error('[cal Google init]', e); } }
     await calRefresh();
   } catch (e) { console.error('[eventos-cretum init]', e); calState = 'error'; calRender(); }
   finally { calBooting = false; }
@@ -3980,19 +4037,43 @@ async function calConnect() {
     calState = 'loading'; calRender();
     await calInit();
     const r = await calMsal.loginPopup({ scopes: CAL_SCOPES, prompt: 'select_account' });
-    calAccount = r.account;
+    calAccount = r.account; calMsNeed = false;
     try { localStorage.setItem('cal-on', '1'); } catch (e) {}
+    calMonthCache && Object.keys(calMonthCache).forEach(k => delete calMonthCache[k]);
     await calRefresh();
   } catch (e) {
     console.error('[eventos-cretum connect]', e);
-    calState = calAccount ? 'error' : 'needlogin';
+    calMsNeed = true; calState = calAnyOn() ? 'ready' : 'idle';
+    calRender();
+  }
+}
+async function gcalConnect() {
+  try {
+    calState = 'loading'; calRender();
+    await gcalInit();
+    await gcalGetToken(true);   // interactivo (gesto del usuario → permite el popup de Google)
+    gcalNeed = false;
+    try { localStorage.setItem('gcal-on', '1'); } catch (e) {}
+    Object.keys(calMonthCache).forEach(k => delete calMonthCache[k]);
+    await calRefresh();
+  } catch (e) {
+    console.error('[eventos-cretum google connect]', e);
+    gcalNeed = true; calState = calAnyOn() ? 'ready' : 'idle';
     calRender();
   }
 }
 function calDisconnect() {
   try { localStorage.removeItem('cal-on'); } catch (e) {}
-  calEvents = null; calState = 'idle';
-  calRender();
+  calAccount = null; calMsNeed = false; calEvents = null;
+  Object.keys(calMonthCache).forEach(k => delete calMonthCache[k]);
+  if (calGOn()) { calState = 'loading'; calRefresh(); } else { calState = 'idle'; calRender(); }
+}
+function gcalDisconnect() {
+  try { if (gcalToken && window.google && google.accounts && google.accounts.oauth2) google.accounts.oauth2.revoke(gcalToken); } catch (e) {}
+  try { localStorage.removeItem('gcal-on'); } catch (e) {}
+  gcalToken = null; gcalTokenExp = 0; gcalNeed = false; calEvents = null;
+  Object.keys(calMonthCache).forEach(k => delete calMonthCache[k]);
+  if (calOn()) { calState = 'loading'; calRefresh(); } else { calState = 'idle'; calRender(); }
 }
 
 // Fila de un evento (reusa el estilo hb-ev del tablero).
@@ -4017,20 +4098,16 @@ function calEventHTML(ev) {
 
 // Estados compartidos (conectar / cargando / sesión expirada / error). Devuelve null si "ready".
 function calNonReadyHTML() {
-  const on = calOn();
-  if (!on || calState === 'idle') {
+  if (!calAnyOn() || calState === 'idle') {
     return `<div class="cal-cta">
-      <p class="cal-cta-tx">${t('Conecta tu Outlook para ver aquí tus próximos eventos. Es privado: solo tú ves tu calendario.')}</p>
-      <button class="cal-connect" onclick="calConnect()"><i class="fa-brands fa-microsoft"></i> ${t('Conectar Outlook')}</button>
+      <p class="cal-cta-tx">${t('Conecta tu calendario para ver aquí tus próximos eventos. Es privado: solo tú ves tu calendario.')}</p>
+      <div class="cal-cta-btns">
+        <button class="cal-connect" onclick="calConnect()"><i class="fa-brands fa-microsoft"></i> ${t('Conectar Outlook')}</button>
+        <button class="cal-connect cal-connect-g" onclick="gcalConnect()"><i class="fa-brands fa-google"></i> ${t('Conectar Google')}</button>
+      </div>
     </div>`;
   }
   if (calState === 'loading') return `<div class="hb-empty"><i class="fa-solid fa-circle-notch fa-spin"></i> ${t('Cargando tus eventos…')}</div>`;
-  if (calState === 'needlogin') {
-    return `<div class="cal-cta">
-      <p class="cal-cta-tx">${t('Tu sesión de Outlook expiró. Vuelve a conectarla para ver tus eventos.')}</p>
-      <button class="cal-connect" onclick="calConnect()"><i class="fa-brands fa-microsoft"></i> ${t('Conectar Outlook')}</button>
-    </div>`;
-  }
   if (calState === 'error') {
     return `<div class="cal-cta">
       <p class="cal-cta-tx">${t('No se pudieron cargar tus eventos.')}</p>
@@ -4039,9 +4116,25 @@ function calNonReadyHTML() {
   }
   return null;
 }
+// Pie: por cada proveedor conectado, la cuenta + ✕; para el no conectado, un botón para sumarlo; + Actualizar.
 function calFootHTML() {
-  const who = calAccount && calAccount.username ? escapeHtml(calAccount.username) : '';
-  return `<div class="cal-foot">${who ? `<span class="cal-who">${who}</span>` : ''}<button class="cal-mini" onclick="calRefresh()"><i class="fa-solid fa-rotate"></i> ${t('Actualizar')}</button><button class="cal-mini" onclick="calDisconnect()">${t('Desconectar')}</button></div>`;
+  const parts = [];
+  if (calOn()) {
+    parts.push(calMsNeed
+      ? `<button class="cal-mini cal-recon" onclick="calConnect()"><i class="fa-brands fa-microsoft"></i> ${t('Reconectar Outlook')}</button>`
+      : `<span class="cal-who"><i class="fa-brands fa-microsoft"></i> ${calAccount && calAccount.username ? escapeHtml(calAccount.username) : 'Outlook'} <button class="cal-x" onclick="calDisconnect()" title="${t('Desconectar')}" aria-label="${t('Desconectar')}">✕</button></span>`);
+  } else {
+    parts.push(`<button class="cal-mini" onclick="calConnect()"><i class="fa-brands fa-microsoft"></i> ${t('Conectar Outlook')}</button>`);
+  }
+  if (calGOn()) {
+    parts.push(gcalNeed
+      ? `<button class="cal-mini cal-recon" onclick="gcalConnect()"><i class="fa-brands fa-google"></i> ${t('Reconectar Google')}</button>`
+      : `<span class="cal-who"><i class="fa-brands fa-google"></i> Google <button class="cal-x" onclick="gcalDisconnect()" title="${t('Desconectar')}" aria-label="${t('Desconectar')}">✕</button></span>`);
+  } else {
+    parts.push(`<button class="cal-mini" onclick="gcalConnect()"><i class="fa-brands fa-google"></i> ${t('Conectar Google')}</button>`);
+  }
+  parts.push(`<button class="cal-mini" onclick="calRefresh()"><i class="fa-solid fa-rotate"></i> ${t('Actualizar')}</button>`);
+  return `<div class="cal-foot">${parts.join('')}</div>`;
 }
 // Fin de la semana actual (domingo 23:59, hora local).
 function calEndOfWeek() {
@@ -4114,7 +4207,7 @@ function renderHomeEvents() {
   if (!host) return;
   if (currentOrg !== 'cretum' || currentView !== 'home' || hmActive()) { host.style.display = 'none'; return; }
   host.style.display = '';
-  if (calOn() && calState === 'idle') { calState = 'loading'; calBootstrap(); }
+  if (calAnyOn() && calState === 'idle') { calState = 'loading'; calBootstrap(); }
   const collapsed = calCollapsed();
   host.innerHTML = `<div class="hb-card${collapsed ? ' collapsed' : ''}">
     <button class="hb-toggle" onclick="calToggleCollapse()" aria-expanded="${!collapsed}">
@@ -4128,7 +4221,7 @@ function renderHomeEvents() {
 function renderCalPage() {
   const host = document.getElementById('calPage');
   if (!host || currentView !== 'calendario') return;
-  if (calOn() && calState === 'idle') { calState = 'loading'; calBootstrap(); }
+  if (calAnyOn() && calState === 'idle') { calState = 'loading'; calBootstrap(); }
   host.innerHTML = `<div class="hb-card cal-card">${calMonthGridHTML()}</div>`;
 }
 function calRender() { renderHomeEvents(); renderCalPage(); renderHomeModular(); }
@@ -4259,7 +4352,7 @@ async function hnEnsureNews() {
 // Calendario adaptativo: reducido = lista de la semana; expandido (≥7 cols y
 // ≥380px de alto) = cuadrícula mensual completa (la misma de la página Calendario).
 function hwCalBody(c) {
-  if (calOn() && calState === 'idle') { calState = 'loading'; calBootstrap(); }
+  if (calAnyOn() && calState === 'idle') { calState = 'loading'; calBootstrap(); }
   const wide = c.w >= 7 && c.h >= 380;
   if (!wide) return calWidgetBody();
   return `<div class="hw-cal-mes">${calMonthGridHTML()}</div>`;
