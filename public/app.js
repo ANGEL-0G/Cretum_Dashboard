@@ -13980,9 +13980,11 @@ function lstSetView(v) {
 }
 
 // Reposiciona los indicadores de los sliders al cambiar el tamaño de ventana.
+// Reposiciona TODOS los indicadores segmentados al cambiar el tamaño de la ventana.
+// (segMove ignora los ocultos por el guard de offsetWidth, así que es seguro barrerlos
+// todos: aptTabsTrack, campFrenteTrack, campTabsTrack, lstViewTrack, tdSeg…)
 window.addEventListener('resize', () => requestAnimationFrame(() => {
-  segMove('campTabsTrack', false);
-  segMove('lstViewTrack', false);
+  document.querySelectorAll('.seg-track').forEach(tr => segMove(tr, false));
 }));
 
 function renderListas() {
