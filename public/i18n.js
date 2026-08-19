@@ -1042,6 +1042,8 @@ const EN = {
   'Solo nombres': 'Names only',
   'Mostrar iconos': 'Show icons',
   'Redimensionar': 'Resize',
+  'Arrastra para mover': 'Drag to move',
+  'Tamaño de iconos': 'Icon size',
   'Cargando noticias…': 'Loading news…',
   'Sin noticias por ahora.': 'No news yet.',
   'Todos los módulos están ocultos. Agrégalos desde la vista Principal.': 'All modules are hidden. Add them back from the Main view.',

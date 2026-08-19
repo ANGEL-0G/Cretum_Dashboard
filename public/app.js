@@ -4141,7 +4141,7 @@ function calRender() { renderHomeEvents(); renderCalPage(); renderHomeModular();
    localStorage. La vista "Principal" queda intacta.
 ═══════════════════════════════════════════ */
 const HW_DEF = {
-  modules:  { on: 1, icons: 1, w: 12, h: 300 },
+  modules:  { on: 1, icons: 1, size: 1, w: 12, h: 300 },
   calendar: { on: 1, w: 6, h: 340 },
   news:     { on: 1, w: 6, h: 340 },
 };
@@ -4163,6 +4163,9 @@ function hwCfg() {
   try { c = JSON.parse(localStorage.getItem(hwCfgKey()) || '{}'); } catch (e) {}
   const out = {};
   for (const k of Object.keys(HW_DEF)) out[k] = { ...HW_DEF[k], ...(c[k] || {}) };
+  // Orden de las ventanas (drag para mover): claves válidas guardadas + las que falten
+  const saved = Array.isArray(c.order) ? c.order.filter(k => HW_DEF[k]) : [];
+  out.order = [...saved, ...Object.keys(HW_DEF).filter(k => !saved.includes(k))];
   return out;
 }
 function hwSave(cfg) { try { localStorage.setItem(hwCfgKey(), JSON.stringify(cfg)); } catch (e) {} }
@@ -4184,7 +4187,8 @@ function hwModulesBody(cfg) {
   const { visible } = homeOrderedModules();
   if (!visible.length) return `<div class="hb-empty">${t('Todos los módulos están ocultos. Agrégalos desde la vista Principal.')}</div>`;
   const icons = cfg.modules.icons;
-  return `<div class="hw-mods${icons ? '' : ' noico'}">` + visible.map(m => {
+  const sz = cfg.modules.size === 2 ? ' sz2' : cfg.modules.size === 3 ? ' sz3' : '';
+  return `<div class="hw-mods${icons ? '' : ' noico'}${sz}">` + visible.map(m => {
     const pulse = (m.view === 'tasks' && pendingInviteCount() > 0) ? '<span class="hw-mod-pulse"></span>' : '';
     const ico = icons ? `<span class="hw-mod-ico"><i class="${m.iconBrand ? 'fa-brands' : 'fa-solid'} ${m.icon}"></i></span>` : '';
     return `<button class="hw-mod" onclick="switchView('${m.view}')">${ico}<span class="hw-mod-t">${t(m.title)}</span>${pulse}</button>`;
@@ -4215,12 +4219,13 @@ function hwWindowHTML(key, cfg) {
   const c = cfg[key], meta = HW_META[key];
   const acts = [];
   if (key === 'modules') {
+    acts.push(`<button class="hw-act" onclick="hwCycleSize()" title="${t('Tamaño de iconos')}" aria-label="${t('Tamaño de iconos')}"><i class="fa-solid fa-magnifying-glass-plus"></i></button>`);
     acts.push(`<button class="hw-act${c.icons ? ' on' : ''}" onclick="hwToggleIcons()" title="${c.icons ? t('Solo nombres') : t('Mostrar iconos')}"><i class="fa-solid fa-shapes"></i></button>`);
   }
   acts.push(`<button class="hw-act" onclick="hwToggle('${key}')" title="${t('Ocultar ventana')}" aria-label="${t('Ocultar ventana')}"><i class="fa-regular fa-eye-slash"></i></button>`);
   const body = key === 'modules' ? hwModulesBody(cfg) : key === 'news' ? hwNewsBody() : hwCalBody();
   return `<section class="hw" data-hw="${key}" style="grid-column:span ${c.w};height:${c.h}px">
-    <div class="hw-head"><i class="fa-solid ${meta.ico} hw-hico"></i><span class="hw-title">${t(meta.title)}</span><div class="hw-acts">${acts.join('')}</div></div>
+    <div class="hw-head" title="${t('Arrastra para mover')}" onpointerdown="hwDragStart(event)"><i class="fa-solid ${meta.ico} hw-hico"></i><span class="hw-title">${t(meta.title)}</span><div class="hw-acts">${acts.join('')}</div></div>
     <div class="hw-body">${body}</div>
     <div class="hw-grip" title="${t('Redimensionar')}" onpointerdown="hwResizeStart(event,'${key}')"></div>
   </section>`;
@@ -4231,7 +4236,7 @@ function renderHomeModular() {
   if (!host) return;
   if (!hmActive() || currentView !== 'home') { host.style.display = 'none'; return; }
   const cfg = hwCfg();
-  const keys = ['modules', 'calendar', 'news'];
+  const keys = cfg.order;
   const on = keys.filter(k => cfg[k].on);
   const off = keys.filter(k => !cfg[k].on);
   const offRow = off.length
@@ -4243,6 +4248,53 @@ function renderHomeModular() {
 
 function hwToggle(key) { const cfg = hwCfg(); cfg[key].on = cfg[key].on ? 0 : 1; hwSave(cfg); renderHomeModular(); }
 function hwToggleIcons() { const cfg = hwCfg(); cfg.modules.icons = cfg.modules.icons ? 0 : 1; hwSave(cfg); renderHomeModular(); }
+// Tamaño de los módulos dentro de la ventana: chico → mediano → grande → chico
+function hwCycleSize() { const cfg = hwCfg(); cfg.modules.size = (cfg.modules.size % 3) + 1; hwSave(cfg); renderHomeModular(); }
+
+/* Mover ventanas: drag desde el header (Pointer Events, funciona en touch).
+   Mientras arrastras, la ventana se reacomoda en vivo sobre la retícula;
+   al soltar se guarda el orden. */
+let hwDrag = null;
+function hwDragStart(e) {
+  if (e.target.closest('.hw-act')) return;   // los botones del header no inician drag
+  const el = e.target.closest('.hw'); if (!el) return;
+  hwDrag = { el, x0: e.clientX, y0: e.clientY, moved: false };
+  document.addEventListener('pointermove', hwDragMove);
+  document.addEventListener('pointerup', hwDragEnd, { once: true });
+}
+function hwDragMove(e) {
+  if (!hwDrag) return;
+  if (!hwDrag.moved) {
+    // umbral: un click en el header no debe contar como drag
+    if (Math.abs(e.clientX - hwDrag.x0) + Math.abs(e.clientY - hwDrag.y0) < 7) return;
+    hwDrag.moved = true;
+    hwDrag.el.classList.add('hw-dragging');
+    document.body.classList.add('hw-noselect');
+  }
+  e.preventDefault();
+  // La ventana arrastrada tiene pointer-events:none → elementFromPoint ve lo de abajo
+  const under = document.elementFromPoint(e.clientX, e.clientY);
+  const over = under && under.closest ? under.closest('.hw') : null;
+  if (!over || over === hwDrag.el) return;
+  const grid = document.getElementById('homeModular');
+  const nodes = [...grid.querySelectorAll('.hw')];
+  if (nodes.indexOf(hwDrag.el) < nodes.indexOf(over)) over.after(hwDrag.el);
+  else over.before(hwDrag.el);
+}
+function hwDragEnd() {
+  document.removeEventListener('pointermove', hwDragMove);
+  document.body.classList.remove('hw-noselect');
+  if (!hwDrag) return;
+  if (hwDrag.moved) {
+    hwDrag.el.classList.remove('hw-dragging');
+    const cfg = hwCfg();
+    const domOrder = [...document.querySelectorAll('#homeModular .hw')].map(x => x.dataset.hw);
+    cfg.order = [...domOrder, ...cfg.order.filter(k => !domOrder.includes(k))];  // ocultas conservan su lugar
+    hwSave(cfg);
+    renderHomeModular();
+  }
+  hwDrag = null;
+}
 
 /* Resize con Pointer Events: snap a la retícula de 12 columnas, alto libre 200–720px */
 let hwRz = null;

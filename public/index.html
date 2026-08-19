@@ -2280,7 +2280,10 @@ a.hb-t:hover{color:var(--navy)}
 .hw{position:relative;display:flex;flex-direction:column;min-width:0;background:#fff;border:1px solid var(--gray-200);border-radius:14px}
 [data-theme="dark"] .hw{background:var(--gray-50)}
 .hw.resizing{border-color:var(--navy);box-shadow:0 0 0 3px var(--navy-pale)}
-.hw-head{display:flex;align-items:center;gap:8px;padding:11px 16px 8px;flex:0 0 auto}
+.hw-head{display:flex;align-items:center;gap:8px;padding:11px 16px 8px;flex:0 0 auto;cursor:grab;touch-action:none}
+.hw-head:active{cursor:grabbing}
+.hw.hw-dragging{opacity:.6;pointer-events:none;border-color:var(--navy);box-shadow:0 0 0 3px var(--navy-pale),0 12px 32px rgba(0,0,0,.16)}
+body.hw-noselect{cursor:grabbing}
 .hw-hico{font-size:12px;color:var(--navy)}
 .hw-title{font-size:12px;font-weight:600;color:var(--gray-700);text-transform:uppercase;letter-spacing:.5px}
 .hw-acts{margin-left:auto;display:flex;gap:2px}
@@ -2308,6 +2311,17 @@ a.hb-t:hover{color:var(--navy)}
 .hw-mod-ico{width:28px;height:28px;border-radius:8px;background:var(--navy-pale);color:var(--navy);display:flex;align-items:center;justify-content:center;font-size:12px;flex:0 0 auto}
 .hw-mod-t{font-size:12.5px;font-weight:500;color:var(--gray-900);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .hw-mod-pulse{position:absolute;top:7px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--red)}
+/* Tamaños de los módulos (botón lupa del header): sz2 mediano, sz3 grande */
+.hw-mods.sz2{grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+.hw-mods.sz2 .hw-mod{padding:12px 14px;gap:11px}
+.hw-mods.sz2 .hw-mod-ico{width:38px;height:38px;font-size:16px;border-radius:10px}
+.hw-mods.sz2 .hw-mod-t{font-size:13.5px}
+.hw-mods.sz3{grid-template-columns:repeat(auto-fill,minmax(214px,1fr));gap:12px}
+.hw-mods.sz3 .hw-mod{padding:15px 16px;gap:13px}
+.hw-mods.sz3 .hw-mod-ico{width:46px;height:46px;font-size:20px;border-radius:13px}
+.hw-mods.sz3 .hw-mod-t{font-size:14.5px}
+.hw-mods.noico.sz2{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.hw-mods.noico.sz3{grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}
 /* Móvil: apilado a lo ancho, sin resize (el alto elegido se respeta con scroll interno) */
 @media (max-width:760px){
   .home-modular{grid-template-columns:1fr;gap:12px}
