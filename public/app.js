@@ -4463,6 +4463,10 @@ window.__afterLang = function () {
     if (typeof renderNavList === 'function') renderNavList();
     if (typeof render === 'function' && currentUser) render();
     if (typeof setSyncStatus === 'function') setSyncStatus(window.__syncState || 'ok');
+    // HTML's MVP: si el panel está abierto, re-pinta las tarjetas para que el
+    // texto dinámico (Actualizado…, botones) tome el nuevo idioma.
+    if (typeof mhRenderGrid === 'function' && document.getElementById('ventasHtmls')
+        && document.getElementById('ventasHtmls').style.display !== 'none') mhRenderGrid();
   } catch (e) { console.error('[afterLang]', e); }
 };
 
@@ -5320,41 +5324,42 @@ function mhRenderGrid() {
   if (!mhData.length) {
     grid.innerHTML = `<div class="et-empty">
       <div class="et-empty-ico"><i class="fa-solid fa-code"></i></div>
-      <h3>Aún no hay HTML's</h3>
-      <p>Sube un archivo .html o pega el código de un correo. Luego cópialo y pégalo en Outlook o Gmail.</p>
-      <button class="btn-primary" onclick="mhNewOpen()"><i class="fa-solid fa-plus"></i> Nuevo HTML</button>
+      <h3>${t("Aún no hay HTML's")}</h3>
+      <p>${t('Sube un archivo .html o pega el código de un correo. Luego cópialo y pégalo en Outlook o Gmail.')}</p>
+      <button class="btn-primary" onclick="mhNewOpen()"><i class="fa-solid fa-plus"></i> ${t('Nuevo HTML')}</button>
     </div>`;
     return;
   }
   // Tarjeta "desplegable": compacta muestra solo el nombre; al pasar el mouse el
   // preview se revela deslizándose de abajo hacia arriba. En táctil (sin hover) el
   // preview queda visible por CSS. Clic en el nombre → vista previa a pantalla completa.
-  grid.innerHTML = mhData.map(t => {
-    const who = USERS[t.created_by]?.name || '';
-    const when = t.updated_at ? fmtCreated(t.updated_at) : '';
+  // (item = `it`, no `t`, para no tapar la función de traducción t()).
+  grid.innerHTML = mhData.map(it => {
+    const who = USERS[it.created_by]?.name || '';
+    const when = it.updated_at ? fmtCreated(it.updated_at) : '';
     return `
     <div class="mh-card">
-      <button class="mh-tab" onclick="event.stopPropagation();mhOpenTab('${t.id}')" title="Abrir en otra pestaña a pantalla completa" aria-label="Abrir en otra pestaña"><i class="fa-solid fa-arrow-up-right-from-square"></i></button>
-      <button class="mh-top" onclick="mhPreviewOpen('${t.id}')" title="Ver en grande">
+      <button class="mh-tab" onclick="event.stopPropagation();mhOpenTab('${it.id}')" title="${t('Abrir en otra pestaña a pantalla completa')}" aria-label="${t('Abrir en otra pestaña')}"><i class="fa-solid fa-arrow-up-right-from-square"></i></button>
+      <button class="mh-top" onclick="mhPreviewOpen('${it.id}')" title="${t('Ver en grande')}">
         <span class="mh-top-ico"><i class="fa-solid fa-file-code"></i></span>
         <span class="mh-top-tx">
-          <span class="mh-top-title">${escapeHtml(t.title || 'HTML')}</span>
-          <span class="mh-top-meta">Actualizado ${when}${who ? ' · ' + escapeHtml(who) : ''}</span>
+          <span class="mh-top-title">${escapeHtml(it.title || 'HTML')}</span>
+          <span class="mh-top-meta">${t('Actualizado')} ${when}${who ? ' · ' + escapeHtml(who) : ''}</span>
         </span>
       </button>
       <div class="mh-reveal">
-        <iframe id="mhrev-${t.id}" class="mh-reveal-frame" sandbox="allow-scripts" scrolling="no" tabindex="-1" aria-hidden="true"></iframe>
+        <iframe id="mhrev-${it.id}" class="mh-reveal-frame" sandbox="allow-scripts" scrolling="no" tabindex="-1" aria-hidden="true"></iframe>
       </div>
       <div class="et-card-foot">
-        <button class="mh-download-primary" onclick="mhDownload('${t.id}')" title="Descargar el archivo .html (para abrir en el navegador o mandar por WhatsApp)"><i class="fa-solid fa-download"></i> Descargar</button>
-        <button class="mh-copy-secondary" onclick="mhCopy('${t.id}')"><i class="fa-solid fa-copy"></i> Copiar</button>
-        <button class="et-kebab" onclick="mhMenu('${t.id}', this)" aria-label="Más opciones"><i class="fa-solid fa-ellipsis"></i></button>
+        <button class="mh-download-primary" onclick="mhDownload('${it.id}')" title="${t('Descargar el archivo .html (para abrir en el navegador o mandar por WhatsApp)')}"><i class="fa-solid fa-download"></i> ${t('Descargar')}</button>
+        <button class="mh-copy-secondary" onclick="mhCopy('${it.id}')"><i class="fa-solid fa-copy"></i> ${t('Copiar')}</button>
+        <button class="et-kebab" onclick="mhMenu('${it.id}', this)" aria-label="${t('Más opciones')}"><i class="fa-solid fa-ellipsis"></i></button>
       </div>
     </div>`;
   }).join('');
-  mhData.forEach(t => {
-    const fr = document.getElementById('mhrev-' + t.id);
-    if (fr) fr.srcdoc = t.html || '<div style="font-family:sans-serif;color:#9aa;padding:16px">(vacío)</div>';
+  mhData.forEach(it => {
+    const fr = document.getElementById('mhrev-' + it.id);
+    if (fr) fr.srcdoc = it.html || '<div style="font-family:sans-serif;color:#9aa;padding:16px">(vacío)</div>';
   });
 }
 
@@ -5362,11 +5367,11 @@ function mhCopy(id) { const t = mhData.find(x => x.id === id); if (t) etCopyHtml
 // Abre el HTML en una pestaña nueva a pantalla completa (blob URL → corre su JS,
 // se ve tal cual, ideal para los HTML que necesitan JavaScript).
 function mhOpenTab(id) {
-  const t = mhData.find(x => x.id === id);
-  if (!t) return;
-  const url = URL.createObjectURL(new Blob([t.html || ''], { type: 'text/html;charset=utf-8' }));
+  const it = mhData.find(x => x.id === id);
+  if (!it) return;
+  const url = URL.createObjectURL(new Blob([it.html || ''], { type: 'text/html;charset=utf-8' }));
   const w = window.open(url, '_blank', 'noopener');
-  if (!w) toast('Permite las ventanas emergentes para abrirlo');
+  if (!w) toast(t('Permite las ventanas emergentes para abrirlo'));
   setTimeout(() => URL.revokeObjectURL(url), 60000);   // deja tiempo a que cargue
 }
 function mhDownload(id) {
@@ -5380,7 +5385,7 @@ function mhMenu(id, btn) {
   etClosePops();
   const pop = document.getElementById('etPop');
   pop.innerHTML = `
-    <button class="et-mi danger" onclick="etClosePops();mhDeleteById('${id}')"><i class="fa-solid fa-trash"></i> Eliminar</button>`;
+    <button class="et-mi danger" onclick="etClosePops();mhDeleteById('${id}')"><i class="fa-solid fa-trash"></i> ${t('Eliminar')}</button>`;
   etPositionPop(pop, btn);
 }
 
@@ -5395,17 +5400,17 @@ function mhNewClose() { document.getElementById('mhModal').classList.remove('sho
 async function mhNewSave() {
   const title = (document.getElementById('mhTitle').value || '').trim();
   const html = document.getElementById('mhCode').value || '';
-  if (!title) { toast('Ponle un nombre'); document.getElementById('mhTitle').focus(); return; }
-  if (!html.trim()) { toast('Pega el código HTML'); document.getElementById('mhCode').focus(); return; }
+  if (!title) { toast(t('Ponle un nombre')); document.getElementById('mhTitle').focus(); return; }
+  if (!html.trim()) { toast(t('Pega el código HTML')); document.getElementById('mhCode').focus(); return; }
   try {
     const { error } = await sb.from('mvp_htmls').insert({ title, html, created_by: currentUser });
     if (error) throw error;
     mhNewClose();
-    toast('HTML guardado');
+    toast(t('HTML guardado'));
     loadMvpHtmls();
   } catch (err) {
     const falta = /relation|does not exist|schema cache|column/i.test(err.message || '');
-    toast('No se pudo guardar' + (falta ? ': falta la migración de BD (db/21_mvp_htmls.sql)' : ''));
+    toast(t('No se pudo guardar') + (falta ? ': ' + t('falta la migración de BD') : ''));
   }
 }
 
@@ -5414,7 +5419,7 @@ function mhFilePick() { document.getElementById('mhFile').click(); }
 function mhOnFile(ev) { const fs = ev.target.files; if (fs && fs.length) mhImportFiles(fs); ev.target.value = ''; }
 async function mhImportFiles(fileList) {
   const files = [...(fileList || [])].filter(etIsHtmlFile);
-  if (!files.length) { toast('Sube un archivo .html'); return; }
+  if (!files.length) { toast(t('Sube un archivo .html')); return; }
   let ok = 0;
   for (const f of files) {
     try {
@@ -5424,8 +5429,8 @@ async function mhImportFiles(fileList) {
       if (!error) ok++;
     } catch (e) { /* sigue con los demás */ }
   }
-  if (ok) { toast(ok === 1 ? 'HTML guardado' : `${ok} HTML's guardados`); loadMvpHtmls(); }
-  else toast('No se pudo subir el archivo');
+  if (ok) { toast(ok === 1 ? t('HTML guardado') : t("{n} HTML's guardados", { n: ok })); loadMvpHtmls(); }
+  else toast(t('No se pudo subir el archivo'));
 }
 // Arrastrar-y-soltar un .html sobre el panel = guardarlo (cablea una sola vez).
 let mhDropWired = false;
@@ -5447,25 +5452,25 @@ function mhWireDrop() {
 
 /* ── Eliminar (biblioteca compartida del equipo) ── */
 async function mhDeleteById(id) {
-  const t = mhData.find(x => x.id === id);
-  const ok = await showConfirm('¿Eliminar HTML?', `"${t?.title || ''}" se borrará para todo el equipo. No se puede deshacer.`);
+  const it = mhData.find(x => x.id === id);
+  const ok = await showConfirm(t('¿Eliminar HTML?'), t('"{t}" se borrará para todo el equipo. No se puede deshacer.', { t: it?.title || '' }));
   if (!ok) return;
   try {
     const { error } = await sb.from('mvp_htmls').delete().eq('id', id);
     if (error) throw error;
     if (mhPrevId === id) mhPreviewClose();
     loadMvpHtmls();
-    toast('HTML eliminado');
-  } catch (err) { toast('No se pudo eliminar'); }
+    toast(t('HTML eliminado'));
+  } catch (err) { toast(t('No se pudo eliminar')); }
 }
 
 /* ── Vista previa a pantalla completa (solo lectura) ── */
 function mhPreviewOpen(id) {
-  const t = mhData.find(x => x.id === id);
-  if (!t) return;
+  const it = mhData.find(x => x.id === id);
+  if (!it) return;
   mhPrevId = id;
-  document.getElementById('mhPreviewTitle').textContent = t.title || 'Vista previa';
-  document.getElementById('mhPreviewFrame').srcdoc = t.html || '';
+  document.getElementById('mhPreviewTitle').textContent = it.title || t('Vista previa');
+  document.getElementById('mhPreviewFrame').srcdoc = it.html || '';
   document.getElementById('mhPreview').classList.add('show');
 }
 function mhPreviewClose() {
