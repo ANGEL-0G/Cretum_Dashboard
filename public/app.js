@@ -3937,16 +3937,35 @@ async function gcalInit() {
   await loadScript('https://accounts.google.com/gsi/client');
   gcalTokenClient = google.accounts.oauth2.initTokenClient({ client_id: GCAL_CLIENT_ID, scope: GCAL_SCOPE, callback: () => {} });
 }
-function gcalGetToken(interactive) {
+// Rescata el token guardado (sobrevive recargas ~1 h). GIS no da refresh token en el
+// navegador, así que sin esto se "cerraba sesión" en cada recarga.
+function gcalLoadTok() {
+  if (gcalToken && Date.now() < gcalTokenExp) return true;
+  try {
+    const tk = localStorage.getItem('gcal-tok'); const ex = +(localStorage.getItem('gcal-exp') || 0);
+    if (tk && ex && Date.now() < ex) { gcalToken = tk; gcalTokenExp = ex; return true; }
+  } catch (e) {}
+  return false;
+}
+function gcalSaveTok() {
+  try { localStorage.setItem('gcal-tok', gcalToken || ''); localStorage.setItem('gcal-exp', String(gcalTokenExp || 0)); } catch (e) {}
+}
+function gcalClearTok() {
+  gcalToken = null; gcalTokenExp = 0;
+  try { localStorage.removeItem('gcal-tok'); localStorage.removeItem('gcal-exp'); } catch (e) {}
+}
+// SOLO interactivo (gesto del usuario). El popup de Google se bloquearía si se
+// dispara al recargar sin clic, por eso las recargas usan el token guardado.
+function gcalGetToken() {
   return new Promise((resolve, reject) => {
-    if (gcalToken && Date.now() < gcalTokenExp) return resolve(gcalToken);
+    if (gcalLoadTok()) return resolve(gcalToken);
     gcalTokenClient.callback = (resp) => {
       if (resp && resp.access_token) {
-        gcalToken = resp.access_token; gcalTokenExp = Date.now() + ((resp.expires_in || 3600) * 1000) - 60000; gcalNeed = false; resolve(resp.access_token);
+        gcalToken = resp.access_token; gcalTokenExp = Date.now() + ((resp.expires_in || 3600) * 1000) - 60000; gcalNeed = false; gcalSaveTok(); resolve(resp.access_token);
       } else { gcalNeed = true; reject(new Error('gcal token')); }
     };
     gcalTokenClient.error_callback = (err) => { gcalNeed = true; reject(err || new Error('gcal error')); };
-    try { gcalTokenClient.requestAccessToken({ prompt: interactive ? 'consent' : '' }); }
+    try { gcalTokenClient.requestAccessToken({ prompt: '' }); }
     catch (e) { gcalNeed = true; reject(e); }
   });
 }
@@ -3958,14 +3977,16 @@ function gcalNormalize(g) {
   return { subject: g.summary || '', start: { dateTime: s }, end: { dateTime: e }, location: { displayName: g.location || '' }, isAllDay: allday, webLink: g.htmlLink || '' };
 }
 async function calFetchGoogle(startDate, endDate, top) {
-  await gcalInit();
-  const token = await gcalGetToken(false);
+  // Usa el token guardado; si no hay/expiró, NO abre popup (se bloquearía sin gesto) →
+  // marca "reconectar" para que el usuario lo reactive con un clic.
+  if (!gcalLoadTok()) { gcalNeed = true; throw new Error('gcal need login'); }
+  const token = gcalToken;
   const url = 'https://www.googleapis.com/calendar/v3/calendars/primary/events'
     + '?timeMin=' + encodeURIComponent(startDate.toISOString())
     + '&timeMax=' + encodeURIComponent(endDate.toISOString())
     + '&singleEvents=true&orderBy=startTime&maxResults=' + (top || 50);
   const r = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
-  if (r.status === 401) { gcalToken = null; gcalNeed = true; throw new Error('gcal 401'); }
+  if (r.status === 401) { gcalClearTok(); gcalNeed = true; throw new Error('gcal 401'); }
   if (!r.ok) throw new Error('gcal ' + r.status);
   const j = await r.json();
   return (j.items || []).map(gcalNormalize);
@@ -4030,7 +4051,7 @@ async function calBootstrap() {
   if (calBooting) return; calBooting = true;
   try {
     if (calProvider() === 'google') {
-      if (calGOn()) { try { await gcalInit(); } catch (e) { console.error('[cal Google init]', e); } }
+      if (calGOn() && !gcalLoadTok()) gcalNeed = true;   // token guardado vive ~1 h; sin él → pedir reconectar (un clic)
     } else {
       if (calOn()) { try { await calInit(); if (!calAccount) calMsNeed = true; } catch (e) { console.error('[cal MS init]', e); calMsNeed = true; } }
     }
@@ -4062,7 +4083,7 @@ async function gcalConnect() {
   try {
     calState = 'loading'; calRender();
     await gcalInit();
-    await gcalGetToken(true);   // interactivo (gesto del usuario → permite el popup de Google)
+    await gcalGetToken();   // gesto del usuario → permite el popup de Google
     gcalNeed = false;
     try { localStorage.setItem('gcal-on', '1'); } catch (e) {}
     Object.keys(calMonthCache).forEach(k => delete calMonthCache[k]);
@@ -4077,14 +4098,14 @@ function calDisconnect() {
   try { localStorage.removeItem('cal-on'); } catch (e) {}
   calAccount = null; calMsNeed = false; calEvents = null;
   Object.keys(calMonthCache).forEach(k => delete calMonthCache[k]);
-  if (calGOn()) { calState = 'loading'; calRefresh(); } else { calState = 'idle'; calRender(); }
+  calState = 'idle'; calLoadedProvider = null; calRender();
 }
 function gcalDisconnect() {
   try { if (gcalToken && window.google && google.accounts && google.accounts.oauth2) google.accounts.oauth2.revoke(gcalToken); } catch (e) {}
   try { localStorage.removeItem('gcal-on'); } catch (e) {}
-  gcalToken = null; gcalTokenExp = 0; gcalNeed = false; calEvents = null;
+  gcalClearTok(); gcalNeed = false; calEvents = null;
   Object.keys(calMonthCache).forEach(k => delete calMonthCache[k]);
-  if (calOn()) { calState = 'loading'; calRefresh(); } else { calState = 'idle'; calRender(); }
+  calState = 'idle'; calLoadedProvider = null; calRender();
 }
 
 // Fila de un evento (reusa el estilo hb-ev del tablero).
