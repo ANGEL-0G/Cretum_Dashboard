@@ -2299,6 +2299,28 @@ body.hw-noselect{cursor:grabbing}
   border-bottom-right-radius:13px;opacity:.75;transition:opacity .15s}
 .hw-grip:hover{opacity:1}
 .hw-noselect{user-select:none!important}
+/* Candado: fija el diseño (oculta toda la edición) */
+.hw-lockbar{grid-column:1/-1;grid-row:span 2;display:flex;justify-content:flex-end;align-items:center}
+.hw-lock{
+  border:1px solid var(--gray-200);background:var(--white);color:var(--gray-400);
+  width:30px;height:30px;border-radius:999px;cursor:pointer;font-size:12px;
+  display:flex;align-items:center;justify-content:center;
+  transition:color .15s,border-color .15s,background-color .15s,transform .16s cubic-bezier(.23,1,.32,1);
+}
+.hw-lock:hover{border-color:var(--navy-light);color:var(--navy)}
+.hw-lock:active{transform:scale(.94)}
+.hw-lock.locked{background:var(--navy);border-color:var(--navy);color:#fff}
+.home-modular.locked .hw-head{cursor:default}
+/* Edición de módulos (lápiz): ✕ para quitar, + para reactivar (atenuados) */
+.hw-mod.hw-editing{border-style:dashed}
+.hw-mod.hw-off-mod{opacity:.45}
+.hw-mod.hw-off-mod:hover{opacity:.85}
+.hw-mod-x{
+  position:absolute;top:4px;right:4px;width:17px;height:17px;border-radius:50%;
+  background:var(--red-bg);color:var(--red);font-size:8.5px;
+  display:flex;align-items:center;justify-content:center;pointer-events:none;
+}
+.hw-mod-x.add{background:var(--navy-pale);color:var(--navy)}
 /* Chips para reactivar ventanas ocultas */
 .hw-off-row{grid-column:1/-1;grid-row:span 3;display:flex;gap:8px;flex-wrap:wrap;align-content:flex-start}
 .hw-off{display:inline-flex;align-items:center;gap:6px;border:1px dashed var(--gray-300);background:transparent;color:var(--gray-500);font-size:12px;font-weight:500;font-family:var(--font);padding:7px 13px;border-radius:999px;cursor:pointer;transition:border-color .15s,color .15s}

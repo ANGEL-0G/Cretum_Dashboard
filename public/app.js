@@ -4167,6 +4167,7 @@ function hwCfg() {
   // Migración del viejo flag icons (0 = solo nombres) al campo mode
   if (c.modules && c.modules.icons === 0 && !c.modules.mode) out.modules.mode = 'names';
   if (!['both', 'icons', 'names'].includes(out.modules.mode)) out.modules.mode = 'both';
+  out.locked = c.locked ? 1 : 0;   // candado: diseño fijado (sin edición)
   // Orden de las ventanas (drag para mover): claves válidas guardadas + las que falten
   const saved = Array.isArray(c.order) ? c.order.filter(k => HW_DEF[k]) : [];
   out.order = [...saved, ...Object.keys(HW_DEF).filter(k => !saved.includes(k))];
@@ -4188,21 +4189,47 @@ function syncHomeViewPref() {
 
 /* ── Contenido de cada ventana ── */
 function hwModulesBody(cfg) {
-  const { visible } = homeOrderedModules();
-  if (!visible.length) return `<div class="hb-empty">${t('Todos los módulos están ocultos. Agrégalos desde la vista Principal.')}</div>`;
+  const { visible, hidden } = homeOrderedModules();
   const mode = cfg.modules.mode;
   const sz = cfg.modules.size === 2 ? ' sz2' : cfg.modules.size === 3 ? ' sz3' : '';
   const cls = mode === 'names' ? ' noico' : mode === 'icons' ? ' ico-only' : '';
-  return `<div class="hw-mods${cls}${sz}">` + visible.map(m => {
-    const pulse = (m.view === 'tasks' && pendingInviteCount() > 0) ? '<span class="hw-mod-pulse"></span>' : '';
+  const editing = hwEdit && !cfg.locked;
+
+  const tile = (m, off) => {
+    const pulse = (!editing && m.view === 'tasks' && pendingInviteCount() > 0) ? '<span class="hw-mod-pulse"></span>' : '';
+    const badge = editing ? `<span class="hw-mod-x${off ? ' add' : ''}"><i class="fa-solid ${off ? 'fa-plus' : 'fa-xmark'}"></i></span>` : '';
+    const click = editing ? `hwModToggle('${m.view}')` : `switchView('${m.view}')`;
+    const extra = `${editing ? ' hw-editing' : ''}${off ? ' hw-off-mod' : ''}`;
     const ico = mode !== 'names' ? `<span class="hw-mod-ico"><i class="${m.iconBrand ? 'fa-brands' : 'fa-solid'} ${m.icon}"></i></span>` : '';
     if (mode === 'icons') {
-      // Solo iconos: el nombre vive dentro del tile y aparece al hover
-      return `<button class="hw-mod hw-mod-io" onclick="switchView('${m.view}')" title="${t(m.title)}" aria-label="${t(m.title)}">
-        ${ico}<span class="hw-mod-io-t">${t(m.title)}</span>${pulse}</button>`;
+      return `<button class="hw-mod hw-mod-io${extra}" onclick="${click}" title="${t(m.title)}" aria-label="${t(m.title)}">
+        ${ico}<span class="hw-mod-io-t">${t(m.title)}</span>${pulse}${badge}</button>`;
     }
-    return `<button class="hw-mod" onclick="switchView('${m.view}')">${ico}<span class="hw-mod-t">${t(m.title)}</span>${pulse}</button>`;
-  }).join('') + '</div>';
+    return `<button class="hw-mod${extra}" onclick="${click}">${ico}<span class="hw-mod-t">${t(m.title)}</span>${pulse}${badge}</button>`;
+  };
+
+  if (!visible.length && !editing) return `<div class="hb-empty">${t('Todos los módulos están ocultos. Actívalos con el lápiz de esta ventana.')}</div>`;
+  // En edición se muestran también los ocultos (atenuados, con +) para reactivarlos
+  return `<div class="hw-mods${cls}${sz}">`
+    + visible.map(m => tile(m, false)).join('')
+    + (editing ? hidden.map(m => tile(m, true)).join('') : '')
+    + '</div>';
+}
+// Quitar/agregar un módulo (comparte configuración con "Personalizar" de la vista Principal)
+function hwModToggle(view) {
+  const layout = loadHomeLayout();
+  if (layout.hidden.includes(view)) layout.hidden = layout.hidden.filter(v => v !== view);
+  else layout.hidden.push(view);
+  saveHomeLayout(layout);
+  renderHomeModular();
+}
+let hwEdit = false;
+function hwToggleEdit() { hwEdit = !hwEdit; renderHomeModular(); }
+function hwToggleLock() {
+  const cfg = hwCfg();
+  cfg.locked = cfg.locked ? 0 : 1;
+  if (cfg.locked) hwEdit = false;
+  hwSave(cfg); renderHomeModular();
 }
 function hwNewsBody() {
   if (!homeNewsCache) {
@@ -4236,19 +4263,25 @@ function hwRows(h) { return Math.max(9, Math.round((h + HW_GAP) / (HW_ROW + HW_G
 
 function hwWindowHTML(key, cfg) {
   const c = cfg[key], meta = HW_META[key];
+  const locked = cfg.locked;
   const acts = [];
-  if (key === 'modules') {
-    acts.push(`<button class="hw-act" onclick="hwCycleSize()" title="${t('Tamaño de iconos')}" aria-label="${t('Tamaño de iconos')}"><i class="fa-solid fa-magnifying-glass-plus"></i></button>`);
-    const modeIco = c.mode === 'icons' ? 'fa-icons' : c.mode === 'names' ? 'fa-font' : 'fa-shapes';
-    const modeLbl = c.mode === 'icons' ? t('Solo iconos') : c.mode === 'names' ? t('Solo nombres') : t('Iconos y nombres');
-    acts.push(`<button class="hw-act${c.mode !== 'both' ? ' on' : ''}" onclick="hwCycleMode()" title="${modeLbl}" aria-label="${modeLbl}"><i class="fa-solid ${modeIco}"></i></button>`);
+  if (!locked) {
+    if (key === 'modules') {
+      acts.push(`<button class="hw-act${hwEdit ? ' on' : ''}" onclick="hwToggleEdit()" title="${t('Editar módulos')}" aria-label="${t('Editar módulos')}"><i class="fa-solid fa-pen"></i></button>`);
+      acts.push(`<button class="hw-act" onclick="hwCycleSize()" title="${t('Tamaño de iconos')}" aria-label="${t('Tamaño de iconos')}"><i class="fa-solid fa-magnifying-glass-plus"></i></button>`);
+      const modeIco = c.mode === 'icons' ? 'fa-icons' : c.mode === 'names' ? 'fa-font' : 'fa-shapes';
+      const modeLbl = c.mode === 'icons' ? t('Solo iconos') : c.mode === 'names' ? t('Solo nombres') : t('Iconos y nombres');
+      acts.push(`<button class="hw-act${c.mode !== 'both' ? ' on' : ''}" onclick="hwCycleMode()" title="${modeLbl}" aria-label="${modeLbl}"><i class="fa-solid ${modeIco}"></i></button>`);
+    }
+    acts.push(`<button class="hw-act" onclick="hwToggle('${key}')" title="${t('Ocultar ventana')}" aria-label="${t('Ocultar ventana')}"><i class="fa-regular fa-eye-slash"></i></button>`);
   }
-  acts.push(`<button class="hw-act" onclick="hwToggle('${key}')" title="${t('Ocultar ventana')}" aria-label="${t('Ocultar ventana')}"><i class="fa-regular fa-eye-slash"></i></button>`);
   const body = key === 'modules' ? hwModulesBody(cfg) : key === 'news' ? hwNewsBody() : hwCalBody(c);
+  const dragAttrs = locked ? '' : ` title="${t('Arrastra para mover')}" onpointerdown="hwDragStart(event)"`;
+  const grip = locked ? '' : `<div class="hw-grip" title="${t('Redimensionar')}" onpointerdown="hwResizeStart(event,'${key}')"></div>`;
   return `<section class="hw" data-hw="${key}" style="grid-column:span ${c.w};grid-row:span ${hwRows(c.h)}">
-    <div class="hw-head" title="${t('Arrastra para mover')}" onpointerdown="hwDragStart(event)"><i class="fa-solid ${meta.ico} hw-hico"></i><span class="hw-title">${t(meta.title)}</span><div class="hw-acts">${acts.join('')}</div></div>
+    <div class="hw-head"${dragAttrs}><i class="fa-solid ${meta.ico} hw-hico"></i><span class="hw-title">${t(meta.title)}</span><div class="hw-acts">${acts.join('')}</div></div>
     <div class="hw-body">${body}</div>
-    <div class="hw-grip" title="${t('Redimensionar')}" onpointerdown="hwResizeStart(event,'${key}')"></div>
+    ${grip}
   </section>`;
 }
 
@@ -4260,11 +4293,14 @@ function renderHomeModular() {
   const keys = cfg.order;
   const on = keys.filter(k => cfg[k].on);
   const off = keys.filter(k => !cfg[k].on);
-  const offRow = off.length
+  const offRow = (!cfg.locked && off.length)
     ? `<div class="hw-off-row">${off.map(k => `<button class="hw-off" onclick="hwToggle('${k}')"><i class="fa-solid fa-plus"></i> ${t(HW_META[k].title)}</button>`).join('')}</div>`
     : '';
+  const lockLbl = cfg.locked ? t('Diseño fijado · toca para editar') : t('Fijar diseño');
+  const lockBar = `<div class="hw-lockbar"><button class="hw-lock${cfg.locked ? ' locked' : ''}" onclick="hwToggleLock()" title="${lockLbl}" aria-label="${lockLbl}"><i class="fa-solid ${cfg.locked ? 'fa-lock' : 'fa-lock-open'}"></i></button></div>`;
+  host.classList.toggle('locked', !!cfg.locked);
   host.style.display = '';
-  host.innerHTML = on.map(k => hwWindowHTML(k, cfg)).join('') + offRow;
+  host.innerHTML = lockBar + on.map(k => hwWindowHTML(k, cfg)).join('') + offRow;
 }
 
 function hwToggle(key) { const cfg = hwCfg(); cfg[key].on = cfg[key].on ? 0 : 1; hwSave(cfg); renderHomeModular(); }
