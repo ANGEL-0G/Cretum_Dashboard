@@ -4146,15 +4146,19 @@ const HW_DEF = {
   modules:  { on: 1, mode: 'both', layout: 'grid', size: 1, w: 12, h: 300 },
   calendar: { on: 1, w: 6, h: 340 },
   news:     { on: 1, w: 6, h: 340 },
+  board:    { on: 1, w: 12, h: 380 },
 };
 const HW_META = {
-  modules:  { title: 'Módulos',    ico: 'fa-table-cells-large' },
-  calendar: { title: 'Calendario', ico: 'fa-calendar-days' },
-  news:     { title: 'Noticias',   ico: 'fa-newspaper' },
+  modules:  { title: 'Módulos',           ico: 'fa-table-cells-large' },
+  calendar: { title: 'Calendario',        ico: 'fa-calendar-days' },
+  news:     { title: 'Noticias',          ico: 'fa-newspaper' },
+  board:    { title: 'Tablero Slack MVP', ico: 'fa-slack', brand: 1 },
 };
+// Ventanas disponibles por organización
+const HW_ORG = { cretum: ['modules', 'calendar', 'news'], mvp: ['modules', 'board', 'calendar'] };
 function homeViewKey() { return `cretum_home_view_${currentUser || 'anon'}_${currentOrg}`; }
 function homeViewMode() { try { return localStorage.getItem(homeViewKey()) === 'modular' ? 'modular' : 'classic'; } catch (e) { return 'classic'; } }
-function hmActive() { return currentOrg === 'cretum' && homeViewMode() === 'modular'; }
+function hmActive() { return !!currentOrg && !!HW_ORG[currentOrg] && homeViewMode() === 'modular'; }
 function setHomeView(mode) {
   try { localStorage.setItem(homeViewKey(), mode); } catch (e) {}
   renderHomeModules();
@@ -4170,9 +4174,10 @@ function hwCfg() {
   if (!['both', 'icons', 'names'].includes(out.modules.mode)) out.modules.mode = 'both';
   if (!['grid', 'list'].includes(out.modules.layout)) out.modules.layout = 'grid';
   out.locked = c.locked ? 1 : 0;   // candado: diseño fijado (sin edición)
-  // Orden de las ventanas (drag para mover): claves válidas guardadas + las que falten
-  const saved = Array.isArray(c.order) ? c.order.filter(k => HW_DEF[k]) : [];
-  out.order = [...saved, ...Object.keys(HW_DEF).filter(k => !saved.includes(k))];
+  // Orden de las ventanas (drag para mover): claves válidas del org guardadas + las que falten
+  const orgKeys = HW_ORG[currentOrg] || HW_ORG.cretum;
+  const saved = Array.isArray(c.order) ? c.order.filter(k => orgKeys.includes(k)) : [];
+  out.order = [...saved, ...orgKeys.filter(k => !saved.includes(k))];
   return out;
 }
 function hwSave(cfg) { try { localStorage.setItem(hwCfgKey(), JSON.stringify(cfg)); } catch (e) {} }
@@ -4181,9 +4186,9 @@ function hwSave(cfg) { try { localStorage.setItem(hwCfgKey(), JSON.stringify(cfg
 function syncHomeViewPref() {
   const row = document.getElementById('homeViewRow');
   if (!row) return;
-  const isCr = currentOrg === 'cretum';
-  row.style.display = isCr ? '' : 'none';
-  if (!isCr) return;
+  const ok = !!currentOrg && !!HW_ORG[currentOrg];
+  row.style.display = ok ? '' : 'none';
+  if (!ok) return;
   const mode = homeViewMode();
   document.getElementById('hvBtnClassic')?.classList.toggle('active', mode === 'classic');
   document.getElementById('hvBtnModular')?.classList.toggle('active', mode === 'modular');
@@ -4278,11 +4283,14 @@ function hwWindowHTML(key, cfg) {
       acts.push(`<button class="hw-act" onclick="hwToggle('${key}')" title="${t('Ocultar ventana')}" aria-label="${t('Ocultar ventana')}"><i class="fa-regular fa-eye-slash"></i></button>`);
     }
   }
-  const body = key === 'modules' ? hwModulesBody(cfg) : key === 'news' ? hwNewsBody() : hwCalBody(c);
+  const body = key === 'modules' ? hwModulesBody(cfg)
+    : key === 'news' ? hwNewsBody()
+    : key === 'board' ? hwBoardBody()
+    : hwCalBody(c);
   const dragAttrs = locked ? '' : ` title="${t('Arrastra para mover')}" onpointerdown="hwDragStart(event)"`;
   const grip = locked ? '' : `<div class="hw-grip" title="${t('Redimensionar')}" onpointerdown="hwResizeStart(event,'${key}')"></div>`;
   return `<section class="hw" data-hw="${key}" style="grid-column:span ${c.w};grid-row:span ${hwRows(c.h)}">
-    <div class="hw-head"${dragAttrs}><i class="fa-solid ${meta.ico} hw-hico"></i><span class="hw-title">${t(meta.title)}</span><div class="hw-acts">${acts.join('')}</div></div>
+    <div class="hw-head"${dragAttrs}><i class="${meta.brand ? 'fa-brands' : 'fa-solid'} ${meta.ico} hw-hico"></i><span class="hw-title">${t(meta.title)}</span><div class="hw-acts">${acts.join('')}</div></div>
     <div class="hw-body">${body}</div>
     ${grip}
   </section>`;
@@ -4491,7 +4499,7 @@ function hbToggleCollapse() {
 function updateHomeBoard() {
   const host = document.getElementById('homeBoard');
   if (!host) return;
-  if (currentOrg !== 'mvp') { host.style.display = 'none'; host.innerHTML = ''; return; }
+  if (currentOrg !== 'mvp' || hmActive()) { host.style.display = 'none'; host.innerHTML = ''; return; }
   host.style.display = '';
   if (!hbLoaded) {
     host.innerHTML = `<div class="hb-card"><div class="home-kpis-load">${t('Cargando tablero…')}</div></div>`;
@@ -4501,7 +4509,10 @@ function updateHomeBoard() {
   }
 }
 
+let hbLoading = false, hbError = false;
 async function loadBoard() {
+  if (hbLoading) return;
+  hbLoading = true; hbError = false;
   const host = document.getElementById('homeBoard');
   try {
     const [items, runs] = await Promise.all([
@@ -4514,8 +4525,11 @@ async function loadBoard() {
     hbItems = items.data || [];
     hbLastRun = (runs.data && runs.data[0]) ? runs.data[0].ran_at : null;
     hbLoaded = true;
+    hbLoading = false;
     renderBoard();
   } catch (e) {
+    hbLoading = false; hbError = true;
+    if (hmActive()) { renderHomeModular(); return; }
     if (host) host.innerHTML = `<div class="hb-card"><div class="hb-err">${t('No se pudo cargar el tablero')}: ${escapeHtml(e.message || 'error')}</div></div>`;
   }
 }
@@ -4571,10 +4585,9 @@ function hbEventHTML(it) {
   return `<div class="hb-ev">${dateBox}<div class="hb-txt">${t_}${it.author ? `<div class="hb-ev-m">${escapeHtml(it.author)}</div>` : ''}</div></div>`;
 }
 
-function renderBoard() {
-  const host = document.getElementById('homeBoard');
-  if (!host || currentOrg !== 'mvp') return;
-
+// Contenido del tablero (sello + botón Nota + feed y eventos).
+// Compartido entre la vista clásica (hb-card colapsable) y la ventana modular.
+function hbInnerHTML() {
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const events = hbItems
     .filter(it => it.kind === 'evento' && (!it.event_date || new Date(it.event_date + 'T23:59:59') >= today))
@@ -4598,29 +4611,44 @@ function renderBoard() {
     ? events.map(hbEventHTML).join('')
     : `<div class="hb-empty">${t('Sin eventos próximos.')}</div>`;
 
+  return `<div class="hb-sub">
+      <span class="hb-upd">${upd}</span>
+      <button class="hb-add" onclick="openBoardComposer()"><i class="fa-solid fa-plus"></i> ${t('Nota')}</button>
+    </div>
+    <div class="hb-grid">
+      <div>
+        <div class="hb-col-h">${t('Avisos y noticias')} · #general</div>
+        ${feedHtml}
+      </div>
+      <div>
+        <div class="hb-col-h">${t('Próximos eventos')}</div>
+        ${evHtml}
+      </div>
+    </div>`;
+}
+
+function renderBoard() {
+  const host = document.getElementById('homeBoard');
+  if (!host || currentOrg !== 'mvp') return;
+  if (hmActive()) { host.style.display = 'none'; renderHomeModular(); return; }
   host.innerHTML = `<div class="hb-card${hbCollapsed ? ' collapsed' : ''}">
     <button class="hb-toggle" onclick="hbToggleCollapse()" aria-expanded="${!hbCollapsed}">
       <i class="fa-solid fa-chevron-down hb-chev"></i>
       <span class="hb-title">${t('Tablero Slack MVP')}</span>
       <span class="hb-desc">${t('Noticias relevantes del Slack')}</span>
     </button>
-    <div class="hb-wrap"><div class="hb-inner">
-      <div class="hb-sub">
-        <span class="hb-upd">${upd}</span>
-        <button class="hb-add" onclick="openBoardComposer()"><i class="fa-solid fa-plus"></i> ${t('Nota')}</button>
-      </div>
-      <div class="hb-grid">
-        <div>
-          <div class="hb-col-h">${t('Avisos y noticias')} · #general</div>
-          ${feedHtml}
-        </div>
-        <div>
-          <div class="hb-col-h">${t('Próximos eventos')}</div>
-          ${evHtml}
-        </div>
-      </div>
-    </div></div>
+    <div class="hb-wrap"><div class="hb-inner">${hbInnerHTML()}</div></div>
   </div>`;
+}
+
+// Ventana modular del Tablero Slack (MVP)
+function hwBoardBody() {
+  if (hbError && !hbLoaded) return `<div class="hb-err">${t('No se pudo cargar el tablero')}</div>`;
+  if (!hbLoaded) {
+    loadBoard();
+    return `<div class="hb-empty"><i class="fa-solid fa-circle-notch fa-spin"></i> ${t('Cargando tablero…')}</div>`;
+  }
+  return hbInnerHTML();
 }
 
 function hbToggleExpand() { hbExpanded = !hbExpanded; renderBoard(); }
