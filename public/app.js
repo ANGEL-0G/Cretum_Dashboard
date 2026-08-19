@@ -3790,6 +3790,8 @@ function renderHomeModules() {
   updateHomeBoard();
   // Noticias del portafolio: solo en el home de Cretum
   renderHomeNews();
+  // Eventos Cretum (Outlook por usuario, privado): solo en el home de Cretum
+  renderHomeEvents();
 }
 
 /* ── Widget de noticias del portafolio (home de Cretum) — al final, desplegable ── */
@@ -3835,6 +3837,164 @@ async function renderHomeNews() {
       <div class="hn-more"><button type="button" class="hn-viewall" onclick="window.open('/blog','_blank','noopener')">Ver todas las noticias <i class="fa-solid fa-arrow-right"></i></button></div>
     </div></div>`;
   host.style.display = '';
+}
+
+/* ═══════════════════════════════════════════
+   EVENTOS CRETUM — calendario de Outlook por usuario (home Cretum)
+   Login de Microsoft en el navegador (MSAL) + Microsoft Graph delegado (/me):
+   cada quien ve SOLO su propio calendario. Nada se guarda en el servidor; el token
+   lo cachea MSAL en localStorage. App registration (SPA) en el tenant de Cretum.
+   ═══════════════════════════════════════════ */
+const CAL_CLIENT_ID = '3576cd49-9e63-445d-8333-cad231a33196';
+const CAL_TENANT_ID = 'd310ef28-ac64-41e3-8341-a4a100c09a7b';
+const CAL_SCOPES = ['Calendars.Read'];
+let calMsal = null, calAccount = null, calEvents = null;
+let calState = 'idle';   // idle | loading | ready | error | needlogin
+const CAL_MES = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+
+function calOn() { try { return localStorage.getItem('cal-on') === '1'; } catch (e) { return false; } }
+function calCollapsed() { try { return localStorage.getItem('ce-collapsed') === '1'; } catch (e) { return false; } }
+function calToggleCollapse() {
+  const host = document.getElementById('homeEvents'); const card = host && host.querySelector('.hb-card');
+  if (!card) return;
+  const c = !card.classList.contains('collapsed');
+  card.classList.toggle('collapsed', c);
+  try { localStorage.setItem('ce-collapsed', c ? '1' : '0'); } catch (e) {}
+}
+
+async function calInit() {
+  if (calMsal) return calMsal;
+  await loadScript('https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.28.1/lib/msal-browser.min.js');
+  calMsal = new msal.PublicClientApplication({
+    auth: { clientId: CAL_CLIENT_ID, authority: 'https://login.microsoftonline.com/' + CAL_TENANT_ID, redirectUri: window.location.origin },
+    cache: { cacheLocation: 'localStorage' },
+  });
+  await calMsal.initialize();
+  const accts = calMsal.getAllAccounts();
+  if (accts.length) calAccount = accts[0];
+  return calMsal;
+}
+async function calToken() {
+  const req = { scopes: CAL_SCOPES, account: calAccount };
+  try { const r = await calMsal.acquireTokenSilent(req); return r.accessToken; }
+  catch (e) { const r = await calMsal.acquireTokenPopup(req); calAccount = r.account; return r.accessToken; }
+}
+async function calFetch() {
+  const token = await calToken();
+  const now = new Date();
+  const end = new Date(now.getTime() + 45 * 864e5);
+  const url = 'https://graph.microsoft.com/v1.0/me/calendarView'
+    + '?startDateTime=' + encodeURIComponent(now.toISOString())
+    + '&endDateTime=' + encodeURIComponent(end.toISOString())
+    + '&$select=subject,start,end,location,isAllDay,webLink&$orderby=start/dateTime&$top=12';
+  const r = await fetch(url, { headers: { Authorization: 'Bearer ' + token, Prefer: 'outlook.timezone="America/Mexico_City"' } });
+  if (!r.ok) throw new Error('graph ' + r.status);
+  const j = await r.json();
+  return j.value || [];
+}
+async function calRefresh() {
+  calState = 'loading'; renderHomeEvents();
+  try { calEvents = await calFetch(); calState = 'ready'; }
+  catch (e) { console.error('[eventos-cretum fetch]', e); calState = 'error'; }
+  renderHomeEvents();
+}
+// Auto-conexión silenciosa si el usuario ya había enlazado Outlook.
+let calBooting = false;
+async function calBootstrap() {
+  if (calBooting) return; calBooting = true;
+  try {
+    await calInit();
+    if (!calAccount) { calState = 'needlogin'; renderHomeEvents(); return; }
+    await calRefresh();
+  } catch (e) { console.error('[eventos-cretum init]', e); calState = 'error'; renderHomeEvents(); }
+  finally { calBooting = false; }
+}
+async function calConnect() {
+  try {
+    calState = 'loading'; renderHomeEvents();
+    await calInit();
+    const r = await calMsal.loginPopup({ scopes: CAL_SCOPES, prompt: 'select_account' });
+    calAccount = r.account;
+    try { localStorage.setItem('cal-on', '1'); } catch (e) {}
+    await calRefresh();
+  } catch (e) {
+    console.error('[eventos-cretum connect]', e);
+    calState = calAccount ? 'error' : 'needlogin';
+    renderHomeEvents();
+  }
+}
+function calDisconnect() {
+  try { localStorage.removeItem('cal-on'); } catch (e) {}
+  calEvents = null; calState = 'idle';
+  renderHomeEvents();
+}
+
+// Fila de un evento (reusa el estilo hb-ev del tablero).
+function calEventHTML(ev) {
+  const raw = ev.start && ev.start.dateTime ? String(ev.start.dateTime).replace(/(\.\d{3})\d+$/, '$1') : '';
+  const dt = raw ? new Date(raw) : null;
+  let dateBox;
+  if (dt && !isNaN(dt)) {
+    dateBox = `<div class="hb-ev-d"><div class="hb-ev-day">${dt.getDate()}</div><div class="hb-ev-mon">${CAL_MES[dt.getMonth()]}</div></div>`;
+  } else {
+    dateBox = `<div class="hb-ev-d"><div class="hb-ev-day"><i class="fa-regular fa-calendar" style="font-size:13px"></i></div><div class="hb-ev-mon">—</div></div>`;
+  }
+  const hora = (dt && !isNaN(dt) && !ev.isAllDay) ? dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (ev.isAllDay ? t('Todo el día') : '');
+  const loc = ev.location && ev.location.displayName ? ev.location.displayName : '';
+  const sub = [hora, loc].filter(Boolean).join(' · ');
+  const subj = escapeHtml(ev.subject || t('(sin título)'));
+  const title = ev.webLink
+    ? `<a class="hb-t hb-ev-t" href="${escapeHtml(ev.webLink)}" target="_blank" rel="noopener" style="font-size:12.5px">${subj}</a>`
+    : `<div class="hb-ev-t">${subj}</div>`;
+  return `<div class="hb-ev">${dateBox}<div class="hb-txt">${title}${sub ? `<div class="hb-ev-m">${escapeHtml(sub)}</div>` : ''}</div></div>`;
+}
+
+function calBodyHTML() {
+  const on = calOn();
+  if (!on || calState === 'idle') {
+    return `<div class="cal-cta">
+      <p class="cal-cta-tx">${t('Conecta tu Outlook para ver aquí tus próximos eventos. Es privado: solo tú ves tu calendario.')}</p>
+      <button class="cal-connect" onclick="calConnect()"><i class="fa-brands fa-microsoft"></i> ${t('Conectar Outlook')}</button>
+    </div>`;
+  }
+  if (calState === 'loading') return `<div class="hb-empty"><i class="fa-solid fa-circle-notch fa-spin"></i> ${t('Cargando tus eventos…')}</div>`;
+  if (calState === 'needlogin') {
+    return `<div class="cal-cta">
+      <p class="cal-cta-tx">${t('Tu sesión de Outlook expiró. Vuelve a conectarla para ver tus eventos.')}</p>
+      <button class="cal-connect" onclick="calConnect()"><i class="fa-brands fa-microsoft"></i> ${t('Conectar Outlook')}</button>
+    </div>`;
+  }
+  if (calState === 'error') {
+    return `<div class="cal-cta">
+      <p class="cal-cta-tx">${t('No se pudieron cargar tus eventos.')}</p>
+      <div class="cal-foot"><button class="cal-mini" onclick="calRefresh()"><i class="fa-solid fa-rotate"></i> ${t('Reintentar')}</button><button class="cal-mini" onclick="calDisconnect()">${t('Desconectar')}</button></div>
+    </div>`;
+  }
+  // ready
+  const list = (calEvents && calEvents.length)
+    ? calEvents.map(calEventHTML).join('')
+    : `<div class="hb-empty">${t('Sin eventos próximos.')}</div>`;
+  const who = calAccount && calAccount.username ? escapeHtml(calAccount.username) : '';
+  return `${list}
+    <div class="cal-foot">${who ? `<span class="cal-who">${who}</span>` : ''}<button class="cal-mini" onclick="calRefresh()"><i class="fa-solid fa-rotate"></i> ${t('Actualizar')}</button><button class="cal-mini" onclick="calDisconnect()">${t('Desconectar')}</button></div>`;
+}
+
+function renderHomeEvents() {
+  const host = document.getElementById('homeEvents');
+  if (!host) return;
+  if (currentOrg !== 'cretum' || currentView !== 'home') { host.style.display = 'none'; return; }
+  host.style.display = '';
+  // Auto-conectar en silencio si ya estaba enlazado y aún no cargamos.
+  if (calOn() && calState === 'idle') { calState = 'loading'; calBootstrap(); }
+  const collapsed = calCollapsed();
+  host.innerHTML = `<div class="hb-card${collapsed ? ' collapsed' : ''}">
+    <button class="hb-toggle" onclick="calToggleCollapse()" aria-expanded="${!collapsed}">
+      <i class="fa-solid fa-chevron-down hb-chev"></i>
+      <span class="hb-title">${t('Eventos Cretum')}</span>
+      <span class="hb-desc">${t('Tus próximos eventos de Outlook · privado')}</span>
+    </button>
+    <div class="hb-wrap"><div class="hb-inner">${calBodyHTML()}</div></div>
+  </div>`;
 }
 
 /* ═══════════════════════════════════════════

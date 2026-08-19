@@ -1121,6 +1121,20 @@ const EN = {
   'No encontré correos en el archivo': 'No emails found in the file',
   '{n} contactos importados (los repetidos se omiten)': '{n} contacts imported (duplicates are skipped)',
   'No se pudo importar': 'Couldn’t import',
+
+  // ── Eventos Cretum (Outlook por usuario) ──
+  'Eventos Cretum': 'Cretum Events',
+  'Tus próximos eventos de Outlook · privado': 'Your upcoming Outlook events · private',
+  'Conecta tu Outlook para ver aquí tus próximos eventos. Es privado: solo tú ves tu calendario.': 'Connect your Outlook to see your upcoming events here. It’s private: only you can see your calendar.',
+  'Conectar Outlook': 'Connect Outlook',
+  'Cargando tus eventos…': 'Loading your events…',
+  'Tu sesión de Outlook expiró. Vuelve a conectarla para ver tus eventos.': 'Your Outlook session expired. Reconnect it to see your events.',
+  'No se pudieron cargar tus eventos.': 'Couldn’t load your events.',
+  'Reintentar': 'Retry',
+  'Desconectar': 'Disconnect',
+  'Actualizar': 'Refresh',
+  'Todo el día': 'All day',
+  '(sin título)': '(untitled)',
 };
 
 let LANG = 'es';
