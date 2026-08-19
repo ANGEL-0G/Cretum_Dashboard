@@ -342,7 +342,13 @@ ${STYLE()}
       </div>
     </header>
     <div class="wrap sec">
-      <div class="news-filter" id="newsFilter" role="group" aria-label="Filtrar por empresa"></div>
+      <div class="news-bar">
+        <div class="news-filter" id="newsFilter" role="group" aria-label="Filtrar por empresa"></div>
+        <div class="news-lang" id="newsLang" role="group" aria-label="Idioma de las noticias">
+          <button type="button" class="nl-btn" data-nlang="es">ES</button>
+          <button type="button" class="nl-btn" data-nlang="en">EN</button>
+        </div>
+      </div>
       <div class="news-grid" id="newsGrid"><div class="news-empty">Cargando noticias…</div></div>
     </div>
   </section>
@@ -523,30 +529,49 @@ const SUMMARY = ${JSON.stringify(summaryText)};
   function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
   function ago(iso){ var d = new Date(iso); if (isNaN(d)) return ''; var s = (Date.now() - d.getTime())/1000; if (s < 3600) return Math.max(1, Math.round(s/60)) + ' min'; if (s < 86400) return Math.round(s/3600) + ' h'; return Math.round(s/86400) + ' d'; }
   var newsData = null, newsCo = 'all';
+  // Idioma de las noticias: comparte la llave 'lang' con el dashboard. Las notas traen
+  // title (original en inglés) y title_es (traducido) → el toggle elige cuál mostrar.
+  var newsLang = (function(){ try { return localStorage.getItem('lang') === 'en' ? 'en' : 'es'; } catch(e){ return 'es'; } })();
+  function NT(es, en){ return newsLang === 'en' ? en : es; }
   var grid = document.getElementById('newsGrid');
+  (function wireNewsLang(){
+    var lb = document.getElementById('newsLang'); if (!lb) return;
+    lb.querySelectorAll('.nl-btn').forEach(function(b){
+      b.classList.toggle('on', b.getAttribute('data-nlang') === newsLang);
+      b.addEventListener('click', function(){
+        newsLang = b.getAttribute('data-nlang');
+        try { localStorage.setItem('lang', newsLang); } catch(e){}
+        lb.querySelectorAll('.nl-btn').forEach(function(x){ x.classList.toggle('on', x === b); });
+        renderMeta(); renderFilter(); renderNews();
+      });
+    });
+  })();
+  function renderMeta(){
+    if (!newsData) return;
+    var mc = document.getElementById('newsMetaCount'); if (mc) mc.textContent = newsData.count + NT(' notas · ', ' stories · ') + (newsData.companies ? newsData.companies.length : 0) + NT(' empresas', ' companies');
+    var mw = document.getElementById('newsMetaWhen'); if (mw) mw.textContent = ago(newsData.generated) + NT(' atrás', ' ago');
+  }
   fetch('/data/company-news.json', { cache: 'no-store' }).then(function(r){ if(!r.ok) throw 0; return r.json(); }).then(function(d){
     newsData = d;
-    var mc = document.getElementById('newsMetaCount'); if (mc) mc.textContent = d.count + ' notas · ' + (d.companies ? d.companies.length : 0) + ' empresas';
-    var mw = document.getElementById('newsMetaWhen'); if (mw) mw.textContent = ago(d.generated) + ' atrás';
-    renderFilter(); renderNews();
-  }).catch(function(){ if (grid) grid.innerHTML = '<div class="news-empty">No se pudieron cargar las noticias. Reintenta en un momento.</div>'; });
+    renderMeta(); renderFilter(); renderNews();
+  }).catch(function(){ if (grid) grid.innerHTML = '<div class="news-empty">' + NT('No se pudieron cargar las noticias. Reintenta en un momento.', 'Couldn\'t load the news. Try again in a moment.') + '</div>'; });
   function renderFilter(){
     var f = document.getElementById('newsFilter'); if (!f || !newsData) return;
     var cos = Object.keys(newsData.items.reduce(function(a, i){ a[i.company] = 1; return a; }, {})).sort();
-    f.innerHTML = '<button class="nf-chip on" data-co="all">Todas</button>' + cos.map(function(co){ return '<button class="nf-chip" data-co="' + esc(co) + '">' + esc(co) + '</button>'; }).join('');
+    f.innerHTML = '<button class="nf-chip' + (newsCo === 'all' ? ' on' : '') + '" data-co="all">' + NT('Todas', 'All') + '</button>' + cos.map(function(co){ return '<button class="nf-chip' + (newsCo === co ? ' on' : '') + '" data-co="' + esc(co) + '">' + esc(co) + '</button>'; }).join('');
     f.querySelectorAll('.nf-chip').forEach(function(b){ b.addEventListener('click', function(){ newsCo = b.getAttribute('data-co'); f.querySelectorAll('.nf-chip').forEach(function(x){ x.classList.toggle('on', x === b); }); renderNews(); }); });
   }
   function renderNews(){
     if (!grid || !newsData) return;
     var items = newsData.items;
     if (newsCo !== 'all') items = items.filter(function(i){ return i.company === newsCo; });
-    if (!items.length){ grid.innerHTML = '<div class="news-empty">Sin noticias para este filtro por ahora.</div>'; return; }
+    if (!items.length){ grid.innerHTML = '<div class="news-empty">' + NT('Sin noticias para este filtro por ahora.', 'No news for this filter yet.') + '</div>'; return; }
     grid.innerHTML = items.map(function(i, idx){
       return '<article class="news-card" style="--i:' + Math.min(idx, 24) + '" title="' + esc(i.title) + '">'
         + '<div class="news-top"><span class="news-co">' + esc(i.company) + '</span><span class="news-time">' + ago(i.published) + '</span></div>'
-        + '<div class="news-title">' + esc(i.title_es || i.title) + '</div>'
+        + '<div class="news-title">' + esc(newsLang === 'en' ? (i.title || i.title_es) : (i.title_es || i.title)) + '</div>'
         + '<div class="news-foot"><span class="news-src">' + esc(i.source) + '</span>'
-        + '<a class="news-btn" href="' + esc(i.url) + '" target="_blank" rel="noopener">Leer noticia <span aria-hidden="true">↗</span></a></div>'
+        + '<a class="news-btn" href="' + esc(i.url) + '" target="_blank" rel="noopener">' + NT('Leer noticia', 'Read the story') + ' <span aria-hidden="true">↗</span></a></div>'
         + '</article>';
     }).join('');
   }
@@ -803,6 +828,13 @@ function STYLE() {
   @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .nf-chip.on{color:#0C121E}}
   :root[data-theme="dark"] .nf-chip.on{color:#0C121E}
   /* ── Rejilla de noticias ── */
+  .news-bar{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;margin-bottom:22px}
+  .news-bar .news-filter{margin-bottom:0;flex:1 1 260px}
+  .news-lang{display:inline-flex;flex:0 0 auto;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px;gap:3px}
+  .nl-btn{font-size:12px;font-weight:600;letter-spacing:.03em;padding:6px 15px;border-radius:999px;cursor:pointer;background:none;border:0;color:var(--ink-mute);font-family:inherit;transition:background .15s ease,color .15s ease}
+  .nl-btn.on{background:var(--navy);color:#fff}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .nl-btn.on{color:#0C121E}}
+  :root[data-theme="dark"] .nl-btn.on{color:#0C121E}
   .news-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
   .news-card{display:flex;flex-direction:column;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:15px;padding:17px 18px;box-shadow:var(--raise);text-decoration:none;color:inherit;transition:transform .18s var(--ease-out),border-color .18s var(--ease-out),box-shadow .18s var(--ease-out);animation:newsIn .5s var(--ease-out) both;animation-delay:calc(var(--i,0) * 32ms)}
   @media (hover:hover){.news-card:hover{transform:translateY(-3px);border-color:var(--navy-pale);box-shadow:0 8px 26px rgba(18,30,54,.08)}}
