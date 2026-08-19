@@ -2337,6 +2337,26 @@ body.hw-noselect{cursor:grabbing}
 .hw-mod-ico{width:28px;height:28px;border-radius:8px;background:var(--navy-pale);color:var(--navy);display:flex;align-items:center;justify-content:center;font-size:12px;flex:0 0 auto}
 .hw-mod-t{font-size:12.5px;font-weight:500;color:var(--gray-900);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .hw-mod-pulse{position:absolute;top:7px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--red)}
+/* Diseño Lista: filas a lo ancho en vez de cuadrícula */
+.hw-mods.list{display:flex;flex-direction:column;gap:6px}
+.hw-mods.list .hw-mod{width:100%}
+/* Desplegable de opciones de la ventana Módulos */
+.hw-menu .cdd-panel{min-width:212px;transform-origin:top right;padding:5px 0}
+.hw-mi-h{padding:7px 14px 3px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--gray-400)}
+.hw-mi{
+  display:flex;align-items:center;gap:9px;width:100%;
+  border:0;background:none;text-align:left;padding:8px 14px;
+  font-family:var(--font);font-size:12.5px;color:var(--gray-700);cursor:pointer;
+  transition:background-color .12s,color .12s;
+}
+.hw-mi:hover{background:var(--navy-ghost);color:var(--navy)}
+.hw-mi.on{color:var(--navy);font-weight:600}
+.hw-mi i{width:15px;font-size:11px;color:var(--gray-400);text-align:center}
+.hw-mi.on i,.hw-mi:hover i{color:var(--navy)}
+.hw-mi .hw-mi-check{margin-left:auto;font-size:10px;width:auto}
+.hw-mi-sep{height:1px;background:var(--gray-100);margin:5px 0}
+[data-theme="dark"] .hw-mi-sep{background:#262626}
+[data-theme="dark"] .hw-menu .cdd-panel{background:#1a1a1a;border-color:#2a2a2a}
 /* Solo iconos: tiles cuadrados; al hover el icono sube y el nombre aparece dentro */
 .hw-mods.ico-only{grid-template-columns:repeat(auto-fill,minmax(66px,1fr))}
 .hw-mod-io{flex-direction:column;justify-content:center;gap:0;aspect-ratio:1;padding:6px}

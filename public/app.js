@@ -4142,7 +4142,8 @@ function calRender() { renderHomeEvents(); renderCalPage(); renderHomeModular();
 ═══════════════════════════════════════════ */
 const HW_DEF = {
   // mode: 'both' (iconos y nombres) | 'icons' (solo iconos, nombre al hover) | 'names' (solo nombres)
-  modules:  { on: 1, mode: 'both', size: 1, w: 12, h: 300 },
+  // layout: 'grid' (cuadrícula) | 'list' (filas a lo ancho)
+  modules:  { on: 1, mode: 'both', layout: 'grid', size: 1, w: 12, h: 300 },
   calendar: { on: 1, w: 6, h: 340 },
   news:     { on: 1, w: 6, h: 340 },
 };
@@ -4167,6 +4168,7 @@ function hwCfg() {
   // Migración del viejo flag icons (0 = solo nombres) al campo mode
   if (c.modules && c.modules.icons === 0 && !c.modules.mode) out.modules.mode = 'names';
   if (!['both', 'icons', 'names'].includes(out.modules.mode)) out.modules.mode = 'both';
+  if (!['grid', 'list'].includes(out.modules.layout)) out.modules.layout = 'grid';
   out.locked = c.locked ? 1 : 0;   // candado: diseño fijado (sin edición)
   // Orden de las ventanas (drag para mover): claves válidas guardadas + las que falten
   const saved = Array.isArray(c.order) ? c.order.filter(k => HW_DEF[k]) : [];
@@ -4190,9 +4192,11 @@ function syncHomeViewPref() {
 /* ── Contenido de cada ventana ── */
 function hwModulesBody(cfg) {
   const { visible, hidden } = homeOrderedModules();
-  const mode = cfg.modules.mode;
+  const layout = cfg.modules.layout;
+  // En lista los tiles son filas con nombre: "solo iconos" no aplica ahí
+  const mode = (layout === 'list' && cfg.modules.mode === 'icons') ? 'both' : cfg.modules.mode;
   const sz = cfg.modules.size === 2 ? ' sz2' : cfg.modules.size === 3 ? ' sz3' : '';
-  const cls = mode === 'names' ? ' noico' : mode === 'icons' ? ' ico-only' : '';
+  const cls = (mode === 'names' ? ' noico' : mode === 'icons' ? ' ico-only' : '') + (layout === 'list' ? ' list' : '');
   const editing = hwEdit && !cfg.locked;
 
   const tile = (m, off) => {
@@ -4267,13 +4271,12 @@ function hwWindowHTML(key, cfg) {
   const acts = [];
   if (!locked) {
     if (key === 'modules') {
+      // Módulos: lápiz directo + desplegable con el resto de opciones
       acts.push(`<button class="hw-act${hwEdit ? ' on' : ''}" onclick="hwToggleEdit()" title="${t('Editar módulos')}" aria-label="${t('Editar módulos')}"><i class="fa-solid fa-pen"></i></button>`);
-      acts.push(`<button class="hw-act" onclick="hwCycleSize()" title="${t('Tamaño de iconos')}" aria-label="${t('Tamaño de iconos')}"><i class="fa-solid fa-magnifying-glass-plus"></i></button>`);
-      const modeIco = c.mode === 'icons' ? 'fa-icons' : c.mode === 'names' ? 'fa-font' : 'fa-shapes';
-      const modeLbl = c.mode === 'icons' ? t('Solo iconos') : c.mode === 'names' ? t('Solo nombres') : t('Iconos y nombres');
-      acts.push(`<button class="hw-act${c.mode !== 'both' ? ' on' : ''}" onclick="hwCycleMode()" title="${modeLbl}" aria-label="${modeLbl}"><i class="fa-solid ${modeIco}"></i></button>`);
+      acts.push(hwModMenuHTML(c));
+    } else {
+      acts.push(`<button class="hw-act" onclick="hwToggle('${key}')" title="${t('Ocultar ventana')}" aria-label="${t('Ocultar ventana')}"><i class="fa-regular fa-eye-slash"></i></button>`);
     }
-    acts.push(`<button class="hw-act" onclick="hwToggle('${key}')" title="${t('Ocultar ventana')}" aria-label="${t('Ocultar ventana')}"><i class="fa-regular fa-eye-slash"></i></button>`);
   }
   const body = key === 'modules' ? hwModulesBody(cfg) : key === 'news' ? hwNewsBody() : hwCalBody(c);
   const dragAttrs = locked ? '' : ` title="${t('Arrastra para mover')}" onpointerdown="hwDragStart(event)"`;
@@ -4305,21 +4308,59 @@ function renderHomeModular() {
 }
 
 function hwToggle(key) { const cfg = hwCfg(); cfg[key].on = cfg[key].on ? 0 : 1; hwSave(cfg); renderHomeModular(); }
-// Modo de los módulos: iconos y nombres → solo iconos (nombre al hover) → solo nombres
-function hwCycleMode() {
+/* ── Desplegable de opciones de la ventana Módulos (patrón cdd de la app) ── */
+function hwModMenuHTML(c) {
+  const mi = (field, val, label, ico) => {
+    const on = String(c[field]) === String(val);
+    return `<button class="hw-mi${on ? ' on' : ''}" onclick="hwSetOpt('${field}','${val}')">
+      <i class="fa-solid ${ico}"></i> ${label}${on ? '<i class="fa-solid fa-check hw-mi-check"></i>' : ''}</button>`;
+  };
+  return `<div class="cdd hw-menu" id="hwModMenu">
+    <button class="hw-act" onclick="hwMenuToggle(event)" title="${t('Opciones')}" aria-label="${t('Opciones')}" aria-haspopup="menu"><i class="fa-solid fa-sliders"></i></button>
+    <div class="cdd-panel hw-menu-panel" role="menu">
+      <div class="hw-mi-h">${t('Diseño')}</div>
+      ${mi('layout', 'grid', t('Cuadrícula'), 'fa-table-cells-large')}
+      ${mi('layout', 'list', t('Lista'), 'fa-list')}
+      <div class="hw-mi-h">${t('Vista')}</div>
+      ${mi('mode', 'both', t('Iconos y nombres'), 'fa-shapes')}
+      ${mi('mode', 'icons', t('Solo iconos'), 'fa-icons')}
+      ${mi('mode', 'names', t('Solo nombres'), 'fa-font')}
+      <div class="hw-mi-h">${t('Tamaño')}</div>
+      ${mi('size', 1, t('Chico'), 'fa-minimize')}
+      ${mi('size', 2, t('Mediano'), 'fa-expand')}
+      ${mi('size', 3, t('Grande'), 'fa-maximize')}
+      <div class="hw-mi-sep"></div>
+      <button class="hw-mi" onclick="hwToggle('modules')"><i class="fa-regular fa-eye-slash"></i> ${t('Ocultar ventana')}</button>
+    </div>
+  </div>`;
+}
+// El panel se posiciona fixed al abrir: la ventana tiene overflow:hidden y lo recortaría
+function hwMenuToggle(ev) {
+  ev.stopPropagation();
+  cddToggle('hwModMenu');
+  const cdd = document.getElementById('hwModMenu');
+  const panel = cdd ? cdd.querySelector('.cdd-panel') : null;
+  if (cdd && panel && cdd.classList.contains('open')) {
+    const r = ev.currentTarget.getBoundingClientRect();
+    panel.style.position = 'fixed';
+    panel.style.top = (r.bottom + 6) + 'px';
+    const w = panel.offsetWidth || 212;
+    panel.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, r.right - w)) + 'px';
+    panel.style.right = 'auto';
+  }
+}
+function hwSetOpt(field, val) {
   const cfg = hwCfg();
-  cfg.modules.mode = cfg.modules.mode === 'both' ? 'icons' : cfg.modules.mode === 'icons' ? 'names' : 'both';
+  cfg.modules[field] = field === 'size' ? Number(val) : val;
   hwSave(cfg); renderHomeModular();
 }
-// Tamaño de los módulos dentro de la ventana: chico → mediano → grande → chico
-function hwCycleSize() { const cfg = hwCfg(); cfg.modules.size = (cfg.modules.size % 3) + 1; hwSave(cfg); renderHomeModular(); }
 
 /* Mover ventanas: drag desde el header (Pointer Events, funciona en touch).
    Mientras arrastras, la ventana se reacomoda en vivo sobre la retícula;
    al soltar se guarda el orden. */
 let hwDrag = null;
 function hwDragStart(e) {
-  if (e.target.closest('.hw-act')) return;   // los botones del header no inician drag
+  if (e.target.closest('.hw-act') || e.target.closest('.hw-menu')) return;   // botones y menú no inician drag
   const el = e.target.closest('.hw'); if (!el) return;
   hwDrag = { el, x0: e.clientX, y0: e.clientY, moved: false };
   document.addEventListener('pointermove', hwDragMove);
