@@ -323,7 +323,8 @@ ${STYLE()}
       <button class="tab on" data-pane="noticias" role="tab" aria-selected="true">Noticias</button>
       <button class="tab" data-pane="avances" role="tab" aria-selected="false">Avances del desk</button>
     </div>
-    <div class="news-lang" id="newsLang" role="group" aria-label="Idioma de las noticias">
+    <div class="news-lang" id="newsLang" data-lang="es" role="group" aria-label="Idioma de las noticias">
+      <span class="nl-ind" aria-hidden="true"></span>
       <button type="button" class="nl-btn" data-nlang="es">ES</button>
       <button type="button" class="nl-btn" data-nlang="en">EN</button>
     </div>
@@ -551,11 +552,13 @@ const SUMMARY = ${JSON.stringify(summaryText)};
   // ── Idioma ES/EN ──
   (function wireNewsLang(){
     var lb = document.getElementById('newsLang'); if (!lb) return;
+    lb.setAttribute('data-lang', newsLang);   // posición inicial de la pastilla
     lb.querySelectorAll('.nl-btn').forEach(function(b){
       b.classList.toggle('on', b.getAttribute('data-nlang') === newsLang);
       b.addEventListener('click', function(){
         newsLang = b.getAttribute('data-nlang');
         try { localStorage.setItem('lang', newsLang); } catch(e){}
+        lb.setAttribute('data-lang', newsLang);   // desliza la pastilla
         lb.querySelectorAll('.nl-btn').forEach(function(x){ x.classList.toggle('on', x === b); });
         renderNewsHero(); renderMeta(); buildFilterList(); updateFilterBtn(); renderNews();
       });
@@ -938,11 +941,15 @@ function STYLE() {
   .news-cddf-foot{display:flex;justify-content:flex-end;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
   .news-cddf-clear{font:inherit;font-size:12.5px;font-weight:600;color:var(--navy-2);background:none;border:0;cursor:pointer;padding:5px 9px;border-radius:8px}
   @media (hover:hover){.news-cddf-clear:hover{background:var(--navy-pale)}}
-  .news-lang{display:inline-flex;flex:0 0 auto;background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:2px;gap:2px}
-  .nl-btn{font-size:11.5px;font-weight:600;letter-spacing:.03em;padding:5px 12px;border-radius:999px;cursor:pointer;background:none;border:0;color:var(--ink-mute);font-family:inherit;transition:background .15s ease,color .15s ease}
-  .nl-btn.on{background:var(--navy);color:#fff}
+  .news-lang{position:relative;display:inline-flex;flex:0 0 auto;background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:3px}
+  /* Pastilla deslizante: se mueve entre ES y EN */
+  .nl-ind{position:absolute;top:3px;bottom:3px;left:3px;width:calc(50% - 3px);border-radius:999px;background:var(--navy);box-shadow:0 1px 3px rgba(18,30,54,.22);transform:translateX(0);transition:transform .34s cubic-bezier(.5,.05,.15,1)}
+  .news-lang[data-lang="en"] .nl-ind{transform:translateX(100%)}
+  .nl-btn{position:relative;z-index:1;flex:1 0 auto;min-width:42px;text-align:center;font-size:11.5px;font-weight:600;letter-spacing:.03em;padding:5px 13px;border-radius:999px;cursor:pointer;background:none;border:0;color:var(--ink-mute);font-family:inherit;transition:color .24s ease}
+  .nl-btn.on{color:#fff}
   @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .nl-btn.on{color:#0C121E}}
   :root[data-theme="dark"] .nl-btn.on{color:#0C121E}
+  @media (prefers-reduced-motion:reduce){.nl-ind{transition:none}}
   .news-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:15px}
   .news-card{display:flex;flex-direction:column;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:15px;padding:17px 18px;box-shadow:var(--raise);text-decoration:none;color:inherit;transition:transform .18s var(--ease-out),border-color .18s var(--ease-out),box-shadow .18s var(--ease-out);animation:newsIn .5s var(--ease-out) both;animation-delay:calc(var(--i,0) * 32ms)}
   @media (hover:hover){.news-card:hover{transform:translateY(-3px);border-color:var(--navy-pale);box-shadow:0 8px 26px rgba(18,30,54,.08)}}
