@@ -4937,6 +4937,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
           <button class="cdd-btn" type="button" onclick="cddToggle('campContactsCdd')"><i class="fa-solid fa-address-book cdd-ico"></i><span class="cdd-label">Contactos</span><i class="fa-solid fa-chevron-down cdd-chev"></i></button>
           <div class="cdd-panel camp-cdd-panel">
             <div class="cdd-opt" onclick="campAddContactOpen();this.closest('.cdd').classList.remove('open');event.stopPropagation()"><i class="fa-solid fa-user-plus"></i> Añadir contacto</div>
+            <div class="cdd-opt" onclick="contactsImportPick('cartas');this.closest('.cdd').classList.remove('open');event.stopPropagation()" title="Carga masiva de contactos desde un archivo CSV o Excel"><i class="fa-solid fa-file-import"></i> Importar contactos</div>
             <div class="cdd-opt" onclick="campPickOpen('edit');this.closest('.cdd').classList.remove('open');event.stopPropagation()"><i class="fa-solid fa-user-pen"></i> Editar contacto</div>
             <div class="cdd-opt" onclick="campPickOpen('delete');this.closest('.cdd').classList.remove('open');event.stopPropagation()"><i class="fa-solid fa-user-minus"></i> Eliminar contacto</div>
           </div>
@@ -5118,6 +5119,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
             <i class="fa-solid fa-magnifying-glass db-search-ico"></i>
             <input id="aptGestSearch" class="db-search-inp" placeholder="Buscar nombre o correo…" oninput="renderAptGest()" autocomplete="off">
           </div>
+          <button class="cdd-btn" type="button" onclick="contactsImportPick('apertura')" title="Carga masiva de contactos desde un archivo CSV o Excel"><i class="fa-solid fa-file-import"></i> Importar</button>
           <button class="cdd-btn" type="button" onclick="aptGestExport()"><i class="fa-solid fa-file-csv"></i> Exportar CSV</button>
         </div>
         <div class="apt-addrow">
@@ -5184,6 +5186,9 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
       </div>
     </div>
   </div>
+
+  <!-- Import masivo de contactos (Apertura Gestión / Campañas): input oculto compartido -->
+  <input type="file" id="contactsImportFile" accept=".csv,.xlsx,.xls,text/csv" style="display:none" onchange="contactsImportRun(this)">
 
   <!-- Import de Listas: input oculto + modal de elección + modal de resultados -->
   <input type="file" id="lstImportFile" accept=".csv,.xlsx,.xls,text/csv" style="display:none" onchange="listasImportFile(this)">
@@ -6990,7 +6995,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   </div>
 </div>
 
-<script src="/i18n.js?v=20260818-htmlsmvp"></script>
-<script src="/app.js?v=20260818-segfix"></script>
+<script src="/i18n.js?v=20260818-import"></script>
+<script src="/app.js?v=20260818-import"></script>
 </body>
 </html>

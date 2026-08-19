@@ -1094,6 +1094,33 @@ const EN = {
   '"{t}" se borrará para todo el equipo. No se puede deshacer.': '“{t}” will be deleted for the whole team. This can’t be undone.',
   'HTML eliminado': 'HTML deleted',
   'Permite las ventanas emergentes para abrirlo': 'Allow pop-ups to open it',
+
+  // ── Noticias / Campañas / Apertura / To Do view / header (retrofit de traducción) ──
+  'Noticias': 'News',
+  'Noticias del portafolio + avances del desk': 'Portfolio news + desk updates',
+  'Novedades del portafolio': 'Portfolio news',
+  'Ver todas las noticias': 'See all news',
+  'Leer': 'Read',
+  'Cartas Mensuales GVV': 'GVV Monthly Letters',
+  'Cartas GVV': 'GVV Letters',
+  'Apertura Cretum Diaria': 'Cretum Daily Market Open',
+  'Apertura Cretum': 'Cretum Market Open',
+  'Listas': 'Lists',
+  'Seguimiento': 'Tracking',
+  'Tipo de vista': 'View type',
+  'Elegir tipo de vista': 'Choose view type',
+  'Base de Datos MVP': 'MVP Database',
+  'Base de Datos Cretum': 'Cretum Database',
+  'Notas': 'Notes',
+  'Usuarios': 'Users',
+
+  // ── Importar contactos (Apertura Gestión / Campañas) ──
+  'Importar': 'Import',
+  'Importar contactos': 'Import contacts',
+  'Carga masiva de contactos desde un archivo CSV o Excel': 'Bulk-upload contacts from a CSV or Excel file',
+  'No encontré correos en el archivo': 'No emails found in the file',
+  '{n} contactos importados (los repetidos se omiten)': '{n} contacts imported (duplicates are skipped)',
+  'No se pudo importar': 'Couldn’t import',
 };
 
 let LANG = 'es';

@@ -3828,7 +3828,7 @@ async function renderHomeNews() {
         ${top.map(i => `
           <div class="hn-card">
             <div class="hn-top"><span class="hn-co">${escapeHtml(i.company)}</span><span class="hn-time">${ago(i.published)}</span></div>
-            <div class="hn-text" title="${escapeHtml(i.title)}">${escapeHtml(i.title_es || i.title)}</div>
+            <div class="hn-text" title="${escapeHtml(i.title)}">${escapeHtml(currentLang() === 'en' ? (i.title || i.title_es) : (i.title_es || i.title))}</div>
             <div class="hn-foot"><span class="hn-src">${escapeHtml(i.source)}</span><a class="hn-btn" href="${escapeHtml(i.url)}" target="_blank" rel="noopener">Leer <i class="fa-solid fa-arrow-up-right-from-square"></i></a></div>
           </div>`).join('')}
       </div>
@@ -4541,7 +4541,7 @@ function switchView(view, isBack = false) {
     'usuarios':     'Usuarios',
   }[view] || '';
   document.getElementById('headerBrandText').textContent =
-    view === 'selector' ? 'Cretum · Selector' : (orgPrefix + viewLabel);
+    view === 'selector' ? 'Cretum · Selector' : (orgPrefix + t(viewLabel));
 
   // Botón de back: visible si hay historial
   const backBtn = document.getElementById('backBtn');
@@ -14453,6 +14453,50 @@ async function lstApplyImport(list, entries, mode) {
   } catch (e) {
     console.error('[listas import apply]', e);
     toast('Error al aplicar: ' + (e.message || ''));
+  }
+}
+
+/* ── Importar contactos por CSV/Excel (Apertura Gestión y Campañas) ──
+   Carga masiva "solo agregar": upsert con ignoreDuplicates → nunca borra ni duplica.
+   Reusa el parser lstParseImport y la lectura de XLSX (que también lee CSV). El input
+   oculto #contactsImportFile lleva data-target = 'apertura' | 'cartas'. ── */
+function contactsImportPick(target) {
+  const inp = document.getElementById('contactsImportFile');
+  if (!inp) return;
+  inp.dataset.target = target;
+  inp.value = '';
+  inp.click();
+}
+async function contactsImportRun(input) {
+  const file = input.files && input.files[0];
+  const target = input.dataset.target || 'apertura';
+  input.value = '';
+  if (!file) return;
+  try {
+    await loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
+    const wbk = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+    const ws = wbk.Sheets[wbk.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, blankrows: false, defval: '' });
+    const seen = new Set(); const entries = [];
+    lstParseImport(rows).forEach(e => { if (e.email && !seen.has(e.email)) { seen.add(e.email); entries.push(e); } });   // dedupe del archivo
+    if (!entries.length) { toast(t('No encontré correos en el archivo')); return; }
+    if (target === 'apertura') {
+      const payload = entries.map(e => ({ email: e.email, nombre: e.name || null }));
+      const { error } = await sb.from('apertura_contacts').upsert(payload, { onConflict: 'email', ignoreDuplicates: true });
+      if (error) throw error;
+      aperturaContacts = null; aptTblRows = null;   // invalida caches (igual que aptGestAdd)
+      if (typeof loadAptGest === 'function') await loadAptGest();
+    } else {
+      const payload = entries.map(e => ({ email: e.email, nombre: lstFirst(e.name) || null, nombre_completo: e.name || '', responsable: null, cancelado: false }));
+      const { error } = await sb.from('lp_contacts').upsert(payload, { onConflict: 'email', ignoreDuplicates: true });
+      if (error) throw error;
+      campaignsLoaded = false;   // fuerza recarga de la matriz
+      if (typeof loadCampaigns === 'function') await loadCampaigns();
+    }
+    toast(t('{n} contactos importados (los repetidos se omiten)', { n: entries.length }));
+  } catch (e) {
+    console.error('[contactsImport]', e);
+    toast(t('No se pudo importar') + ': ' + (e.message || ''));
   }
 }
 
