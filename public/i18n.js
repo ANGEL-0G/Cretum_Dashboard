@@ -1135,6 +1135,8 @@ const EN = {
   'Actualizar': 'Refresh',
   'Todo el día': 'All day',
   '(sin título)': '(untitled)',
+  'Esta semana · privado': 'This week · private',
+  'Sin eventos esta semana.': 'No events this week.',
 };
 
 let LANG = 'es';

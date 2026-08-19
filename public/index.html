@@ -2189,6 +2189,12 @@ a.hb-t:hover{color:var(--navy)}
 .cal-who{font-size:11.5px;color:var(--gray-400);margin-right:auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%}
 .cal-mini{font-family:var(--font);font-size:12px;font-weight:500;color:var(--gray-500);background:none;border:0;cursor:pointer;padding:4px 6px;border-radius:6px;display:inline-flex;align-items:center;gap:6px;transition:color .15s,background .15s}
 .cal-mini:hover{color:var(--navy);background:var(--navy-pale)}
+/* Página Calendario (agenda) */
+.cal-page{max-width:660px}
+.cal-card{padding:16px 20px}
+.cal-day{margin-top:18px}
+.cal-day:first-child{margin-top:2px}
+.cal-day-h{font-size:12px;font-weight:600;color:var(--navy);text-transform:capitalize;letter-spacing:.02em;margin:0 0 4px;padding-bottom:7px;border-bottom:1px solid var(--gray-100)}
 /* Composer de nota manual */
 .hb-comp{text-align:left;width:400px}
 .hb-kinds{display:flex;gap:6px;margin:14px 0 12px}
@@ -4184,6 +4190,14 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
       </div>
       <div class="home-picker-list" id="homePickerList"></div>
     </div>
+  </div>
+
+  <!-- VISTA: CALENDARIO (Outlook por usuario, privado) -->
+  <div class="page page-db" id="pageCalendario">
+    <div class="db-toolbar">
+      <div class="db-title-block"><i class="fa-solid fa-calendar-days"></i> <span data-i18n>Calendario</span></div>
+    </div>
+    <div class="cal-page" id="calPage"></div>
   </div>
 
   <!-- VISTA: DROPBOX -->
@@ -7040,7 +7054,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   </div>
 </div>
 
-<script src="/i18n.js?v=20260819-cal"></script>
-<script src="/app.js?v=20260819-cal"></script>
+<script src="/i18n.js?v=20260819-cal2"></script>
+<script src="/app.js?v=20260819-cal2"></script>
 </body>
 </html>

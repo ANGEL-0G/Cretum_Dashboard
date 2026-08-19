@@ -3485,6 +3485,7 @@ const ORG_NAV = {
   cretum: [
     { view: 'home',    icon: 'fa-house',       label: 'Inicio' },
     { view: 'tasks',   icon: 'fa-list-check',  label: 'To Do Dashboard' },
+    { view: 'calendario', icon: 'fa-calendar-days', label: 'Calendario' },
     { view: 'notes',   icon: 'fa-book',        label: 'Notas' },
     { view: 'contactos', icon: 'fa-database',  label: 'Base de Datos Cretum', hideColaborador: true },
     { view: 'dropbox', icon: 'fa-dropbox',     label: 'Dropbox', brand: true },
@@ -3496,6 +3497,7 @@ const ORG_NAV = {
   ],
   mvp: [
     { view: 'home',         icon: 'fa-house',         label: 'Inicio' },
+    { view: 'calendario',   icon: 'fa-calendar-days', label: 'Calendario' },
     { view: 'notes',        icon: 'fa-book',          label: 'Notas' },
     { view: 'db',           icon: 'fa-database',      label: 'Base de Datos MVP' },
     { view: 'fundTrackers', icon: 'fa-chart-column',  label: 'Fund Trackers' },
@@ -3508,12 +3510,8 @@ const ORG_NAV = {
 };
 
 const ORG_SOON = {
-  cretum: [
-    { icon: 'fa-solid fa-calendar-days', label: 'Calendario' },
-  ],
-  mvp: [
-    { icon: 'fa-solid fa-calendar-days', label: 'Calendario' },
-  ],
+  cretum: [],
+  mvp: [],
 };
 
 function applyOrgTheme() {
@@ -3780,6 +3778,8 @@ function renderHomeModules() {
     soonGrid.innerHTML = soonItems.map(it => `
       <div class="home-soon-item"><i class="${it.icon}"></i> ${t(it.label)}</div>
     `).join('');
+    const soonWrap = soonGrid.closest('.home-soon');   // sin items → oculta el bloque "Próximamente"
+    if (soonWrap) soonWrap.style.display = soonItems.length ? '' : 'none';
   }
 
   // Panel ejecutivo MVP: ahora vive en Base de Datos → botón "Full LATAM MVP Snapshot".
@@ -3893,10 +3893,10 @@ async function calFetch() {
   return j.value || [];
 }
 async function calRefresh() {
-  calState = 'loading'; renderHomeEvents();
+  calState = 'loading'; calRender();
   try { calEvents = await calFetch(); calState = 'ready'; }
   catch (e) { console.error('[eventos-cretum fetch]', e); calState = 'error'; }
-  renderHomeEvents();
+  calRender();
 }
 // Auto-conexión silenciosa si el usuario ya había enlazado Outlook.
 let calBooting = false;
@@ -3904,14 +3904,14 @@ async function calBootstrap() {
   if (calBooting) return; calBooting = true;
   try {
     await calInit();
-    if (!calAccount) { calState = 'needlogin'; renderHomeEvents(); return; }
+    if (!calAccount) { calState = 'needlogin'; calRender(); return; }
     await calRefresh();
-  } catch (e) { console.error('[eventos-cretum init]', e); calState = 'error'; renderHomeEvents(); }
+  } catch (e) { console.error('[eventos-cretum init]', e); calState = 'error'; calRender(); }
   finally { calBooting = false; }
 }
 async function calConnect() {
   try {
-    calState = 'loading'; renderHomeEvents();
+    calState = 'loading'; calRender();
     await calInit();
     const r = await calMsal.loginPopup({ scopes: CAL_SCOPES, prompt: 'select_account' });
     calAccount = r.account;
@@ -3920,13 +3920,13 @@ async function calConnect() {
   } catch (e) {
     console.error('[eventos-cretum connect]', e);
     calState = calAccount ? 'error' : 'needlogin';
-    renderHomeEvents();
+    calRender();
   }
 }
 function calDisconnect() {
   try { localStorage.removeItem('cal-on'); } catch (e) {}
   calEvents = null; calState = 'idle';
-  renderHomeEvents();
+  calRender();
 }
 
 // Fila de un evento (reusa el estilo hb-ev del tablero).
@@ -3949,7 +3949,8 @@ function calEventHTML(ev) {
   return `<div class="hb-ev">${dateBox}<div class="hb-txt">${title}${sub ? `<div class="hb-ev-m">${escapeHtml(sub)}</div>` : ''}</div></div>`;
 }
 
-function calBodyHTML() {
+// Estados compartidos (conectar / cargando / sesión expirada / error). Devuelve null si "ready".
+function calNonReadyHTML() {
   const on = calOn();
   if (!on || calState === 'idle') {
     return `<div class="cal-cta">
@@ -3967,16 +3968,53 @@ function calBodyHTML() {
   if (calState === 'error') {
     return `<div class="cal-cta">
       <p class="cal-cta-tx">${t('No se pudieron cargar tus eventos.')}</p>
-      <div class="cal-foot"><button class="cal-mini" onclick="calRefresh()"><i class="fa-solid fa-rotate"></i> ${t('Reintentar')}</button><button class="cal-mini" onclick="calDisconnect()">${t('Desconectar')}</button></div>
+      ${calFootHTML()}
     </div>`;
   }
-  // ready
-  const list = (calEvents && calEvents.length)
-    ? calEvents.map(calEventHTML).join('')
-    : `<div class="hb-empty">${t('Sin eventos próximos.')}</div>`;
+  return null;
+}
+function calFootHTML() {
   const who = calAccount && calAccount.username ? escapeHtml(calAccount.username) : '';
-  return `${list}
-    <div class="cal-foot">${who ? `<span class="cal-who">${who}</span>` : ''}<button class="cal-mini" onclick="calRefresh()"><i class="fa-solid fa-rotate"></i> ${t('Actualizar')}</button><button class="cal-mini" onclick="calDisconnect()">${t('Desconectar')}</button></div>`;
+  return `<div class="cal-foot">${who ? `<span class="cal-who">${who}</span>` : ''}<button class="cal-mini" onclick="calRefresh()"><i class="fa-solid fa-rotate"></i> ${t('Actualizar')}</button><button class="cal-mini" onclick="calDisconnect()">${t('Desconectar')}</button></div>`;
+}
+// Fin de la semana actual (domingo 23:59, hora local).
+function calEndOfWeek() {
+  const d = new Date();
+  const add = (7 - d.getDay()) % 7;   // días hasta el próximo domingo (0 si hoy es domingo)
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + add, 23, 59, 59, 999);
+}
+function calEvDate(ev) {
+  const raw = ev.start && ev.start.dateTime ? String(ev.start.dateTime).replace(/(\.\d{3})\d+$/, '$1') : '';
+  const d = raw ? new Date(raw) : null;
+  return (d && !isNaN(d)) ? d : null;
+}
+// Widget del home: SOLO eventos de esta semana.
+function calWidgetBody() {
+  const nr = calNonReadyHTML(); if (nr !== null) return nr;
+  const end = calEndOfWeek().getTime();
+  const evs = (calEvents || []).filter(ev => { const d = calEvDate(ev); return d && d.getTime() <= end; });
+  const list = evs.length ? evs.map(calEventHTML).join('') : `<div class="hb-empty">${t('Sin eventos esta semana.')}</div>`;
+  return list + calFootHTML();
+}
+// Página Calendario: agenda completa (próximos ~45 días) agrupada por día.
+function calPageBody() {
+  const nr = calNonReadyHTML(); if (nr !== null) return nr;
+  const evs = calEvents || [];
+  if (!evs.length) return `<div class="hb-empty">${t('Sin eventos próximos.')}</div>` + calFootHTML();
+  const groups = [], byKey = {};
+  evs.forEach(ev => {
+    const d = calEvDate(ev);
+    const key = d ? d.toISOString().slice(0, 10) : 'sin';
+    if (!byKey[key]) { byKey[key] = { d, items: [] }; groups.push(key); }
+    byKey[key].items.push(ev);
+  });
+  const loc = currentLang() === 'en' ? 'en-US' : 'es-MX';
+  const html = groups.map(k => {
+    const g = byKey[k];
+    const hdr = g.d ? g.d.toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' }) : t('Sin fecha');
+    return `<div class="cal-day"><div class="cal-day-h">${escapeHtml(hdr)}</div>${g.items.map(calEventHTML).join('')}</div>`;
+  }).join('');
+  return html + calFootHTML();
 }
 
 function renderHomeEvents() {
@@ -3984,18 +4022,24 @@ function renderHomeEvents() {
   if (!host) return;
   if (currentOrg !== 'cretum' || currentView !== 'home') { host.style.display = 'none'; return; }
   host.style.display = '';
-  // Auto-conectar en silencio si ya estaba enlazado y aún no cargamos.
   if (calOn() && calState === 'idle') { calState = 'loading'; calBootstrap(); }
   const collapsed = calCollapsed();
   host.innerHTML = `<div class="hb-card${collapsed ? ' collapsed' : ''}">
     <button class="hb-toggle" onclick="calToggleCollapse()" aria-expanded="${!collapsed}">
       <i class="fa-solid fa-chevron-down hb-chev"></i>
       <span class="hb-title">${t('Eventos Cretum')}</span>
-      <span class="hb-desc">${t('Tus próximos eventos de Outlook · privado')}</span>
+      <span class="hb-desc">${t('Esta semana · privado')}</span>
     </button>
-    <div class="hb-wrap"><div class="hb-inner">${calBodyHTML()}</div></div>
+    <div class="hb-wrap"><div class="hb-inner">${calWidgetBody()}</div></div>
   </div>`;
 }
+function renderCalPage() {
+  const host = document.getElementById('calPage');
+  if (!host || currentView !== 'calendario') return;
+  if (calOn() && calState === 'idle') { calState = 'loading'; calBootstrap(); }
+  host.innerHTML = `<div class="hb-card cal-card">${calPageBody()}</div>`;
+}
+function calRender() { renderHomeEvents(); renderCalPage(); }
 
 /* ═══════════════════════════════════════════
    TABLERO DEL EQUIPO (home MVP)
@@ -4679,6 +4723,8 @@ function switchView(view, isBack = false) {
   if (pageContactos) pageContactos.classList.toggle('active', view === 'contactos');
   const pageUsuarios = document.getElementById('pageUsuarios');
   if (pageUsuarios) pageUsuarios.classList.toggle('active', view === 'usuarios');
+  const pageCalendario = document.getElementById('pageCalendario');
+  if (pageCalendario) pageCalendario.classList.toggle('active', view === 'calendario');
 
   highlightActiveNav();
 
@@ -4687,6 +4733,7 @@ function switchView(view, isBack = false) {
     'selector':     'Empresas',
     'home':         'Inicio',
     'tasks':        'To Do',
+    'calendario':   'Calendario',
     'db':           'Base de Datos MVP',
     'dropbox':      'Dropbox',
     'fundTrackers': 'Fund Trackers',
@@ -4728,6 +4775,7 @@ function switchView(view, isBack = false) {
   if (view === 'forms') formsBackHome();
   if (view === 'ventas') ventasBackHome();
   if (view === 'notes') openNotesPage();
+  if (view === 'calendario') renderCalPage();
   if (view === 'contactos') loadContactos();
   if (view === 'usuarios') loadUsuarios();
   if (view === 'home') { homeEditMode = false; renderHomeModules(); } else closeHomePicker();
