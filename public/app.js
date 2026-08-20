@@ -18108,6 +18108,10 @@ function gmRender() {
   <div style="${card};margin-bottom:14px"><div style="font-weight:700;margin-bottom:8px"><i class="fa-solid fa-signal"></i> Señales (${sig.length})</div>
     ${sig.length ? sig.map(x => `<div style="display:flex;gap:9px;align-items:baseline;padding:6px 10px;border-radius:8px;background:${sevBg[x.sev]};margin:4px 0;font-size:12.5px"><i class="fa-solid ${x.icon}" style="color:var(--gray-500)"></i><span>${escapeHtml(x.txt)}</span></div>`).join('') : '<div style="color:var(--gray-400);font-size:12px">Sin señales — día tranquilo.</div>'}
   </div>
+  ${(s.alerts_today && s.alerts_today.length) ? `<div style="${card};margin-bottom:14px">
+    <div style="font-weight:700;margin-bottom:8px"><i class="fa-solid fa-bell"></i> Alertas enviadas hoy (${s.alerts_today.length}) <span style="font-weight:400;font-size:11px;color:var(--gray-400)">· Telegram, canal gvv</span></div>
+    ${s.alerts_today.map(a => `<div style="display:flex;gap:9px;align-items:baseline;padding:5px 10px;border-radius:8px;background:var(--gray-50);margin:3px 0;font-size:12.5px"><span style="color:var(--gray-400);font-size:10.5px;font-variant-numeric:tabular-nums">${escapeHtml(a.ts)}</span><span>${escapeHtml(a.text)}</span></div>`).join('')}
+  </div>` : ''}
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-bottom:14px">
     <div style="${card}"><div style="font-weight:700;margin-bottom:6px;color:#c62828"><i class="fa-solid fa-arrow-trend-down"></i> Bajan hoy</div>
       <table class="camp-table" style="width:100%">${s.top_down.map(moverRow).join('')}</table></div>
