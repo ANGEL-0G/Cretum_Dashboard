@@ -6494,6 +6494,7 @@ function dismissTopLayer() {
   //     (limpieza propia: la previa vacía el iframe al cerrar).
   if (q('mhPreview')?.classList.contains('show')) { mhPreviewClose(); return true; }
   if (q('mhModal')?.classList.contains('show'))   { mhNewClose();     return true; }
+  if (q('ccDetailModal')?.classList.contains('show')) { ccDetailClose(); return true; }
   // 3) Cualquier otro modal/overlay visible (campañas, portal, MFA, confirmaciones…)
   const overlays = document.querySelectorAll('.camp-modal-backdrop.show, .modal-backdrop.show, .mvp-snap-modal.show');
   if (overlays.length) { overlays[overlays.length - 1].classList.remove('show'); return true; }
@@ -6542,6 +6543,8 @@ document.addEventListener('keydown', (e) => {
     mhNewClose();
   } else if (document.getElementById('calDayModal')?.classList.contains('show')) {
     calDayClose();
+  } else if (document.getElementById('ccDetailModal')?.classList.contains('show')) {
+    ccDetailClose();
   } else if (document.getElementById('navDrawer')?.classList.contains('open')) {
     closeNav();
   }
@@ -15368,14 +15371,14 @@ function renderContactos() {
     const nombre = (c.nombre || '').trim() || '(sin nombre)';
     const tags = (c.revisar ? '<span class="cc-tag rev" title="Posible personal, por revisar">revisar</span>' : '') +
                  (c.rebote ? '<span class="cc-tag reb" title="Su correo rebotó">rebotó</span>' : '');
-    const acts = canW ? `<td class="ctbl-acts">
+    const acts = canW ? `<td class="ctbl-acts" onclick="event.stopPropagation()">
       <button class="ctbl-act" title="${c.revisar ? 'Quitar marca por revisar' : 'Marcar por revisar (posible personal)'}" onclick="ccToggle('${c.id}','revisar')"${c.revisar ? ' style="color:#e67e22"' : ''}><i class="fa-solid fa-flag"></i></button>
       <button class="ctbl-act" title="${c.rebote ? 'Quitar rebote' : 'Marcar: el correo rebotó'}" onclick="ccToggle('${c.id}','rebote')"${c.rebote ? ' style="color:#c0392b"' : ''}><i class="fa-solid fa-triangle-exclamation"></i></button>
       <button class="ctbl-act" title="Editar" onclick="ccEditOpen('${c.id}')"><i class="fa-solid fa-pen"></i></button>
       <button class="ctbl-act del" title="Eliminar" onclick="ccDelete('${c.id}')"><i class="fa-solid fa-trash"></i></button>
     </td>` : '';
     const tel = c.telefono_movil || c.telefono_trabajo || '';
-    return `<tr class="${c.revisar ? 'cc-tr-rev' : ''}${c.rebote ? ' cc-tr-reb' : ''}">
+    return `<tr class="cc-tr-click${c.revisar ? ' cc-tr-rev' : ''}${c.rebote ? ' cc-tr-reb' : ''}" onclick="ccDetailOpen('${c.id}')" title="${t('Ver detalle')}">
       <td class="ctbl-nm">${escapeHtml(nombre)}${tags}</td>
       <td class="ctbl-em">${escapeHtml(c.email || '')}</td>
       <td>${escapeHtml(c.organizacion || '')}</td>
@@ -15412,6 +15415,46 @@ async function ccDelete(id) {
   renderContactos();
   toast('Contacto eliminado');
 }
+
+/* ── Detalle del contacto (abrir para ver todo + notas editables) ── */
+let ccDetailId = null;
+async function ccDetailOpen(id) {
+  const c = cretumContactos.find(x => x.id === id);
+  if (!c) return;
+  ccDetailId = id;
+  const m = document.getElementById('ccDetailModal'); if (!m) return;
+  document.getElementById('ccdName').textContent = (c.nombre || '').trim() || t('(sin nombre)');
+  const tags = (c.revisar ? `<span class="cc-tag rev">${t('revisar')}</span>` : '') + (c.rebote ? `<span class="cc-tag reb">${t('rebotó')}</span>` : '');
+  document.getElementById('ccdTags').innerHTML = tags;
+  const row = (label, val, href) => val ? `<div class="ccd-row"><span class="ccd-k">${label}</span>${href ? `<a class="ccd-v" href="${href}${escapeHtml(val)}">${escapeHtml(val)}</a>` : `<span class="ccd-v">${escapeHtml(val)}</span>`}</div>` : '';
+  document.getElementById('ccdFields').innerHTML =
+    row(t('Correo'), c.email, 'mailto:') +
+    row(t('Organización'), c.organizacion) +
+    row(t('Puesto'), c.puesto) +
+    row(t('Móvil'), c.telefono_movil, 'tel:') +
+    row(t('Tel. trabajo'), c.telefono_trabajo, 'tel:') +
+    row(t('País'), c.pais) ||
+    `<div class="ccd-empty">${t('Sin datos adicionales.')}</div>`;
+  const nt = document.getElementById('ccdNota');
+  nt.value = t('Cargando…'); nt.disabled = true;
+  const save = document.getElementById('ccdNotaSave'); if (save) save.style.display = ccCanWrite() ? '' : 'none';
+  m.classList.add('show');
+  // Las notas se traen al abrir (no se cargan con las 11k filas).
+  try {
+    const { data } = await sb.from('cretum_contactos').select('notas').eq('id', id).maybeSingle();
+    nt.value = (data && data.notas) || '';
+  } catch (e) { nt.value = ''; }
+  nt.disabled = !ccCanWrite();
+  nt.placeholder = ccCanWrite() ? t('Escribe una nota sobre este contacto…') : t('Sin notas.');
+}
+async function ccDetailSaveNota() {
+  if (!ccDetailId || !ccCanWrite()) return;
+  const nota = document.getElementById('ccdNota').value;
+  const { error } = await sb.from('cretum_contactos').update({ notas: nota }).eq('id', ccDetailId);
+  if (error) { toast('Error: ' + error.message); return; }
+  toast(t('Nota guardada'));
+}
+function ccDetailClose() { document.getElementById('ccDetailModal').classList.remove('show'); ccDetailId = null; }
 
 function ccAddOpen() {
   ccEditId = null;

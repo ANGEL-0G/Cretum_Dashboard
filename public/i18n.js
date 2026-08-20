@@ -1174,6 +1174,22 @@ const EN = {
   'Conectar Google': 'Connect Google',
   'Reconectar Outlook': 'Reconnect Outlook',
   'Reconectar Google': 'Reconnect Google',
+
+  // ── Detalle de contacto (Base de Datos Cretum) ──
+  'Ver detalle': 'View details',
+  '(sin nombre)': '(no name)',
+  'revisar': 'review',
+  'rebotó': 'bounced',
+  'Móvil': 'Mobile',
+  'Tel. trabajo': 'Work phone',
+  'País': 'Country',
+  'Correo': 'Email',
+  'Organización': 'Organization',
+  'Puesto': 'Position',
+  'Sin datos adicionales.': 'No additional details.',
+  'Escribe una nota sobre este contacto…': 'Write a note about this contact…',
+  'Sin notas.': 'No notes.',
+  'Nota guardada': 'Note saved',
 };
 
 let LANG = 'es';
