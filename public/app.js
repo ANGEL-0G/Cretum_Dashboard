@@ -16472,7 +16472,27 @@ function spxrBuildData(d, live) {
     };
   };
   const act = rows.filter(p => !p.distributed_at).map(mk).concat(indirect).sort((a, b) => b.commitment - a.commitment);
-  const sold = rows.filter(p => p.distributed_at).map(mk);
+  let sold = rows.filter(p => p.distributed_at).map(mk);
+
+  // EXCHANGE Serie SX-1 -> 22K (consolidación, NO venta): en Q4-2023 varios miembros del
+  // SX-1 (Fund IV) intercambiaron su posición por la Serie 22K -- las MISMAS acciones, sin
+  // efectivo (invariante sx1-exchange-22k-2023). Se detecta SOLO por los datos (una SX-1
+  // distribuida SIN cash + una 22K activa del mismo inversionista), así que este bloque se
+  // activa EXCLUSIVAMENTE para quien esté en esa situación (Magaña, Cassab y demás del SX-1);
+  // para todos los otros inversionistas queda inerte y el reporte sale igual que siempre.
+  const _isSX1 = s => /Series\s+SX-?1\b|\bSX-?1\b/i.test(s || '');
+  const _is22K = s => /22K/i.test(s || '');
+  const _hasCash = x => (SPXR_N(x.cash_proceeds) || 0) + (SPXR_N(x.value_in_kind) || 0) > 0.01;
+  const _k22a = act.find(a => !a.indirect && _is22K(a.serie));
+  const _sx1Ex = sold.filter(s => _isSX1(s.serie) && !s.dists.some(_hasCash));
+  let exchange = null;
+  if (_k22a && _sx1Ex.length) {
+    const sx1Sh = _sx1Ex.reduce((s, x) => s + x.shares, 0);
+    const extra = Math.round(_k22a.shares - sx1Sh);
+    exchange = { k22Short: _k22a.short, sx1Shares: sx1Sh, k22Shares: _k22a.shares,
+                 extraShares: extra, hasExtra: extra > 5 };
+    sold = sold.filter(s => !_sx1Ex.includes(s));   // no son ventas: excluir del bloque de liquidación
+  }
 
   // Venta/reinversión desde las cartas de distribución de las filas vendidas
   let cashOut = 0, reinvP = 0, soldShares = 0, soldCost = 0, soldPps = null, soldDate = null;
@@ -16533,7 +16553,7 @@ function spxrBuildData(d, live) {
   const shB = totSh - shA;
 
   return {
-    inv, combined, live, act, sold, hasSold: sold.length > 0,
+    inv, combined, live, act, sold, hasSold: sold.length > 0, exchange,
     hasReinv, reinvP, reinvRows, crossReinv, addReinv, cashOut, cashFracNoted, soldShares, soldCost, soldPps, soldDate,
     totSh, totCost, totVal, original, totalGenerado, shA, shB,
     calendar: spxrCalendar(shAd, shAf, shBd, shBf),
@@ -16600,6 +16620,14 @@ function spxrCalendar(shAd, shAf, shBd, shBf) {
 function spxrNarrative(D, EN) {
   const T = (es, en) => (EN ? en : es);
   const ps = [];
+  // Numeración dinámica: 1=posición, luego (si aplica) consolidación por exchange y/o
+  // liquidación, y al final valuación y distribución.
+  const nEx = D.exchange ? 1 : 0;
+  const nSold = D.hasSold ? 1 : 0;
+  const nExNum = 2;                    // el párrafo de consolidación es el punto 2
+  const nLiq = 2 + nEx;                // liquidación va después de la consolidación
+  const nVal = 2 + nEx + nSold;
+  const nDist = 3 + nEx + nSold;
   const dirV = D.act.filter(a => !a.indirect && (!a.isReinvTarget || !D.hasReinv)).map(a => `<b>${a.short}</b> (${SPXR_MONEY(a.commitment)})`);
   const indV = D.act.filter(a => a.indirect);
   const join = arr => arr.join(', ').replace(/, ([^,]*)$/, T(' y $1', ' and $1'));
@@ -16615,27 +16643,36 @@ function spxrNarrative(D, EN) {
            `<b>1. The position.</b> The investor holds direct SpaceX exposure through ${D.act.length === 1 ? 'the vehicle' : 'the vehicles'} ${join(dirV)}${D.hasSold ? ' (plus the portions already liquidated, described below)' : ''}. Original capital: <b>${SPXR_MONEY(D.original)}</b>. Reflecting the <b>5:1 split</b>, the active holding is <b>${SPXR_SH(D.totSh)} post-split shares</b>.`);
   }
   ps.push(p1);
+  if (D.exchange) {
+    const ex = D.exchange;
+    const extraTxt = ex.hasExtra
+      ? T(` Tu <b>${ex.k22Short}</b> también incorpora las <b>${SPXR_SH(ex.extraShares)} acciones</b> de SpaceX que mantenías vía otro vehículo institucional legacy (<b>MVP All-Star Fund II</b>), consolidadas en la misma serie.`,
+          ` Your <b>${ex.k22Short}</b> also incorporates the <b>${SPXR_SH(ex.extraShares)} shares</b> of SpaceX you held via another legacy institutional vehicle (<b>MVP All-Star Fund II</b>), consolidated into the same series.`)
+      : '';
+    ps.push(T(`<b>${nExNum}. Consolidación de tu posición (31 de diciembre de 2023).</b> Tu posición original en la <b>Serie SX-1</b> (MVP Opportunity Fund IV) se <b>intercambió</b> —sin efectivo— por participaciones en tu <b>${ex.k22Short}</b>: las mismas <b>${SPXR_SH(ex.sx1Shares)} acciones</b> de SpaceX, ahora bajo un solo vehículo con menores gastos administrativos.${extraTxt} Por eso tu <b>${ex.k22Short}</b> refleja hoy la totalidad de tu tenencia directa (<b>${SPXR_SH(ex.k22Shares)} acciones</b>); no es capital ni acciones adicionales.`,
+              `<b>${nExNum}. Consolidation of your position (December 31, 2023).</b> Your original <b>Series SX-1</b> position (MVP Opportunity Fund IV) was <b>exchanged</b> —no cash— for interests in your <b>${ex.k22Short}</b>: the same <b>${SPXR_SH(ex.sx1Shares)} shares</b> of SpaceX, now under a single vehicle with lower administrative expenses.${extraTxt} That is why your <b>${ex.k22Short}</b> reflects your entire direct holding today (<b>${SPXR_SH(ex.k22Shares)} shares</b>); it is not additional capital or shares.`));
+  }
   if (D.hasSold) {
     const pps = D.soldPps ? T(` a un precio bruto de ${SPXR_P2(D.soldPps * 5)}/acción (${SPXR_P2(D.soldPps)} post-split)`, ` at a gross price of ${SPXR_P2(D.soldPps * 5)}/share (${SPXR_P2(D.soldPps)} post-split)`) : '';
     const fecha = D.soldDate ? new Date(D.soldDate.slice(0, 10) + 'T12:00:00').toLocaleDateString(EN ? 'en-US' : 'es-MX', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
     if (D.hasReinv && D.cashOut <= 0.01) {
       const crossTxt = (D.crossReinv > 0 && !D.reinvRows.length) ? T(' (posición mantenida en Cretum Partners GVV Fund, LP)', ' (position held in Cretum Partners GVV Fund, LP)') : '';
       const addTxt = D.addReinv > 0.01 ? T(` Adicionalmente, el inversionista aportó <b>${SPXR_MONEY(D.addReinv)}</b> de capital nuevo a la Serie VI-26A QP.`, ` Additionally, the investor contributed <b>${SPXR_MONEY(D.addReinv)}</b> of new capital to Series VI-26A QP.`) : '';
-      ps.push(T(`<b>2. Liquidación parcial y reinversión (${fecha}).</b> Un fondo institucional subyacente vendió <b>${SPXR_SH(D.soldShares)} acciones</b>${pps}. La totalidad de los <b>${SPXR_MONEY(D.reinvP)}</b> recibidos se reinvirtió en el vehículo directo <b>Serie VI-26A QP</b>${crossTxt} — es capital reciclado, no efectivo entregado.${addTxt}`,
-                `<b>2. Partial liquidation and reinvestment (${fecha}).</b> An underlying institutional fund sold <b>${SPXR_SH(D.soldShares)} shares</b>${pps}. The entire <b>${SPXR_MONEY(D.reinvP)}</b> received was reinvested into the direct vehicle <b>Series VI-26A QP</b>${crossTxt} — it is recycled capital, not cash delivered.${addTxt}`));
+      ps.push(T(`<b>${nLiq}. Liquidación parcial y reinversión (${fecha}).</b> Un fondo institucional subyacente vendió <b>${SPXR_SH(D.soldShares)} acciones</b>${pps}. La totalidad de los <b>${SPXR_MONEY(D.reinvP)}</b> recibidos se reinvirtió en el vehículo directo <b>Serie VI-26A QP</b>${crossTxt} — es capital reciclado, no efectivo entregado.${addTxt}`,
+                `<b>${nLiq}. Partial liquidation and reinvestment (${fecha}).</b> An underlying institutional fund sold <b>${SPXR_SH(D.soldShares)} shares</b>${pps}. The entire <b>${SPXR_MONEY(D.reinvP)}</b> received was reinvested into the direct vehicle <b>Series VI-26A QP</b>${crossTxt} — it is recycled capital, not cash delivered.${addTxt}`));
     } else if (D.hasReinv) {
       const addTxt2 = D.addReinv > 0.01 ? T(` Adicionalmente, el inversionista aportó <b>${SPXR_MONEY(D.addReinv)}</b> de capital nuevo a la Serie VI-26A QP.`, ` Additionally, the investor contributed <b>${SPXR_MONEY(D.addReinv)}</b> of new capital to Series VI-26A QP.`) : '';
-      ps.push(T(`<b>2. Liquidación parcial (${fecha}).</b> Un fondo institucional subyacente vendió <b>${SPXR_SH(D.soldShares)} acciones</b>${pps}. Del producto, <b>${SPXR_MONEY(D.reinvP)}</b> se reinvirtió en la <b>Serie VI-26A QP</b> y <b>${SPXR_MONEY(D.cashOut)}</b> se entregó en efectivo.${addTxt2}`,
-                `<b>2. Partial liquidation (${fecha}).</b> An underlying institutional fund sold <b>${SPXR_SH(D.soldShares)} shares</b>${pps}. Of the proceeds, <b>${SPXR_MONEY(D.reinvP)}</b> was reinvested into <b>Series VI-26A QP</b> and <b>${SPXR_MONEY(D.cashOut)}</b> was delivered in cash.${addTxt2}`));
+      ps.push(T(`<b>${nLiq}. Liquidación parcial (${fecha}).</b> Un fondo institucional subyacente vendió <b>${SPXR_SH(D.soldShares)} acciones</b>${pps}. Del producto, <b>${SPXR_MONEY(D.reinvP)}</b> se reinvirtió en la <b>Serie VI-26A QP</b> y <b>${SPXR_MONEY(D.cashOut)}</b> se entregó en efectivo.${addTxt2}`,
+                `<b>${nLiq}. Partial liquidation (${fecha}).</b> An underlying institutional fund sold <b>${SPXR_SH(D.soldShares)} shares</b>${pps}. Of the proceeds, <b>${SPXR_MONEY(D.reinvP)}</b> was reinvested into <b>Series VI-26A QP</b> and <b>${SPXR_MONEY(D.cashOut)}</b> was delivered in cash.${addTxt2}`));
     } else {
-      ps.push(T(`<b>2. Liquidación parcial (${fecha}).</b> Un fondo institucional subyacente vendió <b>${SPXR_SH(D.soldShares)} acciones</b>${pps}. El inversionista recibió <b>${SPXR_MONEY(D.cashOut)} en efectivo</b> — un múltiplo de <b>${SPXR_X(D.cashOut / D.soldCost)}</b> sobre el costo de esa porción (${SPXR_MONEY(D.soldCost)}). Este efectivo ya fue entregado; no está sujeto al lock-up.`,
-                `<b>2. Partial liquidation (${fecha}).</b> An underlying institutional fund sold <b>${SPXR_SH(D.soldShares)} shares</b>${pps}. The investor received <b>${SPXR_MONEY(D.cashOut)} in cash</b> — a <b>${SPXR_X(D.cashOut / D.soldCost)}</b> multiple on that portion's cost (${SPXR_MONEY(D.soldCost)}). This cash has already been delivered; it is not subject to the lock-up.`));
+      ps.push(T(`<b>${nLiq}. Liquidación parcial (${fecha}).</b> Un fondo institucional subyacente vendió <b>${SPXR_SH(D.soldShares)} acciones</b>${pps}. El inversionista recibió <b>${SPXR_MONEY(D.cashOut)} en efectivo</b> — un múltiplo de <b>${SPXR_X(D.cashOut / D.soldCost)}</b> sobre el costo de esa porción (${SPXR_MONEY(D.soldCost)}). Este efectivo ya fue entregado; no está sujeto al lock-up.`,
+                `<b>${nLiq}. Partial liquidation (${fecha}).</b> An underlying institutional fund sold <b>${SPXR_SH(D.soldShares)} shares</b>${pps}. The investor received <b>${SPXR_MONEY(D.cashOut)} in cash</b> — a <b>${SPXR_X(D.cashOut / D.soldCost)}</b> multiple on that portion's cost (${SPXR_MONEY(D.soldCost)}). This cash has already been delivered; it is not subject to the lock-up.`));
     }
   }
-  ps.push(T(`<b>${D.hasSold ? '3' : '2'}. Valuación actual.</b> Al precio de cierre de hoy de <b>${SPXR_P2(D.live.P)}</b> por acción${D.live.EVB ? ` (valuación de SpaceX ~ $${SPXR_INT(D.live.EVB)} mmd)` : ''}, las <b>${SPXR_SH(D.totSh)} acciones activas</b> valen <b>${SPXR_MONEY(D.totVal)}</b>, un múltiplo de <b>${SPXR_X(D.totVal / D.totCost)}</b> sobre su costo (${SPXR_MONEY(D.totCost)}).`,
-            `<b>${D.hasSold ? '3' : '2'}. Current valuation.</b> At today's closing price of <b>${SPXR_P2(D.live.P)}</b> per share${D.live.EVB ? ` (SpaceX valuation ~ $${SPXR_INT(D.live.EVB)}bn)` : ''}, the <b>${SPXR_SH(D.totSh)} active shares</b> are worth <b>${SPXR_MONEY(D.totVal)}</b>, a <b>${SPXR_X(D.totVal / D.totCost)}</b> multiple on their cost (${SPXR_MONEY(D.totCost)}).`));
-  ps.push(T(`<b>${D.hasSold ? '4' : '3'}. Distribución (en proceso).</b> Aún no se ha distribuido ni liquidado la posición activa. Las acciones están sujetas a un lock-up con liberación escalonada (ver detalle abajo). El inversionista deberá elegir entre <b>acciones (in-kind)</b> o <b>efectivo</b> mediante el formulario de Trident.`,
-            `<b>${D.hasSold ? '4' : '3'}. Distribution (in progress).</b> The active position has not yet been distributed or liquidated. The shares are subject to a staggered-release lock-up (see detail below). The investor will need to choose between <b>shares (in-kind)</b> or <b>cash</b> via the Trident election form.`));
+  ps.push(T(`<b>${nVal}. Valuación actual.</b> Al precio de cierre de hoy de <b>${SPXR_P2(D.live.P)}</b> por acción${D.live.EVB ? ` (valuación de SpaceX ~ $${SPXR_INT(D.live.EVB)} mmd)` : ''}, las <b>${SPXR_SH(D.totSh)} acciones activas</b> valen <b>${SPXR_MONEY(D.totVal)}</b>, un múltiplo de <b>${SPXR_X(D.totVal / D.totCost)}</b> sobre su costo (${SPXR_MONEY(D.totCost)}).`,
+            `<b>${nVal}. Current valuation.</b> At today's closing price of <b>${SPXR_P2(D.live.P)}</b> per share${D.live.EVB ? ` (SpaceX valuation ~ $${SPXR_INT(D.live.EVB)}bn)` : ''}, the <b>${SPXR_SH(D.totSh)} active shares</b> are worth <b>${SPXR_MONEY(D.totVal)}</b>, a <b>${SPXR_X(D.totVal / D.totCost)}</b> multiple on their cost (${SPXR_MONEY(D.totCost)}).`));
+  ps.push(T(`<b>${nDist}. Distribución (en proceso).</b> Aún no se ha distribuido ni liquidado la posición activa. Las acciones están sujetas a un lock-up con liberación escalonada (ver detalle abajo). El inversionista deberá elegir entre <b>acciones (in-kind)</b> o <b>efectivo</b> mediante el formulario de Trident.`,
+            `<b>${nDist}. Distribution (in progress).</b> The active position has not yet been distributed or liquidated. The shares are subject to a staggered-release lock-up (see detail below). The investor will need to choose between <b>shares (in-kind)</b> or <b>cash</b> via the Trident election form.`));
   return ps;
 }
 
