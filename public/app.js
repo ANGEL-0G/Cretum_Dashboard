@@ -3452,6 +3452,9 @@ const ORG_MODULES = {
     { view: 'portal', icon: 'fa-share-nodes', title: 'Portal de clientes',
       desc: 'Sube dashboards externos y da acceso a clientes con su propio usuario',
       iconClass: 'home-ico-portal' },
+    { view: 'gvvmesa', icon: 'fa-gauge-high', title: 'GVV Mesa',
+      desc: 'Monitoreo intradía del fondo: P&L del día, opciones y señales',
+      iconClass: 'home-ico-ventas' },
     { view: 'ventas', icon: 'fa-chart-line', title: 'Ventas',
       desc: 'Dashboards y análisis de ventas del fondo',
       iconClass: 'home-ico-ventas' },
@@ -3492,6 +3495,7 @@ const ORG_NAV = {
     { view: 'campaigns', icon: 'fa-bolt',      label: 'Campañas' },
     { view: 'forms',     icon: 'fa-clipboard-list', label: 'Formularios' },
     { view: 'portal',    icon: 'fa-share-nodes', label: 'Portal de clientes' },
+    { view: 'gvvmesa',   icon: 'fa-gauge-high',  label: 'GVV Mesa' },
     { view: 'ventas',    icon: 'fa-chart-line', label: 'Ventas' },
     { view: 'usuarios',  icon: 'fa-users-gear', label: 'Usuarios', adminOnly: true },
   ],
@@ -5283,6 +5287,8 @@ function switchView(view, isBack = false) {
   if (pageRep) pageRep.classList.toggle('active', view === 'reports');
   const pagePortal = document.getElementById('pagePortal');
   if (pagePortal) pagePortal.classList.toggle('active', view === 'portal');
+  const pageGvvMesa = document.getElementById('pageGvvMesa');
+  if (pageGvvMesa) pageGvvMesa.classList.toggle('active', view === 'gvvmesa');
   const pageForms = document.getElementById('pageForms');
   if (pageForms) pageForms.classList.toggle('active', view === 'forms');
   const pageVentas = document.getElementById('pageVentas');
@@ -5312,6 +5318,7 @@ function switchView(view, isBack = false) {
     'reports':      'Reportes',
     'forms':        'Formularios',
     'portal':       'Portal de clientes',
+    'gvvmesa':      'GVV Mesa',
     'ventas':       'Ventas',
     'notes':        'Notas',
     'contactos':    'Base de Datos Cretum',
@@ -5342,6 +5349,7 @@ function switchView(view, isBack = false) {
   if (view === 'campaigns') loadCampaigns();
   if (view === 'reports') loadReports();
   if (view === 'portal') { portalOrg = currentOrg || 'cretum'; loadPortalAdmin(); }
+  if (view === 'gvvmesa') gmLoad();
   if (view === 'forms') formsBackHome();
   if (view === 'ventas') ventasBackHome();
   if (view === 'notes') openNotesPage();
@@ -17962,3 +17970,165 @@ async function openLettersModal() {
   st.textContent = css;
   document.head.appendChild(st);
 })();
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GVV MESA — monitoreo intradía del fondo (uso interno)
+   Fuente: GET /api/gvv-live (robot gvv_spots en la Mini, cada 10 min en horario
+   de mercado). Señales v1 con umbrales fijos; migrarán a percentiles vs la
+   propia historia cuando el robot acumule serie. Auto-refresh cada 2 min
+   mientras la vista está activa.
+   ═══════════════════════════════════════════════════════════════════════════ */
+let gmTimer = null;
+let gmSnap = null;
+let gmSort = { key: 'absPl', dir: -1 };
+
+function gmFmtUsd(x, dec = 0) {
+  const sign = x < 0 ? '-' : '';
+  return sign + '$' + Math.abs(x).toLocaleString('en-US', { maximumFractionDigits: dec, minimumFractionDigits: dec });
+}
+function gmPct(x, dec = 2) { return (x > 0 ? '+' : '') + x.toFixed(dec) + '%'; }
+function gmColor(x) { return x > 0 ? '#0d6e3c' : (x < 0 ? '#c62828' : 'var(--gray-500)'); }
+
+async function gmLoad(manual = false) {
+  clearInterval(gmTimer);
+  gmTimer = setInterval(() => { if (currentView === 'gvvmesa') gmLoad(); else clearInterval(gmTimer); }, 120000);
+  const root = document.getElementById('gmRoot');
+  try {
+    const [r, rh] = await Promise.all([
+      authedFetch('/api/gvv-live'),
+      authedFetch('/api/gvv-live?hist=1').catch(() => null),
+    ]);
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'HTTP ' + r.status);
+    gmSnap = await r.json();
+    gmSnap._hist = rh && rh.ok ? await rh.json() : [];
+    gmRender();
+    if (manual) toast('Snapshot actualizado');
+  } catch (err) {
+    if (root) root.innerHTML = `<div style="padding:40px;text-align:center;color:#c62828">No se pudo cargar el snapshot: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function gmSignals(s) {
+  const out = [];
+  const aum = s.aum_live || s.aum_excel || 1;
+  const expired = s.options.filter(o => typeof o.dte === 'number' && o.dte < 0);
+  if (expired.length) out.push({ sev: 'warn', icon: 'fa-broom', txt: `${expired.length} opción(es) VENCIDAS siguen en el Excel: ${expired.map(o => o.ticker).join(', ')} — limpiar filas` });
+  const nearExp = s.options.filter(o => typeof o.dte === 'number' && o.dte >= 0 && o.dte <= 7);
+  if (nearExp.length) out.push({ sev: 'info', icon: 'fa-hourglass-half', txt: `${nearExp.length} opción(es) vencen en ≤7 días: ${nearExp.map(o => `${o.ticker} (${o.dte}d)`).join(', ')}` });
+  const tight = s.options.filter(o => o.cv === 'Venta' && o.dist_strike_pct != null && typeof o.dte === 'number' && o.dte >= 0 && Math.abs(o.dist_strike_pct) < 3);
+  for (const o of tight) out.push({ sev: 'warn', icon: 'fa-crosshairs', txt: `${o.ticker} ${o.pc === 'P' ? 'put' : 'call'} vendido a ${Math.abs(o.dist_strike_pct).toFixed(1)}% del strike ${o.strike} (spot ${o.spot}) — riesgo de asignación` });
+  const itm = s.options.filter(o => o.estado === 'ITM' && typeof o.dte === 'number' && o.dte >= 0);
+  if (itm.length) out.push({ sev: 'warn', icon: 'fa-triangle-exclamation', txt: `${itm.length} opción(es) ITM vivas: ${itm.map(o => o.ticker).join(', ')}` });
+  for (const p of s.positions) {
+    const w = (p.live_value / aum) * 100;
+    if (p.day_chg_pct != null && Math.abs(p.day_chg_pct) >= 4 && w >= 1)
+      out.push({ sev: 'move', icon: 'fa-bolt', txt: `${p.ticker} ${gmPct(p.day_chg_pct)} hoy (${w.toFixed(1)}% del fondo, ${gmFmtUsd(p.day_pl)})` });
+    if (w >= 8 && p.ac !== 'Cash')
+      out.push({ sev: 'info', icon: 'fa-scale-unbalanced', txt: `${p.ticker} pesa ${w.toFixed(1)}% del fondo` });
+  }
+  const cash = s.positions.filter(p => p.ac === 'Cash').reduce((a, p) => a + p.live_value, 0) / aum * 100;
+  if (cash < 10) out.push({ sev: 'warn', icon: 'fa-droplet', txt: `Efectivo en ${cash.toFixed(1)}% — por debajo del rango habitual (~20%)` });
+  const stale = s.positions.filter(p => p.src === 'excel' && p.ac !== 'Cash' && p.ac !== 'Private Equity' && p.ticker !== 'CASH').length;
+  if (stale > 5) out.push({ sev: 'info', icon: 'fa-clock', txt: `${stale} posiciones sin quote en vivo (precio del Excel)` });
+  return out;
+}
+
+function gmSpark(hist) {
+  if (!hist || hist.length < 2) return '<span style="color:var(--gray-400);font-size:11px">La serie del día se dibuja a partir del segundo snapshot.</span>';
+  const w = 320, h = 60, pad = 4;
+  const vals = hist.map(p => p.day_pl);
+  const min = Math.min(...vals, 0), max = Math.max(...vals, 0);
+  const x = i => pad + i * (w - 2 * pad) / (hist.length - 1);
+  const y = v => h - pad - (v - min) * (h - 2 * pad) / ((max - min) || 1);
+  const pts = vals.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  const last = vals[vals.length - 1];
+  return `<svg width="${w}" height="${h}" style="display:block">
+    <line x1="${pad}" y1="${y(0)}" x2="${w - pad}" y2="${y(0)}" stroke="var(--gray-200)" stroke-dasharray="3,3"/>
+    <polyline points="${pts}" fill="none" stroke="${gmColor(last)}" stroke-width="2"/>
+    <circle cx="${x(vals.length - 1)}" cy="${y(last)}" r="3" fill="${gmColor(last)}"/>
+  </svg>`;
+}
+
+function gmRender() {
+  const s = gmSnap; if (!s) return;
+  const root = document.getElementById('gmRoot'); if (!root) return;
+  const badge = document.getElementById('gmBadge');
+  const ts = new Date(s.ts);
+  if (badge) {
+    badge.textContent = (s.market_open ? 'Mercado abierto' : 'Mercado cerrado') + ' · ' + ts.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+    badge.style.background = s.market_open ? '#e6f4ea' : 'var(--gray-100)';
+    badge.style.color = s.market_open ? '#0d6e3c' : 'var(--gray-500)';
+  }
+  const sig = gmSignals(s);
+  const sevBg = { warn: '#fdf3e7', move: '#eef3fa', info: 'var(--gray-50)' };
+  const card = 'background:#fff;border:1px solid var(--gray-200);border-radius:12px;padding:16px 18px';
+
+  const moverRow = m => `<tr><td style="font-weight:600">${escapeHtml(m.t)}</td><td style="text-align:right;color:${gmColor(m.pl)}">${gmFmtUsd(m.pl)}</td><td style="text-align:right;color:${gmColor(m.pct || 0)}">${m.pct != null ? gmPct(m.pct) : '—'}</td></tr>`;
+
+  const liveOpts = s.options.filter(o => !(typeof o.dte === 'number' && o.dte < 0));
+  const optRow = o => {
+    const dteCol = typeof o.dte === 'number' && o.dte <= 7 ? '#b26a00' : 'inherit';
+    const dCol = o.dist_strike_pct != null && Math.abs(o.dist_strike_pct) < 3 && o.cv === 'Venta' ? '#c62828' : 'inherit';
+    return `<tr${o.estado === 'ITM' ? ' style="background:#fdf0ef"' : ''}>
+      <td style="font-weight:600">${escapeHtml(o.ticker)}</td><td>${escapeHtml(o.cv || '')} ${escapeHtml(o.pc || '')}</td>
+      <td class="num">${o.strike}</td><td class="num">${o.spot ?? '—'}</td>
+      <td class="num" style="color:${dCol}">${o.dist_strike_pct != null ? gmPct(o.dist_strike_pct, 1) : '—'}</td>
+      <td class="num">${o.dist_be_pct != null ? gmPct(o.dist_be_pct, 1) : '—'}</td>
+      <td class="num" style="color:${dteCol};font-weight:${typeof o.dte === 'number' && o.dte <= 7 ? 700 : 400}">${o.dte ?? '—'}</td>
+      <td class="num" style="color:${gmColor(o.pl || 0)}">${gmFmtUsd(o.pl || 0)}</td><td>${escapeHtml(o.estado || '')}</td></tr>`;
+  };
+
+  const aum = s.aum_live || 1;
+  let rows = s.positions.filter(p => p.ticker !== 'CASH' && p.ac !== 'Cash');
+  const q = (document.getElementById('gmSearch')?.value || '').toLowerCase();
+  if (q) rows = rows.filter(p => (p.ticker + ' ' + p.company).toLowerCase().includes(q));
+  const keyFn = { absPl: p => Math.abs(p.day_pl), day: p => p.day_pl, chg: p => p.day_chg_pct ?? -1e9, w: p => p.live_value, tot: p => p.plpct ?? -1e9 }[gmSort.key] || (p => Math.abs(p.day_pl));
+  rows.sort((a, b) => (keyFn(b) - keyFn(a)) * -gmSort.dir);
+  const posRow = p => `<tr>
+    <td style="font-weight:600">${escapeHtml(p.ticker)}</td>
+    <td style="max-width:210px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(p.company || '')}</td>
+    <td class="num">${(p.live_value / aum * 100).toFixed(1)}%</td>
+    <td class="num">${p.live_price != null ? p.live_price.toLocaleString('en-US', { maximumFractionDigits: 2 }) : '—'}</td>
+    <td class="num" style="color:${gmColor(p.day_chg_pct || 0)}">${p.day_chg_pct != null ? gmPct(p.day_chg_pct) : '—'}</td>
+    <td class="num" style="color:${gmColor(p.day_pl)};font-weight:600">${gmFmtUsd(p.day_pl)}</td>
+    <td class="num" style="color:${gmColor(p.plpct || 0)}">${p.plpct != null ? gmPct(p.plpct, 1) : '—'}</td>
+    <td style="color:var(--gray-400);font-size:10px">${p.src === 'live' ? 'live' : 'excel'}</td></tr>`;
+  const th = (lbl, key) => `<th style="cursor:pointer" onclick="gmSort={key:'${key}',dir:gmSort.key==='${key}'?-gmSort.dir:-1};gmRender()">${lbl}${gmSort.key === key ? (gmSort.dir < 0 ? ' ↓' : ' ↑') : ''}</th>`;
+
+  root.innerHTML = `
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-bottom:14px">
+    <div style="${card}"><div style="font-size:11px;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px">P&L del día</div>
+      <div style="font-size:30px;font-weight:800;color:${gmColor(s.day_pl_total)}">${gmFmtUsd(s.day_pl_total)}</div>
+      <div style="font-size:13px;color:${gmColor(s.day_pl_total)}">${gmPct(s.day_pl_pct)}</div></div>
+    <div style="${card}"><div style="font-size:11px;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px">AUM en vivo</div>
+      <div style="font-size:30px;font-weight:800;color:var(--gray-800)">${gmFmtUsd(s.aum_live)}</div>
+      <div style="font-size:12px;color:var(--gray-400)">Excel: ${gmFmtUsd(s.aum_excel)} · quotes ${s.quotes_ok}/${s.quotes_total}</div></div>
+    <div style="${card}"><div style="font-size:11px;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px">Curva del día</div>${gmSpark(s._hist)}</div>
+  </div>
+  <div style="${card};margin-bottom:14px"><div style="font-weight:700;margin-bottom:8px"><i class="fa-solid fa-signal"></i> Señales (${sig.length})</div>
+    ${sig.length ? sig.map(x => `<div style="display:flex;gap:9px;align-items:baseline;padding:6px 10px;border-radius:8px;background:${sevBg[x.sev]};margin:4px 0;font-size:12.5px"><i class="fa-solid ${x.icon}" style="color:var(--gray-500)"></i><span>${escapeHtml(x.txt)}</span></div>`).join('') : '<div style="color:var(--gray-400);font-size:12px">Sin señales — día tranquilo.</div>'}
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-bottom:14px">
+    <div style="${card}"><div style="font-weight:700;margin-bottom:6px;color:#c62828"><i class="fa-solid fa-arrow-trend-down"></i> Bajan hoy</div>
+      <table class="camp-table" style="width:100%">${s.top_down.map(moverRow).join('')}</table></div>
+    <div style="${card}"><div style="font-weight:700;margin-bottom:6px;color:#0d6e3c"><i class="fa-solid fa-arrow-trend-up"></i> Suben hoy</div>
+      <table class="camp-table" style="width:100%">${s.top_up.map(moverRow).join('')}</table></div>
+  </div>
+  <div style="${card};margin-bottom:14px"><div style="font-weight:700;margin-bottom:8px"><i class="fa-solid fa-layer-group"></i> Opciones vivas (${liveOpts.length})</div>
+    <div style="overflow-x:auto"><table class="camp-table" style="width:100%;font-size:12px">
+      <tr><th>Ticker</th><th>Tipo</th><th>Strike</th><th>Spot</th><th>Dist. strike</th><th>Dist. BE</th><th>DTE</th><th>P&L</th><th>Estado</th></tr>
+      ${liveOpts.sort((a, b) => (a.dte ?? 999) - (b.dte ?? 999)).map(optRow).join('')}
+    </table></div></div>
+  <div style="${card}"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:10px;flex-wrap:wrap">
+      <div style="font-weight:700"><i class="fa-solid fa-table-list"></i> Posiciones (${rows.length})</div>
+      <input id="gmSearch" placeholder="Buscar ticker o empresa…" value="${escapeHtml(q)}" oninput="gmRender()" style="padding:6px 12px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px;width:220px">
+    </div>
+    <div style="overflow-x:auto;max-height:520px;overflow-y:auto"><table class="camp-table" style="width:100%;font-size:12px">
+      <tr><th>Ticker</th><th>Empresa</th>${th('Peso', 'w')}<th>Precio</th>${th('Δ día', 'chg')}${th('P&L día', 'day')}${th('P&L total', 'tot')}<th>Fuente</th></tr>
+      ${rows.map(posRow).join('')}
+    </table></div>
+    <div style="margin-top:8px;font-size:10.5px;color:var(--gray-400)">Snapshot del robot cada 10 min en horario de mercado · posiciones del Excel oficial · quotes Finnhub · los privados y MX conservan el precio del Excel. Señales v1 con umbrales fijos; pasarán a percentiles contra la propia historia del fondo conforme se acumule serie.</div>
+  </div>`;
+  // conservar foco del buscador tras re-render
+  if (q) { const el = document.getElementById('gmSearch'); if (el) { el.focus(); el.setSelectionRange(q.length, q.length); } }
+}
