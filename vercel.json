@@ -122,10 +122,6 @@
       "use": "@vercel/node"
     },
     {
-      "src": "api/gvv-live.js",
-      "use": "@vercel/node"
-    },
-    {
       "src": "public/fonts/*.ttf",
       "use": "@vercel/static"
     },
@@ -220,7 +216,7 @@
     },
     {
       "src": "/api/gvv-live",
-      "dest": "/api/gvv-live.js"
+      "dest": "/api/prices.js?gvvlive=1"
     },
     {
       "src": "/api/track",
