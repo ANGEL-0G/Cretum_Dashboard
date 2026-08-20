@@ -58,7 +58,8 @@ async function gvvLive(req, res) {
   const sb = getSupabaseAdmin();
   if (!sb) return res.status(500).json({ error: 'Sin service role' });
   let key = 'cretum/_internal/gvv-live.json';
-  if (req.query.hist) {
+  if (req.query.analytics) key = 'cretum/_internal/gvv-analytics.json';
+  else if (req.query.hist) {
     const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City' })
       .format(new Date()).replace(/-/g, '');
     key = `cretum/_internal/gvv-hist-${day}.json`;
