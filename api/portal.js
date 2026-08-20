@@ -88,6 +88,84 @@ async function canManage(req) {
 // Empresa del portal: 'mvp' o 'cretum' (default). Separa dashboards/clientes por org.
 function reqOrg(req) { return (req.body && req.body.org === 'mvp') ? 'mvp' : 'cretum'; }
 
+/* ── Data room (kind 'folder') ──
+ * El prefijo del bucket contiene un manifest.json:
+ *   { root: [{key, name}], sections: [{name, files: [{key, name}]}] }
+ * `key` es relativo al prefijo (claves ASCII-safe); `name` es el nombre a mostrar
+ * (con acentos). Sin manifest → se lista el prefijo (raíz + 1 nivel de carpetas). */
+function escHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+async function buildDataRoomHtml(sb, dash) {
+  const prefix = String(dash.file_path).replace(/\/+$/, '');
+  const store = sb.storage.from('portal-files');
+  let manifest = null;
+  try {
+    const { data: mf } = await store.download(`${prefix}/manifest.json`);
+    if (mf) manifest = JSON.parse(await mf.text());
+  } catch { /* sin manifest → listamos */ }
+  if (!manifest) {
+    const { data: rootEntries } = await store.list(prefix, { limit: 500, sortBy: { column: 'name', order: 'asc' } });
+    if (!rootEntries) return null;
+    const root = rootEntries.filter(e => e.id && e.name !== 'manifest.json').map(e => ({ key: e.name, name: e.name }));
+    const folders = rootEntries.filter(e => !e.id);
+    const sections = await Promise.all(folders.map(async f => {
+      const { data: sub } = await store.list(`${prefix}/${f.name}`, { limit: 500, sortBy: { column: 'name', order: 'asc' } });
+      return { name: f.name, files: (sub || []).filter(x => x.id).map(x => ({ key: `${f.name}/${x.name}`, name: x.name })) };
+    }));
+    manifest = { root, sections };
+  }
+  const allFiles = [...(manifest.root || []), ...(manifest.sections || []).flatMap(s => s.files || [])];
+  if (!allFiles.length) return null;
+  const paths = allFiles.map(f => `${prefix}/${f.key}`);
+  const { data: signed, error } = await store.createSignedUrls(paths, 3600);
+  if (error || !signed) return null;
+  const urlByPath = {};
+  signed.forEach(s => { if (s.signedUrl) urlByPath[s.path || s.signedUrl.split('?')[0]] = s.signedUrl; });
+  // createSignedUrls devuelve en el MISMO orden que paths — usamos el índice como respaldo.
+  const urlOf = (i) => signed[i]?.signedUrl || urlByPath[paths[i]] || '#';
+  let idx = 0;
+  const fileRow = (f) => {
+    const u = urlOf(idx++);
+    return `<a class="f" href="${escHtml(u)}" target="_blank" rel="noopener">` +
+      `<span class="fi">📄</span><span class="fn">${escHtml(f.name)}</span><span class="op">Abrir ↗</span></a>`;
+  };
+  const rootHtml = (manifest.root || []).map(fileRow).join('');
+  const secHtml = (manifest.sections || []).map(s =>
+    `<details class="sec"><summary><span class="chev">▸</span>${escHtml(s.name)}` +
+    `<span class="cnt">${(s.files || []).length} documento${(s.files || []).length === 1 ? '' : 's'}</span></summary>` +
+    `<div class="files">${(s.files || []).map(fileRow).join('')}</div></details>`).join('');
+  return `<!doctype html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>${escHtml(dash.title)}</title><style>
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,'Segoe UI','Helvetica Neue',Arial,sans-serif;background:#f4f6f9;color:#1a2332}
+.wrap{max-width:860px;margin:0 auto;padding:28px 18px 60px}
+.hd{border-bottom:2.5px solid #0f2849;padding-bottom:12px;margin-bottom:6px}
+.hd .wm{font-size:12px;font-weight:700;letter-spacing:3.5px;color:#0f2849}
+h1{font-family:Georgia,serif;font-size:22px;color:#0f2849;margin:14px 0 4px}
+.sub{color:#5a6b82;font-size:12px;margin:0 0 18px}
+.note{background:#eef3fa;border:1px solid #d5e0ef;border-radius:8px;padding:9px 13px;font-size:11.5px;color:#33475f;margin:0 0 18px}
+.f{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid #dde3ec;border-radius:8px;margin:6px 0;background:#fff;text-decoration:none;color:#1a2332;font-size:12.5px}
+.f:hover{border-color:#1c4e80;background:#fbfdff}
+.fi{flex:none}.fn{flex:1;min-width:0;overflow-wrap:anywhere}.op{flex:none;font-size:10.5px;color:#1c4e80;font-weight:600}
+.main .f{border-color:#0f2849;background:#0f2849;color:#fff}.main .f .op{color:#cfe0f5}.main .f:hover{background:#1c4e80}
+.sec{border:1px solid #dde3ec;border-radius:10px;background:#fff;margin:8px 0;padding:0 12px}
+.sec summary{display:flex;align-items:center;gap:8px;list-style:none;cursor:pointer;padding:11px 2px;font-size:13px;font-weight:600;color:#0f2849;user-select:none}
+.sec summary::-webkit-details-marker{display:none}
+.chev{transition:transform .15s;color:#5a6b82}.sec[open] .chev{transform:rotate(90deg)}
+.cnt{margin-left:auto;font-size:10.5px;font-weight:400;color:#5a6b82;background:#f4f6f9;border-radius:99px;padding:2px 9px}
+.files{padding:2px 0 10px}
+.ft{margin-top:26px;padding-top:10px;border-top:1px solid #dde3ec;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#5a6b82;display:flex;justify-content:space-between}
+</style></head><body><div class="wrap">
+<div class="hd"><span class="wm">CRETUM&nbsp;PARTNERS</span></div>
+<h1>${escHtml(dash.title)}</h1>
+<p class="sub">Data room · ${allFiles.length} documentos</p>
+<div class="note">Los enlaces se generan al abrir esta página y son válidos por 1 hora; si alguno expira, vuelve a abrir el data room desde el menú.</div>
+<div class="main">${rootHtml}</div>
+${secHtml}
+<div class="ft"><span>Cretum Partners GVV Fund, LP</span><span>Confidencial</span></div>
+</div></body></html>`;
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST requerido' });
   const secret = process.env.PORTAL_JWT_SECRET;
@@ -148,6 +226,15 @@ export default async function handler(req, res) {
         if (sErr || !signed) return res.status(500).json({ error: 'No se pudo abrir el archivo' });
         return res.status(200).json({ title: dash.title, kind: 'file', url: signed.signedUrl, mime: dash.file_mime || '', name: dash.file_name || '' });
       }
+      // Dashboard tipo carpeta (data room): file_path es un PREFIJO del bucket con un
+      // manifest.json que define el orden y los nombres a mostrar. Se firman TODOS los
+      // archivos (1h) en cada apertura y se devuelve la página generada como HTML —
+      // portal.html no necesita saber nada nuevo.
+      if (dash.kind === 'folder' && dash.file_path) {
+        const html = await buildDataRoomHtml(sb, dash);
+        if (!html) return res.status(500).json({ error: 'No se pudo abrir el data room' });
+        return res.status(200).json({ title: dash.title, kind: 'html', html });
+      }
       return res.status(200).json({ title: dash.title, kind: 'html', html: dash.html });
     }
 
@@ -186,20 +273,22 @@ export default async function handler(req, res) {
     if (action === 'save_dashboard') {
       const slug = String(req.body.slug || '').trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '');
       const title = String(req.body.title || '').trim();
-      const kind = req.body.kind === 'file' ? 'file' : 'html';
+      const kind = ['file', 'folder'].includes(req.body.kind) ? req.body.kind : 'html';
       const html = kind === 'html' ? String(req.body.html || '') : '';
-      const file_path = kind === 'file' ? String(req.body.file_path || '') : null;
+      const file_path = kind !== 'html' ? String(req.body.file_path || '') : null;
       const file_mime = kind === 'file' ? String(req.body.file_mime || '') : null;
       const file_name = kind === 'file' ? String(req.body.file_name || '') : null;
       if (!slug || !title) return res.status(400).json({ error: 'Falta slug o título' });
       if (kind === 'file' && !file_path) return res.status(400).json({ error: 'Falta el archivo subido' });
+      if (kind === 'folder' && !file_path) return res.status(400).json({ error: 'Falta el prefijo del data room' });
       const fields = { slug, title, kind, html, file_path, file_mime, file_name, updated_at: new Date().toISOString() };
       if (req.body.id) {
         // Si cambia el archivo, borramos el anterior del bucket para no dejar basura.
-        const { data: old } = await sb.from('portal_dashboards').select('file_path').eq('id', req.body.id).eq('org', org).maybeSingle();
+        // (Solo dashboards tipo 'file': en 'folder' file_path es un prefijo, no un objeto.)
+        const { data: old } = await sb.from('portal_dashboards').select('file_path, kind').eq('id', req.body.id).eq('org', org).maybeSingle();
         const { error } = await sb.from('portal_dashboards').update(fields).eq('id', req.body.id).eq('org', org);
         if (error) throw error;
-        if (old?.file_path && old.file_path !== file_path) {
+        if (old?.kind === 'file' && old?.file_path && old.file_path !== file_path) {
           await sb.storage.from('portal-files').remove([old.file_path]).catch(() => {});
         }
       } else {
@@ -210,10 +299,12 @@ export default async function handler(req, res) {
     }
 
     if (action === 'delete_dashboard') {
-      const { data: old } = await sb.from('portal_dashboards').select('file_path').eq('id', req.body.id).eq('org', org).maybeSingle();
+      const { data: old } = await sb.from('portal_dashboards').select('file_path, kind').eq('id', req.body.id).eq('org', org).maybeSingle();
       const { error } = await sb.from('portal_dashboards').delete().eq('id', req.body.id).eq('org', org);
       if (error) throw error;
-      if (old?.file_path) await sb.storage.from('portal-files').remove([old.file_path]).catch(() => {});
+      // 'folder': los archivos del prefijo se conservan (borrarlos exige listado recursivo;
+      // se hace manualmente si de verdad se quiere vaciar el data room).
+      if (old?.kind === 'file' && old?.file_path) await sb.storage.from('portal-files').remove([old.file_path]).catch(() => {});
       return res.status(200).json({ ok: true });
     }
 

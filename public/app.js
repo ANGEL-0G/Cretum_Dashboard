@@ -7020,7 +7020,16 @@ function ptDashOpen(id) {
     document.getElementById('ptDashHtml').value = 'Cargando…';
     portalApi({ action: 'get_dashboard', id: d.id })
       .then(full => {
-        if (full.kind === 'file') {
+        if (full.kind === 'folder') {
+          // Data room: el contenido vive en un prefijo del bucket; aquí solo se
+          // editan título/slug. Conservamos kind y file_path tal cual al guardar.
+          ptSetKind('folder');
+          ptEditFile = { file_path: full.file_path };
+          const fc2 = document.getElementById('ptFileCurrent');
+          fc2.style.display = '';
+          fc2.innerHTML = `<i class="fa-solid fa-folder-open"></i> Data room: ${escapeHtml(full.file_path || '')} <span style="color:var(--gray-400)">— el contenido se administra en el bucket; aquí solo título/slug</span>`;
+          document.getElementById('ptDashHtml').value = '';
+        } else if (full.kind === 'file') {
           ptSetKind('file');
           ptEditFile = { file_path: full.file_path, file_mime: full.file_mime, file_name: full.file_name };
           const fc2 = document.getElementById('ptFileCurrent');
@@ -7037,10 +7046,12 @@ function ptDashOpen(id) {
   }
 }
 
-// Cambia el tipo de contenido del dashboard (Pegar HTML / Subir archivo).
+// Cambia el tipo de contenido del dashboard (Pegar HTML / Subir archivo / Data room).
 function ptSetKind(kind) {
-  ptDashKind = kind === 'file' ? 'file' : 'html';
+  ptDashKind = ['file', 'folder'].includes(kind) ? kind : 'html';
   document.querySelectorAll('.pt-kind-btn').forEach(b => b.classList.toggle('active', b.dataset.kind === ptDashKind));
+  // 'folder' no tiene panel propio: se oculta el editor y la zona de subida
+  // (solo se muestran título/slug + la leyenda de ptFileCurrent).
   document.getElementById('ptKindHtml').style.display = ptDashKind === 'html' ? '' : 'none';
   document.getElementById('ptKindFile').style.display = ptDashKind === 'file' ? '' : 'none';
 }
@@ -7170,7 +7181,10 @@ async function ptDashView(id) {
   try {
     const full = await portalApi({ action: 'get_dashboard', id });
     if (!f) return;
-    if (full.kind === 'file' && full.file_path) {
+    if (full.kind === 'folder') {
+      f.removeAttribute('src');
+      f.srcdoc = `<div style="font-family:sans-serif;color:#33475f;padding:28px;line-height:1.6"><strong>Data room</strong> — prefijo del bucket: <code>${escapeHtml(full.file_path || '')}</code>.<br>La página con carpetas y enlaces firmados se genera al abrirlo desde el portal de clientes (<code>/portal#${escapeHtml(d?.slug || '')}</code>).</div>`;
+    } else if (full.kind === 'file' && full.file_path) {
       // Preview de archivo: firmamos una URL corta con la sesión de admin.
       const { data: signed, error } = await sb.storage.from('portal-files').createSignedUrl(full.file_path, 300);
       if (error || !signed) throw new Error(error?.message || 'No se pudo abrir el archivo');

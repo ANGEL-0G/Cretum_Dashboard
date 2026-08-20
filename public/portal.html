@@ -174,7 +174,10 @@
         <button class="menu-logout" onclick="logout()">Cerrar sesión</button>
       </div>
     </div>
-    <iframe id="frame" sandbox="allow-scripts allow-popups allow-forms"></iframe>
+    <!-- allow-popups-to-escape-sandbox: los data rooms abren PDFs (URLs firmadas) en
+         pestaña nueva; sin esta flag la pestaña hereda el sandbox y el visor de PDF
+         no renderiza. El HTML de dashboards solo lo escribe el equipo (riesgo acotado). -->
+    <iframe id="frame" sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox"></iframe>
   </div>
 
 <script>
