@@ -122,6 +122,10 @@
       "use": "@vercel/node"
     },
     {
+      "src": "api/gvv-live.js",
+      "use": "@vercel/node"
+    },
+    {
       "src": "public/fonts/*.ttf",
       "use": "@vercel/static"
     },
@@ -215,6 +219,10 @@
       "dest": "/api/logo.js"
     },
     {
+      "src": "/api/gvv-live",
+      "dest": "/api/gvv-live.js"
+    },
+    {
       "src": "/api/track",
       "dest": "/api/logo.js"
     },
@@ -305,12 +313,16 @@
     {
       "src": "/gvv",
       "dest": "https://ygmiwiaycfeyjpgormou.supabase.co/storage/v1/object/public/cartas/Carta%20Mensual%20GVV%20Cretum%20Partners.pdf",
-      "headers": { "Content-Disposition": "inline; filename=\"Carta Mensual GVV.pdf\"" }
+      "headers": {
+        "Content-Disposition": "inline; filename=\"Carta Mensual GVV.pdf\""
+      }
     },
     {
       "src": "/carta",
       "dest": "https://ygmiwiaycfeyjpgormou.supabase.co/storage/v1/object/public/cartas/Carta%20Mensual%20GVV%20Cretum%20Partners.pdf",
-      "headers": { "Content-Disposition": "inline; filename=\"Carta Mensual GVV.pdf\"" }
+      "headers": {
+        "Content-Disposition": "inline; filename=\"Carta Mensual GVV.pdf\""
+      }
     },
     {
       "src": "/docs/(.*)",
