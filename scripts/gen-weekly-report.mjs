@@ -344,7 +344,7 @@ ${STYLE()}
           <span class="tag">${ICON('globe', 'ti')} <b id="newsMetaCount">cargando…</b></span>
           <span class="tag">${ICON('clock', 'ti')} <span id="newsMetaWhenLbl">actualizado</span> <b id="newsMetaWhen">—</b></span>
         </div>
-        <p class="news-disclaimer reveal" id="newsDisclaimer" style="--d:340ms">${ICON('clock', 'ti')} <span>Se actualiza solo <b>3 veces al día</b> (aprox. 7:00, 13:00 y 17:00 h, CDMX). Las notas recién llegadas se marcan en <b>naranja</b>; el brillo se apaga solo a las <b>6 h</b> o en cuanto la abres.</span></p>
+        <p class="news-disclaimer reveal" id="newsDisclaimer" style="--d:340ms">${ICON('clock', 'ti')} <span>Se actualiza solo <b>3 veces al día</b> (aprox. 7:00, 13:00 y 17:00 h, CDMX).</span></p>
       </div>
     </header>
     <div class="wrap sec">
@@ -577,8 +577,8 @@ const SUMMARY = ${JSON.stringify(summaryText)};
     );
     var disc = document.getElementById('newsDisclaimer');
     if (disc) { var span = disc.querySelector('span'); if (span) span.innerHTML = NT(
-      'Se actualiza solo <b>3 veces al día</b> (aprox. 7:00, 13:00 y 17:00 h, CDMX). Las notas recién llegadas se marcan en <b>naranja</b>; el brillo se apaga solo a las <b>6 h</b> o en cuanto la abres.',
-      'Refreshes automatically <b>3 times a day</b> (around 7:00, 13:00 and 17:00, CDMX time). Fresh stories are flagged in <b>orange</b>; the glow fades on its own after <b>6 h</b> or as soon as you open it.'
+      'Se actualiza solo <b>3 veces al día</b> (aprox. 7:00, 13:00 y 17:00 h, CDMX).',
+      'Refreshes automatically <b>3 times a day</b> (around 7:00, 13:00 and 17:00, CDMX time).'
     ); }
   }
   function renderMeta(){
