@@ -1193,6 +1193,16 @@ const EN = {
   'Ver ficha del contacto': 'View contact card',
   'No se pudo abrir el contacto': 'Couldn’t open the contact',
   'Ese contacto no está en la base todavía': 'That contact isn’t in the database yet',
+
+  // ── Detalle de persona en rankings (Información ↔ Histórico de Vistas) ──
+  'Información': 'Information',
+  'Histórico de Vistas': 'View history',
+  'días vistos': 'days viewed',
+  'clics': 'clicks',
+  'correos abiertos': 'emails opened',
+  'cartas vistas': 'letters viewed',
+  'respuestas': 'replies',
+  'Aún no registra interacciones.': 'No interactions recorded yet.',
 };
 
 let LANG = 'es';

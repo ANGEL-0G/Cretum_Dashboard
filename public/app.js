@@ -13338,6 +13338,7 @@ function deriveEngagement(rows) {
 let campTab = null;
 let campLatestPeriodo = null;   // último mes con datos (para "Último visto")
 let campRankRows = [];          // filas del ranking (con historial) para el detalle por LP
+let aptRankRows = [];           // idem para el ranking de Apertura
 let campCurrentParams = null;   // valores del generador de la última campaña publicada
 
 // Mueve el indicador deslizante de un slider segmentado bajo su botón activo.
@@ -13564,6 +13565,7 @@ function renderAperturaRanking(rows) {
     if (note) note.textContent = '';
     return;
   }
+  aptRankRows = rows;
   const maxScore = Math.max(...rows.map(r => r.score), 1);
   const ultimo = rows.map(r => r.ultimo_dia).filter(Boolean).sort().slice(-1)[0];
   if (note) note.textContent = ultimo ? `Último día con datos: ${ultimo}` : '';
@@ -13573,9 +13575,8 @@ function renderAperturaRanking(rows) {
     const [mc, mg] = mov[r.momentum] || mov.flat;
     const topCls = pos === 1 ? ' top1' : pos === 2 ? ' top2' : pos === 3 ? ' top3' : '';
     const pct = Math.round((r.score / maxScore) * 100);
-    const clk = r.email ? ' cc-rank-click' : '';
-    const clkAttr = r.email ? ` onclick="ccDetailOpenByEmail('${escapeHtml(r.email)}')" title="${t('Ver ficha del contacto')}"` : '';
-    return `<div class="camp-rank-row${topCls}${clk}"${clkAttr}>
+    return `<div class="camp-rank-row${topCls} cc-rank-click" onclick="aptRankOpen(${i})" title="${t('Ver detalle')}">
+
       <div class="camp-rank-pos">${pos}</div>
       <div class="camp-rank-mov ${mc}" title="${r.momentum === 'up' ? 'Subiendo / constante' : r.momentum === 'down' ? 'Bajó / dejó de abrir' : 'Sin cambio'}">${mg}</div>
       <div class="camp-rank-info">
@@ -13840,8 +13841,7 @@ function renderCampRanking(rows) {
     const [mc, mg] = mov[r.momentum] || mov.flat;
     const topCls = pos === 1 ? ' top1' : pos === 2 ? ' top2' : pos === 3 ? ' top3' : '';
     const pct = Math.round((r.score / maxScore) * 100);
-    const ficha = r.email ? `<button class="cc-rank-ficha" onclick="event.stopPropagation();ccDetailOpenByEmail('${escapeHtml(r.email)}')" title="${t('Ver ficha del contacto')}"><i class="fa-solid fa-id-card"></i></button>` : '';
-    return `<div class="camp-rank-row${topCls}" onclick="campLpOpen(${i})" title="Ver detalle de interacción">
+    return `<div class="camp-rank-row${topCls}" onclick="campLpOpen(${i})" title="${t('Ver detalle')}">
       <div class="camp-rank-pos">${pos}</div>
       <div class="camp-rank-mov ${mc}" title="${r.momentum === 'up' ? 'Subiendo / constante' : r.momentum === 'down' ? 'Bajó / dejó de ver' : 'Sin cambio'}">${mg}</div>
       <div class="camp-rank-info">
@@ -13852,7 +13852,6 @@ function renderCampRanking(rows) {
         <div class="camp-rank-score">${r.score}</div>
         <div class="camp-rank-veces">${r.meses_vistos} ${r.meses_vistos === 1 ? 'mes' : 'meses'}</div>
       </div>
-      ${ficha}
     </div>`;
   }).join('');
 }
@@ -14057,7 +14056,11 @@ async function campUploadCartaFile(input) {
 // Desde el ranking: usa el historial que trae campaign_ranking() (sin email).
 function campLpOpen(i) {
   const r = campRankRows[i];
-  if (r) campLpRender(r.nombre, r.historial || []);
+  if (r) personDetailOpen(r.nombre, r.email, r.historial || [], 'campaign');
+}
+function aptRankOpen(i) {
+  const r = aptRankRows[i];
+  if (r) personDetailOpen(r.nombre, r.email, r.historial || [], 'apertura');
 }
 // Desde la matriz (admin): arma el historial con los datos ya cargados.
 function campLpOpenEmail(email) {
@@ -14066,43 +14069,114 @@ function campLpOpenEmail(email) {
     .filter(e => e.email === email)
     .map(e => ({ periodo: e.periodo, opened: e.opened, clicked: e.clicked, replied: e.replied, nivel: e.nivel }))
     .sort((a, b) => String(a.periodo).localeCompare(String(b.periodo)));
-  campLpRender(c?.nombre_completo || c?.nombre || email, hist);
+  personDetailOpen(c?.nombre_completo || c?.nombre || email, email, hist, 'campaign');
 }
-function campLpClose() { document.getElementById('campLpModal').classList.remove('show'); }
+function campLpClose() { document.getElementById('campLpModal').classList.remove('show'); pdContactId = null; }
 
-function campLpRender(nombre, hist) {
-  const abiertos = hist.filter(h => h.opened).length;
-  const cartas   = hist.filter(h => h.clicked).length;
-  const resp     = hist.filter(h => h.replied).length;
-  const vistos   = hist.filter(h => h.nivel >= 1);
-  document.getElementById('campLpName').innerHTML =
-    `<i class="fa-solid fa-user"></i> ${escapeHtml(nombre)}`;
-  const body = document.getElementById('campLpBody');
+/* ── Detalle de persona: deslizable "Información del contacto" ↔ "Histórico de Vistas".
+   Se abre desde los rankings de Campañas y Apertura. La pestaña Información solo
+   aparece cuando el ranking entregó email (can_cretum_db) → trae datos + notas. ── */
+let pdContactId = null;
+function personHistHTML(hist, kind) {
+  const vistos = hist.filter(h => h.nivel >= 1);
   if (!vistos.length) {
-    body.innerHTML = `<div class="camp-empty-mini"><i class="fa-solid fa-envelope"></i>
-      <p>Aún no registra interacciones con las campañas.</p></div>`;
-  } else {
-    const desde = periodoLabel(vistos[0].periodo);
-    const frase = `Ha visto la carta <strong>${cartas}</strong> ${cartas === 1 ? 'vez' : 'veces'}, ` +
-      `con <strong>${resp}</strong> ${resp === 1 ? 'respuesta' : 'respuestas'}, ` +
-      `y ha abierto nuestros correos <strong>${abiertos}</strong> ${abiertos === 1 ? 'vez' : 'veces'} ` +
-      `desde <strong>${desde}</strong>.`;
-    const DESC = ['Sin interacción', 'Abrió el correo', 'Abrió el correo y vio la carta', 'Abrió, vio la carta y respondió'];
-    const tl = hist.map(h => `<div class="camp-lp-tl-row">
+    return `<div class="camp-empty-mini"><i class="fa-solid fa-envelope"></i><p>Aún no registra interacciones.</p></div>`;
+  }
+  if (kind === 'apertura') {
+    const dias = vistos.length;
+    const clicks = hist.filter(h => h.clicked).length;
+    const desde = vistos[0].fecha;
+    const frase = `Ha abierto el correo de Apertura <strong>${dias}</strong> ${dias === 1 ? 'día' : 'días'}` +
+      (clicks ? `, con <strong>${clicks}</strong> ${clicks === 1 ? 'clic' : 'clics'}` : '') +
+      ` desde <strong>${desde}</strong>.`;
+    const DESC = ['Sin interacción', 'Abrió el correo', 'Abrió y dio clic'];
+    const tl = hist.slice().reverse().map(h => `<div class="camp-lp-tl-row">
         <span class="camp-lp-dot n${h.nivel}"></span>
-        <span class="camp-lp-mes">${periodoLabel(h.periodo)}</span>
+        <span class="camp-lp-mes">${h.fecha}</span>
         <span class="camp-lp-desc n${h.nivel}">${DESC[h.nivel] || DESC[0]}</span>
       </div>`).join('');
-    body.innerHTML = `
-      <div class="camp-lp-summary">${frase}</div>
+    return `<div class="camp-lp-summary">${frase}</div>
       <div class="camp-lp-stats">
-        <div class="camp-lp-stat"><div class="camp-lp-stat-n">${abiertos}</div><div class="camp-lp-stat-l">correos abiertos</div></div>
-        <div class="camp-lp-stat"><div class="camp-lp-stat-n">${cartas}</div><div class="camp-lp-stat-l">cartas vistas</div></div>
-        <div class="camp-lp-stat"><div class="camp-lp-stat-n">${resp}</div><div class="camp-lp-stat-l">respuestas</div></div>
+        <div class="camp-lp-stat"><div class="camp-lp-stat-n">${dias}</div><div class="camp-lp-stat-l">días vistos</div></div>
+        <div class="camp-lp-stat"><div class="camp-lp-stat-n">${clicks}</div><div class="camp-lp-stat-l">clics</div></div>
       </div>
       <div class="camp-lp-tl">${tl}</div>`;
   }
+  // campaña
+  const abiertos = hist.filter(h => h.opened).length;
+  const cartas = hist.filter(h => h.clicked).length;
+  const resp = hist.filter(h => h.replied).length;
+  const desde = periodoLabel(vistos[0].periodo);
+  const frase = `Ha visto la carta <strong>${cartas}</strong> ${cartas === 1 ? 'vez' : 'veces'}, ` +
+    `con <strong>${resp}</strong> ${resp === 1 ? 'respuesta' : 'respuestas'}, ` +
+    `y ha abierto nuestros correos <strong>${abiertos}</strong> ${abiertos === 1 ? 'vez' : 'veces'} ` +
+    `desde <strong>${desde}</strong>.`;
+  const DESC = ['Sin interacción', 'Abrió el correo', 'Abrió el correo y vio la carta', 'Abrió, vio la carta y respondió'];
+  const tl = hist.map(h => `<div class="camp-lp-tl-row">
+      <span class="camp-lp-dot n${h.nivel}"></span>
+      <span class="camp-lp-mes">${periodoLabel(h.periodo)}</span>
+      <span class="camp-lp-desc n${h.nivel}">${DESC[h.nivel] || DESC[0]}</span>
+    </div>`).join('');
+  return `<div class="camp-lp-summary">${frase}</div>
+    <div class="camp-lp-stats">
+      <div class="camp-lp-stat"><div class="camp-lp-stat-n">${abiertos}</div><div class="camp-lp-stat-l">correos abiertos</div></div>
+      <div class="camp-lp-stat"><div class="camp-lp-stat-n">${cartas}</div><div class="camp-lp-stat-l">cartas vistas</div></div>
+      <div class="camp-lp-stat"><div class="camp-lp-stat-n">${resp}</div><div class="camp-lp-stat-l">respuestas</div></div>
+    </div>
+    <div class="camp-lp-tl">${tl}</div>`;
+}
+function personInfoHTML(c, email) {
+  if (!c) return `<div class="ccd-empty">${t('Ese contacto no está en la base todavía')}${email ? ' — ' + escapeHtml(email) : ''}</div>`;
+  const row = (label, val, href) => val ? `<div class="ccd-row"><span class="ccd-k">${label}</span>${href ? `<a class="ccd-v" href="${href}${escapeHtml(val)}">${escapeHtml(val)}</a>` : `<span class="ccd-v">${escapeHtml(val)}</span>`}</div>` : '';
+  const fields = (row(t('Correo'), c.email, 'mailto:') + row(t('Organización'), c.organizacion) + row(t('Puesto'), c.puesto) + row(t('Móvil'), c.telefono_movil, 'tel:') + row(t('Tel. trabajo'), c.telefono_trabajo, 'tel:') + row(t('País'), c.pais)) || `<div class="ccd-empty">${t('Sin datos adicionales.')}</div>`;
+  const canW = ccCanWrite();
+  return `${fields}
+    <div class="ccd-notes">
+      <div class="ccd-notes-h">${t('Notas')}</div>
+      <textarea id="pdNota" class="ccd-nota" rows="4" ${canW ? '' : 'disabled'} placeholder="${canW ? t('Escribe una nota sobre este contacto…') : t('Sin notas.')}">${escapeHtml(c.notas || '')}</textarea>
+      ${canW ? `<div class="ccd-notes-foot"><button class="et-ebtn primary" onclick="pdSaveNota()"><i class="fa-solid fa-check"></i> ${t('Guardar')}</button></div>` : ''}
+    </div>`;
+}
+async function pdSaveNota() {
+  if (!pdContactId || !ccCanWrite()) return;
+  const nota = document.getElementById('pdNota').value;
+  const { error } = await sb.from('cretum_contactos').update({ notas: nota }).eq('id', pdContactId);
+  if (error) { toast('Error: ' + error.message); return; }
+  toast(t('Nota guardada'));
+}
+function pdTab(which) {
+  document.querySelectorAll('#pdSeg .seg-btn').forEach(b => b.classList.toggle('on', b.dataset.pd === which));
+  segMove('pdSeg');
+  const inf = document.getElementById('pdInfoPane'), his = document.getElementById('pdHistPane');
+  if (inf) inf.hidden = which !== 'info';
+  if (his) his.hidden = which !== 'hist';
+}
+async function personDetailOpen(nombre, email, hist, kind) {
+  pdContactId = null;
+  document.getElementById('campLpName').innerHTML = `<i class="fa-solid fa-user"></i> ${escapeHtml(nombre)}`;
+  const body = document.getElementById('campLpBody');
+  const hasInfo = !!email;   // el ranking solo entrega email a quien puede ver la BD Cretum
+  body.innerHTML = (hasInfo ? `
+    <div class="pd-seg seg-track" id="pdSeg">
+      <span class="seg-ind"></span>
+      <button class="seg-btn on" data-pd="info" onclick="pdTab('info')"><i class="fa-solid fa-id-card"></i> ${t('Información')}</button>
+      <button class="seg-btn" data-pd="hist" onclick="pdTab('hist')"><i class="fa-solid fa-chart-line"></i> ${t('Histórico de Vistas')}</button>
+    </div>` : '') +
+    `<div id="pdInfoPane"${hasInfo ? '' : ' hidden'}>${hasInfo ? `<div class="db-loading"><i class="fa-solid fa-spinner fa-spin"></i> ${t('Cargando…')}</div>` : ''}</div>
+     <div id="pdHistPane"${hasInfo ? ' hidden' : ''}>${personHistHTML(hist, kind)}</div>`;
   document.getElementById('campLpModal').classList.add('show');
+  if (hasInfo) {
+    requestAnimationFrame(() => segMove('pdSeg', false));
+    try {
+      const { data } = await sb.from('cretum_contactos').select('*').ilike('email', ccNorm(email)).limit(1).maybeSingle();
+      pdContactId = data ? data.id : null;
+      const pane = document.getElementById('pdInfoPane');
+      if (pane) pane.innerHTML = personInfoHTML(data, email);
+    } catch (e) {
+      const pane = document.getElementById('pdInfoPane');
+      if (pane) pane.innerHTML = personInfoHTML(null, email);
+    }
+  }
 }
 
 /* ── Render de la matriz contactos × meses ── */
