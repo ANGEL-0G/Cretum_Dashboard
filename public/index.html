@@ -2409,6 +2409,21 @@ body.hw-noselect{cursor:grabbing}
 .hw-mods.sz3 .hw-mod-t{font-size:14.5px}
 .hw-mods.noico.sz2{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
 .hw-mods.noico.sz3{grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}
+/* Cuadrícula con iconos y nombres: tarjeta vertical, eco de la vista Principal */
+.hw-mods.vcards{grid-template-columns:repeat(auto-fill,minmax(128px,1fr))}
+.hw-mods.vcards .hw-mod{flex-direction:column;justify-content:center;gap:9px;padding:16px 10px 13px;text-align:center}
+.hw-mods.vcards .hw-mod-ico{width:38px;height:38px;font-size:16px;border-radius:11px;transition:transform .28s cubic-bezier(.23,1,.32,1)}
+.hw-mods.vcards .hw-mod-t{white-space:normal;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+@media (hover:hover) and (pointer:fine){.hw-mods.vcards .hw-mod:hover .hw-mod-ico{transform:scale(1.1) rotate(-5deg)}}
+@media (prefers-reduced-motion:reduce){.hw-mods.vcards .hw-mod-ico{transition:none}.hw-mods.vcards .hw-mod:hover .hw-mod-ico{transform:none}}
+.hw-mods.vcards.sz2{grid-template-columns:repeat(auto-fill,minmax(148px,1fr))}
+.hw-mods.vcards.sz2 .hw-mod{padding:18px 10px 14px}
+.hw-mods.vcards.sz2 .hw-mod-ico{width:44px;height:44px;font-size:19px;border-radius:12px}
+.hw-mods.vcards.sz2 .hw-mod-t{font-size:13.5px}
+.hw-mods.vcards.sz3{grid-template-columns:repeat(auto-fill,minmax(168px,1fr))}
+.hw-mods.vcards.sz3 .hw-mod{padding:20px 12px 16px;gap:11px}
+.hw-mods.vcards.sz3 .hw-mod-ico{width:46px;height:46px;font-size:20px;border-radius:13px}
+.hw-mods.vcards.sz3 .hw-mod-t{font-size:14px}
 /* Calendario mensual compacto dentro de una ventana modular */
 .hw-cal-mes .cg-cell{min-height:52px;padding:3px 4px}
 .hw-cal-mes .cg-top{margin-bottom:6px}

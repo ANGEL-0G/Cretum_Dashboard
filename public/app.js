@@ -4326,7 +4326,9 @@ function hwModulesBody(cfg) {
   // En lista los tiles son filas con nombre: "solo iconos" no aplica ahí
   const mode = (layout === 'list' && cfg.modules.mode === 'icons') ? 'both' : cfg.modules.mode;
   const sz = cfg.modules.size === 2 ? ' sz2' : cfg.modules.size === 3 ? ' sz3' : '';
-  const cls = (mode === 'names' ? ' noico' : mode === 'icons' ? ' ico-only' : '') + (layout === 'list' ? ' list' : '');
+  // Cuadrícula + iconos y nombres → tarjeta vertical (icono arriba, nombre abajo), como la vista Principal
+  const vert = (layout !== 'list' && mode === 'both') ? ' vcards' : '';
+  const cls = (mode === 'names' ? ' noico' : mode === 'icons' ? ' ico-only' : '') + (layout === 'list' ? ' list' : '') + vert;
   const editing = hwEdit && !cfg.locked;
 
   const tile = (m, off) => {
