@@ -304,7 +304,7 @@ const html = `<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<title>Noticias Cretum</title>
+<title>Noticias MVP</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='1' y='1' width='30' height='30' rx='7' fill='%231A3A6B'/><g fill='%23fff'><rect x='7.4' y='17' width='4.2' height='8' rx='1.4'/><rect x='13.9' y='11.5' width='4.2' height='13.5' rx='1.4'/><rect x='20.4' y='7.5' width='4.2' height='17.5' rx='1.4'/></g></svg>">
@@ -339,11 +339,12 @@ ${STYLE()}
       <div class="wrap">
         <p class="eyebrow reveal" style="--d:40ms"><span class="pulse"></span> <span id="newsEyebrowTx">Novedades del portafolio</span></p>
         <h1 class="hnews-title reveal" id="newsH1" style="--d:110ms">Noticias de las empresas en seguimiento</h1>
-        <p class="lede reveal" id="newsLede" style="--d:180ms">Titulares recientes de las compañías donde invierte el portafolio, de <b>medios confiables</b> (Reuters, Bloomberg, TechCrunch, CNBC, FT…). Se actualiza varias veces al día.</p>
+        <p class="lede reveal" id="newsLede" style="--d:180ms">Titulares recientes de las compañías donde invierte el portafolio, de <b>medios confiables</b> (Reuters, Bloomberg, TechCrunch, CNBC, FT…).</p>
         <div class="meta-row reveal" style="--d:280ms">
           <span class="tag">${ICON('globe', 'ti')} <b id="newsMetaCount">cargando…</b></span>
           <span class="tag">${ICON('clock', 'ti')} <span id="newsMetaWhenLbl">actualizado</span> <b id="newsMetaWhen">—</b></span>
         </div>
+        <p class="news-disclaimer reveal" id="newsDisclaimer" style="--d:340ms">${ICON('clock', 'ti')} <span>Se actualiza solo <b>3 veces al día</b> (aprox. 7:00, 13:00 y 17:00 h, CDMX). Las notas recién llegadas se marcan en <b>naranja</b>; el brillo se apaga solo a las <b>6 h</b> o en cuanto la abres.</span></p>
       </div>
     </header>
     <div class="wrap sec">
@@ -571,9 +572,14 @@ const SUMMARY = ${JSON.stringify(summaryText)};
     setTx('newsH1', NT('Noticias de las empresas en seguimiento', 'News from the companies we track'));
     var lede = document.getElementById('newsLede');
     if (lede) lede.innerHTML = NT(
-      'Titulares recientes de las compañías donde invierte el portafolio, de <b>medios confiables</b> (Reuters, Bloomberg, TechCrunch, CNBC, FT…). Se actualiza varias veces al día.',
-      'Recent headlines from the companies the portfolio invests in, from <b>trusted outlets</b> (Reuters, Bloomberg, TechCrunch, CNBC, FT…). Updated several times a day.'
+      'Titulares recientes de las compañías donde invierte el portafolio, de <b>medios confiables</b> (Reuters, Bloomberg, TechCrunch, CNBC, FT…).',
+      'Recent headlines from the companies the portfolio invests in, from <b>trusted outlets</b> (Reuters, Bloomberg, TechCrunch, CNBC, FT…).'
     );
+    var disc = document.getElementById('newsDisclaimer');
+    if (disc) { var span = disc.querySelector('span'); if (span) span.innerHTML = NT(
+      'Se actualiza solo <b>3 veces al día</b> (aprox. 7:00, 13:00 y 17:00 h, CDMX). Las notas recién llegadas se marcan en <b>naranja</b>; el brillo se apaga solo a las <b>6 h</b> o en cuanto la abres.',
+      'Refreshes automatically <b>3 times a day</b> (around 7:00, 13:00 and 17:00, CDMX time). Fresh stories are flagged in <b>orange</b>; the glow fades on its own after <b>6 h</b> or as soon as you open it.'
+    ); }
   }
   function renderMeta(){
     if (!newsData) return;
@@ -633,30 +639,71 @@ const SUMMARY = ${JSON.stringify(summaryText)};
     if (d && d.classList.contains('open') && !d.contains(e.target)) { d.classList.remove('open'); var btn = document.getElementById('newsFilterBtn'); if (btn) btn.setAttribute('aria-expanded', 'false'); }
   });
 
+  // ── Notas nuevas: brillo naranja durante 6 h desde que se publican; se apaga
+  //    solo al cumplirse las 6 h o en cuanto el usuario la abre. El estado
+  //    "ya la abrí" se guarda por dispositivo (localStorage) y se limpia de
+  //    URLs que ya no están en el feed para no crecer sin límite. ──
+  var NEW_MS = 6 * 3600 * 1000;
+  function lsGet(k){ try { return JSON.parse(localStorage.getItem(k) || '{}') || {}; } catch(e){ return {}; } }
+  function lsSet(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+  var newsOpen = lsGet('news-open');   // url -> 1 si ya se abrió (el brillo no vuelve)
+  function isNew(i){
+    if (newsOpen[i.url]) return false;
+    var t = new Date(i.published).getTime();
+    return isFinite(t) && (Date.now() - t) < NEW_MS;
+  }
+  function markOpened(url){ if (newsOpen[url]) return; newsOpen[url] = 1; lsSet('news-open', newsOpen); }
+
   // ── Carga ──
   fetch('/data/company-news.json', { cache: 'no-store' }).then(function(r){ if(!r.ok) throw 0; return r.json(); }).then(function(d){
     newsData = d;
+    // Poda: conserva "abiertas" solo de URLs vigentes.
+    var live = {}; (newsData.items || []).forEach(function(i){ live[i.url] = 1; });
+    var pruned = {}; Object.keys(newsOpen).forEach(function(u){ if (live[u]) pruned[u] = 1; });
+    newsOpen = pruned; lsSet('news-open', newsOpen);
     renderNewsHero(); renderMeta(); buildFilterList(); updateFilterBtn(); renderNews();
   }).catch(function(){ if (grid) grid.innerHTML = '<div class="news-empty">' + NT('No se pudieron cargar las noticias. Reintenta en un momento.', "Couldn't load the news. Try again in a moment.") + '</div>'; });
 
+  // Toda la tarjeta abre la nota; al abrirla se apaga su brillo para siempre.
+  if (grid) grid.addEventListener('click', function(e){
+    var card = e.target.closest ? e.target.closest('.news-card') : null;
+    if (!card) return;
+    var url = card.getAttribute('data-url');
+    if (url) markOpened(url);
+    card.classList.remove('is-new');
+    // Si el clic no fue sobre el enlace, abre igual (la tarjeta entera es clickeable).
+    if (url && !(e.target.closest && e.target.closest('a'))) window.open(url, '_blank', 'noopener');
+  });
+
   // ── Tarjetas (con destacada = la más reciente) ──
   function titleOf(i){ return newsLang === 'en' ? (i.title || i.title_es) : (i.title_es || i.title); }
+  function subOf(i){ return NT('Vía ', 'Via ') + esc(i.source); }
+  function newBadge(){ return '<span class="news-new">' + NT('Nueva', 'New') + '</span>'; }
   function cardHtml(i, idx){
-    return '<article class="news-card" style="--i:' + Math.min(idx, 24) + '" title="' + esc(i.title) + '">'
-      + '<div class="news-top"><span class="news-co">' + esc(i.company) + '</span><span class="news-time">' + ago(i.published) + '</span></div>'
-      + '<div class="news-title">' + esc(titleOf(i)) + '</div>'
-      + '<div class="news-foot"><span class="news-src">' + esc(i.source) + '</span>'
-      + '<a class="news-btn" href="' + esc(i.url) + '" target="_blank" rel="noopener">' + NT('Leer noticia', 'Read the story') + ' <span aria-hidden="true">↗</span></a></div>'
+    return '<article class="news-card' + (isNew(i) ? ' is-new' : '') + '" data-url="' + esc(i.url) + '" data-pub="' + esc(i.published) + '" style="--i:' + Math.min(idx, 24) + '" title="' + esc(i.title) + '">'
+      + '<div class="news-top"><span class="news-co">' + esc(i.company) + '</span>' + newBadge() + '<span class="news-time">' + ago(i.published) + '</span></div>'
+      + '<h3 class="news-title">' + esc(titleOf(i)) + '</h3>'
+      + '<p class="news-sub">' + subOf(i) + '</p>'
+      + '<div class="news-foot"><a class="news-btn" href="' + esc(i.url) + '" target="_blank" rel="noopener">' + NT('Leer', 'Read') + ' <span aria-hidden="true">↗</span></a></div>'
       + '</article>';
   }
   function featHtml(i){
-    return '<article class="news-card feat" title="' + esc(i.title) + '">'
-      + '<div class="news-feat-head"><span class="news-feat-tag"><span class="fdot"></span>' + NT('Lo más reciente', 'Latest') + '</span><span class="news-time">' + ago(i.published) + '</span></div>'
+    return '<article class="news-card feat' + (isNew(i) ? ' is-new' : '') + '" data-url="' + esc(i.url) + '" data-pub="' + esc(i.published) + '" title="' + esc(i.title) + '">'
+      + '<div class="news-feat-head"><span class="news-feat-tag"><span class="fdot"></span>' + NT('Lo más reciente', 'Latest') + '</span>' + newBadge() + '<span class="news-time">' + ago(i.published) + '</span></div>'
       + '<div class="news-top"><span class="news-co">' + esc(i.company) + '</span></div>'
-      + '<div class="news-title">' + esc(titleOf(i)) + '</div>'
-      + '<div class="news-foot"><span class="news-src">' + esc(i.source) + '</span>'
-      + '<a class="news-btn" href="' + esc(i.url) + '" target="_blank" rel="noopener">' + NT('Leer noticia', 'Read the story') + ' <span aria-hidden="true">↗</span></a></div>'
+      + '<h2 class="news-title">' + esc(titleOf(i)) + '</h2>'
+      + '<p class="news-sub">' + subOf(i) + '</p>'
+      + '<div class="news-foot"><a class="news-btn" href="' + esc(i.url) + '" target="_blank" rel="noopener">' + NT('Leer noticia', 'Read the story') + ' <span aria-hidden="true">↗</span></a></div>'
       + '</article>';
+  }
+  // Programa el apagado del brillo justo cuando cada nota cumple 6 h (sin recargar).
+  function scheduleGlowExpiry(){
+    if (!grid) return;
+    [].slice.call(grid.querySelectorAll('.news-card.is-new')).forEach(function(el){
+      var t = new Date(el.getAttribute('data-pub')).getTime(); if (!isFinite(t)) return;
+      var left = NEW_MS - (Date.now() - t);
+      if (left > 0) setTimeout(function(){ el.classList.remove('is-new'); }, left + 200);
+    });
   }
   function renderNews(){
     if (!grid || !newsData) return;
@@ -668,6 +715,7 @@ const SUMMARY = ${JSON.stringify(summaryText)};
     if (items.length >= 4) { html = featHtml(items[0]) + items.slice(1).map(function(i, k){ return cardHtml(i, k); }).join(''); }
     else { html = items.map(function(i, k){ return cardHtml(i, k); }).join(''); }
     grid.innerHTML = html;
+    scheduleGlowExpiry();
   }
 })();
 </script>
@@ -912,9 +960,23 @@ function STYLE() {
   .tab.on{color:var(--navy-2);background:var(--navy-pale)}
   .tab:active{transform:scale(.98)}
   #pane-avances .snav{top:54px}   /* la sub-nav del reporte, bajo la barra de pestañas */
+
+  /* ── Noticias en clave MVP (naranja). Recolorea SOLO la pestaña Noticias
+     remapeando las variables navy dentro del pane, del toggle de idioma y de
+     su pestaña; "Avances del desk" conserva el navy del desk. Un solo lugar
+     controla todo el color de esta sección. --mvp-glow es el naranja vibrante
+     del brillo de notas nuevas. ── */
+  #pane-noticias,#newsLang,.tab[data-pane="noticias"]{--navy:#ED7824;--navy-2:#B4530E;--navy-pale:#FCEAD9;--mvp-glow:#F2660F}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) #pane-noticias,:root:not([data-theme="light"]) #newsLang,:root:not([data-theme="light"]) .tab[data-pane="noticias"]{--navy:#F59A4E;--navy-2:#F7A863;--navy-pale:#3A2410;--mvp-glow:#FF9A45}}
+  :root[data-theme="dark"] #pane-noticias,:root[data-theme="dark"] #newsLang,:root[data-theme="dark"] .tab[data-pane="noticias"]{--navy:#F59A4E;--navy-2:#F7A863;--navy-pale:#3A2410;--mvp-glow:#FF9A45}
+
   .hero-news{padding:52px 0 26px}
   /* Título editorial de Noticias (sin typewriter): grande, confiado */
-  .hnews-title{font-size:clamp(30px,5.4vw,50px);line-height:1.05;letter-spacing:-.03em;font-weight:700;margin:0 0 16px;text-wrap:balance;color:var(--ink)}
+  .hnews-title{font-size:clamp(34px,6vw,60px);line-height:1.02;letter-spacing:-.032em;font-weight:700;margin:0 0 16px;text-wrap:balance;color:var(--ink)}
+  /* Disclaimer: cada cuánto se actualiza + cómo funciona el brillo de novedades */
+  .news-disclaimer{display:flex;align-items:flex-start;gap:9px;margin-top:18px;padding:11px 14px;border-radius:12px;background:var(--navy-pale);border:1px solid color-mix(in srgb,var(--navy) 22%,transparent);font-size:12.5px;line-height:1.5;color:var(--ink-soft);max-width:70ch}
+  .news-disclaimer .ti{color:var(--navy-2);flex:0 0 auto;margin-top:1px}
+  .news-disclaimer b{color:var(--ink);font-weight:600}
   /* ── Barra: filtro desplegable (multi-empresa) + idioma ── */
   .news-bar{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center;justify-content:flex-start;margin-bottom:24px}
   .news-cddf{position:relative;flex:0 1 auto;min-width:0}
@@ -951,16 +1013,25 @@ function STYLE() {
   :root[data-theme="dark"] .nl-btn.on{color:#0C121E}
   @media (prefers-reduced-motion:reduce){.nl-ind{transition:none}}
   .news-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:15px}
-  .news-card{display:flex;flex-direction:column;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:15px;padding:17px 18px;box-shadow:var(--raise);text-decoration:none;color:inherit;transition:transform .18s var(--ease-out),border-color .18s var(--ease-out),box-shadow .18s var(--ease-out);animation:newsIn .5s var(--ease-out) both;animation-delay:calc(var(--i,0) * 32ms)}
+  .news-card{display:flex;flex-direction:column;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:15px;padding:17px 18px;box-shadow:var(--raise);text-decoration:none;color:inherit;cursor:pointer;transition:transform .18s var(--ease-out),border-color .18s var(--ease-out),box-shadow .18s var(--ease-out);animation:newsIn .5s var(--ease-out) both;animation-delay:calc(var(--i,0) * 32ms)}
   @media (hover:hover){.news-card:hover{transform:translateY(-3px);border-color:var(--navy-pale);box-shadow:0 8px 26px rgba(18,30,54,.08)}}
   @keyframes newsIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
   @media (prefers-reduced-motion:reduce){.news-card{animation:none}}
-  .news-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .news-top{display:flex;align-items:center;justify-content:flex-start;gap:8px;flex-wrap:wrap}
   .news-co{font-size:11.5px;font-weight:600;color:var(--navy-2);background:var(--navy-pale);padding:3px 9px;border-radius:999px;white-space:nowrap}
-  .news-time{font-family:var(--mono);font-size:11px;color:var(--ink-mute);white-space:nowrap}
-  .news-title{font-size:15px;line-height:1.35;font-weight:600;letter-spacing:-.01em;color:var(--ink);flex:1}
-  .news-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:var(--ink-mute);padding-top:2px}
+  .news-time{font-family:var(--mono);font-size:11px;color:var(--ink-mute);white-space:nowrap;margin-left:auto}
+  .news-title{font-size:16.5px;line-height:1.32;font-weight:600;letter-spacing:-.012em;color:var(--ink);flex:1;margin:0}
+  .news-sub{font-size:12.5px;line-height:1.45;color:var(--ink-mute);font-weight:500;margin:0;text-wrap:pretty}
+  .news-foot{display:flex;align-items:center;justify-content:flex-end;gap:8px;font-size:12px;color:var(--ink-mute);padding-top:4px;margin-top:auto}
   .news-src{font-weight:500}
+  /* Badge "Nueva" + brillo naranja vibrante de notas recién llegadas */
+  .news-new{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#fff;background:var(--mvp-glow,#F2660F);padding:3px 9px;border-radius:999px;white-space:nowrap}
+  .news-new::before{content:"";width:6px;height:6px;border-radius:50%;background:#fff;box-shadow:0 0 0 0 rgba(255,255,255,.7);animation:newDot 1.8s var(--ease-out) infinite}
+  @media (prefers-reduced-motion:reduce){.news-new::before{animation:none}}
+  @keyframes newDot{0%{box-shadow:0 0 0 0 rgba(255,255,255,.6)}70%{box-shadow:0 0 0 5px rgba(255,255,255,0)}100%{box-shadow:0 0 0 0 rgba(255,255,255,0)}}
+  .news-card:not(.is-new) .news-new{display:none}
+  .news-card.is-new{border-color:var(--mvp-glow,#F2660F);box-shadow:0 0 0 1.5px color-mix(in srgb,var(--mvp-glow,#F2660F) 55%,transparent),0 12px 34px color-mix(in srgb,var(--mvp-glow,#F2660F) 26%,transparent);transition:box-shadow .5s var(--ease-out),border-color .5s var(--ease-out)}
+  @media (hover:hover){.news-card.is-new:hover{transform:translateY(-3px);border-color:var(--mvp-glow,#F2660F)}}
   .news-btn{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--navy-2);background:var(--navy-pale);padding:6px 12px;border-radius:8px;text-decoration:none;white-space:nowrap;flex:0 0 auto;transition:transform .14s var(--ease-out),background .14s ease,color .14s ease}
   @media (hover:hover){.news-btn:hover{background:var(--navy);color:#fff}}
   :root[data-theme="dark"] .news-btn:hover{color:#0C121E}

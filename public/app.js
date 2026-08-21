@@ -3814,13 +3814,13 @@ function renderHomeModules() {
 
   // Tablero del equipo: solo en el home de MVP
   updateHomeBoard();
-  // Noticias del portafolio: solo en el home de Cretum
+  // Noticias del portafolio: solo en el home de MVP
   renderHomeNews();
   // Eventos Cretum (Outlook por usuario, privado): solo en el home de Cretum
   renderHomeEvents();
 }
 
-/* ── Widget de noticias del portafolio (home de Cretum) — al final, desplegable ── */
+/* ── Widget de noticias del portafolio (home de MVP) — al final, desplegable ── */
 let homeNewsCache = null;
 function homeNewsCollapsed() { try { return localStorage.getItem('hn-collapsed') === '1'; } catch (e) { return false; } }
 function toggleHomeNews() {
@@ -3851,7 +3851,7 @@ function hnCardHTML(i) {
 async function renderHomeNews() {
   const host = document.getElementById('homeNews');
   if (!host) return;
-  if (currentOrg !== 'cretum' || hmActive()) { host.style.display = 'none'; return; }
+  if (currentOrg !== 'mvp' || hmActive()) { host.style.display = 'none'; return; }
   if (!homeNewsCache) {
     try {
       const r = await fetch('/data/company-news.json', { cache: 'no-store' });
@@ -4280,7 +4280,7 @@ const HW_META = {
   board:    { title: 'Tablero Slack MVP', ico: 'fa-slack', brand: 1 },
 };
 // Ventanas disponibles por organización
-const HW_ORG = { cretum: ['modules', 'calendar', 'news'], mvp: ['modules', 'board', 'calendar'] };
+const HW_ORG = { cretum: ['modules', 'calendar'], mvp: ['modules', 'news', 'board', 'calendar'] };
 function homeViewKey() { return `cretum_home_view_${currentUser || 'anon'}_${currentOrg}`; }
 function homeViewMode() { try { return localStorage.getItem(homeViewKey()) === 'modular' ? 'modular' : 'classic'; } catch (e) { return 'classic'; } }
 function hmActive() { return !!currentOrg && !!HW_ORG[currentOrg] && homeViewMode() === 'modular'; }
