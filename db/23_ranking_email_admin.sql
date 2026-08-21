@@ -1,9 +1,9 @@
 -- ═══════════════════════════════════════════════════════════════════════════
--- CRETUM DASHBOARD · Email en los rankings SOLO para editor/admin
+-- CRETUM DASHBOARD · Email en los rankings SOLO para quien accede a la BD Cretum
 -- Los rankings (apertura/campañas) siguen ocultando el correo a viewers y
 -- colaboradores. Se agrega una columna `email` que solo se llena si el que
--- consulta es editor/admin (is_editor_or_admin()), para poder abrir la ficha
--- del contacto desde el ranking sin filtrar correos a quien no debe verlos.
+-- consulta puede ver la Base de Datos Cretum (can_cretum_db() — excluye al rol
+-- colaborador), para poder abrir la ficha del contacto sin filtrar correos.
 -- Recrear (DROP+CREATE) porque cambia el tipo de retorno.
 -- ═══════════════════════════════════════════════════════════════════════════
 
@@ -32,7 +32,7 @@ as $function$
   SELECT nombre, score::int, dias_vistos::int, ultimo_dia,
          CASE WHEN last_n>=1 AND last_n>=prev_n THEN 'up' WHEN last_n<prev_n THEN 'down' ELSE 'flat' END,
          historial,
-         CASE WHEN public.is_editor_or_admin() THEN agg.email ELSE NULL END
+         CASE WHEN public.can_cretum_db() THEN agg.email ELSE NULL END
   FROM agg WHERE dias_vistos>=1
   ORDER BY score DESC, dias_vistos DESC, nombre;
 $function$;
@@ -69,7 +69,7 @@ as $function$
               WHEN last_n < prev_n THEN 'down'
               ELSE 'flat' END AS momentum,
          historial,
-         CASE WHEN public.is_editor_or_admin() THEN agg.email ELSE NULL END
+         CASE WHEN public.can_cretum_db() THEN agg.email ELSE NULL END
   FROM agg WHERE meses_vistos >= 1
   ORDER BY score DESC, meses_vistos DESC, nombre;
 $function$;
