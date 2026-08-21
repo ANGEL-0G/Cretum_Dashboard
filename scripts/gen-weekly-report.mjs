@@ -966,9 +966,19 @@ function STYLE() {
      su pestaña; "Avances del desk" conserva el navy del desk. Un solo lugar
      controla todo el color de esta sección. --mvp-glow es el naranja vibrante
      del brillo de notas nuevas. ── */
+  /* Claro: acento naranja para el pane, el toggle de idioma y su pestaña. */
   #pane-noticias,#newsLang,.tab[data-pane="noticias"]{--navy:#ED7824;--navy-2:#B4530E;--navy-pale:#FCEAD9;--mvp-glow:#F2660F}
-  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) #pane-noticias,:root:not([data-theme="light"]) #newsLang,:root:not([data-theme="light"]) .tab[data-pane="noticias"]{--navy:#F59A4E;--navy-2:#F7A863;--navy-pale:#3A2410;--mvp-glow:#FF9A45}}
-  :root[data-theme="dark"] #pane-noticias,:root[data-theme="dark"] #newsLang,:root[data-theme="dark"] .tab[data-pane="noticias"]{--navy:#F59A4E;--navy-2:#F7A863;--navy-pale:#3A2410;--mvp-glow:#FF9A45}
+  /* Oscuro: el pane toma la paleta oscura de MVP (cálida, marrón-negro) + acento
+     naranja; el toggle y la pestaña solo el acento (viven en la barra chrome). */
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]) #newsLang,:root:not([data-theme="light"]) .tab[data-pane="noticias"]{--navy:#F59A4E;--navy-2:#F7A863;--navy-pale:#3A2410;--mvp-glow:#FF9A45}
+    :root:not([data-theme="light"]) #pane-noticias{--navy:#F59A4E;--navy-2:#F7A863;--navy-pale:#3A2410;--mvp-glow:#FF9A45;--bg:#0E0A06;--surface:#1B140D;--surface-2:#241A10;--line:#3A2E1E;--line-soft:#251C12;--ink:#F5ECE0;--ink-soft:#C9B9A4;--ink-mute:#93826C;background:var(--bg)}
+  }
+  :root[data-theme="dark"] #newsLang,:root[data-theme="dark"] .tab[data-pane="noticias"]{--navy:#F59A4E;--navy-2:#F7A863;--navy-pale:#3A2410;--mvp-glow:#FF9A45}
+  :root[data-theme="dark"] #pane-noticias{--navy:#F59A4E;--navy-2:#F7A863;--navy-pale:#3A2410;--mvp-glow:#FF9A45;--bg:#0E0A06;--surface:#1B140D;--surface-2:#241A10;--line:#3A2E1E;--line-soft:#251C12;--ink:#F5ECE0;--ink-soft:#C9B9A4;--ink-mute:#93826C;background:var(--bg)}
+  /* El hero ya trae padding inferior; recorta el arranque de la sección para
+     que el filtro no quede tan separado del disclaimer. */
+  #pane-noticias .sec{padding-top:6px}
 
   .hero-news{padding:52px 0 26px}
   /* Título editorial de Noticias (sin typewriter): grande, confiado */
