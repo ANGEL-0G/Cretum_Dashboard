@@ -1190,6 +1190,9 @@ const EN = {
   'Escribe una nota sobre este contacto…': 'Write a note about this contact…',
   'Sin notas.': 'No notes.',
   'Nota guardada': 'Note saved',
+  'Ver ficha del contacto': 'View contact card',
+  'No se pudo abrir el contacto': 'Couldn’t open the contact',
+  'Ese contacto no está en la base todavía': 'That contact isn’t in the database yet',
 };
 
 let LANG = 'es';

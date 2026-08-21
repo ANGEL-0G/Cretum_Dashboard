@@ -13573,7 +13573,9 @@ function renderAperturaRanking(rows) {
     const [mc, mg] = mov[r.momentum] || mov.flat;
     const topCls = pos === 1 ? ' top1' : pos === 2 ? ' top2' : pos === 3 ? ' top3' : '';
     const pct = Math.round((r.score / maxScore) * 100);
-    return `<div class="camp-rank-row${topCls}">
+    const clk = r.email ? ' cc-rank-click' : '';
+    const clkAttr = r.email ? ` onclick="ccDetailOpenByEmail('${escapeHtml(r.email)}')" title="${t('Ver ficha del contacto')}"` : '';
+    return `<div class="camp-rank-row${topCls}${clk}"${clkAttr}>
       <div class="camp-rank-pos">${pos}</div>
       <div class="camp-rank-mov ${mc}" title="${r.momentum === 'up' ? 'Subiendo / constante' : r.momentum === 'down' ? 'Bajó / dejó de abrir' : 'Sin cambio'}">${mg}</div>
       <div class="camp-rank-info">
@@ -13838,6 +13840,7 @@ function renderCampRanking(rows) {
     const [mc, mg] = mov[r.momentum] || mov.flat;
     const topCls = pos === 1 ? ' top1' : pos === 2 ? ' top2' : pos === 3 ? ' top3' : '';
     const pct = Math.round((r.score / maxScore) * 100);
+    const ficha = r.email ? `<button class="cc-rank-ficha" onclick="event.stopPropagation();ccDetailOpenByEmail('${escapeHtml(r.email)}')" title="${t('Ver ficha del contacto')}"><i class="fa-solid fa-id-card"></i></button>` : '';
     return `<div class="camp-rank-row${topCls}" onclick="campLpOpen(${i})" title="Ver detalle de interacción">
       <div class="camp-rank-pos">${pos}</div>
       <div class="camp-rank-mov ${mc}" title="${r.momentum === 'up' ? 'Subiendo / constante' : r.momentum === 'down' ? 'Bajó / dejó de ver' : 'Sin cambio'}">${mg}</div>
@@ -13849,6 +13852,7 @@ function renderCampRanking(rows) {
         <div class="camp-rank-score">${r.score}</div>
         <div class="camp-rank-veces">${r.meses_vistos} ${r.meses_vistos === 1 ? 'mes' : 'meses'}</div>
       </div>
+      ${ficha}
     </div>`;
   }).join('');
 }
@@ -15440,34 +15444,41 @@ async function ccDelete(id) {
 
 /* ── Detalle del contacto (abrir para ver todo + notas editables) ── */
 let ccDetailId = null;
-async function ccDetailOpen(id) {
-  const c = cretumContactos.find(x => x.id === id);
-  if (!c) return;
-  ccDetailId = id;
-  const m = document.getElementById('ccDetailModal'); if (!m) return;
+// Pinta la ficha desde una fila COMPLETA de cretum_contactos (incluye notas).
+function ccDetailShow(c) {
+  const m = document.getElementById('ccDetailModal'); if (!m || !c) return;
+  ccDetailId = c.id;
   document.getElementById('ccdName').textContent = (c.nombre || '').trim() || t('(sin nombre)');
   const tags = (c.revisar ? `<span class="cc-tag rev">${t('revisar')}</span>` : '') + (c.rebote ? `<span class="cc-tag reb">${t('rebotó')}</span>` : '');
   document.getElementById('ccdTags').innerHTML = tags;
   const row = (label, val, href) => val ? `<div class="ccd-row"><span class="ccd-k">${label}</span>${href ? `<a class="ccd-v" href="${href}${escapeHtml(val)}">${escapeHtml(val)}</a>` : `<span class="ccd-v">${escapeHtml(val)}</span>`}</div>` : '';
   document.getElementById('ccdFields').innerHTML =
-    row(t('Correo'), c.email, 'mailto:') +
-    row(t('Organización'), c.organizacion) +
-    row(t('Puesto'), c.puesto) +
-    row(t('Móvil'), c.telefono_movil, 'tel:') +
-    row(t('Tel. trabajo'), c.telefono_trabajo, 'tel:') +
-    row(t('País'), c.pais) ||
+    (row(t('Correo'), c.email, 'mailto:') +
+     row(t('Organización'), c.organizacion) +
+     row(t('Puesto'), c.puesto) +
+     row(t('Móvil'), c.telefono_movil, 'tel:') +
+     row(t('Tel. trabajo'), c.telefono_trabajo, 'tel:') +
+     row(t('País'), c.pais)) ||
     `<div class="ccd-empty">${t('Sin datos adicionales.')}</div>`;
   const nt = document.getElementById('ccdNota');
-  nt.value = t('Cargando…'); nt.disabled = true;
-  const save = document.getElementById('ccdNotaSave'); if (save) save.style.display = ccCanWrite() ? '' : 'none';
-  m.classList.add('show');
-  // Las notas se traen al abrir (no se cargan con las 11k filas).
-  try {
-    const { data } = await sb.from('cretum_contactos').select('notas').eq('id', id).maybeSingle();
-    nt.value = (data && data.notas) || '';
-  } catch (e) { nt.value = ''; }
+  nt.value = c.notas || '';
   nt.disabled = !ccCanWrite();
   nt.placeholder = ccCanWrite() ? t('Escribe una nota sobre este contacto…') : t('Sin notas.');
+  const save = document.getElementById('ccdNotaSave'); if (save) save.style.display = ccCanWrite() ? '' : 'none';
+  m.classList.add('show');
+}
+async function ccDetailOpen(id) {
+  const { data, error } = await sb.from('cretum_contactos').select('*').eq('id', id).maybeSingle();
+  if (error || !data) { toast(t('No se pudo abrir el contacto')); return; }
+  ccDetailShow(data);
+}
+// Abre la ficha por email (desde los rankings). Si no está en la base, avisa.
+async function ccDetailOpenByEmail(email) {
+  const e = ccNorm(email); if (!e) return;
+  const { data, error } = await sb.from('cretum_contactos').select('*').ilike('email', e).limit(1).maybeSingle();
+  if (error) { toast('Error: ' + error.message); return; }
+  if (!data) { toast(t('Ese contacto no está en la base todavía')); return; }
+  ccDetailShow(data);
 }
 async function ccDetailSaveNota() {
   if (!ccDetailId || !ccCanWrite()) return;
