@@ -59,6 +59,7 @@ async function gvvLive(req, res) {
   if (!sb) return res.status(500).json({ error: 'Sin service role' });
   let key = 'cretum/_internal/gvv-live.json';
   if (req.query.analytics) key = 'cretum/_internal/gvv-analytics.json';
+  else if (req.query.riesgo) key = 'cretum/_internal/gvv-riesgo.json';
   else if (req.query.hist) {
     const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City' })
       .format(new Date()).replace(/-/g, '');

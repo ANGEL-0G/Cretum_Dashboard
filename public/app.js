@@ -18254,10 +18254,11 @@ function gmRender() {
     badge.style.color = s.market_open ? '#0d6e3c' : 'var(--gray-500)';
   }
   const tabs = [['resumen', 'fa-gauge-high', 'Resumen'], ['posiciones', 'fa-table-list', 'Posiciones'],
-                ['opciones', 'fa-layer-group', 'Opciones'], ['intel', 'fa-brain', 'Inteligencia']];
+                ['opciones', 'fa-layer-group', 'Opciones'], ['riesgo', 'fa-shield-halved', 'Riesgo'],
+                ['intel', 'fa-brain', 'Inteligencia']];
   const tabBar = `<div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">${tabs.map(([k, ic, lbl]) =>
     `<button onclick="gmSetTab('${k}')" style="border:1.5px solid ${gmTab === k ? '#0f2849' : 'var(--gray-200)'};background:${gmTab === k ? '#0f2849' : '#fff'};color:${gmTab === k ? '#fff' : 'var(--gray-600)'};border-radius:99px;padding:7px 16px;font-size:12.5px;font-weight:600;cursor:pointer"><i class="fa-solid ${ic}"></i> ${lbl}</button>`).join('')}</div>`;
-  const fn = { resumen: gmTabResumen, posiciones: gmTabPosiciones, opciones: gmTabOpciones, intel: gmTabIntel }[gmTab] || gmTabResumen;
+  const fn = { resumen: gmTabResumen, posiciones: gmTabPosiciones, opciones: gmTabOpciones, riesgo: gmTabRiesgo, intel: gmTabIntel }[gmTab] || gmTabResumen;
   root.innerHTML = tabBar + fn(s) +
     `<div style="margin-top:10px;font-size:10.5px;color:var(--gray-400)">Snapshot del robot cada 10 min en horario de mercado · posiciones del Excel oficial · quotes en vivo · privados y MX con precio del Excel. Señales v1 con umbrales fijos; pasarán a percentiles contra la propia historia del fondo conforme se acumule serie.</div>`;
 }
@@ -18438,4 +18439,79 @@ function gmTabIntel(s) {
     ${ptRows ? `<div style="overflow-x:auto"><table class="camp-table" style="width:100%;font-size:12px"><tr><th>Ticker</th><th>PT medio</th><th>Upside</th><th># analistas</th><th>Buy</th><th>Hold</th><th>Sell</th></tr>${ptRows}</table></div>` : '<div style="color:var(--gray-400);font-size:12px">Consenso en construcción.</div>'}
     ${bancoHtml ? `<div style="font-weight:600;font-size:12px;margin:10px 0 4px">Movimientos de bancos capturados</div>${bancoHtml}` : ''}
   </div>`;
+}
+
+
+/* ── GVV Mesa: pestaña Riesgo (gvv-riesgo.json, robot diario 6:40) ── */
+let gmRiesgo = null, gmRiesgoLoading = false;
+function gmTabRiesgo(s) {
+  if (!gmRiesgo && !gmRiesgoLoading) {
+    gmRiesgoLoading = true;
+    authedFetch('/api/gvv-live?riesgo=1').then(async r => {
+      gmRiesgo = r.ok ? await r.json() : { error: (await r.json().catch(() => ({}))).error || 'HTTP ' + r.status };
+    }).catch(e => { gmRiesgo = { error: e.message }; })
+      .finally(() => { gmRiesgoLoading = false; if (gmTab === 'riesgo') gmRender(); });
+    return `<div style="${GM_CARD};color:var(--gray-400)">Cargando análisis de riesgo…</div>`;
+  }
+  const R = gmRiesgo;
+  if (!R || R.error) return `<div style="${GM_CARD};color:#c62828">No se pudo cargar el análisis de riesgo${R?.error ? ': ' + escapeHtml(R.error) : ''}. El robot corre diario a las 6:40.</div>`;
+  const libro = R.libro || {};
+  const corte = new Date(R.ts).toLocaleString('es-MX', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+
+  const escHtml2 = R.escenarios.map(e => `<tr><td style="font-weight:600">S&P ${e.shock}%</td>
+    <td class="num" style="color:${gmColor(e.impacto_pct)}">${gmPct(e.impacto_pct)}</td>
+    <td class="num" style="color:${gmColor(e.impacto_usd)};font-weight:700">${gmFmtUsd(e.impacto_usd)}</td></tr>`).join('');
+
+  const clustersHtml = (R.clusters || []).length ? R.clusters.map(c =>
+    `<div style="display:flex;gap:9px;align-items:baseline;padding:6px 10px;border-radius:8px;background:#fdf3e7;margin:4px 0;font-size:12.5px">
+      <i class="fa-solid fa-link" style="color:#b26a00"></i>
+      <span><strong>${c.tickers.join(' · ')}</strong> se mueven como una sola apuesta (ρ>0.75) — juntas pesan <strong>${c.peso}%</strong> del fondo</span></div>`).join('')
+    : '<div style="color:var(--gray-400);font-size:12px">Sin clusters de correlación >0.75 en el top 15 — el libro está razonablemente diversificado.</div>';
+
+  const n = (R.top_syms || []).length;
+  let matriz = '';
+  if (n) {
+    const cell = v => {
+      if (v == null) return '<td style="background:var(--gray-50)"></td>';
+      const a = Math.min(1, Math.abs(v));
+      const bg = v >= 0 ? `rgba(28,78,128,${(a * 0.85).toFixed(2)})` : `rgba(198,40,40,${(a * 0.85).toFixed(2)})`;
+      return `<td style="background:${bg};color:${a > 0.55 ? '#fff' : '#1a2332'};text-align:center;font-size:9px;padding:3px 2px;min-width:30px" title="${v}">${(v * 100).toFixed(0)}</td>`;
+    };
+    matriz = `<div style="overflow-x:auto"><table cellspacing="1" style="border-collapse:separate;margin-top:6px">
+      <tr><td></td>${R.top_syms.map(x => `<td style="font-size:8.5px;color:var(--gray-500);text-align:center;padding:2px">${escapeHtml(x)}</td>`).join('')}</tr>
+      ${R.matriz.map((fila, i) => `<tr><td style="font-size:9px;font-weight:700;color:var(--gray-600);padding-right:4px">${escapeHtml(R.top_syms[i])}</td>${fila.map(cell).join('')}</tr>`).join('')}
+    </table></div>`;
+  }
+
+  const posRows = (R.posiciones || []).slice(0, 60).map(p => `<tr>
+    <td style="font-weight:600">${escapeHtml(p.t)}</td><td class="num">${p.w}%</td>
+    <td class="num">${p.beta ?? '—'}</td><td class="num">${p.vol != null ? p.vol + '%' : '—'}</td>
+    <td class="num">${p.dias != null ? p.dias.toLocaleString('en-US') : '—'}</td>
+    <td class="num" style="color:${gmColor(p.cagr || 0)}">${p.cagr != null ? gmPct(p.cagr, 1) : '—'}</td>
+    <td class="num" style="color:${gmColor(p.plpct || 0)}">${p.plpct != null ? gmPct(p.plpct, 1) : '—'}</td></tr>`).join('');
+
+  return `
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:14px">
+    <div style="${GM_CARD}"><div style="font-size:10.5px;color:var(--gray-500);text-transform:uppercase">Beta del portafolio</div>
+      <div style="font-size:30px;font-weight:800;color:var(--gray-800)">${R.beta_portafolio}</div>
+      <div style="font-size:10px;color:var(--gray-400)">${escapeHtml(R.nota_beta)}</div></div>
+    <div style="${GM_CARD}"><div style="font-size:10.5px;color:var(--gray-500);text-transform:uppercase">Win rate del libro</div>
+      <div style="font-size:30px;font-weight:800;color:${(libro.win_rate || 0) >= 50 ? '#0d6e3c' : '#c62828'}">${libro.win_rate ?? '—'}%</div>
+      <div style="font-size:10px;color:var(--gray-400)">${libro.n ?? 0} posiciones con fecha de entrada</div></div>
+    <div style="${GM_CARD}"><div style="font-size:10.5px;color:var(--gray-500);text-transform:uppercase">Ganadoras vs perdedoras</div>
+      <div style="font-size:15px;font-weight:700;margin-top:6px"><span style="color:#0d6e3c">${libro.pl_medio_ganadoras != null ? gmPct(libro.pl_medio_ganadoras, 1) : '—'}</span> · ${libro.dias_medio_ganadoras ?? '—'}d
+      &nbsp;vs&nbsp; <span style="color:#c62828">${libro.pl_medio_perdedoras != null ? gmPct(libro.pl_medio_perdedoras, 1) : '—'}</span> · ${libro.dias_medio_perdedoras ?? '—'}d</div>
+      <div style="font-size:10px;color:var(--gray-400)">P&L medio y días en cartera de cada grupo</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin-bottom:14px">
+    <div style="${GM_CARD}"><div style="font-weight:700;margin-bottom:6px"><i class="fa-solid fa-vial"></i> Escenarios (beta)</div>
+      <div style="font-size:10.5px;color:var(--gray-400);margin-bottom:6px">Impacto estimado sobre el AUM si el S&P cae X% (aprox. lineal por beta; los privados no se mueven en el día)</div>
+      <table class="camp-table" style="width:100%;font-size:12px"><tr><th>Escenario</th><th>Fondo est.</th><th>Impacto USD</th></tr>${escHtml2}</table></div>
+    <div style="${GM_CARD}"><div style="font-weight:700;margin-bottom:6px"><i class="fa-solid fa-diagram-project"></i> Riesgo escondido — clusters de correlación</div>${clustersHtml}</div>
+  </div>
+  <div style="${GM_CARD};margin-bottom:14px"><div style="font-weight:700;margin-bottom:2px"><i class="fa-solid fa-table-cells"></i> Matriz de correlación — top 15 por peso <span style="font-weight:400;font-size:11px;color:var(--gray-400)">· 6 meses de retornos diarios · azul = juntas, rojo = opuestas</span></div>${matriz}</div>
+  <div style="${GM_CARD}"><div style="font-weight:700;margin-bottom:8px"><i class="fa-solid fa-microscope"></i> Métricas por posición <span style="font-weight:400;font-size:11px;color:var(--gray-400)">· top 60 por peso · corte ${escapeHtml(corte)} · cobertura ${R.cobertura?.con_historia}/${R.cobertura?.total} con historia</span></div>
+    <div style="overflow-x:auto;max-height:520px;overflow-y:auto"><table class="camp-table" style="width:100%;font-size:12px">
+      <tr><th>Ticker</th><th>Peso</th><th>Beta</th><th>Vol anual</th><th>Días en cartera</th><th>CAGR desde entrada</th><th>P&L total</th></tr>
+      ${posRows}</table></div></div>`;
 }
