@@ -18199,6 +18199,7 @@ function gmRender() {
     <div style="font-weight:700;margin-bottom:8px"><i class="fa-solid fa-bell"></i> Alertas enviadas hoy (${s.alerts_today.length}) <span style="font-weight:400;font-size:11px;color:var(--gray-400)">· Telegram, canal gvv</span></div>
     ${s.alerts_today.map(a => `<div style="display:flex;gap:9px;align-items:baseline;padding:5px 10px;border-radius:8px;background:var(--gray-50);margin:3px 0;font-size:12.5px"><span style="color:var(--gray-400);font-size:10.5px;font-variant-numeric:tabular-nums">${escapeHtml(a.ts)}</span><span>${escapeHtml(a.text)}</span></div>`).join('')}
   </div>` : ''}
+  ${gmF3Cards(s)}
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-bottom:14px">
     <div style="${card}"><div style="font-weight:700;margin-bottom:6px;color:#c62828"><i class="fa-solid fa-arrow-trend-down"></i> Bajan hoy</div>
       <table class="camp-table" style="width:100%">${s.top_down.map(moverRow).join('')}</table></div>
@@ -18222,4 +18223,60 @@ function gmRender() {
   </div>`;
   // conservar foco del buscador tras re-render
   if (q) { const el = document.getElementById('gmSearch'); if (el) { el.focus(); el.setSelectionRange(q.length, q.length); } }
+}
+
+
+/* ── GVV Mesa fase 3: calendario 14 días, noticias y analistas ── */
+function gmAgo(ts) {
+  if (!ts) return '';
+  const h = (Date.now() / 1000 - ts) / 3600;
+  return h < 1 ? `hace ${Math.max(1, Math.round(h * 60))}m` : (h < 24 ? `hace ${Math.round(h)}h` : `hace ${Math.round(h / 24)}d`);
+}
+function gmF3Cards(s) {
+  const f3 = s.fase3;
+  if (!f3) return '';
+  const card = 'background:#fff;border:1px solid var(--gray-200);border-radius:12px;padding:16px 18px';
+  const tipoChip = { earnings: ['EARNINGS', '#eef3fa', '#1c4e80'], vencimiento: ['VENCIMIENTO', '#fdf3e7', '#b26a00'], macro: ['MACRO', '#f3e8fd', '#6b21a8'] };
+  const calHtml = (f3.calendar || []).length ? (f3.calendar || []).map(c => {
+    const [lbl, bg, fg] = tipoChip[c.tipo] || ['EVENTO', 'var(--gray-100)', 'var(--gray-500)'];
+    const d = new Date(c.date + 'T12:00:00');
+    const fecha = d.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' });
+    return `<div style="display:flex;gap:9px;align-items:baseline;padding:5px 10px;border-radius:8px;background:var(--gray-50);margin:3px 0;font-size:12.5px">
+      <span style="min-width:86px;color:var(--gray-500);font-size:11px">${escapeHtml(fecha)}</span>
+      <span style="font-size:9px;font-weight:700;letter-spacing:.5px;padding:2px 8px;border-radius:99px;background:${bg};color:${fg}">${lbl}</span>
+      <span>${escapeHtml(c.txt)}${c.w ? ` <span style="color:var(--gray-400);font-size:10.5px">· ${c.w}% del fondo</span>` : ''}</span></div>`;
+  }).join('') : '<div style="color:var(--gray-400);font-size:12px">Sin eventos próximos.</div>';
+
+  const newsHtml = (f3.news || []).slice(0, 14).map(a => `
+    <a href="${escapeHtml(a.url || '#')}" target="_blank" rel="noopener" style="display:flex;gap:9px;align-items:baseline;padding:5px 10px;border-radius:8px;margin:3px 0;font-size:12.5px;text-decoration:none;color:var(--gray-800)" onmouseover="this.style.background='var(--gray-50)'" onmouseout="this.style.background=''">
+      <span style="min-width:52px;font-weight:700;color:#1c4e80">${escapeHtml(a.sym)}</span>
+      <span style="flex:1">${escapeHtml(a.h)}</span>
+      <span style="color:var(--gray-400);font-size:10.5px;white-space:nowrap">${escapeHtml(a.src || '')} · ${gmAgo(a.t)}</span></a>`).join('')
+    || '<div style="color:var(--gray-400);font-size:12px">Aún sin noticias de las últimas 48h.</div>';
+
+  const spotBySym = {};
+  for (const p of (s.positions || [])) if (p.live_price != null) spotBySym[String(p.ticker).replace('/', '.')] = p.live_price;
+  const ptRows = Object.entries(f3.pt || {}).filter(([, v]) => v.reco || v.mean).slice(0, 18).map(([sym, v]) => {
+    const spot = spotBySym[sym];
+    const up = (v.mean && spot) ? ((v.mean / spot - 1) * 100) : null;
+    const r = v.reco || {};
+    return `<tr><td style="font-weight:600">${escapeHtml(sym)}</td>
+      <td class="num">${v.mean != null ? '$' + v.mean.toLocaleString('en-US', { maximumFractionDigits: 1 }) : '—'}</td>
+      <td class="num" style="color:${up == null ? 'inherit' : gmColor(up)}">${up != null ? gmPct(up, 1) : '—'}</td>
+      <td class="num">${v.n ?? '—'}</td>
+      <td class="num" style="color:#0d6e3c">${r.buy ?? '—'}</td><td class="num">${r.hold ?? '—'}</td><td class="num" style="color:#c62828">${r.sell ?? '—'}</td></tr>`;
+  }).join('');
+  const bancoHtml = (f3.pt_bancos || []).slice(0, 8).map(b => `
+    <div style="display:flex;gap:9px;align-items:baseline;padding:4px 10px;border-radius:8px;background:var(--gray-50);margin:3px 0;font-size:12px">
+      <span style="min-width:52px;font-weight:700;color:#1c4e80">${escapeHtml(b.sym)}</span>
+      <span><strong>${escapeHtml(b.bank)}</strong> ${escapeHtml(b.action)} PT a $${b.pt.toLocaleString('en-US')}</span>
+      <span style="color:var(--gray-400);font-size:10.5px;margin-left:auto">${escapeHtml(b.date)}</span></div>`).join('');
+
+  return `
+  <div style="${card};margin-bottom:14px"><div style="font-weight:700;margin-bottom:8px"><i class="fa-solid fa-calendar-days"></i> Calendario 14 días</div>${calHtml}</div>
+  <div style="${card};margin-bottom:14px"><div style="font-weight:700;margin-bottom:8px"><i class="fa-solid fa-newspaper"></i> Noticias del portafolio <span style="font-weight:400;font-size:11px;color:var(--gray-400)">· últimas 48h, rankeadas por peso en cartera · cobertura ${f3.cov?.news ?? 0}/${f3.cov?.total ?? 0} emisoras</span></div>${newsHtml}</div>
+  <div style="${card};margin-bottom:14px"><div style="font-weight:700;margin-bottom:8px"><i class="fa-solid fa-bullseye"></i> Analistas <span style="font-weight:400;font-size:11px;color:var(--gray-400)">· consenso best-effort + registro propio por banco (capturado de titulares)</span></div>
+    ${ptRows ? `<div style="overflow-x:auto"><table class="camp-table" style="width:100%;font-size:12px"><tr><th>Ticker</th><th>PT medio</th><th>Upside</th><th># analistas</th><th>Buy</th><th>Hold</th><th>Sell</th></tr>${ptRows}</table></div>` : '<div style="color:var(--gray-400);font-size:12px">Consenso en construcción (se llena por lotes cada corrida).</div>'}
+    ${bancoHtml ? `<div style="font-weight:600;font-size:12px;margin:10px 0 4px">Movimientos de bancos capturados</div>${bancoHtml}` : ''}
+  </div>`;
 }
