@@ -18397,9 +18397,38 @@ function gmTabOpciones(s) {
     </table></div></div>`;
 }
 
+let gmPrivados = null, gmPrivLoading = false;
+function gmPrivadosCard() {
+  if (!gmPrivados && !gmPrivLoading) {
+    gmPrivLoading = true;
+    authedFetch('/api/gvv-live?privados=1').then(async r => { gmPrivados = r.ok ? await r.json() : { error: true }; })
+      .catch(() => { gmPrivados = { error: true }; })
+      .finally(() => { gmPrivLoading = false; if (gmTab === 'intel') gmRender(); });
+    return `<div style="${GM_CARD};margin-bottom:14px;color:var(--gray-400)">Cargando pulso del secundario (Caplight)…</div>`;
+  }
+  const P = gmPrivados;
+  if (!P || P.error || !(P.companias || []).length) return '';
+  const filas = P.companias.map(c => {
+    const prem = c.premium_pct;
+    const bn = v => v == null ? '—' : '$' + (v / 1e9).toLocaleString('en-US', { maximumFractionDigits: 1 }) + 'B';
+    return `<tr><td style="font-weight:600">${escapeHtml(c.nombre || c.ticker)}</td>
+      <td class="num">${c.gvv?.peso ?? '—'}%</td>
+      <td class="num" style="color:${gmColor(c.gvv?.plpct || 0)}">${c.gvv?.plpct != null ? gmPct(c.gvv.plpct, 1) : '—'}</td>
+      <td class="num">${bn(c.last_round_val)}</td><td class="num">${bn(c.market_price_val)}</td>
+      <td class="num" style="font-weight:700;color:${gmColor(prem || 0)}">${prem != null ? gmPct(prem, 1) : '—'}</td>
+      <td style="font-size:10.5px;color:var(--gray-500)">${escapeHtml(c.ronda || '')}</td></tr>`;
+  }).join('');
+  const corte = new Date(P.ts).toLocaleString('es-MX', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  return `<div style="${GM_CARD};margin-bottom:14px">
+    <div style="font-weight:700;margin-bottom:2px"><i class="fa-solid fa-gem"></i> Privados — pulso del secundario (Caplight) <span style="font-weight:400;font-size:11px;color:var(--gray-400)">· corte ${escapeHtml(corte)}${(P.sin_datos || []).length ? ' · sin datos: ' + P.sin_datos.join(', ') : ''}</span></div>
+    <div style="font-size:10.5px;color:var(--gray-400);margin-bottom:6px">${escapeHtml(P.nota || '')}</div>
+    <div style="overflow-x:auto"><table class="camp-table" style="width:100%;font-size:12px">
+      <tr><th>Compañía</th><th>Peso GVV</th><th>P&L GVV</th><th>Últ. ronda</th><th>Secundario</th><th>Premium</th><th>Ronda</th></tr>${filas}</table></div></div>`;
+}
+
 function gmTabIntel(s) {
   const f3 = s.fase3;
-  if (!f3) return `<div style="${GM_CARD};color:var(--gray-400)">La capa de inteligencia se está llenando (el robot rota emisoras cada corrida).</div>`;
+  if (!f3) return gmPrivadosCard() + `<div style="${GM_CARD};color:var(--gray-400)">La capa de inteligencia se está llenando (el robot rota emisoras cada corrida).</div>`;
   const tipoChip = { earnings: ['EARNINGS', '#eef3fa', '#1c4e80'], vencimiento: ['VENCIMIENTO', '#fdf3e7', '#b26a00'], macro: ['MACRO', '#f3e8fd', '#6b21a8'] };
   const calHtml = (f3.calendar || []).length ? (f3.calendar || []).map(c => {
     const [lbl, bg, fg] = tipoChip[c.tipo] || ['EVENTO', 'var(--gray-100)', 'var(--gray-500)'];
@@ -18433,6 +18462,7 @@ function gmTabIntel(s) {
       <span><strong>${escapeHtml(b.bank)}</strong> ${escapeHtml(b.action)} PT a $${b.pt.toLocaleString('en-US')}</span>
       <span style="color:var(--gray-400);font-size:10.5px;margin-left:auto">${escapeHtml(b.date)}</span></div>`).join('');
   return `
+  ${gmPrivadosCard()}
   <div style="${GM_CARD};margin-bottom:14px"><div style="font-weight:700;margin-bottom:8px"><i class="fa-solid fa-calendar-days"></i> Calendario 14 días</div>${calHtml}</div>
   <div style="${GM_CARD};margin-bottom:14px"><div style="font-weight:700;margin-bottom:8px"><i class="fa-solid fa-newspaper"></i> Noticias del portafolio <span style="font-weight:400;font-size:11px;color:var(--gray-400)">· últimas 48h, rankeadas por peso · cobertura ${f3.cov?.news ?? 0}/${f3.cov?.total ?? 0} emisoras</span></div>${newsHtml}</div>
   <div style="${GM_CARD}"><div style="font-weight:700;margin-bottom:8px"><i class="fa-solid fa-bullseye"></i> Analistas <span style="font-weight:400;font-size:11px;color:var(--gray-400)">· consenso best-effort + registro propio por banco</span></div>
@@ -18510,6 +18540,12 @@ function gmTabRiesgo(s) {
     <div style="${GM_CARD}"><div style="font-weight:700;margin-bottom:6px"><i class="fa-solid fa-diagram-project"></i> Riesgo escondido — clusters de correlación</div>${clustersHtml}</div>
   </div>
   <div style="${GM_CARD};margin-bottom:14px"><div style="font-weight:700;margin-bottom:2px"><i class="fa-solid fa-table-cells"></i> Matriz de correlación — top 15 por peso <span style="font-weight:400;font-size:11px;color:var(--gray-400)">· 6 meses de retornos diarios · azul = juntas, rojo = opuestas</span></div>${matriz}</div>
+  ${(R.cerradas_recientes || []).length ? `<div style="${GM_CARD};margin-bottom:14px">
+    <div style="font-weight:700;margin-bottom:6px"><i class="fa-solid fa-box-archive"></i> Post-mortem — posiciones cerradas recientes</div>
+    <table class="camp-table" style="width:100%;font-size:12px"><tr><th>Ticker</th><th>Salida</th><th>P&L final</th><th>Días en cartera</th><th>Valor final</th></tr>
+    ${R.cerradas_recientes.map(c => `<tr><td style="font-weight:600">${escapeHtml(c.ticker)}</td><td>${escapeHtml(String(c.fecha_salida))}</td>
+      <td class="num" style="color:${gmColor(c.plpct_final || 0)}">${c.plpct_final != null ? gmPct(c.plpct_final, 1) : '—'}</td>
+      <td class="num">${c.dias_en_cartera ?? '—'}</td><td class="num">${c.valor_final != null ? gmFmtUsd(c.valor_final) : '—'}</td></tr>`).join('')}</table></div>` : ''}
   <div style="${GM_CARD}"><div style="font-weight:700;margin-bottom:8px"><i class="fa-solid fa-microscope"></i> Métricas por posición <span style="font-weight:400;font-size:11px;color:var(--gray-400)">· top 60 por peso · corte ${escapeHtml(corte)} · cobertura ${R.cobertura?.con_historia}/${R.cobertura?.total} con historia</span></div>
     <div style="overflow-x:auto;max-height:520px;overflow-y:auto"><table class="camp-table" style="width:100%;font-size:12px">
       <tr><th>Ticker</th><th>Peso</th><th>Beta</th><th>Vol anual</th><th>Días en cartera</th><th>CAGR desde entrada</th><th>P&L total</th></tr>
