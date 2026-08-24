@@ -18118,30 +18118,81 @@ async function gmLoad(manual = false) {
   }
 }
 
-/* ── señales (mismas reglas v1 de siempre) ── */
+/* ── señales v2: tema + severidad + acción sugerida (mismas reglas de datos) ── */
 function gmSignals(s) {
   const out = [];
   const aum = s.aum_live || s.aum_excel || 1;
-  const expired = s.options.filter(o => typeof o.dte === 'number' && o.dte < 0);
-  if (expired.length) out.push({ sev: 'warn', icon: 'fa-broom', txt: `${expired.length} opción(es) VENCIDAS siguen en el Excel: ${[...new Set(expired.map(o => o.ticker))].join(', ')} — limpiar filas` });
-  const nearExp = s.options.filter(o => typeof o.dte === 'number' && o.dte >= 0 && o.dte <= 7);
-  if (nearExp.length) out.push({ sev: 'info', icon: 'fa-hourglass-half', txt: `${nearExp.length} opción(es) vencen en ≤7 días: ${[...new Set(nearExp.map(o => `${o.ticker} (${o.dte}d)`))].join(', ')}` });
+  const push = (tema, sev, txt, accion) => out.push({ tema, sev, txt, accion });
+
+  // OPCIONES — riesgo de asignación (lo más accionable primero)
   const tight = s.options.filter(o => o.cv === 'Venta' && o.dist_strike_pct != null && typeof o.dte === 'number' && o.dte >= 0 && Math.abs(o.dist_strike_pct) < 3);
-  for (const o of tight) out.push({ sev: 'warn', icon: 'fa-crosshairs', txt: `${o.ticker} ${o.pc === 'P' ? 'put' : 'call'} vendido a ${Math.abs(o.dist_strike_pct).toFixed(1)}% del strike ${o.strike} (spot ${o.spot}) — riesgo de asignación` });
+  for (const o of tight)
+    push('opciones', 'crit', `${o.ticker} ${o.pc === 'P' ? 'put' : 'call'} vendido a ${Math.abs(o.dist_strike_pct).toFixed(1)}% del strike ${o.strike} (spot ${o.spot})`, 'decidir roll / cierre');
   const itm = s.options.filter(o => o.estado === 'ITM' && typeof o.dte === 'number' && o.dte >= 0);
-  if (itm.length) out.push({ sev: 'warn', icon: 'fa-triangle-exclamation', txt: `${itm.length} opción(es) ITM vivas: ${[...new Set(itm.map(o => o.ticker))].join(', ')}` });
+  if (itm.length) push('opciones', 'warn', `${itm.length} opciones ITM vivas: ${[...new Set(itm.map(o => o.ticker))].join(', ')}`, 'revisar en pestaña Opciones');
+  const nearExp = s.options.filter(o => typeof o.dte === 'number' && o.dte >= 0 && o.dte <= 7);
+  if (nearExp.length) push('opciones', 'warn', `${nearExp.length} vencen en ≤7 días: ${[...new Set(nearExp.map(o => `${o.ticker} (${o.dte}d)`))].join(', ')}`, 'planear la semana');
+
+  // MOVIMIENTOS del día
   for (const p of s.positions) {
     const w = (p.live_value / aum) * 100;
     if (p.day_chg_pct != null && Math.abs(p.day_chg_pct) >= 4 && w >= 1)
-      out.push({ sev: 'move', icon: 'fa-bolt', txt: `${p.ticker} ${gmPct(p.day_chg_pct)} hoy (${w.toFixed(1)}% del fondo, ${gmFmtUsd(p.day_pl)})` });
-    if (w >= 8 && p.ac !== 'Cash')
-      out.push({ sev: 'info', icon: 'fa-scale-unbalanced', txt: `${p.ticker} pesa ${w.toFixed(1)}% del fondo` });
+      push('movimientos', Math.abs(p.day_chg_pct) >= 7 ? 'crit' : 'warn',
+        `${p.ticker} ${gmPct(p.day_chg_pct)} hoy — ${w.toFixed(1)}% del fondo (${gmFmtUsd(p.day_pl)})`, 'ver noticias en su ficha');
+  }
+
+  // CONCENTRACIÓN Y LIQUIDEZ
+  for (const p of s.positions) {
+    const w = (p.live_value / aum) * 100;
+    if (w >= 8 && p.ac !== 'Cash') push('cartera', 'info', `${p.ticker} pesa ${w.toFixed(1)}% del fondo`, 'consciente, no acción');
   }
   const cash = s.positions.filter(p => p.ac === 'Cash').reduce((a, p) => a + p.live_value, 0) / aum * 100;
-  if (cash < 10) out.push({ sev: 'warn', icon: 'fa-droplet', txt: `Efectivo en ${cash.toFixed(1)}% — por debajo del rango habitual (~20%)` });
+  if (cash < 10) push('cartera', 'crit', `Efectivo en ${cash.toFixed(1)}% — por debajo del rango habitual (~20%)`, 'revisar liquidez');
+
+  // HIGIENE DE DATOS
+  const expired = s.options.filter(o => typeof o.dte === 'number' && o.dte < 0);
+  if (expired.length) {
+    const tks = [...new Set(expired.map(o => o.ticker))];
+    push('higiene', 'warn', `${expired.length} opciones VENCIDAS siguen en el Excel (${tks.slice(0, 8).join(', ')}${tks.length > 8 ? '…' : ''})`, 'Kevin: limpiar filas');
+  }
   const stale = s.positions.filter(p => p.src === 'excel' && p.ac !== 'Cash' && p.ac !== 'Private Equity' && p.ticker !== 'CASH').length;
-  if (stale > 5) out.push({ sev: 'info', icon: 'fa-clock', txt: `${stale} posiciones sin quote en vivo (precio del Excel)` });
+  if (stale > 5) push('higiene', 'info', `${stale} posiciones sin quote en vivo (usan precio del Excel — MX y no cubiertas)`, 'esperado');
   return out;
+}
+
+function gmSignalsCard(s) {
+  const sig = gmSignals(s);
+  const SEV = { crit: ['#c62828', '#fdf0ef', 'CRÍTICO'], warn: ['#b26a00', '#fdf3e7', 'VIGILAR'], info: ['#5a6b82', 'var(--gray-50)', 'INFO'] };
+  const TEMAS = {
+    opciones: ['fa-layer-group', 'Opciones'], movimientos: ['fa-bolt', 'Movimientos del día'],
+    cartera: ['fa-scale-unbalanced', 'Cartera y liquidez'], higiene: ['fa-broom', 'Higiene de datos'],
+  };
+  const orden = { crit: 0, warn: 1, info: 2 };
+  const counts = { crit: 0, warn: 0, info: 0 };
+  sig.forEach(x => counts[x.sev]++);
+  const chip = (sev, n) => n ? `<span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:${SEV[sev][0]};background:${SEV[sev][1]};border-radius:99px;padding:4px 12px"><span style="width:8px;height:8px;border-radius:99px;background:${SEV[sev][0]}"></span>${n} ${SEV[sev][2].toLowerCase()}</span>` : '';
+  const grupos = Object.keys(TEMAS).map(tema => {
+    const items = sig.filter(x => x.tema === tema).sort((a, b) => orden[a.sev] - orden[b.sev]);
+    if (!items.length) return '';
+    const peor = items[0].sev;
+    const [ic, titulo] = TEMAS[tema];
+    return `<div style="border:1px solid var(--gray-200);border-left:4px solid ${SEV[peor][0]};border-radius:10px;padding:10px 14px;margin:8px 0;background:#fff">
+      <div style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:12.5px;margin-bottom:6px;color:var(--gray-800)">
+        <i class="fa-solid ${ic}" style="color:${SEV[peor][0]}"></i> ${titulo}
+        <span style="font-weight:400;font-size:10px;color:var(--gray-400)">${items.length} señal${items.length === 1 ? '' : 'es'}</span></div>
+      ${items.map(x => `<div style="display:flex;gap:9px;align-items:baseline;padding:5px 0;font-size:12.5px;border-top:1px solid var(--gray-50)">
+        <span style="flex:none;width:8px;height:8px;border-radius:99px;background:${SEV[x.sev][0]};position:relative;top:0px"></span>
+        <span style="flex:1">${escapeHtml(x.txt)}</span>
+        <span style="flex:none;font-size:9.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:${SEV[x.sev][0]};background:${SEV[x.sev][1]};border-radius:99px;padding:2px 9px;white-space:nowrap">${escapeHtml(x.accion)}</span></div>`).join('')}
+    </div>`;
+  }).join('');
+  return `<div style="${GM_CARD};margin-bottom:14px">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px">
+      <div style="font-weight:700"><i class="fa-solid fa-signal"></i> Centro de señales</div>
+      ${chip('crit', counts.crit)}${chip('warn', counts.warn)}${chip('info', counts.info)}
+      <span style="margin-left:auto;font-size:10px;color:var(--gray-400)">umbrales v1 → percentiles con historia</span></div>
+    ${sig.length ? grupos : '<div style="color:var(--gray-400);font-size:12px">Sin señales — día tranquilo.</div>'}
+  </div>`;
 }
 
 /* ── gráficas SVG ── */
@@ -18277,8 +18328,6 @@ function gmRender() {
 
 function gmTabResumen(s) {
   const aum = s.aum_live || 1;
-  const sig = gmSignals(s);
-  const sevBg = { warn: '#fdf3e7', move: '#eef3fa', info: 'var(--gray-50)' };
   const cash = s.positions.filter(p => p.ac === 'Cash').reduce((a, p) => a + p.live_value, 0);
   const agg = (keyFn) => {
     const m = {};
@@ -18300,9 +18349,7 @@ function gmTabResumen(s) {
     ${gmTreemap(s, 900, 340)}
     <div style="display:flex;gap:4px;align-items:center;margin-top:8px;font-size:9.5px;color:var(--gray-500)">-5%
       ${[-5, -3, -1.5, 0, 1.5, 3, 5].map(v => `<div style="width:26px;height:9px;background:${gmHeatColor(v)};border-radius:2px"></div>`).join('')} +5%</div></div>
-  <div style="${GM_CARD};margin-bottom:14px"><div style="font-weight:700;margin-bottom:8px"><i class="fa-solid fa-signal"></i> Señales (${sig.length})</div>
-    ${sig.length ? sig.map(x => `<div style="display:flex;gap:9px;align-items:baseline;padding:6px 10px;border-radius:8px;background:${sevBg[x.sev]};margin:4px 0;font-size:12.5px"><i class="fa-solid ${x.icon}" style="color:var(--gray-500)"></i><span>${escapeHtml(x.txt)}</span></div>`).join('') : '<div style="color:var(--gray-400);font-size:12px">Sin señales — día tranquilo.</div>'}
-  </div>
+  ${gmSignalsCard(s)}
   ${(s.alerts_today && s.alerts_today.length) ? `<div style="${GM_CARD};margin-bottom:14px">
     <div style="font-weight:700;margin-bottom:8px"><i class="fa-solid fa-bell"></i> Alertas enviadas hoy (${s.alerts_today.length}) <span style="font-weight:400;font-size:11px;color:var(--gray-400)">· Telegram, canal gvv</span></div>
     ${s.alerts_today.map(a => `<div style="display:flex;gap:9px;align-items:baseline;padding:5px 10px;border-radius:8px;background:var(--gray-50);margin:3px 0;font-size:12.5px"><span style="color:var(--gray-400);font-size:10.5px;font-variant-numeric:tabular-nums">${escapeHtml(a.ts)}</span><span>${escapeHtml(a.text)}</span></div>`).join('')}
