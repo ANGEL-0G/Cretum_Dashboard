@@ -18470,11 +18470,14 @@ function gmDteLadder(ops, w, h) {
   vivos.forEach(o => { byD[o.dte] = byD[o.dte] || []; byD[o.dte].push(o); });
   const dots = Object.entries(byD).map(([d, list]) => {
     const itm = list.filter(o => o.estado === 'ITM').length;
+    const sel = gmDteSel === +d;
     const r = Math.min(16, 5 + Math.sqrt(list.length) * 3);
-    return `<g><circle cx="${x(+d)}" cy="${h / 2 - 6}" r="${r}" fill="${itm ? 'rgba(198,40,40,.75)' : 'rgba(28,78,128,.75)'}">
-      <title>DTE ${d}: ${list.length} posiciones (${itm} ITM) — ${[...new Set(list.map(o => o.ticker))].join(', ')}</title></circle>
+    return `<g onclick="gmDteSel=gmDteSel===${d}?null:${d};gmRender()" style="cursor:pointer">
+      ${sel ? `<circle cx="${x(+d)}" cy="${h / 2 - 6}" r="${r + 4}" fill="none" stroke="#0f2849" stroke-width="2"/>` : ''}
+      <circle cx="${x(+d)}" cy="${h / 2 - 6}" r="${r}" fill="${itm ? `rgba(198,40,40,${sel ? '1' : '.75'})` : `rgba(28,78,128,${sel ? '1' : '.75'})`}">
+      <title>DTE ${d}: ${list.length} posiciones (${itm} ITM) — click para el detalle</title></circle>
       <text x="${x(+d)}" y="${h / 2 - 6 + 3.5}" text-anchor="middle" font-size="9.5" font-weight="700" fill="#fff" pointer-events="none">${list.length}</text>
-      <text x="${x(+d)}" y="${h - 4}" text-anchor="middle" font-size="9" fill="var(--gray-500)">${d}d</text></g>`;
+      <text x="${x(+d)}" y="${h - 4}" text-anchor="middle" font-size="9" fill="${sel ? '#0f2849' : 'var(--gray-500)'}" font-weight="${sel ? 700 : 400}">${d}d</text></g>`;
   }).join('');
   return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;display:block">
     <line x1="26" y1="${h / 2 - 6}" x2="${w - 12}" y2="${h / 2 - 6}" stroke="var(--gray-200)"/>${dots}</svg>`;
@@ -18738,8 +18741,29 @@ function gmTabOpciones(s) {
     <div style="${GM_CARD}"><div style="font-size:10.5px;color:var(--gray-500);text-transform:uppercase">Vencen hoy</div><div style="font-size:26px;font-weight:800;color:#b26a00">${vivos.filter(o => o.dte === 0).length}</div></div>
     <div style="${GM_CARD}"><div style="font-size:10.5px;color:var(--gray-500);text-transform:uppercase">P&L abierto</div><div style="font-size:26px;font-weight:800;color:${gmColor(pl)}">${gmFmtUsd(pl)}</div></div>
   </div>
-  <div style="${GM_CARD};margin-bottom:14px"><div style="font-weight:700;margin-bottom:2px"><i class="fa-solid fa-stairs"></i> Escalera de vencimientos <span style="font-weight:400;font-size:11px;color:var(--gray-400)">· burbuja = # posiciones (rojo = incluye ITM) · pasa el cursor</span></div>
-    ${gmDteLadder(ops, 900, 90)}</div>
+  <div style="${GM_CARD};margin-bottom:14px"><div style="font-weight:700;margin-bottom:2px"><i class="fa-solid fa-stairs"></i> Escalera de vencimientos <span style="font-weight:400;font-size:11px;color:var(--gray-400)">· burbuja = # posiciones (rojo = incluye ITM) · click en una burbuja para su detalle</span></div>
+    ${gmDteLadder(ops, 900, 90)}
+    ${gmDteSel != null ? (() => {
+      const sel = vivos.filter(o => o.dte === gmDteSel);
+      if (!sel.length) return '';
+      const f = new Date(Date.now() + gmDteSel * 86400000).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+      return `<div style="margin-top:10px;border-top:1px solid var(--gray-100);padding-top:10px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;font-size:12.5px">
+          <strong>Vencen en ${gmDteSel} día${gmDteSel === 1 ? '' : 's'} (${escapeHtml(f)})</strong>
+          <span style="color:var(--gray-400)">· ${sel.length} posiciones · ${sel.filter(o => o.estado === 'ITM').length} ITM · P&L ${gmFmtUsd(sel.reduce((a, o) => a + (o.pl || 0), 0))}</span>
+          <a onclick="gmDteSel=null;gmRender()" style="cursor:pointer;margin-left:auto;font-size:11px;color:var(--gray-400)">cerrar ✕</a></div>
+        <div style="overflow-x:auto"><table class="camp-table" style="width:100%;font-size:12px">
+          <tr><th>Ticker</th><th>Tipo</th><th>Strike</th><th>Spot</th><th>Dist. strike</th><th>Dist. BE</th><th>Títulos</th><th>Prima</th><th>P&L</th><th>Estado</th></tr>
+          ${sel.sort((a, b) => (a.estado === 'ITM' ? 0 : 1) - (b.estado === 'ITM' ? 0 : 1)).map(o => `<tr${o.estado === 'ITM' ? ' style="background:#fdf0ef"' : ''}>
+            <td style="font-weight:600">${escapeHtml(o.ticker)}</td><td>${escapeHtml(o.cv || '')} ${escapeHtml(o.pc || '')}</td>
+            <td class="num">${o.strike}</td><td class="num">${o.spot ?? '—'}</td>
+            <td class="num" style="color:${o.dist_strike_pct != null && Math.abs(o.dist_strike_pct) < 3 && o.cv === 'Venta' ? '#c62828' : 'inherit'}">${o.dist_strike_pct != null ? gmPct(o.dist_strike_pct, 1) : '—'}</td>
+            <td class="num">${o.dist_be_pct != null ? gmPct(o.dist_be_pct, 1) : '—'}</td>
+            <td class="num">${(o.titulos || 0).toLocaleString('en-US')}</td>
+            <td class="num">${o.prima != null ? o.prima : '—'}</td>
+            <td class="num" style="color:${gmColor(o.pl || 0)}">${gmFmtUsd(o.pl || 0)}</td><td>${escapeHtml(o.estado || '')}</td></tr>`).join('')}
+        </table></div></div>`;
+    })() : ''}</div>
   <div style="${GM_CARD};margin-bottom:14px">${gmStressAsignacion(s)}</div>
   <div style="${GM_CARD}"><div style="font-weight:700;margin-bottom:8px"><i class="fa-solid fa-layer-group"></i> Todas las opciones vivas (${vivos.length})</div>
     <div style="overflow-x:auto"><table class="camp-table" style="width:100%;font-size:12px">
@@ -18824,6 +18848,7 @@ function gmTabIntel(s) {
 
 
 /* ── GVV Mesa: pestaña Riesgo (gvv-riesgo.json, robot diario 6:40) ── */
+let gmDteSel = null;
 let gmRiesgo = null, gmRiesgoLoading = false;
 function gmEnsureRiesgo() {
   if (gmRiesgo || gmRiesgoLoading) return;
