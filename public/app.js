@@ -3828,7 +3828,7 @@ function renderHomeModules() {
      MVP lee el portafolio (company-news.json → /blog naranja) y Cretum lee sus
      empresas en seguimiento (company-news-cretum.json → /noticias-cretum navy). ── */
 let homeNewsCache = {};   // caché por org: { mvp:{...}, cretum:{...} }
-function hnUrl() { return currentOrg === 'cretum' ? '/data/company-news-cretum.json' : '/data/company-news.json'; }
+function hnUrl() { return '/api/news?org=' + (currentOrg === 'cretum' ? 'cretum' : 'mvp'); }
 function hnRoute() { return currentOrg === 'cretum' ? '/noticias-cretum' : '/blog'; }
 // Botón "Noticias" del header: abre la página del lado activo (Cretum vs MVP).
 function openNewsPage() { window.open(hnRoute(), '_blank', 'noopener'); }
@@ -15865,7 +15865,7 @@ let usrUsers = null, usrLoaded = false, usrMe = null, usrEditId = null, usrPwId 
 const ROLE_LABEL = { admin: 'Admin', editor: 'Editor', colaborador: 'Colaborador', viewer: 'Viewer' };
 
 async function usrApi(body) {
-  const r = await authedFetch('/api/contacts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const r = await authedFetch('/api/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   const d = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(d.error || ('Error ' + r.status));
   return d;

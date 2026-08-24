@@ -1,27 +1,27 @@
-/* ═══════════════════════════════════════════════════════════════════════════
- * Noticias del portafolio — generador (Google News RSS + lista blanca)
+/**
+ * api/news.js — Noticias del portafolio (MVP) y de seguimiento (Cretum).
  *
- * Para cada empresa del portafolio consulta el feed de Google Noticias (últimos
- * días), FILTRA a medios confiables (lista blanca) para evitar ruido/fake news,
- * y escribe public/data/company-news.json. El home/blog lo lee en el cliente.
+ * DOS modos en un endpoint:
+ *  · CRON (Authorization: Bearer $CRON_SECRET, lo dispara Vercel cada hora):
+ *    consulta Google News (filtrado a medios confiables), traduce el titular y
+ *    guarda el resultado en Redis (news:mvp / news:cretum). NO commitea al repo
+ *    — por eso vive en Vercel y no en GitHub Actions.
+ *  · PÚBLICO (GET ?org=mvp|cretum): devuelve el JSON guardado en Redis. Lo leen
+ *    el blog (/blog, /noticias-cretum) y el widget del home.
  *
- * Sin API key, sin función de Vercel: lo corre un GitHub Action a diario y
- * commitea el JSON (mismo patrón que el blog semanal).
- * Local: `node scripts/gen-news.mjs`
- * ═══════════════════════════════════════════════════════════════════════════ */
-import { writeFileSync, mkdirSync } from 'node:fs';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+ * Sustituye al viejo scripts/gen-news.mjs + workflow news.yml (que commiteaban
+ * public/data/company-news*.json).
+ */
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const OUT_DIR = join(ROOT, 'public', 'data');
-const OUT = join(OUT_DIR, 'company-news.json');            // MVP (portafolio)
-const OUT_CRETUM = join(OUT_DIR, 'company-news-cretum.json'); // Cretum (otras empresas)
-const PER_COMPANY = 5;     // máx notas por empresa
-const WINDOW = '10d';      // ventana de Google News (últimos N días)
+import crypto from 'crypto';
+import { getRedis } from './_lib/redis.js';
 
-// Empresas del portafolio (tabla companies). `q` = búsqueda afinada para las
-// ambiguas (Bolt/Lime/Groq…). Se quitó "Diversified Fund" (agregado) y dups.
+export const config = { maxDuration: 300 };   // el ciclo de fetch+traducción tarda ~1 min
+
+const PER_COMPANY = 5;
+const WINDOW = '10d';
+
+// Portafolio MVP (tabla companies).
 const COMPANIES = [
   { name: 'SpaceX', q: 'SpaceX' },
   { name: 'Anthropic', q: 'Anthropic (Claude AI)' },
@@ -55,9 +55,7 @@ const COMPANIES = [
   { name: 'Lyft', q: 'Lyft' },
 ];
 
-// Empresas / temas en seguimiento de Cretum (distintas al portafolio MVP; puede
-// haber traslape). Mezcla de startups seguidas y compañías públicas de interés.
-// Para agregar más, solo añade { name, q } aquí.
+// Empresas / temas de seguimiento de Cretum (distintas al portafolio; puede haber traslape).
 const CRETUM_COMPANIES = [
   { name: 'NVIDIA', q: 'Nvidia' },
   { name: 'Base Power', q: '"Base Power" energy startup' },
@@ -74,7 +72,6 @@ const CRETUM_COMPANIES = [
   { name: 'Valmer', q: 'Grupo Valmer' },
 ];
 
-// Lista blanca de medios confiables (dominios). Solo pasa lo de estas fuentes.
 const ALLOW = new Set([
   'reuters.com', 'bloomberg.com', 'wsj.com', 'ft.com', 'cnbc.com', 'apnews.com',
   'techcrunch.com', 'theverge.com', 'forbes.com', 'businessinsider.com', 'axios.com',
@@ -83,8 +80,6 @@ const ALLOW = new Set([
   'cnn.com', 'bbc.com', 'bbc.co.uk', 'economist.com', 'fastcompany.com', 'techradar.com',
   'nbcnews.com', 'cnet.com', 'seekingalpha.com', 'investors.com', 'yahoo.com', 'qz.com',
 ]);
-
-// Nombres "bonitos" cuando el feed da el dominio pelón como fuente.
 const NAMES = {
   'bloomberg.com': 'Bloomberg', 'forbes.com': 'Forbes', 'yahoo.com': 'Yahoo Finance',
   'reuters.com': 'Reuters', 'cnbc.com': 'CNBC', 'wsj.com': 'The Wall Street Journal',
@@ -98,7 +93,6 @@ const NAMES = {
   'techradar.com': 'TechRadar', 'nbcnews.com': 'NBC News', 'cnet.com': 'CNET', 'qz.com': 'Quartz',
   'investors.com': "Investor's Business Daily", 'theinformation.com': 'The Information',
 };
-// Títulos que NO son noticias (páginas de cotización, perfiles, etc.).
 const JUNK = /(stock quote|price and forecast|quote & chart|share price|stock price|company profile|symbol__|_symbol|quote and chart|price target)/i;
 
 function decode(s) {
@@ -114,8 +108,6 @@ function tag(block, name) {
   const m = block.match(new RegExp(`<${name}[^>]*>([\\s\\S]*?)</${name}>`, 'i'));
   return m ? m[1] : '';
 }
-
-// Traduce EN→ES con el endpoint gratis de Google Translate. Si falla, devuelve ''.
 async function translateES(text) {
   if (!text) return '';
   try {
@@ -126,23 +118,21 @@ async function translateES(text) {
     return (j[0] || []).map(x => x[0]).join('').trim();
   } catch (e) { return ''; }
 }
-
 async function fetchCompany(c) {
   const q = encodeURIComponent(`${c.q} when:${WINDOW}`);
   const url = `https://news.google.com/rss/search?q=${q}&hl=en-US&gl=US&ceid=US:en`;
   let xml = '';
   try {
     const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; CretumDesk/1.0)' } });
-    if (!r.ok) { console.warn(`[news] ${c.name}: HTTP ${r.status}`); return []; }
+    if (!r.ok) return [];
     xml = await r.text();
-  } catch (e) { console.warn(`[news] ${c.name}: ${e.message}`); return []; }
-
+  } catch (e) { return []; }
   const out = [];
   for (const raw of xml.split('<item>').slice(1)) {
     const srcM = raw.match(/<source url="([^"]+)"[^>]*>([\s\S]*?)<\/source>/i);
     let domain = '';
     try { domain = new URL(srcM ? srcM[1] : '').hostname.replace(/^www\./, ''); } catch (e) {}
-    if (!ALLOW.has(domain)) continue;                 // solo fuentes confiables
+    if (!ALLOW.has(domain)) continue;
     const rawName = srcM ? decode(srcM[2]) : domain;
     const source = NAMES[domain] || rawName;
     let title = decode(tag(raw, 'title'));
@@ -151,43 +141,77 @@ async function fetchCompany(c) {
     const pub = tag(raw, 'pubDate').trim();
     let published = pub;
     try { published = new Date(pub).toISOString(); } catch (e) {}
-    if (!title || !link || title.length < 16 || JUNK.test(title)) continue;   // descarta basura
+    if (!title || !link || title.length < 16 || JUNK.test(title)) continue;
     out.push({ company: c.name, title, url: link, source, domain, published });
     if (out.length >= PER_COMPANY) break;
   }
   return out;
 }
 
-// Genera un set completo (fetch + dedup + traducción + escritura) para una lista
-// de empresas. Se llama una vez por lado: MVP (portafolio) y Cretum.
-async function generate(companies, outPath, label) {
+// Genera el set completo (fetch + dedup + traducción) para una lista de empresas.
+async function generate(companies) {
   const all = [];
   for (const c of companies) {
-    const items = await fetchCompany(c);
-    all.push(...items);
-    console.log(`[news:${label}] ${c.name}: ${items.length}`);
-    await new Promise(r => setTimeout(r, 250));         // amable con el feed
+    all.push(...await fetchCompany(c));
+    await new Promise(r => setTimeout(r, 200));
   }
-  // Dedup por URL, orden por fecha desc.
   const seen = new Set();
   const items = all
     .filter(x => { if (seen.has(x.url)) return false; seen.add(x.url); return true; })
     .sort((a, b) => (b.published || '').localeCompare(a.published || ''));
-  // Resumen en español = titular traducido (fallback al inglés si falla).
   for (const it of items) {
     it.title_es = (await translateES(it.title)) || it.title;
-    await new Promise(r => setTimeout(r, 120));
+    await new Promise(r => setTimeout(r, 100));
   }
-  console.log(`[news:${label}] traducidas ${items.filter(i => i.title_es !== i.title).length}/${items.length}`);
-  mkdirSync(OUT_DIR, { recursive: true });
-  writeFileSync(outPath, JSON.stringify({
-    generated: new Date().toISOString(),
-    count: items.length,
-    companies: companies.map(c => c.name),
-    items,
-  }, null, 0), 'utf8');
-  console.log(`[news:${label}] TOTAL ${items.length} notas de ${new Set(items.map(i => i.company)).size} empresas → ${outPath}`);
+  return items;
+}
+function blob(items, companies) {
+  return { generated: new Date().toISOString(), count: items.length, companies: companies.map(c => c.name), items };
 }
 
-await generate(COMPANIES, OUT, 'mvp');
-await generate(CRETUM_COMPANIES, OUT_CRETUM, 'cretum');
+function bearer(req) { return String(req.headers.authorization || '').replace(/^Bearer\s+/i, ''); }
+function safeEq(a, b) {
+  const A = Buffer.from(String(a || '')), B = Buffer.from(String(b || ''));
+  return A.length === B.length && crypto.timingSafeEqual(A, B);
+}
+const EMPTY = JSON.stringify({ generated: null, count: 0, companies: [], items: [] });
+
+export default async function handler(req, res) {
+  const secret = process.env.CRON_SECRET;
+  const isCron = !!(secret && safeEq(bearer(req), secret));
+
+  // ── Modo CRON: regenerar y guardar en Redis (lo dispara Vercel cada hora) ──
+  if (req.query.cron != null || isCron) {
+    if (!isCron) return res.status(401).json({ error: 'No autorizado' });
+    const r = getRedis();
+    if (!r) return res.status(500).json({ error: 'Sin Redis' });
+    const [mvp, cretum] = [await generate(COMPANIES), await generate(CRETUM_COMPANIES)];
+    await r.set('news:mvp', JSON.stringify(blob(mvp, COMPANIES)));
+    await r.set('news:cretum', JSON.stringify(blob(cretum, CRETUM_COMPANIES)));
+    return res.status(200).json({ ok: true, mvp: mvp.length, cretum: cretum.length });
+  }
+
+  // ── Modo PÚBLICO: servir el JSON guardado (lo leen blog y widget) ──
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET');
+  if (req.method === 'OPTIONS') return res.status(204).end();
+  if (req.method !== 'GET') return res.status(405).json({ error: 'GET requerido' });
+  const org = req.query.org === 'cretum' ? 'cretum' : 'mvp';
+  const r = getRedis();
+  let raw = null;
+  try { raw = r ? await r.get('news:' + org) : null; } catch (e) {}
+  // Semilla: mientras el cron no haya poblado Redis (p. ej. recién desplegado),
+  // sirve el último JSON estático commiteado para no mostrar la sección vacía.
+  if (!raw) {
+    try {
+      const host = req.headers['x-forwarded-host'] || req.headers.host;
+      if (host) {
+        const f = await fetch(`https://${host}/data/company-news${org === 'cretum' ? '-cretum' : ''}.json`);
+        if (f.ok) raw = await f.text();
+      }
+    } catch (e) {}
+  }
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=300');
+  return res.status(200).send(raw || EMPTY);
+}

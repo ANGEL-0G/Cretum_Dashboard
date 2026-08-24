@@ -552,7 +552,7 @@ const SUMMARY = ${JSON.stringify(summaryText)};
   var grid = document.getElementById('newsGrid');
   // Lado: MVP (portafolio) o Cretum (otras empresas). Lo fija el <head> según la ruta.
   var NEWS_ORG = document.documentElement.getAttribute('data-news-org') === 'cretum' ? 'cretum' : 'mvp';
-  var NEWS_URL = NEWS_ORG === 'cretum' ? '/data/company-news-cretum.json' : '/data/company-news.json';
+  var NEWS_URL = '/api/news?org=' + NEWS_ORG;
   (function brand(){ var bn = document.getElementById('brandName'); if (bn) bn.textContent = NEWS_ORG === 'cretum' ? 'Cretum' : 'MVP'; })();
 
   // ── Idioma ES/EN ──

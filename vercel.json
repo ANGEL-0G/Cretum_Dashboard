@@ -110,6 +110,18 @@
       "use": "@vercel/node"
     },
     {
+      "src": "api/users.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/gvv-live.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/news.js",
+      "use": "@vercel/node"
+    },
+    {
       "src": "api/contacts.js",
       "use": "@vercel/node"
     },
@@ -162,6 +174,11 @@
       "use": "@vercel/static"
     }
   ],
+  "crons": [
+    { "path": "/api/reminder", "schedule": "0 * * * *" },
+    { "path": "/api/reminder?tasksonly=1", "schedule": "*/5 * * * *" },
+    { "path": "/api/news?cron=1", "schedule": "0 * * * *" }
+  ],
   "routes": [
     {
       "src": "/(.*)",
@@ -207,6 +224,14 @@
       "dest": "/api/lp.js"
     },
     {
+      "src": "/api/users",
+      "dest": "/api/users.js"
+    },
+    {
+      "src": "/api/news",
+      "dest": "/api/news.js"
+    },
+    {
       "src": "/api/contacts",
       "dest": "/api/contacts.js"
     },
@@ -228,7 +253,7 @@
     },
     {
       "src": "/api/gvv-live",
-      "dest": "/api/prices.js?gvvlive=1"
+      "dest": "/api/gvv-live.js"
     },
     {
       "src": "/api/track",
