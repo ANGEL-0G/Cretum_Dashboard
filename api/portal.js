@@ -159,7 +159,7 @@ h1{font-family:Georgia,serif;font-size:22px;color:#0f2849;margin:14px 0 4px}
 <div class="hd"><span class="wm">CRETUM&nbsp;PARTNERS</span></div>
 <h1>${escHtml(dash.title)}</h1>
 <p class="sub">Data room · ${allFiles.length} documentos</p>
-<div class="note">Los enlaces se generan al abrir esta página y son válidos por 1 hora; si alguno expira, vuelve a abrir el data room desde el menú.</div>
+<div class="note">Los documentos se abren con enlaces seguros que se renuevan automáticamente al entrar al data room. Si dejaste esta página abierta mucho tiempo y un documento no abre, vuelve a entrar desde el menú.</div>
 <div class="main">${rootHtml}</div>
 ${secHtml}
 <div class="ft"><span>Cretum Partners GVV Fund, LP</span><span>Confidencial</span></div>
