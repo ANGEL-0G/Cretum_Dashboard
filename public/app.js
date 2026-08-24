@@ -18683,7 +18683,7 @@ function gmTabPosiciones(s) {
     cuerpo = Object.entries(gm2).sort((a, b) => b[1].reduce((x, p) => x + p.live_value, 0) - a[1].reduce((x, p) => x + p.live_value, 0)).map(([k, list]) => {
       const v = list.reduce((x, p) => x + p.live_value, 0), pl = list.reduce((x, p) => x + p.day_pl, 0);
       return `<tr><td colspan="10" style="background:#0f2849;color:#fff;padding:6px 10px;font-size:11px;font-weight:700;letter-spacing:.5px">
-        ${escapeHtml(k)} <span style="font-weight:400;color:#9fb6d0">· ${list.length} posición${list.length === 1 ? '' : 'es'} · ${(v / aum * 100).toFixed(1)}% del fondo ·</span>
+        ${escapeHtml(k)} <span style="font-weight:400;color:#9fb6d0">· ${list.length} ${list.length === 1 ? 'posición' : 'posiciones'} · ${(v / aum * 100).toFixed(1)}% del fondo ·</span>
         <span style="color:${pl >= 0 ? '#9be3b3' : '#f5a3a3'}">${gmFmtUsd(pl)} hoy</span></td></tr>` + list.map(posRow).join('');
     }).join('');
   } else cuerpo = rows.map(posRow).join('');
