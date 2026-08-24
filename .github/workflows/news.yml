@@ -1,8 +1,9 @@
 name: Noticias del portafolio
 
 # Consulta Google News (filtrado a medios confiables) para las empresas del
-# portafolio y actualiza public/data/company-news.json. Varias veces al día para
-# frescura. Sin llaves ni funciones de Vercel (repo público → Actions gratis).
+# portafolio (MVP) y las de seguimiento de Cretum, y actualiza los dos JSON:
+# public/data/company-news.json y public/data/company-news-cretum.json. Varias
+# veces al día para frescura. Sin llaves ni funciones de Vercel (repo público).
 
 on:
   schedule:
@@ -30,10 +31,10 @@ jobs:
         run: |
           git config user.name  "Noticias portafolio"
           git config user.email "actions@users.noreply.github.com"
-          if git diff --quiet -- public/data/company-news.json; then
+          if git diff --quiet -- public/data/company-news.json public/data/company-news-cretum.json; then
             echo "Sin cambios en las noticias."
           else
-            git add public/data/company-news.json
-            git commit -m "Noticias del portafolio (auto)"
+            git add public/data/company-news.json public/data/company-news-cretum.json
+            git commit -m "Noticias (auto): portafolio MVP + seguimiento Cretum"
             git push
           fi

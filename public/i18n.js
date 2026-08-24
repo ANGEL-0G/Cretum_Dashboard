@@ -1194,6 +1194,10 @@ const EN = {
   'No se pudo abrir el contacto': 'Couldn’t open the contact',
   'Ese contacto no está en la base todavía': 'That contact isn’t in the database yet',
 
+  // ── Widget de noticias en el home ──
+  'En seguimiento': 'On watch',
+  'Mostrar u ocultar noticias': 'Show or hide news',
+
   // ── Detalle de persona en rankings (Información ↔ Histórico de Vistas) ──
   'Información': 'Information',
   'Histórico de Vistas': 'View history',

@@ -15,7 +15,8 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT_DIR = join(ROOT, 'public', 'data');
-const OUT = join(OUT_DIR, 'company-news.json');
+const OUT = join(OUT_DIR, 'company-news.json');            // MVP (portafolio)
+const OUT_CRETUM = join(OUT_DIR, 'company-news-cretum.json'); // Cretum (otras empresas)
 const PER_COMPANY = 5;     // máx notas por empresa
 const WINDOW = '10d';      // ventana de Google News (últimos N días)
 
@@ -52,6 +53,25 @@ const COMPANIES = [
   { name: 'Patreon', q: 'Patreon' },
   { name: 'Asana', q: 'Asana software' },
   { name: 'Lyft', q: 'Lyft' },
+];
+
+// Empresas / temas en seguimiento de Cretum (distintas al portafolio MVP; puede
+// haber traslape). Mezcla de startups seguidas y compañías públicas de interés.
+// Para agregar más, solo añade { name, q } aquí.
+const CRETUM_COMPANIES = [
+  { name: 'NVIDIA', q: 'Nvidia' },
+  { name: 'Base Power', q: '"Base Power" energy startup' },
+  { name: 'Saronic', q: 'Saronic Technologies defense maritime' },
+  { name: 'Cohesity', q: 'Cohesity' },
+  { name: 'Kraken', q: 'Kraken crypto exchange' },
+  { name: 'Diamond Foundry', q: '"Diamond Foundry"' },
+  { name: 'Anthropic', q: 'Anthropic (Claude AI)' },
+  { name: 'Bloomberg', q: 'Bloomberg LP company' },
+  { name: 'Harley-Davidson', q: '"Harley-Davidson"' },
+  { name: 'Constellation Brands', q: '"Constellation Brands"' },
+  { name: 'Berkshire Hathaway', q: '"Berkshire Hathaway"' },
+  { name: "Campbell's", q: '"Campbell Soup Company"' },
+  { name: 'Valmer', q: 'Grupo Valmer' },
 ];
 
 // Lista blanca de medios confiables (dominios). Solo pasa lo de estas fuentes.
@@ -138,32 +158,36 @@ async function fetchCompany(c) {
   return out;
 }
 
-const all = [];
-for (const c of COMPANIES) {
-  const items = await fetchCompany(c);
-  all.push(...items);
-  console.log(`[news] ${c.name}: ${items.length}`);
-  await new Promise(r => setTimeout(r, 250));         // amable con el feed
+// Genera un set completo (fetch + dedup + traducción + escritura) para una lista
+// de empresas. Se llama una vez por lado: MVP (portafolio) y Cretum.
+async function generate(companies, outPath, label) {
+  const all = [];
+  for (const c of companies) {
+    const items = await fetchCompany(c);
+    all.push(...items);
+    console.log(`[news:${label}] ${c.name}: ${items.length}`);
+    await new Promise(r => setTimeout(r, 250));         // amable con el feed
+  }
+  // Dedup por URL, orden por fecha desc.
+  const seen = new Set();
+  const items = all
+    .filter(x => { if (seen.has(x.url)) return false; seen.add(x.url); return true; })
+    .sort((a, b) => (b.published || '').localeCompare(a.published || ''));
+  // Resumen en español = titular traducido (fallback al inglés si falla).
+  for (const it of items) {
+    it.title_es = (await translateES(it.title)) || it.title;
+    await new Promise(r => setTimeout(r, 120));
+  }
+  console.log(`[news:${label}] traducidas ${items.filter(i => i.title_es !== i.title).length}/${items.length}`);
+  mkdirSync(OUT_DIR, { recursive: true });
+  writeFileSync(outPath, JSON.stringify({
+    generated: new Date().toISOString(),
+    count: items.length,
+    companies: companies.map(c => c.name),
+    items,
+  }, null, 0), 'utf8');
+  console.log(`[news:${label}] TOTAL ${items.length} notas de ${new Set(items.map(i => i.company)).size} empresas → ${outPath}`);
 }
 
-// Dedup por URL, orden por fecha desc.
-const seen = new Set();
-const items = all
-  .filter(x => { if (seen.has(x.url)) return false; seen.add(x.url); return true; })
-  .sort((a, b) => (b.published || '').localeCompare(a.published || ''));
-
-// Resumen en español = titular traducido (fallback al inglés si falla la traducción).
-for (const it of items) {
-  it.title_es = (await translateES(it.title)) || it.title;
-  await new Promise(r => setTimeout(r, 120));
-}
-console.log(`[news] traducidas ${items.filter(i => i.title_es !== i.title).length}/${items.length}`);
-
-mkdirSync(OUT_DIR, { recursive: true });
-writeFileSync(OUT, JSON.stringify({
-  generated: new Date().toISOString(),
-  count: items.length,
-  companies: COMPANIES.map(c => c.name),
-  items,
-}, null, 0), 'utf8');
-console.log(`[news] TOTAL ${items.length} notas de ${new Set(items.map(i => i.company)).size} empresas → ${OUT}`);
+await generate(COMPANIES, OUT, 'mvp');
+await generate(CRETUM_COMPANIES, OUT_CRETUM, 'cretum');

@@ -308,7 +308,7 @@ const html = `<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='1' y='1' width='30' height='30' rx='7' fill='%231A3A6B'/><g fill='%23fff'><rect x='7.4' y='17' width='4.2' height='8' rx='1.4'/><rect x='13.9' y='11.5' width='4.2' height='13.5' rx='1.4'/><rect x='20.4' y='7.5' width='4.2' height='17.5' rx='1.4'/></g></svg>">
-<script>try{var r=document.documentElement,t=localStorage.getItem('blog-theme');if(t==='light'||t==='dark')r.setAttribute('data-theme',t);r.setAttribute('data-eff',r.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'));}catch(e){}</script>
+<script>try{var r=document.documentElement,t=localStorage.getItem('blog-theme');if(t==='light'||t==='dark')r.setAttribute('data-theme',t);r.setAttribute('data-eff',r.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'));var org=location.pathname.indexOf('noticias-cretum')>=0?'cretum':'mvp';r.setAttribute('data-news-org',org);document.title=org==='cretum'?'Noticias Cretum':'Noticias MVP';}catch(e){}</script>
 <style>
 ${STYLE()}
 </style>
@@ -536,7 +536,8 @@ const SUMMARY = ${JSON.stringify(summaryText)};
     try { if (location.hash !== '#' + name) history.replaceState(null, '', name === 'noticias' ? location.pathname : '#' + name); } catch(e){}
   }
   tabs.forEach(function(t){ t.addEventListener('click', function(){ showPane(t.getAttribute('data-pane')); }); });
-  if (location.hash === '#avances') showPane('avances');
+  // Avances solo existe en MVP; en Cretum su pestaña está oculta y no se honra el hash.
+  if (location.hash === '#avances' && document.documentElement.getAttribute('data-news-org') !== 'cretum') showPane('avances');
 
   // ── Noticias del portafolio (lee /data/company-news.json) ──
   function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
@@ -549,6 +550,9 @@ const SUMMARY = ${JSON.stringify(summaryText)};
   function NT(es, en){ return newsLang === 'en' ? en : es; }
   function setTx(id, tx){ var el = document.getElementById(id); if (el) el.textContent = tx; }
   var grid = document.getElementById('newsGrid');
+  // Lado: MVP (portafolio) o Cretum (otras empresas). Lo fija el <head> según la ruta.
+  var NEWS_ORG = document.documentElement.getAttribute('data-news-org') === 'cretum' ? 'cretum' : 'mvp';
+  var NEWS_URL = NEWS_ORG === 'cretum' ? '/data/company-news-cretum.json' : '/data/company-news.json';
 
   // ── Idioma ES/EN ──
   (function wireNewsLang(){
@@ -568,13 +572,23 @@ const SUMMARY = ${JSON.stringify(summaryText)};
 
   // ── Hero (traducible) ──
   function renderNewsHero(){
-    setTx('newsEyebrowTx', NT('Novedades del portafolio', 'Portfolio news'));
-    setTx('newsH1', NT('Noticias de las empresas en seguimiento', 'News from the companies we track'));
-    var lede = document.getElementById('newsLede');
-    if (lede) lede.innerHTML = NT(
-      'Titulares recientes de las compañías donde invierte el portafolio, de <b>medios confiables</b> (Reuters, Bloomberg, TechCrunch, CNBC, FT…).',
-      'Recent headlines from the companies the portfolio invests in, from <b>trusted outlets</b> (Reuters, Bloomberg, TechCrunch, CNBC, FT…).'
-    );
+    if (NEWS_ORG === 'cretum') {
+      setTx('newsEyebrowTx', NT('En seguimiento · Cretum', 'On watch · Cretum'));
+      setTx('newsH1', NT('Noticias de las empresas en seguimiento', 'News from the companies we track'));
+      var ledeC = document.getElementById('newsLede');
+      if (ledeC) ledeC.innerHTML = NT(
+        'Titulares recientes de las empresas y temas que sigue Cretum, de <b>medios confiables</b> (Reuters, Bloomberg, TechCrunch, CNBC, FT…).',
+        'Recent headlines from the companies and topics Cretum tracks, from <b>trusted outlets</b> (Reuters, Bloomberg, TechCrunch, CNBC, FT…).'
+      );
+    } else {
+      setTx('newsEyebrowTx', NT('Novedades del portafolio', 'Portfolio news'));
+      setTx('newsH1', NT('Noticias de las empresas en seguimiento', 'News from the companies we track'));
+      var lede = document.getElementById('newsLede');
+      if (lede) lede.innerHTML = NT(
+        'Titulares recientes de las compañías donde invierte el portafolio, de <b>medios confiables</b> (Reuters, Bloomberg, TechCrunch, CNBC, FT…).',
+        'Recent headlines from the companies the portfolio invests in, from <b>trusted outlets</b> (Reuters, Bloomberg, TechCrunch, CNBC, FT…).'
+      );
+    }
     var disc = document.getElementById('newsDisclaimer');
     if (disc) { var span = disc.querySelector('span'); if (span) span.innerHTML = NT(
       'Se actualiza solo <b>3 veces al día</b> (aprox. 7:00, 13:00 y 17:00 h, CDMX).',
@@ -655,7 +669,7 @@ const SUMMARY = ${JSON.stringify(summaryText)};
   function markOpened(url){ if (newsOpen[url]) return; newsOpen[url] = 1; lsSet('news-open', newsOpen); }
 
   // ── Carga ──
-  fetch('/data/company-news.json', { cache: 'no-store' }).then(function(r){ if(!r.ok) throw 0; return r.json(); }).then(function(d){
+  fetch(NEWS_URL, { cache: 'no-store' }).then(function(r){ if(!r.ok) throw 0; return r.json(); }).then(function(d){
     newsData = d;
     // Poda: conserva "abiertas" solo de URLs vigentes.
     var live = {}; (newsData.items || []).forEach(function(i){ live[i.url] = 1; });
@@ -966,16 +980,25 @@ function STYLE() {
      su pestaña; "Avances del desk" conserva el navy del desk. Un solo lugar
      controla todo el color de esta sección. --mvp-glow es el naranja vibrante
      del brillo de notas nuevas. ── */
-  /* Claro: acento naranja para el pane, el toggle de idioma y su pestaña. */
-  #pane-noticias,#newsLang,.tab[data-pane="noticias"]{--navy:#ED7824;--navy-2:#B4530E;--navy-pale:#FCEAD9;--mvp-glow:#F2660F}
-  /* Oscuro: el pane toma la paleta oscura de MVP (cálida, marrón-negro) + acento
-     naranja; el toggle y la pestaña solo el acento (viven en la barra chrome). */
+  /* ── Tema por lado ──────────────────────────────────────────────────────
+     La MISMA página se sirve en /blog (MVP, naranja) y /noticias-cretum
+     (Cretum, navy). El naranja de MVP se activa solo con [data-news-org="mvp"]
+     (lo pone un script del <head> según la ruta); Cretum usa el navy por
+     defecto sin overrides. --mvp-glow es el naranja vibrante del brillo. */
+  /* Glow de novedades por defecto (Cretum): azul vibrante que combina con navy.
+     MVP lo sobrescribe a naranja abajo. */
+  #pane-noticias{--mvp-glow:#2E5BA3}
+  :root[data-news-org="mvp"] #pane-noticias,:root[data-news-org="mvp"] #newsLang,:root[data-news-org="mvp"] .tab[data-pane="noticias"]{--navy:#ED7824;--navy-2:#B4530E;--navy-pale:#FCEAD9;--mvp-glow:#F2660F}
+  /* Oscuro MVP: el pane toma la paleta oscura de MVP (cálida, marrón-negro) +
+     acento naranja; toggle y pestaña solo el acento (viven en la barra chrome). */
   @media (prefers-color-scheme:dark){
-    :root:not([data-theme="light"]) #newsLang,:root:not([data-theme="light"]) .tab[data-pane="noticias"]{--navy:#F59A4E;--navy-2:#F7A863;--navy-pale:#3A2410;--mvp-glow:#FF9A45}
-    :root:not([data-theme="light"]) #pane-noticias{--navy:#F59A4E;--navy-2:#F7A863;--navy-pale:#3A2410;--mvp-glow:#FF9A45;--bg:#0E0A06;--surface:#1B140D;--surface-2:#241A10;--line:#3A2E1E;--line-soft:#251C12;--ink:#F5ECE0;--ink-soft:#C9B9A4;--ink-mute:#93826C;background:var(--bg)}
+    :root[data-news-org="mvp"]:not([data-theme="light"]) #newsLang,:root[data-news-org="mvp"]:not([data-theme="light"]) .tab[data-pane="noticias"]{--navy:#F59A4E;--navy-2:#F7A863;--navy-pale:#3A2410;--mvp-glow:#FF9A45}
+    :root[data-news-org="mvp"]:not([data-theme="light"]) #pane-noticias{--navy:#F59A4E;--navy-2:#F7A863;--navy-pale:#3A2410;--mvp-glow:#FF9A45;--bg:#0E0A06;--surface:#1B140D;--surface-2:#241A10;--line:#3A2E1E;--line-soft:#251C12;--ink:#F5ECE0;--ink-soft:#C9B9A4;--ink-mute:#93826C;background:var(--bg)}
   }
-  :root[data-theme="dark"] #newsLang,:root[data-theme="dark"] .tab[data-pane="noticias"]{--navy:#F59A4E;--navy-2:#F7A863;--navy-pale:#3A2410;--mvp-glow:#FF9A45}
-  :root[data-theme="dark"] #pane-noticias{--navy:#F59A4E;--navy-2:#F7A863;--navy-pale:#3A2410;--mvp-glow:#FF9A45;--bg:#0E0A06;--surface:#1B140D;--surface-2:#241A10;--line:#3A2E1E;--line-soft:#251C12;--ink:#F5ECE0;--ink-soft:#C9B9A4;--ink-mute:#93826C;background:var(--bg)}
+  :root[data-news-org="mvp"][data-theme="dark"] #newsLang,:root[data-news-org="mvp"][data-theme="dark"] .tab[data-pane="noticias"]{--navy:#F59A4E;--navy-2:#F7A863;--navy-pale:#3A2410;--mvp-glow:#FF9A45}
+  :root[data-news-org="mvp"][data-theme="dark"] #pane-noticias{--navy:#F59A4E;--navy-2:#F7A863;--navy-pale:#3A2410;--mvp-glow:#FF9A45;--bg:#0E0A06;--surface:#1B140D;--surface-2:#241A10;--line:#3A2E1E;--line-soft:#251C12;--ink:#F5ECE0;--ink-soft:#C9B9A4;--ink-mute:#93826C;background:var(--bg)}
+  /* En Cretum no existe "Avances del desk" (solo MVP): se oculta su pestaña. */
+  :root[data-news-org="cretum"] .tab[data-pane="avances"]{display:none}
   /* El hero ya trae padding inferior; recorta el arranque de la sección para
      que el filtro no quede tan separado del disclaimer. */
   #pane-noticias .sec{padding-top:6px}

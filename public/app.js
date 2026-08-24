@@ -3820,8 +3820,13 @@ function renderHomeModules() {
   renderHomeEvents();
 }
 
-/* ── Widget de noticias del portafolio (home de MVP) — al final, desplegable ── */
-let homeNewsCache = null;
+/* ── Widget de noticias — al final del home, desplegable. Vive en AMBOS homes:
+     MVP lee el portafolio (company-news.json → /blog naranja) y Cretum lee sus
+     empresas en seguimiento (company-news-cretum.json → /noticias-cretum navy). ── */
+let homeNewsCache = {};   // caché por org: { mvp:{...}, cretum:{...} }
+function hnUrl() { return currentOrg === 'cretum' ? '/data/company-news-cretum.json' : '/data/company-news.json'; }
+function hnRoute() { return currentOrg === 'cretum' ? '/noticias-cretum' : '/blog'; }
+function hnTitle() { return currentOrg === 'cretum' ? t('En seguimiento') : t('Novedades del portafolio'); }
 function homeNewsCollapsed() { try { return localStorage.getItem('hn-collapsed') === '1'; } catch (e) { return false; } }
 function toggleHomeNews() {
   const host = document.getElementById('homeNews'); if (!host) return;
@@ -3836,7 +3841,7 @@ function hnAgo(iso) {
 }
 // La más reciente por empresa (para variedad), luego las n más nuevas.
 function hnTopItems(n) {
-  const d = homeNewsCache;
+  const d = homeNewsCache[currentOrg];
   if (!d || !Array.isArray(d.items)) return [];
   const perCo = {}; d.items.forEach(i => { if (!perCo[i.company]) perCo[i.company] = i; });
   return Object.values(perCo).sort((a, b) => (b.published || '').localeCompare(a.published || '')).slice(0, n);
@@ -3851,24 +3856,24 @@ function hnCardHTML(i) {
 async function renderHomeNews() {
   const host = document.getElementById('homeNews');
   if (!host) return;
-  if (currentOrg !== 'mvp' || hmActive()) { host.style.display = 'none'; return; }
-  if (!homeNewsCache) {
+  if (hmActive()) { host.style.display = 'none'; return; }
+  if (!homeNewsCache[currentOrg]) {
     try {
-      const r = await fetch('/data/company-news.json', { cache: 'no-store' });
-      homeNewsCache = await r.json();
+      const r = await fetch(hnUrl(), { cache: 'no-store' });
+      homeNewsCache[currentOrg] = await r.json();
     } catch (e) { host.style.display = 'none'; return; }
   }
   const top = hnTopItems(4);
   if (!top.length || currentView !== 'home' || hmActive()) { host.style.display = 'none'; return; }
   host.classList.toggle('collapsed', homeNewsCollapsed());
   host.innerHTML = `
-    <button class="hn-bar" type="button" onclick="toggleHomeNews()" aria-label="Mostrar u ocultar noticias">
-      <span class="hn-bar-title"><i class="fa-solid fa-newspaper"></i> Novedades del portafolio</span>
+    <button class="hn-bar" type="button" onclick="toggleHomeNews()" aria-label="${t('Mostrar u ocultar noticias')}">
+      <span class="hn-bar-title"><i class="fa-solid fa-newspaper"></i> ${hnTitle()}</span>
       <span class="hn-bar-right"><span class="hn-count">${top.length}</span><i class="fa-solid fa-chevron-down hn-chev"></i></span>
     </button>
     <div class="hn-body"><div class="hn-inner">
       <div class="hn-grid">${top.map(hnCardHTML).join('')}</div>
-      <div class="hn-more"><button type="button" class="hn-viewall" onclick="window.open('/blog','_blank','noopener')">Ver todas las noticias <i class="fa-solid fa-arrow-right"></i></button></div>
+      <div class="hn-more"><button type="button" class="hn-viewall" onclick="window.open('${hnRoute()}','_blank','noopener')">${t('Ver todas las noticias')} <i class="fa-solid fa-arrow-right"></i></button></div>
     </div></div>`;
   host.style.display = '';
 }
@@ -4280,7 +4285,7 @@ const HW_META = {
   board:    { title: 'Tablero Slack MVP', ico: 'fa-slack', brand: 1 },
 };
 // Ventanas disponibles por organización
-const HW_ORG = { cretum: ['modules', 'calendar'], mvp: ['modules', 'news', 'board', 'calendar'] };
+const HW_ORG = { cretum: ['modules', 'news', 'calendar'], mvp: ['modules', 'news', 'board', 'calendar'] };
 function homeViewKey() { return `cretum_home_view_${currentUser || 'anon'}_${currentOrg}`; }
 function homeViewMode() { try { return localStorage.getItem(homeViewKey()) === 'modular' ? 'modular' : 'classic'; } catch (e) { return 'classic'; } }
 function hmActive() { return !!currentOrg && !!HW_ORG[currentOrg] && homeViewMode() === 'modular'; }
@@ -4368,19 +4373,20 @@ function hwToggleLock() {
   hwSave(cfg); renderHomeModular();
 }
 function hwNewsBody() {
-  if (!homeNewsCache) {
+  if (!homeNewsCache[currentOrg]) {
     hnEnsureNews();
     return `<div class="hb-empty"><i class="fa-solid fa-circle-notch fa-spin"></i> ${t('Cargando noticias…')}</div>`;
   }
   const top = hnTopItems(8);
   if (!top.length) return `<div class="hb-empty">${t('Sin noticias por ahora.')}</div>`;
   return `<div class="hn-grid">${top.map(hnCardHTML).join('')}</div>
-    <div class="hn-more"><button type="button" class="hn-viewall" onclick="window.open('/blog','_blank','noopener')">${t('Ver todas las noticias')} <i class="fa-solid fa-arrow-right"></i></button></div>`;
+    <div class="hn-more"><button type="button" class="hn-viewall" onclick="window.open('${hnRoute()}','_blank','noopener')">${t('Ver todas las noticias')} <i class="fa-solid fa-arrow-right"></i></button></div>`;
 }
 async function hnEnsureNews() {
-  if (homeNewsCache) return;
-  try { const r = await fetch('/data/company-news.json', { cache: 'no-store' }); homeNewsCache = await r.json(); }
-  catch (e) { homeNewsCache = { items: [] }; }
+  const org = currentOrg;
+  if (homeNewsCache[org]) return;
+  try { const r = await fetch(hnUrl(), { cache: 'no-store' }); homeNewsCache[org] = await r.json(); }
+  catch (e) { homeNewsCache[org] = { items: [] }; }
   renderHomeModular();
 }
 // Calendario adaptativo: reducido = lista de la semana; expandido (≥7 cols y

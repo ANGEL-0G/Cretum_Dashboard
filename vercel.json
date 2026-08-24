@@ -307,6 +307,10 @@
       "dest": "/public/blog-semanal.html"
     },
     {
+      "src": "/noticias-cretum",
+      "dest": "/public/blog-semanal.html"
+    },
+    {
       "src": "/gvv",
       "dest": "https://ygmiwiaycfeyjpgormou.supabase.co/storage/v1/object/public/cartas/Carta%20Mensual%20GVV%20Cretum%20Partners.pdf",
       "headers": {
