@@ -18826,9 +18826,10 @@ function gmPrivadosCard() {
       const conPrem = P.companias.filter(c => c.premium_pct != null && c.gvv?.valor);
       if (!conPrem.length) return '';
       const delta = conPrem.reduce((a, c) => a + c.gvv.valor * c.premium_pct / 100, 0);
+      const aumP = gmSnap?.aum_live || 0;
       return `<div style="margin-top:8px;padding:9px 13px;border-radius:8px;background:${delta >= 0 ? '#e9f5ee' : '#fdf0ef'};font-size:12.5px">
         <strong>Si el secundario tiene razón</strong> (marcar estas ${conPrem.length} al premium/descuento de Caplight): impacto de
-        <strong style="color:${gmColor(delta)}">${gmFmtUsd(delta)}</strong> al NAV
+        <strong style="color:${gmColor(delta)}">${gmFmtUsd(delta)}</strong> al NAV${aumP ? ` <strong style="color:${gmColor(delta)}">(${gmPct(delta / aumP * 100)})</strong>` : ''}
         <span style="color:var(--gray-500);font-size:10.5px">— aproximación: aplica el premium a nivel compañía sobre el mark actual del fondo; no es un mark oficial.</span></div>`;
     })()}</div>`;
 }
