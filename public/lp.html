@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Cretum · Portal de inversionistas</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='1' y='1' width='30' height='30' rx='7' fill='%231A3A6B'/><g fill='%23fff'><rect x='7.4' y='17' width='4.2' height='8' rx='1.4'/><rect x='13.9' y='11.5' width='4.2' height='13.5' rx='1.4'/><rect x='20.4' y='7.5' width='4.2' height='17.5' rx='1.4'/></g></svg>">
+<style>
+  @font-face{font-family:'Outfit';src:url('/fonts/Outfit-Regular.ttf') format('truetype');font-weight:400;font-display:swap}
+  @font-face{font-family:'Outfit';src:url('/fonts/Outfit-Bold.ttf') format('truetype');font-weight:700;font-display:swap}
+  :root{
+    --font:'Outfit',system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --bg:#EEF2F8; --surface:#FFFFFF; --surface-2:#F4F7FB;
+    --ink:#16233B; --ink-soft:#4C5A72; --ink-mute:#8592A6;
+    --line:#E1E8F1; --navy:#1A3A6B; --navy-2:#2E5BA3; --navy-pale:#E7EFFA;
+    --shadow:0 1px 2px rgba(18,30,54,.05),0 10px 34px rgba(18,30,54,.08);
+    --r:16px; --ease:cubic-bezier(.23,1,.32,1);
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --bg:#0B1120; --surface:#141D2E; --surface-2:#1A2740;
+    --ink:#E8EDF6; --ink-soft:#AEB9CC; --ink-mute:#7A879C;
+    --line:#25324A; --navy:#7BA4E6; --navy-2:#9DBEF1; --navy-pale:#1A2A47;
+    --shadow:0 1px 2px rgba(0,0,0,.34),0 12px 34px rgba(0,0,0,.34);
+  }}
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;flex-direction:column}
+  a{color:inherit}
+  .wrap{width:100%;max-width:860px;margin:0 auto;padding:0 20px}
+
+  /* Barra superior */
+  header.top{border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--surface) 80%,transparent);backdrop-filter:saturate(1.3) blur(8px);-webkit-backdrop-filter:saturate(1.3) blur(8px);position:sticky;top:0;z-index:10}
+  .top-in{display:flex;align-items:center;gap:11px;height:60px}
+  .mark{width:26px;height:26px;border-radius:7px;background:var(--navy);display:grid;place-items:center;flex:0 0 auto}
+  .mark svg{width:15px;height:15px}
+  .brand{font-weight:700;font-size:16px;letter-spacing:-.01em}
+  .brand small{display:block;font-weight:400;font-size:11.5px;color:var(--ink-mute);letter-spacing:.02em;margin-top:-2px}
+
+  main{flex:1;width:100%}
+  .hero{padding:48px 0 8px}
+  .eyebrow{font-size:12.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--navy-2);font-weight:600;margin:0 0 12px}
+  h1{font-size:clamp(28px,5vw,42px);line-height:1.08;letter-spacing:-.03em;font-weight:700;margin:0 0 12px;text-wrap:balance}
+  .lede{font-size:clamp(15px,2.2vw,17px);color:var(--ink-soft);max-width:60ch;margin:0;text-wrap:pretty}
+
+  .sec{padding:26px 0 60px}
+  .sec-h{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-mute);font-weight:600;margin:0 0 14px}
+  .docs{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+  .doc{display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:var(--shadow);text-align:left;cursor:pointer;font:inherit;color:inherit;transition:transform .18s var(--ease),border-color .18s var(--ease),box-shadow .18s var(--ease)}
+  @media (hover:hover){.doc:hover{transform:translateY(-3px);border-color:var(--navy-pale);box-shadow:0 10px 30px rgba(18,30,54,.12)}}
+  .doc:active{transform:scale(.99)}
+  .doc-ic{width:42px;height:42px;border-radius:11px;background:var(--navy-pale);color:var(--navy-2);display:grid;place-items:center;flex:0 0 auto;font-size:18px}
+  .doc-body{min-width:0;flex:1}
+  .doc-t{font-weight:600;font-size:15px;letter-spacing:-.01em;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .doc-m{font-size:12.5px;color:var(--ink-mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .doc-go{color:var(--ink-mute);flex:0 0 auto;font-size:14px}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:34px 26px;text-align:center;max-width:460px;margin:0 auto}
+  .card .ic{width:52px;height:52px;border-radius:14px;background:var(--navy-pale);color:var(--navy-2);display:grid;place-items:center;font-size:22px;margin:0 auto 16px}
+  .card h2{margin:0 0 8px;font-size:20px;letter-spacing:-.02em}
+  .card p{margin:0;color:var(--ink-soft);font-size:14.5px}
+  .center{min-height:60vh;display:flex;align-items:center}
+
+  .empty{background:var(--surface);border:1px dashed var(--line);border-radius:14px;padding:40px 22px;text-align:center;color:var(--ink-mute);font-size:14.5px}
+  .spin{display:inline-block;width:26px;height:26px;border:3px solid var(--navy-pale);border-top-color:var(--navy-2);border-radius:50%;animation:sp .8s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion:reduce){.spin{animation:none}}
+
+  footer{border-top:1px solid var(--line);color:var(--ink-mute);font-size:12px;padding:18px 0}
+  footer .wrap{display:flex;flex-wrap:wrap;gap:6px 14px;justify-content:space-between;align-items:center}
+  .hidden{display:none!important}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap top-in">
+    <span class="mark"><svg viewBox="0 0 32 32" aria-hidden="true"><g fill="#fff"><rect x="7.4" y="17" width="4.2" height="8" rx="1.4"/><rect x="13.9" y="11.5" width="4.2" height="13.5" rx="1.4"/><rect x="20.4" y="7.5" width="4.2" height="17.5" rx="1.4"/></g></svg></span>
+    <span class="brand">Cretum<small>Portal de inversionistas</small></span>
+  </div>
+</header>
+
+<main>
+  <!-- Cargando -->
+  <div id="loading" class="wrap center"><div style="margin:0 auto;text-align:center"><span class="spin"></span></div></div>
+
+  <!-- Acceso inválido / sin enlace -->
+  <div id="gate" class="wrap center hidden">
+    <div class="card">
+      <div class="ic">🔒</div>
+      <h2 id="gateTitle">Enlace no válido</h2>
+      <p id="gateMsg">Este enlace no es válido o fue desactivado. Contacta a tu asesor en Cretum para recibir uno nuevo.</p>
+    </div>
+  </div>
+
+  <!-- Contenido del LP -->
+  <div id="content" class="hidden">
+    <section class="hero">
+      <div class="wrap">
+        <p class="eyebrow">Información privada</p>
+        <h1 id="greeting">Hola</h1>
+        <p class="lede">Aquí encontrarás los documentos e información que Cretum ha preparado para ti. Toca cualquiera para abrirlo.</p>
+      </div>
+    </section>
+    <section class="sec">
+      <div class="wrap">
+        <p class="sec-h">Documentos</p>
+        <div id="docs" class="docs"></div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer><div class="wrap">
+  <span>© Cretum Partners</span>
+  <span>Documento confidencial · uso exclusivo del destinatario</span>
+</div></footer>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  function show(el) { el.classList.remove('hidden'); }
+  function hide(el) { el.classList.add('hidden'); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+  function getKey() {
+    try { return new URLSearchParams(location.search).get('k') || ''; } catch (e) { return ''; }
+  }
+  function api(body) {
+    return fetch('/api/lp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); });
+  }
+  function gate(title, msg) {
+    hide($('loading')); hide($('content'));
+    if (title) $('gateTitle').textContent = title;
+    if (msg) $('gateMsg').textContent = msg;
+    show($('gate'));
+  }
+
+  var SESSION = null;
+
+  function docIcon(mime, name) {
+    var n = (name || '').toLowerCase();
+    if ((mime || '').indexOf('pdf') >= 0 || /\.pdf$/.test(n)) return '📄';
+    if (/\.(xlsx?|csv)$/.test(n)) return '📊';
+    if (/\.(docx?)$/.test(n)) return '📝';
+    if (/\.(png|jpe?g|gif|webp|svg)$/.test(n)) return '🖼️';
+    return '📎';
+  }
+
+  function renderDocs(list) {
+    var box = $('docs');
+    if (!list || !list.length) {
+      box.innerHTML = '<div class="empty">Aún no hay documentos disponibles. Tu asesor los subirá pronto.</div>';
+      return;
+    }
+    box.innerHTML = list.map(function (d) {
+      return '<button class="doc" data-id="' + esc(d.id) + '">' +
+        '<span class="doc-ic">' + docIcon(d.mime, d.name) + '</span>' +
+        '<span class="doc-body"><span class="doc-t">' + esc(d.title) + '</span>' +
+        '<span class="doc-m">' + esc(d.name || 'Abrir documento') + '</span></span>' +
+        '<span class="doc-go">↗</span></button>';
+    }).join('');
+    Array.prototype.forEach.call(box.querySelectorAll('.doc'), function (btn) {
+      btn.addEventListener('click', function () { openDoc(btn.getAttribute('data-id'), btn); });
+    });
+  }
+
+  function openDoc(id, btn) {
+    if (!SESSION) return;
+    var go = btn && btn.querySelector('.doc-go'); var prev = go ? go.textContent : '';
+    if (go) go.textContent = '…';
+    api({ action: 'file', token: SESSION, id: id }).then(function (res) {
+      if (go) go.textContent = prev;
+      if (!res.ok || !res.j.url) { alert(res.j && res.j.error ? res.j.error : 'No se pudo abrir el documento.'); return; }
+      window.open(res.j.url, '_blank', 'noopener');
+    }).catch(function () { if (go) go.textContent = prev; alert('No se pudo abrir el documento.'); });
+  }
+
+  var k = getKey();
+  if (!k) { gate('Falta tu enlace', 'Abre el enlace personal que te compartió Cretum para ver tu información.'); return; }
+
+  api({ action: 'access', k: k }).then(function (res) {
+    if (!res.ok || !res.j.token) { gate('Enlace no válido', res.j && res.j.error ? res.j.error : 'Este enlace no es válido o fue desactivado.'); return; }
+    SESSION = res.j.token;
+    $('greeting').textContent = 'Hola, ' + (res.j.name || '');
+    renderDocs(res.j.documents || []);
+    hide($('loading')); show($('content'));
+  }).catch(function () { gate('Sin conexión', 'No pudimos cargar tu información. Inténtalo de nuevo en un momento.'); });
+})();
+</script>
+</body>
+</html>

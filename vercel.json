@@ -10,6 +10,10 @@
       "use": "@vercel/static"
     },
     {
+      "src": "public/lp.html",
+      "use": "@vercel/static"
+    },
+    {
       "src": "public/portal-mvp.html",
       "use": "@vercel/static"
     },
@@ -99,6 +103,10 @@
     },
     {
       "src": "api/portal.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/lp.js",
       "use": "@vercel/node"
     },
     {
@@ -195,6 +203,10 @@
       "dest": "/api/portal.js"
     },
     {
+      "src": "/api/lp",
+      "dest": "/api/lp.js"
+    },
+    {
       "src": "/api/contacts",
       "dest": "/api/contacts.js"
     },
@@ -237,6 +249,10 @@
     {
       "src": "/portal",
       "dest": "/public/portal.html"
+    },
+    {
+      "src": "/lp",
+      "dest": "/public/lp.html"
     },
     {
       "src": "/form",

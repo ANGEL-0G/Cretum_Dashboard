@@ -5807,6 +5807,34 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   .pt-badge{font-size:10.5px;padding:2px 8px;border-radius:20px;background:var(--navy-ghost,#eef3fb);color:var(--navy)}
   .pt-badge.off{background:#fbe6e3;color:#c0392b}
   .pt-empty{padding:28px 24px;text-align:center;color:var(--ink-soft,#889);font-size:13px;border:1px dashed var(--line,#e3e8f0);border-radius:12px}
+  /* ── Portal de LP's (admin en el desk) ── */
+  .lp-intro{font-size:13.5px;color:var(--ink-soft,#667);max-width:70ch;margin:0 0 16px;line-height:1.55}
+  .lp-code{font-family:var(--mono,monospace);font-size:12.5px;background:var(--navy-ghost,#f0f4fa);color:var(--navy);padding:2px 8px;border-radius:6px}
+  .lp-list{display:flex;flex-direction:column;gap:10px;max-width:840px}
+  .lp-item{display:flex;align-items:center;gap:14px;flex-wrap:wrap;border:1px solid var(--line,#e3e8f0);border-radius:12px;padding:14px 16px;background:var(--white,#fff)}
+  .lp-item-main{flex:1;min-width:180px}
+  .lp-item-name{font-size:15px;font-weight:600;color:var(--ink,#1c2740);display:flex;align-items:center;gap:8px}
+  .lp-item-meta{font-size:12.5px;color:var(--ink-soft,#889);margin-top:3px}
+  .lp-item-acts{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .lp-badge{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 8px;border-radius:999px}
+  .lp-badge.off{background:#fce8e8;color:#c0392b}
+  [data-theme="dark"] .lp-badge.off{background:rgba(192,57,43,.2);color:#f0a0a0}
+  .pt-btn{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;font-family:inherit;color:var(--ink-soft,#556);background:var(--white,#fff);border:1px solid var(--line,#dde3ec);border-radius:8px;padding:7px 11px;cursor:pointer;transition:border-color .15s,color .15s}
+  .pt-btn:hover{border-color:var(--navy);color:var(--navy)}
+  .pt-btn.danger:hover{border-color:#c0392b;color:#c0392b}
+  .lp-flabel{display:block;font-size:12.5px;font-weight:600;color:var(--ink-soft,#667);margin:12px 0 5px}
+  .lp-finput{width:100%;font:inherit;font-size:14px;color:var(--ink,#1c2740);background:var(--white,#fff);border:1px solid var(--line,#d7dde8);border-radius:9px;padding:10px 12px;outline:none}
+  .lp-finput:focus{border-color:var(--navy)}
+  .lp-fcheck{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--ink,#1c2740);margin-top:14px;cursor:pointer}
+  .lp-uprow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:6px}
+  .lp-uprow .lp-finput{flex:1;min-width:180px}
+  .lp-upbtn{white-space:nowrap;cursor:pointer}
+  .lp-doclist{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+  .lp-doc{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid var(--line,#e3e8f0);border-radius:10px;padding:11px 14px;background:var(--white,#fff)}
+  .lp-doc-main{display:flex;align-items:center;gap:11px;min-width:0}
+  .lp-doc-main i{color:var(--navy);font-size:16px;flex:0 0 auto}
+  .lp-doc-t{font-size:13.5px;font-weight:600;color:var(--ink,#1c2740);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .lp-doc-m{font-size:12px;color:var(--ink-soft,#889);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .pt-dash-cks{display:flex;flex-direction:column;gap:6px;max-height:180px;overflow:auto;border:1px solid var(--line,#e8ecf3);border-radius:8px;padding:8px}
   .pt-dash-cks label{display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer}
   #ptDashHtml{width:100%;min-height:200px;font-family:var(--mono,monospace);font-size:12px;border:1px solid var(--line,#d7dde8);border-radius:8px;padding:10px;resize:vertical}
@@ -6481,6 +6509,58 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
         <h3><span><i class="fa-solid fa-key"></i> Accesos</span></h3>
         <div class="pt-list" id="ptUserList"></div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Portal de LP's (sistema aparte, enlace mágico por LP) ═══ -->
+<div class="page page-db" id="pageLp">
+  <div class="db-toolbar">
+    <div class="db-title-block"><i class="fa-solid fa-user-tie"></i> Portal de LP's</div>
+    <button class="btn-primary" id="lpNewBtn" type="button" onclick="lpNew()" style="display:none"><i class="fa-solid fa-plus"></i> Nuevo LP</button>
+  </div>
+  <p class="lp-intro">Cada LP entra con su propio <b>enlace</b> (sin contraseña). Crea el LP, copia su enlace para compartirlo y súbele documentos. La página que ve el LP: <span class="lp-code">cretumdesk.com/lp</span></p>
+  <div class="lp-list" id="lpList"></div>
+</div>
+
+<!-- Modal: alta/edición de LP -->
+<div class="camp-modal-backdrop" id="lpModal" onclick="if(event.target===this)lpModalClose()">
+  <div class="camp-modal">
+    <div class="camp-modal-head">
+      <div class="camp-modal-title"><i class="fa-solid fa-user-tie"></i> <span id="lpModalTitle">Nuevo LP</span></div>
+      <button class="camp-modal-x" onclick="lpModalClose()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="camp-modal-body">
+      <label class="lp-flabel">Nombre del LP</label>
+      <input type="text" id="lpfName" class="lp-finput" placeholder="Ej. Familia Pérez / Fondo X" autocomplete="off">
+      <label class="lp-flabel">Correo (opcional, referencia)</label>
+      <input type="email" id="lpfEmail" class="lp-finput" placeholder="correo@ejemplo.com" autocomplete="off">
+      <label class="lp-fcheck"><input type="checkbox" id="lpfActive" checked> Acceso activo</label>
+      <div class="camp-modal-msg" id="lpModalMsg"></div>
+    </div>
+    <div class="camp-modal-foot">
+      <button class="cdd-btn" onclick="lpModalClose()">Cancelar</button>
+      <button class="btn-primary" onclick="lpSave()"><i class="fa-solid fa-check"></i> Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: documentos de un LP -->
+<div class="camp-modal-backdrop" id="lpDocsModal" onclick="if(event.target===this)lpDocsClose()">
+  <div class="camp-modal camp-modal-wide">
+    <div class="camp-modal-head">
+      <div class="camp-modal-title"><i class="fa-solid fa-folder-open"></i> <span id="lpDocsTitle">Documentos</span></div>
+      <button class="camp-modal-x" onclick="lpDocsClose()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="camp-modal-body">
+      <div class="lp-uprow" id="lpDocsUploadRow">
+        <input type="text" id="lpDocTitle" class="lp-finput" placeholder="Título del documento (opcional)" autocomplete="off">
+        <label class="cdd-btn lp-upbtn"><i class="fa-solid fa-upload"></i> Subir documento
+          <input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg" style="display:none" onchange="lpDocUpload(this)">
+        </label>
+      </div>
+      <div class="camp-modal-msg" id="lpDocsMsg"></div>
+      <div class="lp-doclist" id="lpDocsList"></div>
     </div>
   </div>
 </div>
@@ -7345,7 +7425,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   </div>
 </div>
 
-<script src="/i18n.js?v=20260824-news3"></script>
-<script src="/app.js?v=20260824-news3"></script>
+<script src="/i18n.js?v=20260824-lp1"></script>
+<script src="/app.js?v=20260824-lp1"></script>
 </body>
 </html>

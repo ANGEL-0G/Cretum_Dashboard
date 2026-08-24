@@ -3452,6 +3452,9 @@ const ORG_MODULES = {
     { view: 'portal', icon: 'fa-share-nodes', title: 'Portal de clientes',
       desc: 'Sube dashboards externos y da acceso a clientes con su propio usuario',
       iconClass: 'home-ico-portal' },
+    { view: 'lp', icon: 'fa-user-tie', title: "Portal de LP's",
+      desc: 'Comparte documentos privados con cada LP por su propio enlace de acceso',
+      iconClass: 'home-ico-portal', editorOrAdmin: true, hideColaborador: true },
     { view: 'gvvmesa', icon: 'fa-gauge-high', title: 'GVV Mesa',
       desc: 'Monitoreo intradía del fondo: P&L del día, opciones y señales',
       iconClass: 'home-ico-ventas' },
@@ -3495,6 +3498,7 @@ const ORG_NAV = {
     { view: 'campaigns', icon: 'fa-bolt',      label: 'Campañas' },
     { view: 'forms',     icon: 'fa-clipboard-list', label: 'Formularios' },
     { view: 'portal',    icon: 'fa-share-nodes', label: 'Portal de clientes' },
+    { view: 'lp',        icon: 'fa-user-tie',    label: "Portal de LP's", editorOrAdmin: true, hideColaborador: true },
     { view: 'gvvmesa',   icon: 'fa-gauge-high',  label: 'GVV Mesa' },
     { view: 'ventas',    icon: 'fa-chart-line', label: 'Ventas' },
     { view: 'usuarios',  icon: 'fa-users-gear', label: 'Usuarios', adminOnly: true },
@@ -5301,6 +5305,8 @@ function switchView(view, isBack = false) {
   if (pageRep) pageRep.classList.toggle('active', view === 'reports');
   const pagePortal = document.getElementById('pagePortal');
   if (pagePortal) pagePortal.classList.toggle('active', view === 'portal');
+  const pageLp = document.getElementById('pageLp');
+  if (pageLp) pageLp.classList.toggle('active', view === 'lp');
   const pageGvvMesa = document.getElementById('pageGvvMesa');
   if (pageGvvMesa) pageGvvMesa.classList.toggle('active', view === 'gvvmesa');
   const pageForms = document.getElementById('pageForms');
@@ -5332,6 +5338,7 @@ function switchView(view, isBack = false) {
     'reports':      'Reportes',
     'forms':        'Formularios',
     'portal':       'Portal de clientes',
+    'lp':           "Portal de LP's",
     'gvvmesa':      'GVV Mesa',
     'ventas':       'Ventas',
     'notes':        'Notas',
@@ -5363,6 +5370,7 @@ function switchView(view, isBack = false) {
   if (view === 'campaigns') loadCampaigns();
   if (view === 'reports') loadReports();
   if (view === 'portal') { portalOrg = currentOrg || 'cretum'; loadPortalAdmin(); }
+  if (view === 'lp') loadLpAdmin();
   if (view === 'gvvmesa') gmLoad();
   if (view === 'forms') formsBackHome();
   if (view === 'ventas') ventasBackHome();
@@ -6465,7 +6473,8 @@ function applyRoute() {
     }
     const isAdmin = currentProfile?.role === 'admin';
     const isColab = currentProfile?.role === 'colaborador';
-    const allowed = (ORG_NAV[org] || []).some(it => it.view === view && (!it.adminOnly || isAdmin) && !(it.hideColaborador && isColab));
+    const isEditorOrAdmin = isAdmin || currentProfile?.role === 'editor' || isColab;
+    const allowed = (ORG_NAV[org] || []).some(it => it.view === view && (!it.adminOnly || isAdmin) && (!it.editorOrAdmin || isEditorOrAdmin) && !(it.hideColaborador && isColab));
     switchView(allowed ? view : 'home', true);
   } else {
     switchView('selector', true);
@@ -6813,6 +6822,194 @@ async function portalApi(body) {
   const d = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
   return d;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PORTAL DE LP's — sistema aparte (api/lp.js). Cada LP entra por un
+   ENLACE MÁGICO (cretumdesk.com/lp?k=<token>). Aquí (admin del desk)
+   se dan de alta, se copia su enlace y se les suben documentos.
+   Gestión: editores/admins (el backend usa can_manage; colaborador no).
+═══════════════════════════════════════════════════════════════ */
+let lpList = [];
+let lpEditId = null;      // LP en edición (modal de alta/edición)
+let lpDocsId = null;      // LP cuyos documentos se están gestionando
+const lpCanManage = () => ['admin', 'editor'].includes(currentProfile?.role);
+
+async function lpApi(body) {
+  const r = await authedFetch('/api/lp', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
+  return d;
+}
+function lpLinkFor(token) { return location.origin + '/lp?k=' + encodeURIComponent(token); }
+function lpFmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso); if (isNaN(d)) return '—';
+  return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+async function loadLpAdmin() {
+  const newBtn = document.getElementById('lpNewBtn');
+  if (newBtn) newBtn.style.display = lpCanManage() ? '' : 'none';
+  const list = document.getElementById('lpList');
+  if (list) list.innerHTML = '<div class="pt-empty"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
+  try {
+    const d = await lpApi({ action: 'admin_list' });
+    lpList = d.lps || [];
+    renderLpList();
+  } catch (err) {
+    if (list) list.innerHTML = `<div class="pt-empty">${lpCanManage() ? 'Error: ' + escapeHtml(err.message) : 'Solo editores o admins pueden gestionar el portal de LP\'s.'}</div>`;
+  }
+}
+
+function renderLpList() {
+  const list = document.getElementById('lpList');
+  if (!list) return;
+  if (!lpList.length) {
+    list.innerHTML = `<div class="pt-empty">Aún no hay LP's.${lpCanManage() ? ' Crea el primero con “Nuevo LP”.' : ''}</div>`;
+    return;
+  }
+  const manage = lpCanManage();
+  list.innerHTML = lpList.map(l => `
+    <div class="lp-item">
+      <div class="lp-item-main">
+        <div class="lp-item-name">${escapeHtml(l.name)} ${l.active ? '' : '<span class="lp-badge off">inactivo</span>'}</div>
+        <div class="lp-item-meta">${l.email ? escapeHtml(l.email) + ' · ' : ''}${l.docs} doc${l.docs === 1 ? '' : 's'} · último acceso: ${lpFmtDate(l.last_access_at)}</div>
+      </div>
+      <div class="lp-item-acts">
+        <button class="pt-btn" onclick="lpCopyLink('${l.id}')" title="Copiar enlace de acceso"><i class="fa-solid fa-link"></i> Enlace</button>
+        <button class="pt-btn" onclick="lpDocsOpen('${l.id}')" title="Documentos"><i class="fa-solid fa-folder-open"></i> Docs</button>
+        ${manage ? `<button class="pt-btn" onclick="lpEdit('${l.id}')" title="Editar"><i class="fa-solid fa-pen"></i></button>
+        <button class="pt-btn" onclick="lpRegen('${l.id}')" title="Regenerar enlace (invalida el anterior)"><i class="fa-solid fa-rotate"></i></button>
+        <button class="pt-btn danger" onclick="lpDelete('${l.id}')" title="Borrar"><i class="fa-solid fa-trash"></i></button>` : ''}
+      </div>
+    </div>`).join('');
+}
+
+async function lpCopyLink(id) {
+  const l = lpList.find(x => x.id === id); if (!l) return;
+  const url = lpLinkFor(l.token);
+  try { await navigator.clipboard.writeText(url); toast('Enlace copiado'); }
+  catch (e) { prompt('Copia el enlace de acceso del LP:', url); }
+}
+
+function lpNew() {
+  lpEditId = null;
+  document.getElementById('lpModalTitle').textContent = "Nuevo LP";
+  document.getElementById('lpfName').value = '';
+  document.getElementById('lpfEmail').value = '';
+  document.getElementById('lpfActive').checked = true;
+  const msg = document.getElementById('lpModalMsg'); if (msg) { msg.textContent = ''; msg.className = 'camp-modal-msg'; }
+  document.getElementById('lpModal').classList.add('show');
+}
+function lpEdit(id) {
+  const l = lpList.find(x => x.id === id); if (!l) return;
+  lpEditId = id;
+  document.getElementById('lpModalTitle').textContent = 'Editar LP';
+  document.getElementById('lpfName').value = l.name || '';
+  document.getElementById('lpfEmail').value = l.email || '';
+  document.getElementById('lpfActive').checked = l.active !== false;
+  const msg = document.getElementById('lpModalMsg'); if (msg) { msg.textContent = ''; msg.className = 'camp-modal-msg'; }
+  document.getElementById('lpModal').classList.add('show');
+}
+function lpModalClose() { document.getElementById('lpModal').classList.remove('show'); }
+
+async function lpSave() {
+  const name = document.getElementById('lpfName').value.trim();
+  const email = document.getElementById('lpfEmail').value.trim();
+  const active = document.getElementById('lpfActive').checked;
+  const msg = document.getElementById('lpModalMsg');
+  if (!name) { msg.textContent = 'Pon el nombre del LP.'; msg.className = 'camp-modal-msg err'; return; }
+  try {
+    const body = { action: 'save_lp', name, email, active };
+    if (lpEditId) body.id = lpEditId;
+    const d = await lpApi(body);
+    lpModalClose();
+    await loadLpAdmin();
+    if (!lpEditId && d.token) {
+      // LP nuevo: ofrece copiar su enlace de inmediato.
+      const url = lpLinkFor(d.token);
+      try { await navigator.clipboard.writeText(url); toast('LP creado · enlace copiado'); }
+      catch (e) { prompt('LP creado. Copia su enlace de acceso:', url); }
+    } else {
+      toast('LP actualizado');
+    }
+  } catch (err) { msg.textContent = err.message; msg.className = 'camp-modal-msg err'; }
+}
+
+async function lpDelete(id) {
+  const l = lpList.find(x => x.id === id); if (!l) return;
+  if (!confirm(`¿Borrar a "${l.name}"? Se elimina su acceso y sus documentos. No se puede deshacer.`)) return;
+  try { await lpApi({ action: 'delete_lp', id }); toast('LP borrado'); loadLpAdmin(); }
+  catch (err) { toast('Error: ' + err.message); }
+}
+
+async function lpRegen(id) {
+  if (!confirm('¿Generar un enlace nuevo? El enlace anterior dejará de funcionar de inmediato.')) return;
+  try {
+    const d = await lpApi({ action: 'regen_link', id });
+    const l = lpList.find(x => x.id === id); if (l && d.token) l.token = d.token;
+    const url = lpLinkFor(d.token);
+    try { await navigator.clipboard.writeText(url); toast('Enlace nuevo copiado'); }
+    catch (e) { prompt('Nuevo enlace de acceso:', url); }
+  } catch (err) { toast('Error: ' + err.message); }
+}
+
+/* ── Documentos de un LP ── */
+async function lpDocsOpen(id) {
+  lpDocsId = id;
+  const l = lpList.find(x => x.id === id);
+  document.getElementById('lpDocsTitle').textContent = 'Documentos · ' + (l ? l.name : '');
+  const up = document.getElementById('lpDocsUploadRow'); if (up) up.style.display = lpCanManage() ? '' : 'none';
+  document.getElementById('lpDocsModal').classList.add('show');
+  await lpDocsReload();
+}
+function lpDocsClose() { document.getElementById('lpDocsModal').classList.remove('show'); lpDocsId = null; }
+async function lpDocsReload() {
+  const box = document.getElementById('lpDocsList');
+  box.innerHTML = '<div class="pt-empty"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
+  try {
+    const d = await lpApi({ action: 'lp_docs', lp_user_id: lpDocsId });
+    const docs = d.documents || [];
+    if (!docs.length) { box.innerHTML = '<div class="pt-empty">Sin documentos todavía.</div>'; return; }
+    box.innerHTML = docs.map(doc => `
+      <div class="lp-doc">
+        <div class="lp-doc-main"><i class="fa-solid fa-file-lines"></i>
+          <div><div class="lp-doc-t">${escapeHtml(doc.title)}</div>
+          <div class="lp-doc-m">${escapeHtml(doc.file_name || '')}</div></div>
+        </div>
+        ${lpCanManage() ? `<button class="pt-btn danger" onclick="lpDocDelete('${doc.id}')" title="Quitar"><i class="fa-solid fa-trash"></i></button>` : ''}
+      </div>`).join('');
+  } catch (err) { box.innerHTML = `<div class="pt-empty">Error: ${escapeHtml(err.message)}</div>`; }
+}
+async function lpDocUpload(input) {
+  const file = input.files && input.files[0]; if (!file) return;
+  const msg = document.getElementById('lpDocsMsg');
+  if (file.size > 25 * 1048576) { msg.textContent = 'El archivo supera 25 MB.'; msg.className = 'camp-modal-msg err'; input.value = ''; return; }
+  const title = (document.getElementById('lpDocTitle').value || '').trim() || file.name.replace(/\.[^.]+$/, '');
+  msg.textContent = 'Subiendo…'; msg.className = 'camp-modal-msg';
+  try {
+    const safe = file.name.replace(/[^a-zA-Z0-9._-]+/g, '_');
+    const path = `${lpDocsId}/${Date.now()}-${safe}`;
+    const mime = file.type || 'application/octet-stream';
+    const { error: upErr } = await sb.storage.from('lp-files').upload(path, file, { contentType: mime, upsert: false });
+    if (upErr) throw new Error(upErr.message);
+    await lpApi({ action: 'save_doc', lp_user_id: lpDocsId, title, file_path: path, file_mime: mime, file_name: file.name });
+    document.getElementById('lpDocTitle').value = '';
+    input.value = '';
+    msg.textContent = ''; msg.className = 'camp-modal-msg';
+    toast('Documento subido');
+    await lpDocsReload();
+    loadLpAdmin();   // refresca el conteo de docs en la lista
+  } catch (err) { msg.textContent = 'Error: ' + err.message; msg.className = 'camp-modal-msg err'; input.value = ''; }
+}
+async function lpDocDelete(docId) {
+  if (!confirm('¿Quitar este documento? El LP dejará de verlo.')) return;
+  try { await lpApi({ action: 'delete_doc', id: docId }); toast('Documento quitado'); await lpDocsReload(); loadLpAdmin(); }
+  catch (err) { toast('Error: ' + err.message); }
 }
 
 async function loadPortalAdmin() {
