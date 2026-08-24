@@ -18574,59 +18574,141 @@ function gmTabResumen(s) {
   </div>`;
 }
 
+let gmGroupBy = 'sector', gmConsolidar = true, gmFiltroSector = '';
 function gmTabPosiciones(s) {
+  gmEnsureRiesgo();
   const aum = s.aum_live || 1;
   const f3 = s.fase3 || {};
-  const strats = [...new Set(s.positions.map(p => p.strat).filter(Boolean))].sort();
-  let rows = s.positions.filter(p => p.ticker !== 'CASH' && p.ac !== 'Cash');
+  const rmap = {};
+  for (const x of (gmRiesgo?.posiciones || [])) if (!rmap[x.t]) rmap[x.t] = x;
+
+  // ── base: consolidar tramos del mismo ticker (opcional) ──
+  let base = s.positions.filter(p => p.ticker !== 'CASH' && p.ac !== 'Cash');
+  if (gmConsolidar) {
+    const m = {};
+    for (const p of base) {
+      const k = p.ticker;
+      if (!m[k]) m[k] = { ...p, tramos: 1 };
+      else {
+        const a = m[k];
+        a.tramos++; a.live_value += p.live_value; a.day_pl += p.day_pl;
+        a.pl = (a.pl || 0) + (p.pl || 0); a.cost = (a.cost || 0) + (p.cost || 0);
+        a.titulos = (a.titulos || 0) + (p.titulos || 0);
+        a.plpct = a.cost ? (a.pl / a.cost * 100) : a.plpct;
+        if (p.src !== 'live') a.src = p.src;
+      }
+    }
+    base = Object.values(m);
+  }
+
+  // ── tira de sectores (peso + P&L día, click = filtro) ──
+  const secAgg = {};
+  for (const p of base) {
+    const k = p.sector || '—';
+    secAgg[k] = secAgg[k] || { v: 0, pl: 0, n: 0 };
+    secAgg[k].v += p.live_value; secAgg[k].pl += p.day_pl; secAgg[k].n++;
+  }
+  const secChips = Object.entries(secAgg).sort((a, b) => b[1].v - a[1].v).map(([k, x]) => {
+    const on = gmFiltroSector === k;
+    return `<button onclick="gmFiltroSector=gmFiltroSector==='${escapeHtml(k).replace(/'/g, "\\'")}'?'':'${escapeHtml(k).replace(/'/g, "\\'")}';gmExpanded=null;gmRender()"
+      style="flex:none;border:1.5px solid ${on ? '#0f2849' : 'var(--gray-200)'};background:${on ? '#0f2849' : '#fff'};border-radius:10px;padding:7px 12px;cursor:pointer;text-align:left;min-width:118px">
+      <div style="font-size:10px;font-weight:700;color:${on ? '#cfe0f5' : 'var(--gray-500)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px">${escapeHtml(k)}</div>
+      <div style="font-size:12.5px;font-weight:800;color:${on ? '#fff' : 'var(--gray-800)'}">${(x.v / aum * 100).toFixed(1)}%</div>
+      <div style="font-size:10.5px;font-weight:600;color:${on ? (x.pl >= 0 ? '#9be3b3' : '#f5a3a3') : gmColor(x.pl)}">${gmFmtUsd(x.pl)}</div></button>`;
+  }).join('');
+
+  // ── filtros ──
+  let rows = base;
   const q = (document.getElementById('gmSearch')?.value || '').toLowerCase();
   if (q) rows = rows.filter(p => (p.ticker + ' ' + p.company).toLowerCase().includes(q));
   if (gmFiltroStrat) rows = rows.filter(p => p.strat === gmFiltroStrat);
-  const keyFn = { absPl: p => Math.abs(p.day_pl), day: p => p.day_pl, chg: p => p.day_chg_pct ?? -1e9, w: p => p.live_value, tot: p => p.plpct ?? -1e9 }[gmSort.key] || (p => Math.abs(p.day_pl));
+  if (gmFiltroSector) rows = rows.filter(p => (p.sector || '—') === gmFiltroSector);
+  const keyFn = { absPl: p => Math.abs(p.day_pl), day: p => p.day_pl, chg: p => p.day_chg_pct ?? -1e9, w: p => p.live_value, tot: p => p.plpct ?? -1e9, cagr: p => rmap[p.ticker]?.cagr ?? -1e9 }[gmSort.key] || (p => Math.abs(p.day_pl));
   rows.sort((a, b) => (keyFn(b) - keyFn(a)) * -gmSort.dir);
-  const th = (lbl, key) => `<th style="cursor:pointer" onclick="gmSort={key:'${key}',dir:gmSort.key==='${key}'?-gmSort.dir:-1};gmRender()">${lbl}${gmSort.key === key ? (gmSort.dir < 0 ? ' ↓' : ' ↑') : ''}</th>`;
+  const th = (lbl, key) => `<th style="cursor:pointer;white-space:nowrap" onclick="gmSort={key:'${key}',dir:gmSort.key==='${key}'?-gmSort.dir:-1};gmRender()">${lbl}${gmSort.key === key ? (gmSort.dir < 0 ? ' ↓' : ' ↑') : ''}</th>`;
+
+  // ── ficha expandible (por ticker) ──
   const fichaDe = (p) => {
     const sym = String(p.ticker).replace('/', '.');
     const news = (f3.news || []).filter(a => a.sym === sym).slice(0, 4);
     const pt = (f3.pt || {})[sym];
     const bancos = (f3.pt_bancos || []).filter(b => b.sym === sym).slice(0, 3);
     const r = pt?.reco;
-    return `<tr><td colspan="9" style="background:#fbfdff;border-bottom:2px solid var(--gray-200);padding:12px 16px">
+    const rk = rmap[p.ticker];
+    return `<tr><td colspan="10" style="background:#fbfdff;border-bottom:2px solid var(--gray-200);padding:12px 16px">
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;font-size:12px">
-        <div><div style="font-weight:700;margin-bottom:4px">${escapeHtml(p.company || p.ticker)}</div>
+        <div><div style="font-weight:700;margin-bottom:4px">${escapeHtml(p.company || p.ticker)}${p.tramos > 1 ? ` <span style="font-size:10px;color:var(--gray-400)">· ${p.tramos} tramos consolidados</span>` : ''}</div>
           <div style="color:var(--gray-500)">${escapeHtml(p.sector || '')} · ${escapeHtml(p.region || '')} · ${escapeHtml(p.strat || '')}</div>
           <div style="margin-top:6px">Títulos: <strong>${(p.titulos || 0).toLocaleString('en-US')}</strong> · Costo: <strong>${gmFmtUsd(p.cost)}</strong> · Valor: <strong>${gmFmtUsd(p.live_value)}</strong></div>
-          <div>P&L total: <strong style="color:${gmColor(p.pl || 0)}">${gmFmtUsd(p.pl || 0)} (${p.plpct != null ? gmPct(p.plpct, 1) : '—'})</strong></div></div>
+          <div>P&L total: <strong style="color:${gmColor(p.pl || 0)}">${gmFmtUsd(p.pl || 0)} (${p.plpct != null ? gmPct(p.plpct, 1) : '—'})</strong></div>
+          ${rk ? `<div style="margin-top:4px;color:var(--gray-600)">Beta ${rk.beta ?? '—'} · Vol ${rk.vol != null ? rk.vol + '%' : '—'} · ${rk.dias != null ? rk.dias + ' días en cartera' : ''} ${rk.cagr != null ? '· CAGR desde entrada ' + gmPct(rk.cagr, 1) : ''}</div>` : ''}</div>
         <div><div style="font-weight:700;margin-bottom:4px">Analistas</div>
-          ${r ? `<div>Buy <strong style="color:#0d6e3c">${r.buy}</strong> · Hold <strong>${r.hold}</strong> · Sell <strong style="color:#c62828">${r.sell}</strong></div>` : '<div style="color:var(--gray-400)">Sin datos aún (se llena por lotes)</div>'}
+          ${r ? `<div>Buy <strong style="color:#0d6e3c">${r.buy}</strong> · Hold <strong>${r.hold}</strong> · Sell <strong style="color:#c62828">${r.sell}</strong></div>` : '<div style="color:var(--gray-400)">Sin datos aún</div>'}
           ${pt?.mean ? `<div>PT consenso: <strong>$${pt.mean.toLocaleString('en-US')}</strong>${p.live_price ? ` (${gmPct((pt.mean / p.live_price - 1) * 100, 1)} upside)` : ''}</div>` : ''}
           ${bancos.map(b => `<div style="font-size:11px;color:var(--gray-600)">${escapeHtml(b.bank)} ${escapeHtml(b.action)} PT $${b.pt.toLocaleString('en-US')}</div>`).join('')}</div>
         <div><div style="font-weight:700;margin-bottom:4px">Noticias recientes</div>
           ${news.length ? news.map(a => `<div style="margin:3px 0;font-size:11.5px"><a href="${escapeHtml(a.url || '#')}" target="_blank" rel="noopener" style="color:#1c4e80;text-decoration:none">${escapeHtml(a.h)}</a> <span style="color:var(--gray-400);font-size:10px">${gmAgo(a.t)}</span></div>`).join('') : '<div style="color:var(--gray-400)">Sin noticias en 72h</div>'}</div>
       </div></td></tr>`;
   };
-  const posRow = (p, i) => `<tr onclick="gmExpanded=gmExpanded===${i}?null:${i};gmRender()" style="cursor:pointer${gmExpanded === i ? ';background:#eef3fa' : ''}">
-    <td style="font-weight:600">${escapeHtml(p.ticker)} <i class="fa-solid fa-chevron-${gmExpanded === i ? 'up' : 'down'}" style="font-size:8px;color:var(--gray-300)"></i></td>
-    <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(p.company || '')}</td>
+
+  // ── fila de posición (con σ del día y CAGR) ──
+  const posRow = (p) => {
+    const rk = rmap[p.ticker];
+    let sigma = null;
+    if (p.day_chg_pct != null && rk?.vol) sigma = p.day_chg_pct / (rk.vol / Math.sqrt(252));
+    const sigChip = sigma != null && Math.abs(sigma) >= 2
+      ? ` <span style="font-size:9px;font-weight:800;color:#fff;background:${sigma < 0 ? '#c62828' : '#0d6e3c'};border-radius:99px;padding:1px 6px">${Math.abs(sigma).toFixed(1)}σ</span>` : '';
+    const key = p.ticker;
+    return `<tr onclick="gmExpanded=gmExpanded==='${escapeHtml(key)}'?null:'${escapeHtml(key)}';gmRender()" style="cursor:pointer${gmExpanded === key ? ';background:#eef3fa' : ''}">
+    <td style="font-weight:600;white-space:nowrap">${escapeHtml(p.ticker)}${p.tramos > 1 ? ` <span style="font-size:9px;color:var(--gray-400)">×${p.tramos}</span>` : ''} <i class="fa-solid fa-chevron-${gmExpanded === key ? 'up' : 'down'}" style="font-size:8px;color:var(--gray-300)"></i></td>
+    <td style="max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(p.company || '')}</td>
     <td class="num">${(p.live_value / aum * 100).toFixed(1)}%</td>
     <td class="num">${p.live_price != null ? p.live_price.toLocaleString('en-US', { maximumFractionDigits: 2 }) : '—'}</td>
-    <td class="num" style="color:${gmColor(p.day_chg_pct || 0)}">${p.day_chg_pct != null ? gmPct(p.day_chg_pct) : '—'}</td>
+    <td class="num" style="white-space:nowrap;color:${gmColor(p.day_chg_pct || 0)}">${p.day_chg_pct != null ? gmPct(p.day_chg_pct) : '—'}${sigChip}</td>
     <td class="num" style="color:${gmColor(p.day_pl)};font-weight:600">${gmFmtUsd(p.day_pl)}</td>
     <td class="num" style="color:${gmColor(p.plpct || 0)}">${p.plpct != null ? gmPct(p.plpct, 1) : '—'}</td>
-    <td style="color:var(--gray-400);font-size:10px">${p.src === 'live' ? 'live' : 'excel'}</td></tr>` + (gmExpanded === i ? fichaDe(p) : '');
-  return `<div style="${GM_CARD}">
+    <td class="num" style="color:${gmColor(rmap[p.ticker]?.cagr || 0)}">${rmap[p.ticker]?.cagr != null ? gmPct(rmap[p.ticker].cagr, 1) : '—'}</td>
+    <td class="num">${rmap[p.ticker]?.dias != null ? rmap[p.ticker].dias.toLocaleString('en-US') : '—'}</td>
+    <td style="color:var(--gray-400);font-size:10px">${p.src === 'live' ? 'live' : (p.src === 'cierre_previo' ? 'cierre prev.' : 'excel')}</td></tr>` + (gmExpanded === key ? fichaDe(p) : '');
+  };
+
+  // ── agrupación con subtotales ──
+  const GROUPS = { sector: ['Sector', p => p.sector || '—'], strat: ['Estrategia', p => p.strat || '—'],
+                   region: ['Región', p => p.region || '—'], ac: ['Clase', p => p.ac || '—'], none: ['Sin agrupar', () => ''] };
+  let cuerpo = '';
+  if (gmGroupBy !== 'none') {
+    const gfn = GROUPS[gmGroupBy][1];
+    const gm2 = {};
+    for (const p of rows) { const k = gfn(p); (gm2[k] = gm2[k] || []).push(p); }
+    cuerpo = Object.entries(gm2).sort((a, b) => b[1].reduce((x, p) => x + p.live_value, 0) - a[1].reduce((x, p) => x + p.live_value, 0)).map(([k, list]) => {
+      const v = list.reduce((x, p) => x + p.live_value, 0), pl = list.reduce((x, p) => x + p.day_pl, 0);
+      return `<tr><td colspan="10" style="background:#0f2849;color:#fff;padding:6px 10px;font-size:11px;font-weight:700;letter-spacing:.5px">
+        ${escapeHtml(k)} <span style="font-weight:400;color:#9fb6d0">· ${list.length} posición${list.length === 1 ? '' : 'es'} · ${(v / aum * 100).toFixed(1)}% del fondo ·</span>
+        <span style="color:${pl >= 0 ? '#9be3b3' : '#f5a3a3'}">${gmFmtUsd(pl)} hoy</span></td></tr>` + list.map(posRow).join('');
+    }).join('');
+  } else cuerpo = rows.map(posRow).join('');
+
+  const strats = [...new Set(s.positions.map(p => p.strat).filter(Boolean))].sort();
+  return `
+  <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:10px">${secChips}</div>
+  <div style="${GM_CARD}">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:10px;flex-wrap:wrap">
-      <div style="font-weight:700"><i class="fa-solid fa-table-list"></i> Posiciones (${rows.length}) <span style="font-weight:400;font-size:11px;color:var(--gray-400)">· click en una fila para su ficha</span></div>
-      <div style="display:flex;gap:8px">
+      <div style="font-weight:700"><i class="fa-solid fa-table-list"></i> Posiciones (${rows.length})${gmFiltroSector ? ` <span style="font-size:11px;color:#1c4e80">· ${escapeHtml(gmFiltroSector)} <a onclick="gmFiltroSector='';gmRender()" style="cursor:pointer">✕</a></span>` : ''} <span style="font-weight:400;font-size:11px;color:var(--gray-400)">· click en una fila para su ficha</span></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <select onchange="gmGroupBy=this.value;gmExpanded=null;gmRender()" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px">
+          ${Object.entries(GROUPS).map(([k, [lbl]]) => `<option value="${k}" ${gmGroupBy === k ? 'selected' : ''}>Agrupar: ${lbl}</option>`).join('')}</select>
+        <label style="display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--gray-600);border:1px solid var(--gray-200);border-radius:8px;padding:5px 10px;cursor:pointer">
+          <input type="checkbox" ${gmConsolidar ? 'checked' : ''} onchange="gmConsolidar=this.checked;gmExpanded=null;gmRender()"> Consolidar tramos</label>
         <select onchange="gmFiltroStrat=this.value;gmExpanded=null;gmRender()" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px">
           <option value="">Todas las estrategias</option>${strats.map(x => `<option ${gmFiltroStrat === x ? 'selected' : ''}>${escapeHtml(x)}</option>`).join('')}</select>
-        <input id="gmSearch" placeholder="Buscar ticker o empresa…" value="${escapeHtml(q)}" oninput="gmExpanded=null;gmRender()" style="padding:6px 12px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px;width:200px">
+        <input id="gmSearch" placeholder="Buscar ticker o empresa…" value="${escapeHtml(q)}" oninput="gmExpanded=null;gmRender()" style="padding:6px 12px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px;width:180px">
       </div></div>
-    <div style="overflow-x:auto;max-height:640px;overflow-y:auto"><table class="camp-table" style="width:100%;font-size:12px">
-      <tr><th>Ticker</th><th>Empresa</th>${th('Peso', 'w')}<th>Precio</th>${th('Δ día', 'chg')}${th('P&L día', 'day')}${th('P&L total', 'tot')}<th>Fuente</th></tr>
-      ${rows.map(posRow).join('')}
-    </table></div></div>`;
-  }
+    <div style="overflow-x:auto;max-height:680px;overflow-y:auto"><table class="camp-table" style="width:100%;font-size:12px">
+      <tr><th>Ticker</th><th>Empresa</th>${th('Peso', 'w')}<th>Precio</th>${th('Δ día', 'chg')}${th('P&L día', 'day')}${th('P&L total', 'tot')}${th('CAGR entrada', 'cagr')}<th>Días</th><th>Fuente</th></tr>
+      ${cuerpo}
+    </table></div>
+    <div style="margin-top:8px;font-size:10px;color:var(--gray-400)">σ = movimiento del día en desviaciones estándar de la volatilidad propia (60d) — se marca desde 2σ · CAGR/días desde la fecha de compra del Excel · beta y vol en la ficha de cada posición.</div></div>`;
+}
 
 function gmTabOpciones(s) {
   const ops = s.options || [];
@@ -18740,13 +18822,17 @@ function gmTabIntel(s) {
 
 /* ── GVV Mesa: pestaña Riesgo (gvv-riesgo.json, robot diario 6:40) ── */
 let gmRiesgo = null, gmRiesgoLoading = false;
+function gmEnsureRiesgo() {
+  if (gmRiesgo || gmRiesgoLoading) return;
+  gmRiesgoLoading = true;
+  authedFetch('/api/gvv-live?riesgo=1').then(async r => {
+    gmRiesgo = r.ok ? await r.json() : { error: (await r.json().catch(() => ({}))).error || 'HTTP ' + r.status };
+  }).catch(e => { gmRiesgo = { error: e.message }; })
+    .finally(() => { gmRiesgoLoading = false; if (['riesgo', 'posiciones'].includes(gmTab)) gmRender(); });
+}
 function gmTabRiesgo(s) {
-  if (!gmRiesgo && !gmRiesgoLoading) {
-    gmRiesgoLoading = true;
-    authedFetch('/api/gvv-live?riesgo=1').then(async r => {
-      gmRiesgo = r.ok ? await r.json() : { error: (await r.json().catch(() => ({}))).error || 'HTTP ' + r.status };
-    }).catch(e => { gmRiesgo = { error: e.message }; })
-      .finally(() => { gmRiesgoLoading = false; if (gmTab === 'riesgo') gmRender(); });
+  if (!gmRiesgo) {
+    gmEnsureRiesgo();
     return `<div style="${GM_CARD};color:var(--gray-400)">Cargando análisis de riesgo…</div>`;
   }
   const R = gmRiesgo;
