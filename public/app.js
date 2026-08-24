@@ -4724,11 +4724,15 @@ function hbEventHTML(it) {
 // Compartido entre la vista clásica (hb-card colapsable) y la ventana modular.
 function hbInnerHTML() {
   const today = new Date(); today.setHours(0, 0, 0, 0);
+  // Un evento sin fecha se trata como vigente (no hay forma de saber que ya pasó).
+  const eventoVigente = it => !it.event_date || new Date(it.event_date + 'T23:59:59') >= today;
   const events = hbItems
-    .filter(it => it.kind === 'evento' && (!it.event_date || new Date(it.event_date + 'T23:59:59') >= today))
+    .filter(it => it.kind === 'evento' && eventoVigente(it))
     .sort((a, b) => (a.event_date || '9999') < (b.event_date || '9999') ? -1 : 1)
     .slice(0, 6);
-  const feed = hbItems.filter(it => it.kind !== 'evento');
+  // Los eventos ya ocurridos caen al feed: sin esto desaparecían del tablero al
+  // día siguiente y el home se veía "congelado" en el último aviso/noticia.
+  const feed = hbItems.filter(it => it.kind !== 'evento' || !eventoVigente(it));
   const shown = hbExpanded ? feed.slice(0, 25) : feed.slice(0, HB_FEED_LIMIT);
   const hidden = feed.length - shown.length;
 
