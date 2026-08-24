@@ -18804,10 +18804,14 @@ function gmPrivadosCard() {
   const filas = P.companias.map(c => {
     const prem = c.premium_pct;
     const bn = v => v == null ? '—' : '$' + (v / 1e9).toLocaleString('en-US', { maximumFractionDigits: 1 }) + 'B';
-    return `<tr><td style="font-weight:600">${escapeHtml(c.nombre || c.ticker)}</td>
+    const base = `<tr><td style="font-weight:600">${escapeHtml(c.nombre || c.ticker)}</td>
       <td class="num">${c.gvv?.peso ?? '—'}%</td>
-      <td class="num" style="color:${gmColor(c.gvv?.plpct || 0)}">${c.gvv?.plpct != null ? gmPct(c.gvv.plpct, 1) : '—'}</td>
-      <td class="num">${bn(c.last_round_val)}</td><td class="num">${bn(c.market_price_val)}</td>
+      <td class="num" style="color:${gmColor(c.gvv?.plpct || 0)}">${c.gvv?.plpct != null ? gmPct(c.gvv.plpct, 1) : '—'}</td>`;
+    if (c.tipo === 'fondo')
+      return base + `<td colspan="5" style="color:var(--gray-400);font-size:11px;font-style:italic">vehículo fondo (CERPI / fondo MVP) — el mercado secundario por compañía no aplica</td></tr>`;
+    if (prem == null && c.last_round_val == null)
+      return base + `<td colspan="5" style="color:var(--gray-400);font-size:11px;font-style:italic">sin cobertura en Caplight por ahora — el robot reintenta diario</td></tr>`;
+    return base + `<td class="num">${bn(c.last_round_val)}</td><td class="num">${bn(c.market_price_val)}</td>
       <td class="num" style="font-weight:700;color:${gmColor(prem || 0)}">${prem != null ? gmPct(prem, 1) : '—'}</td>
       <td class="num">${(prem != null && c.gvv?.valor) ? gmFmtUsd(c.gvv.valor * (1 + prem / 100)) : '—'}</td>
       <td style="font-size:10.5px;color:var(--gray-500)">${escapeHtml(c.ronda || '')}</td></tr>`;
