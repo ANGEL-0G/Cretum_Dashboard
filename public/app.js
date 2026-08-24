@@ -18550,6 +18550,24 @@ function gmTabResumen(s) {
     <div style="display:flex;gap:4px;align-items:center;margin-top:8px;font-size:9.5px;color:var(--gray-500)">-5%
       ${[-5, -3, -1.5, 0, 1.5, 3, 5].map(v => `<div style="width:26px;height:9px;background:${gmHeatColor(v)};border-radius:2px"></div>`).join('')} +5%</div></div>
   ${gmSignalsCard(s)}
+  ${(() => {
+    const pubLiq = s.positions.filter(p => p.ac !== 'Cash' && p.ac !== 'Private Equity' && p.ticker !== 'CASH' && p.src !== 'excel').reduce((a, p) => a + p.live_value, 0);
+    const priv = s.positions.filter(p => p.ac === 'Private Equity').reduce((a, p) => a + p.live_value, 0);
+    const filas = [5, 10, 20].map(pct => {
+      const req = aum * pct / 100;
+      let verd, col;
+      if (req <= cash) { verd = 'Cubierto con efectivo'; col = '#0d6e3c'; }
+      else if (req <= cash + pubLiq) { verd = `Vender ${gmFmtUsd(req - cash)} de públicos`; col = '#b26a00'; }
+      else { verd = `INSUFICIENTE sin tocar privados (faltan ${gmFmtUsd(req - cash - pubLiq)})`; col = '#c62828'; }
+      return `<tr><td style="font-weight:600">Redenciones ${pct}% del AUM</td>
+        <td class="num">${gmFmtUsd(req)}</td>
+        <td class="num" style="color:${col};font-weight:700">${verd}</td></tr>`;
+    }).join('');
+    return `<div style="${GM_CARD};margin-bottom:14px">
+      <div style="font-weight:700;margin-bottom:2px"><i class="fa-solid fa-faucet-drip"></i> Escenarios de liquidez</div>
+      <div style="font-size:10.5px;color:var(--gray-400);margin-bottom:6px">Si mañana llegan retiros, ¿con qué se pagan? Efectivo ${gmFmtUsd(cash)} · públicos vendibles ${gmFmtUsd(pubLiq)} · privados (ilíquidos) ${gmFmtUsd(priv)}.</div>
+      <table class="camp-table" style="width:100%;font-size:12px"><tr><th>Escenario</th><th>Monto a pagar</th><th>Veredicto</th></tr>${filas}</table></div>`;
+  })()}
   ${(s.alerts_today && s.alerts_today.length) ? `<details style="${GM_CARD};margin-bottom:14px;padding:12px 18px">
     <summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;font-weight:700;font-size:13px">
       <i class="fa-solid fa-paper-plane" style="color:var(--gray-400)"></i> Notificaciones enviadas hoy (${s.alerts_today.length})
@@ -18791,6 +18809,7 @@ function gmPrivadosCard() {
       <td class="num" style="color:${gmColor(c.gvv?.plpct || 0)}">${c.gvv?.plpct != null ? gmPct(c.gvv.plpct, 1) : '—'}</td>
       <td class="num">${bn(c.last_round_val)}</td><td class="num">${bn(c.market_price_val)}</td>
       <td class="num" style="font-weight:700;color:${gmColor(prem || 0)}">${prem != null ? gmPct(prem, 1) : '—'}</td>
+      <td class="num">${(prem != null && c.gvv?.valor) ? gmFmtUsd(c.gvv.valor * (1 + prem / 100)) : '—'}</td>
       <td style="font-size:10.5px;color:var(--gray-500)">${escapeHtml(c.ronda || '')}</td></tr>`;
   }).join('');
   const corte = new Date(P.ts).toLocaleString('es-MX', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
@@ -18798,7 +18817,16 @@ function gmPrivadosCard() {
     <div style="font-weight:700;margin-bottom:2px"><i class="fa-solid fa-gem"></i> Privados — pulso del secundario (Caplight) <span style="font-weight:400;font-size:11px;color:var(--gray-400)">· corte ${escapeHtml(corte)}${(P.sin_datos || []).length ? ' · sin datos: ' + P.sin_datos.join(', ') : ''}</span></div>
     <div style="font-size:10.5px;color:var(--gray-400);margin-bottom:6px">${escapeHtml(P.nota || '')}</div>
     <div style="overflow-x:auto"><table class="camp-table" style="width:100%;font-size:12px">
-      <tr><th>Compañía</th><th>Peso GVV</th><th>P&L GVV</th><th>Últ. ronda</th><th>Secundario</th><th>Premium</th><th>Ronda</th></tr>${filas}</table></div></div>`;
+      <tr><th>Compañía</th><th>Peso GVV</th><th>P&L GVV</th><th>Últ. ronda</th><th>Secundario</th><th>Premium</th><th>Mark al secundario</th><th>Ronda</th></tr>${filas}</table></div>
+    ${(() => {
+      const conPrem = P.companias.filter(c => c.premium_pct != null && c.gvv?.valor);
+      if (!conPrem.length) return '';
+      const delta = conPrem.reduce((a, c) => a + c.gvv.valor * c.premium_pct / 100, 0);
+      return `<div style="margin-top:8px;padding:9px 13px;border-radius:8px;background:${delta >= 0 ? '#e9f5ee' : '#fdf0ef'};font-size:12.5px">
+        <strong>Si el secundario tiene razón</strong> (marcar estas ${conPrem.length} al premium/descuento de Caplight): impacto de
+        <strong style="color:${gmColor(delta)}">${gmFmtUsd(delta)}</strong> al NAV
+        <span style="color:var(--gray-500);font-size:10.5px">— aproximación: aplica el premium a nivel compañía sobre el mark actual del fondo; no es un mark oficial.</span></div>`;
+    })()}</div>`;
 }
 
 function gmTabIntel(s) {
@@ -18919,6 +18947,18 @@ function gmTabRiesgo(s) {
       <table class="camp-table" style="width:100%;font-size:12px"><tr><th>Escenario</th><th>Fondo est.</th><th>Impacto USD</th></tr>${escHtml2}</table></div>
     <div style="${GM_CARD}"><div style="font-weight:700;margin-bottom:6px"><i class="fa-solid fa-diagram-project"></i> Riesgo escondido — clusters de correlación</div>${clustersHtml}</div>
   </div>
+  ${R.stress_empirico ? `<div style="${GM_CARD};margin-bottom:14px">
+    <div style="font-weight:700;margin-bottom:2px"><i class="fa-solid fa-cloud-bolt"></i> Stress empírico — "el peor día de cada una, todas a la vez"</div>
+    <div style="font-size:10.5px;color:var(--gray-400);margin-bottom:8px">Cada pública repite su PEOR día del último año (dato histórico real, no supuesto) simultáneamente — cota extrema de un día de pánico. ${R.stress_empirico.n} posiciones con historia.</div>
+    <div style="display:flex;gap:22px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px">
+      <div><span style="font-size:26px;font-weight:800;color:#c62828">${gmFmtUsd(R.stress_empirico.total_usd)}</span>
+        <span style="font-size:13px;color:#c62828;font-weight:600"> (${gmPct(R.stress_empirico.total_pct)})</span></div>
+      <span style="font-size:11px;color:var(--gray-500)">peores contribuyentes:</span></div>
+    <table class="camp-table" style="width:100%;font-size:12px"><tr><th>Ticker</th><th>Su peor día (1a)</th><th>Cuándo fue</th><th>Impacto al fondo</th></tr>
+      ${R.stress_empirico.top.map(z => `<tr><td style="font-weight:600">${escapeHtml(z.t)}</td>
+        <td class="num" style="color:#c62828">${gmPct(z.pct, 1)}</td>
+        <td style="color:var(--gray-500);font-size:11px">${escapeHtml(z.fecha || '')}</td>
+        <td class="num" style="color:#c62828;font-weight:600">${gmFmtUsd(z.usd)}</td></tr>`).join('')}</table></div>` : ''}
   <div style="${GM_CARD};margin-bottom:14px"><div style="font-weight:700;margin-bottom:2px"><i class="fa-solid fa-table-cells"></i> Matriz de correlación — top 15 por peso <span style="font-weight:400;font-size:11px;color:var(--gray-400)">· 6 meses de retornos diarios · azul = juntas, rojo = opuestas</span></div>${matriz}</div>
   ${(R.cerradas_recientes || []).length ? `<div style="${GM_CARD};margin-bottom:14px">
     <div style="font-weight:700;margin-bottom:6px"><i class="fa-solid fa-box-archive"></i> Post-mortem — posiciones cerradas recientes</div>
