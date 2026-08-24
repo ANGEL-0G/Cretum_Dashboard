@@ -3826,6 +3826,8 @@ function renderHomeModules() {
 let homeNewsCache = {};   // caché por org: { mvp:{...}, cretum:{...} }
 function hnUrl() { return currentOrg === 'cretum' ? '/data/company-news-cretum.json' : '/data/company-news.json'; }
 function hnRoute() { return currentOrg === 'cretum' ? '/noticias-cretum' : '/blog'; }
+// Botón "Noticias" del header: abre la página del lado activo (Cretum vs MVP).
+function openNewsPage() { window.open(hnRoute(), '_blank', 'noopener'); }
 function hnTitle() { return currentOrg === 'cretum' ? t('En seguimiento') : t('Novedades del portafolio'); }
 function homeNewsCollapsed() { try { return localStorage.getItem('hn-collapsed') === '1'; } catch (e) { return false; } }
 function toggleHomeNews() {

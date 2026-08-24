@@ -307,8 +307,8 @@ const html = `<!DOCTYPE html>
 <title>Noticias MVP</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='1' y='1' width='30' height='30' rx='7' fill='%231A3A6B'/><g fill='%23fff'><rect x='7.4' y='17' width='4.2' height='8' rx='1.4'/><rect x='13.9' y='11.5' width='4.2' height='13.5' rx='1.4'/><rect x='20.4' y='7.5' width='4.2' height='17.5' rx='1.4'/></g></svg>">
-<script>try{var r=document.documentElement,t=localStorage.getItem('blog-theme');if(t==='light'||t==='dark')r.setAttribute('data-theme',t);r.setAttribute('data-eff',r.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'));var org=location.pathname.indexOf('noticias-cretum')>=0?'cretum':'mvp';r.setAttribute('data-news-org',org);document.title=org==='cretum'?'Noticias Cretum':'Noticias MVP';}catch(e){}</script>
+<link id="fav" rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='1' y='1' width='30' height='30' rx='7' fill='%231A3A6B'/><g fill='%23fff'><rect x='7.4' y='17' width='4.2' height='8' rx='1.4'/><rect x='13.9' y='11.5' width='4.2' height='13.5' rx='1.4'/><rect x='20.4' y='7.5' width='4.2' height='17.5' rx='1.4'/></g></svg>">
+<script>try{var r=document.documentElement,t=localStorage.getItem('blog-theme');if(t==='light'||t==='dark')r.setAttribute('data-theme',t);r.setAttribute('data-eff',r.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'));var org=location.pathname.indexOf('noticias-cretum')>=0?'cretum':'mvp';r.setAttribute('data-news-org',org);document.title=org==='cretum'?'Noticias Cretum':'Noticias MVP';if(org==='mvp'){var f=document.getElementById('fav');if(f)f.setAttribute('href',f.getAttribute('href').replace('%231A3A6B','%23ED7824'));}}catch(e){}</script>
 <style>
 ${STYLE()}
 </style>
@@ -318,7 +318,7 @@ ${STYLE()}
 
 <nav class="tabbar" id="tabbar">
   <div class="wrap tabbar-in">
-    <span class="brand"><span class="brand-mark"></span> Cretum</span>
+    <span class="brand"><span class="brand-mark"></span> <span id="brandName">Cretum</span></span>
     <div class="tabs" role="tablist" aria-label="Secciones">
       <button class="tab on" data-pane="noticias" role="tab" aria-selected="true">Noticias</button>
       <button class="tab" data-pane="avances" role="tab" aria-selected="false">Avances del desk</button>
@@ -553,6 +553,7 @@ const SUMMARY = ${JSON.stringify(summaryText)};
   // Lado: MVP (portafolio) o Cretum (otras empresas). Lo fija el <head> según la ruta.
   var NEWS_ORG = document.documentElement.getAttribute('data-news-org') === 'cretum' ? 'cretum' : 'mvp';
   var NEWS_URL = NEWS_ORG === 'cretum' ? '/data/company-news-cretum.json' : '/data/company-news.json';
+  (function brand(){ var bn = document.getElementById('brandName'); if (bn) bn.textContent = NEWS_ORG === 'cretum' ? 'Cretum' : 'MVP'; })();
 
   // ── Idioma ES/EN ──
   (function wireNewsLang(){
@@ -988,14 +989,14 @@ function STYLE() {
   /* Glow de novedades por defecto (Cretum): azul vibrante que combina con navy.
      MVP lo sobrescribe a naranja abajo. */
   #pane-noticias{--mvp-glow:#2E5BA3}
-  :root[data-news-org="mvp"] #pane-noticias,:root[data-news-org="mvp"] #newsLang,:root[data-news-org="mvp"] .tab[data-pane="noticias"]{--navy:#ED7824;--navy-2:#B4530E;--navy-pale:#FCEAD9;--mvp-glow:#F2660F}
+  :root[data-news-org="mvp"] #pane-noticias,:root[data-news-org="mvp"] #newsLang,:root[data-news-org="mvp"] .tab[data-pane="noticias"],:root[data-news-org="mvp"] .brand{--navy:#ED7824;--navy-2:#B4530E;--navy-pale:#FCEAD9;--mvp-glow:#F2660F}
   /* Oscuro MVP: el pane toma la paleta oscura de MVP (cálida, marrón-negro) +
      acento naranja; toggle y pestaña solo el acento (viven en la barra chrome). */
   @media (prefers-color-scheme:dark){
-    :root[data-news-org="mvp"]:not([data-theme="light"]) #newsLang,:root[data-news-org="mvp"]:not([data-theme="light"]) .tab[data-pane="noticias"]{--navy:#F59A4E;--navy-2:#F7A863;--navy-pale:#3A2410;--mvp-glow:#FF9A45}
+    :root[data-news-org="mvp"]:not([data-theme="light"]) #newsLang,:root[data-news-org="mvp"]:not([data-theme="light"]) .tab[data-pane="noticias"],:root[data-news-org="mvp"]:not([data-theme="light"]) .brand{--navy:#F59A4E;--navy-2:#F7A863;--navy-pale:#3A2410;--mvp-glow:#FF9A45}
     :root[data-news-org="mvp"]:not([data-theme="light"]) #pane-noticias{--navy:#F59A4E;--navy-2:#F7A863;--navy-pale:#3A2410;--mvp-glow:#FF9A45;--bg:#0E0A06;--surface:#1B140D;--surface-2:#241A10;--line:#3A2E1E;--line-soft:#251C12;--ink:#F5ECE0;--ink-soft:#C9B9A4;--ink-mute:#93826C;background:var(--bg)}
   }
-  :root[data-news-org="mvp"][data-theme="dark"] #newsLang,:root[data-news-org="mvp"][data-theme="dark"] .tab[data-pane="noticias"]{--navy:#F59A4E;--navy-2:#F7A863;--navy-pale:#3A2410;--mvp-glow:#FF9A45}
+  :root[data-news-org="mvp"][data-theme="dark"] #newsLang,:root[data-news-org="mvp"][data-theme="dark"] .tab[data-pane="noticias"],:root[data-news-org="mvp"][data-theme="dark"] .brand{--navy:#F59A4E;--navy-2:#F7A863;--navy-pale:#3A2410;--mvp-glow:#FF9A45}
   :root[data-news-org="mvp"][data-theme="dark"] #pane-noticias{--navy:#F59A4E;--navy-2:#F7A863;--navy-pale:#3A2410;--mvp-glow:#FF9A45;--bg:#0E0A06;--surface:#1B140D;--surface-2:#241A10;--line:#3A2E1E;--line-soft:#251C12;--ink:#F5ECE0;--ink-soft:#C9B9A4;--ink-mute:#93826C;background:var(--bg)}
   /* En Cretum no existe "Avances del desk" (solo MVP): se oculta su pestaña. */
   :root[data-news-org="cretum"] .tab[data-pane="avances"]{display:none}
