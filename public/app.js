@@ -18575,6 +18575,9 @@ function gmTabResumen(s) {
 }
 
 let gmGroupBy = 'sector', gmConsolidar = true, gmFiltroSector = '';
+// El sector "Technology" del Excel contiene las compañías privadas/pre-IPO del
+// pilar Growth: se muestra como "Private Companies" (solo etiqueta, sin tocar datos).
+function gmSectorLbl(x) { return (x || '—') === 'Technology' ? 'Private Companies' : (x || '—'); }
 function gmTabPosiciones(s) {
   gmEnsureRiesgo();
   const aum = s.aum_live || 1;
@@ -18604,7 +18607,7 @@ function gmTabPosiciones(s) {
   // ── tira de sectores (peso + P&L día, click = filtro) ──
   const secAgg = {};
   for (const p of base) {
-    const k = p.sector || '—';
+    const k = gmSectorLbl(p.sector);
     secAgg[k] = secAgg[k] || { v: 0, pl: 0, n: 0 };
     secAgg[k].v += p.live_value; secAgg[k].pl += p.day_pl; secAgg[k].n++;
   }
@@ -18622,7 +18625,7 @@ function gmTabPosiciones(s) {
   const q = (document.getElementById('gmSearch')?.value || '').toLowerCase();
   if (q) rows = rows.filter(p => (p.ticker + ' ' + p.company).toLowerCase().includes(q));
   if (gmFiltroStrat) rows = rows.filter(p => p.strat === gmFiltroStrat);
-  if (gmFiltroSector) rows = rows.filter(p => (p.sector || '—') === gmFiltroSector);
+  if (gmFiltroSector) rows = rows.filter(p => gmSectorLbl(p.sector) === gmFiltroSector);
   const keyFn = { absPl: p => Math.abs(p.day_pl), day: p => p.day_pl, chg: p => p.day_chg_pct ?? -1e9, w: p => p.live_value, tot: p => p.plpct ?? -1e9, cagr: p => rmap[p.ticker]?.cagr ?? -1e9 }[gmSort.key] || (p => Math.abs(p.day_pl));
   rows.sort((a, b) => (keyFn(b) - keyFn(a)) * -gmSort.dir);
   const th = (lbl, key) => `<th style="cursor:pointer;white-space:nowrap" onclick="gmSort={key:'${key}',dir:gmSort.key==='${key}'?-gmSort.dir:-1};gmRender()">${lbl}${gmSort.key === key ? (gmSort.dir < 0 ? ' ↓' : ' ↑') : ''}</th>`;
@@ -18673,7 +18676,7 @@ function gmTabPosiciones(s) {
   };
 
   // ── agrupación con subtotales ──
-  const GROUPS = { sector: ['Sector', p => p.sector || '—'], strat: ['Estrategia', p => p.strat || '—'],
+  const GROUPS = { sector: ['Sector', p => gmSectorLbl(p.sector)], strat: ['Estrategia', p => p.strat || '—'],
                    region: ['Región', p => p.region || '—'], ac: ['Clase', p => p.ac || '—'], none: ['Sin agrupar', () => ''] };
   let cuerpo = '';
   if (gmGroupBy !== 'none') {
