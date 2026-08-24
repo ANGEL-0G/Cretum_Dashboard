@@ -18547,10 +18547,20 @@ function gmTabResumen(s) {
     <div style="display:flex;gap:4px;align-items:center;margin-top:8px;font-size:9.5px;color:var(--gray-500)">-5%
       ${[-5, -3, -1.5, 0, 1.5, 3, 5].map(v => `<div style="width:26px;height:9px;background:${gmHeatColor(v)};border-radius:2px"></div>`).join('')} +5%</div></div>
   ${gmSignalsCard(s)}
-  ${(s.alerts_today && s.alerts_today.length) ? `<div style="${GM_CARD};margin-bottom:14px">
-    <div style="font-weight:700;margin-bottom:8px"><i class="fa-solid fa-bell"></i> Alertas enviadas hoy (${s.alerts_today.length}) <span style="font-weight:400;font-size:11px;color:var(--gray-400)">· Telegram, canal gvv</span></div>
-    ${s.alerts_today.map(a => `<div style="display:flex;gap:9px;align-items:baseline;padding:5px 10px;border-radius:8px;background:var(--gray-50);margin:3px 0;font-size:12.5px"><span style="color:var(--gray-400);font-size:10.5px;font-variant-numeric:tabular-nums">${escapeHtml(a.ts)}</span><span>${escapeHtml(a.text)}</span></div>`).join('')}
-  </div>` : ''}
+  ${(s.alerts_today && s.alerts_today.length) ? `<details style="${GM_CARD};margin-bottom:14px;padding:12px 18px">
+    <summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;font-weight:700;font-size:13px">
+      <i class="fa-solid fa-paper-plane" style="color:var(--gray-400)"></i> Notificaciones enviadas hoy (${s.alerts_today.length})
+      <span style="font-weight:400;font-size:10.5px;color:var(--gray-400)">· registro de envíos a Telegram (canal gvv) — el estado actual vive en el Centro de señales · click para abrir</span>
+      <span style="margin-left:auto;font-size:10.5px;color:var(--gray-400)">${s.alerts_today.filter(a => a.activa).length} siguen activas</span></summary>
+    <div style="margin-top:8px">
+    ${s.alerts_today.map(a => {
+      const res = a.activa === false;
+      return `<div style="display:flex;gap:9px;align-items:baseline;padding:5px 10px;border-radius:8px;background:var(--gray-50);margin:3px 0;font-size:12px;${res ? 'opacity:.55' : ''}">
+        <span style="color:var(--gray-400);font-size:10.5px;font-variant-numeric:tabular-nums">${escapeHtml(a.ts)}</span>
+        <span style="flex:1;${res ? 'text-decoration:line-through solid rgba(90,107,130,.35)' : ''}">${escapeHtml(a.text)}</span>
+        <span style="flex:none;font-size:9px;font-weight:700;letter-spacing:.4px;padding:2px 8px;border-radius:99px;${res ? 'background:var(--gray-100);color:var(--gray-400)' : 'background:#fdf3e7;color:#b26a00'}">${res ? 'RESUELTA' : (a.activa ? 'ACTIVA' : 'ENVIADA')}</span></div>`;
+    }).join('')}</div>
+  </details>` : ''}
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-bottom:14px">
     <div style="${GM_CARD}"><div style="font-weight:700;margin-bottom:6px;color:#c62828"><i class="fa-solid fa-arrow-trend-down"></i> Bajan hoy</div>
       <table class="camp-table" style="width:100%">${s.top_down.map(moverRow).join('')}</table></div>
