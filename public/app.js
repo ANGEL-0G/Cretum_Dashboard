@@ -18818,28 +18818,88 @@ function gm13fCard() {
   const D = gm13f;
   if (!D || D.error || !(D.cruce || []).length) return '';
   const fm = v => (v >= 0 ? '+' : '-') + '$' + (Math.abs(v) >= 1e9 ? (Math.abs(v) / 1e9).toFixed(1) + 'B' : Math.round(Math.abs(v) / 1e6).toLocaleString('en-US') + 'M');
+  const fmAbs = v => '$' + (Math.abs(v) >= 1e9 ? (Math.abs(v) / 1e9).toFixed(1) + 'B' : Math.round(Math.abs(v) / 1e6).toLocaleString('en-US') + 'M');
   const q = (D.quarters || [])[0] || '';
-  const pendientes = Object.entries(D.estatus || {}).filter(([, v]) => v !== q).map(([k]) => k);
+  const pendientes = Object.entries(D.estatus || {}).filter(([, v]) => v !== q).map(([k]) => k.split(' ')[0]);
+  const H = D.hero || {};
+  const secStyle = 'border:1px solid var(--gray-200);border-radius:10px;margin:8px 0;padding:2px 14px;background:#fff';
+  const sumStyle = 'cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;font-weight:700;font-size:13px;padding:10px 0';
   const chipF = f => `<span style="display:inline-block;font-size:10px;padding:2px 8px;border-radius:99px;margin:1px 2px;background:${f.diff >= 0 ? '#e9f5ee' : '#fdf0ef'};color:${f.diff >= 0 ? '#0d6e3c' : '#c62828'}">${escapeHtml(f.fund.split(' ')[0])} ${fm(f.diff)}${f.nueva ? ' · NUEVA' : (f.cerrada ? ' · CERRADA' : '')}</span>`;
-  const filas = D.cruce.slice(0, 14).map(c => `<tr>
+  const trendMini = (tr) => (tr || []).map((v, ix) => {
+    const h = Math.min(14, Math.max(3, Math.log10(Math.abs(v) + 1) * 1.6));
+    return `<span style="display:inline-block;width:7px;height:${h}px;margin-right:2px;border-radius:1.5px;background:${v > 0 ? '#0d6e3c' : (v < 0 ? '#c62828' : 'var(--gray-200)')};vertical-align:baseline" title="${fm(v)}"></span>`;
+  }).join('');
+
+  // ── 1) cartera × smart money (abierto) ──
+  const filas = D.cruce.slice(0, 16).map(c => `<tr>
     <td style="font-weight:600;white-space:nowrap">${escapeHtml(c.ticker)} <span style="font-size:10px;color:var(--gray-400)">${c.peso}%</span></td>
+    <td style="white-space:nowrap">${trendMini(c.trend)}${c.racha >= 2 ? `<span style="font-size:9px;font-weight:700;color:${c.neto >= 0 ? '#0d6e3c' : '#c62828'};margin-left:4px">${c.racha}T ${c.neto >= 0 ? 'comprando' : 'vendiendo'}</span>` : ''}</td>
     <td>${c.flujos.slice(0, 4).map(chipF).join('')}</td>
-    <td class="num" style="font-weight:700;color:${gmColor(c.neto)}">${fm(c.neto)}</td></tr>`).join('');
-  const cons = (D.consenso || []).slice(0, 10).map(c => `
+    <td class="num" style="font-weight:700;color:${gmColor(c.neto)}">${fm(c.neto)}</td>
+    <td class="num" style="color:${gmColor(c.plpct || 0)};font-size:11px">${c.plpct != null ? gmPct(c.plpct, 1) : '—'}</td></tr>`).join('');
+  const sec1 = `<details open style="${secStyle}"><summary style="${sumStyle}">
+      <i class="fa-solid fa-briefcase" style="color:#1c4e80"></i> Nuestra cartera × smart money
+      <span style="font-weight:400;font-size:10.5px;color:var(--gray-400)">· tendencia = flujo institucional de los últimos 4 trimestres · P&L = nuestra posición</span></summary>
+    <div style="overflow-x:auto;padding-bottom:10px"><table class="camp-table" style="width:100%;font-size:12px">
+      <tr><th>Posición</th><th>Tendencia 4T</th><th>Movimientos del trimestre</th><th>Neto Q</th><th>Nuestro P&L</th></tr>${filas}</table></div></details>`;
+
+  // ── 2) por manager (desplegable con sub-desplegables) ──
+  const fondosHtml = (D.fondos || []).map(f => {
+    const serie = (f.serie || []).map(s2 => `<span style="font-size:9.5px;color:var(--gray-400);margin-right:8px">${escapeHtml(String(s2.q).slice(2, 7))}: ${fmAbs(s2.total)}</span>`).join('');
+    const tb = (f.top_buys || []).map(x => `<div style="font-size:11.5px;margin:2px 0"><span style="color:#0d6e3c;font-weight:700">${fm(x.diff)}</span> ${escapeHtml(x.name)}${x.nueva ? ' <span style="font-size:8.5px;font-weight:800;color:#1c4e80">NUEVA</span>' : ''}</div>`).join('');
+    const ts2 = (f.top_sells || []).map(x => `<div style="font-size:11.5px;margin:2px 0"><span style="color:#c62828;font-weight:700">${fm(x.diff)}</span> ${escapeHtml(x.name)}${x.cerrada ? ' <span style="font-size:8.5px;font-weight:800;color:#c62828">CERRADA</span>' : ''}</div>`).join('');
+    return `<details style="border-top:1px solid var(--gray-100);padding:4px 0"><summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;font-size:12.5px;padding:7px 0">
+        <strong style="min-width:150px">${escapeHtml(f.name)}</strong>
+        <span style="color:var(--gray-500)">${fmAbs(f.total)} en 13F</span>
+        <span style="font-weight:700;color:${gmColor(f.chg_pct || 0)}">${f.chg_pct != null ? gmPct(f.chg_pct, 1) : '—'} QoQ</span>
+        <span style="font-size:10.5px;color:var(--gray-400)">${(f.n_pos || 0).toLocaleString('en-US')} posiciones · Q ${escapeHtml(String(f.quarter))}</span>
+        <i class="fa-solid fa-chevron-down" style="margin-left:auto;font-size:9px;color:var(--gray-300)"></i></summary>
+      <div style="padding:4px 0 10px 12px">
+        <div style="margin-bottom:6px">${serie}</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px">
+          <div><div style="font-size:10.5px;font-weight:700;color:#0d6e3c;margin-bottom:3px">TOP COMPRAS DEL TRIMESTRE</div>${tb || '<span style="font-size:11px;color:var(--gray-400)">—</span>'}</div>
+          <div><div style="font-size:10.5px;font-weight:700;color:#c62828;margin-bottom:3px">TOP VENTAS DEL TRIMESTRE</div>${ts2 || '<span style="font-size:11px;color:var(--gray-400)">—</span>'}</div>
+        </div></div></details>`;
+  }).join('');
+  const sec2 = `<details style="${secStyle}"><summary style="${sumStyle}">
+      <i class="fa-solid fa-user-tie" style="color:#1c4e80"></i> Por manager
+      <span style="font-weight:400;font-size:10.5px;color:var(--gray-400)">· portafolio 13F, evolución 5 trimestres y sus top movimientos — click en cada uno</span></summary>
+    <div style="padding-bottom:8px">${fondosHtml}</div></details>`;
+
+  // ── 3) consenso en cartera / 4) ideas fuera de cartera ──
+  const consRow = c => `
     <div style="display:flex;gap:8px;align-items:baseline;padding:4px 10px;border-radius:8px;margin:3px 0;font-size:12px;background:${c.en_cartera ? '#eef3fa' : 'var(--gray-50)'}">
-      ${c.en_cartera ? '<span style="font-size:9px;font-weight:800;color:#1c4e80">EN CARTERA</span>' : ''}
       <span style="font-weight:600">${escapeHtml(c.issuer)}</span>
       <span style="font-weight:700;color:${c.dir === 'compra' ? '#0d6e3c' : '#c62828'}">${c.dir.toUpperCase()} ×${c.n}</span>
-      <span style="margin-left:auto;font-weight:700;color:${gmColor(c.neto)}">${fm(c.neto)}</span></div>`).join('');
+      <span style="font-size:10px;color:var(--gray-400)">${c.fondos.map(f2 => escapeHtml(f2.fund.split(' ')[0])).join(' · ')}</span>
+      <span style="margin-left:auto;font-weight:700;color:${gmColor(c.neto)}">${fm(c.neto)}</span></div>`;
+  const enCart = (D.consenso || []).filter(c => c.en_cartera);
+  const fueraCart = (D.consenso || []).filter(c => !c.en_cartera);
+  const sec3 = enCart.length ? `<details open style="${secStyle}"><summary style="${sumStyle}">
+      <i class="fa-solid fa-handshake" style="color:#0d6e3c"></i> Consenso institucional EN nuestra cartera
+      <span style="font-weight:400;font-size:10.5px;color:var(--gray-400)">· 2+ managers en la misma dirección</span></summary>
+    <div style="padding-bottom:10px">${enCart.slice(0, 8).map(consRow).join('')}</div></details>` : '';
+  const sec4 = fueraCart.length ? `<details style="${secStyle}"><summary style="${sumStyle}">
+      <i class="fa-solid fa-lightbulb" style="color:#b26a00"></i> Radar — consenso FUERA de nuestra cartera
+      <span style="font-weight:400;font-size:10.5px;color:var(--gray-400)">· lo que el smart money mueve y nosotros no tenemos</span></summary>
+    <div style="padding-bottom:10px">${fueraCart.slice(0, 10).map(consRow).join('')}</div></details>` : '';
+
   return `<div style="${GM_CARD};margin-bottom:14px">
     <div style="font-weight:700;margin-bottom:2px"><i class="fa-solid fa-landmark"></i> Smart money — 13F institucional
-      <span style="font-weight:400;font-size:11px;color:var(--gray-400)">· Q al ${escapeHtml(q)} vs trimestre previo · Citadel, Berkshire, Pershing, Bridgewater, Third Point, AQR${pendientes.length ? ' · pendiente Q nuevo: ' + pendientes.join(', ') : ''}</span></div>
-    <div style="font-size:10.5px;color:var(--gray-400);margin-bottom:8px">${escapeHtml(D.nota || '')}</div>
-    <div style="font-weight:600;font-size:12px;margin:6px 0 4px">Qué hicieron con NUESTRAS emisoras</div>
-    <div style="overflow-x:auto"><table class="camp-table" style="width:100%;font-size:12px">
-      <tr><th>Posición (peso)</th><th>Movimientos del trimestre</th><th>Neto</th></tr>${filas}</table></div>
-    <div style="font-weight:600;font-size:12px;margin:12px 0 4px">Consenso institucional (2+ fondos misma dirección)</div>
-    ${cons}</div>`;
+      <span style="font-weight:400;font-size:11px;color:var(--gray-400)">· Q al ${escapeHtml(q)} vs previo · SEC EDGAR, rezago ~45 días, solo largos US${pendientes.length ? ' · con Q anterior: ' + pendientes.join(', ') : ''}</span></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:10px 0">
+      <div style="background:${(H.neto_cartera || 0) >= 0 ? '#e9f5ee' : '#fdf0ef'};border-radius:10px;padding:10px 14px">
+        <div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--gray-500)">Flujo neto hacia nuestra cartera</div>
+        <div style="font-size:22px;font-weight:800;color:${gmColor(H.neto_cartera || 0)}">${fm(H.neto_cartera || 0)}</div></div>
+      <div style="background:var(--gray-50);border-radius:10px;padding:10px 14px">
+        <div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--gray-500)">Emisoras nuestras compradas / vendidas</div>
+        <div style="font-size:22px;font-weight:800"><span style="color:#0d6e3c">${H.n_compradas ?? '—'}</span> / <span style="color:#c62828">${H.n_vendidas ?? '—'}</span></div></div>
+      <div style="background:var(--gray-50);border-radius:10px;padding:10px 14px">
+        <div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--gray-500)">Mayor flujo del trimestre</div>
+        <div style="font-size:22px;font-weight:800;color:${gmColor(H.mayor?.neto || 0)}">${H.mayor ? escapeHtml(H.mayor.ticker) + ' ' + fm(H.mayor.neto) : '—'}</div></div>
+    </div>
+    ${sec1}${sec2}${sec3}${sec4}
+    <div style="font-size:10px;color:var(--gray-400);margin-top:6px">${escapeHtml(D.nota || '')}</div></div>`;
 }
 
 let gmPrivados = null, gmPrivLoading = false;
