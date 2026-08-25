@@ -6182,10 +6182,26 @@ function mhOpenTab(id) {
   if (!w) toast(t('Permite las ventanas emergentes para abrirlo'));
   setTimeout(() => URL.revokeObjectURL(url), 60000);   // deja tiempo a que cargue
 }
-function mhDownload(id) {
+async function mhDownload(id) {
   const t = mhData.find(x => x.id === id);
   if (!t) return;
   const name = (t.title || 'correo').replace(/[^a-z0-9]+/gi, '_');
+  const file = new File([t.html || ''], name + '.html', { type: 'text/html' });
+  // Movil (iOS/Android): un .html descargado se ve como archivo generico sin
+  // vista previa (Safari no lo renderiza en su hoja de "Descargas", solo da
+  // "Abrir en Outlook"/"Mas..." — no hay boton para verlo ni mandarlo por
+  // WhatsApp directo). Si el navegador soporta compartir ARCHIVOS (iOS Safari
+  // 15+, Chrome Android), usar el share sheet nativo: ahi SI aparecen Whats-
+  // App/Mail/Guardar en Archivos, tal como dice el tooltip del boton.
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: t.title || 'HTML' });
+      return;
+    } catch (e) {
+      if (e && e.name === 'AbortError') return;   // el usuario cerro el share sheet
+      // sigue al fallback de descarga si el share fallo por otra razon
+    }
+  }
   downloadBlob(new Blob([t.html || ''], { type: 'text/html;charset=utf-8;' }), name + '.html');
 }
 // Menú ⋯ de la card (reusa el popover compartido #etPop y su posicionamiento).
