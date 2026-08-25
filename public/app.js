@@ -18806,6 +18806,42 @@ function gmTabOpciones(s) {
     </table></div></div>`;
 }
 
+let gm13f = null, gm13fLoading = false;
+function gm13fCard() {
+  if (!gm13f && !gm13fLoading) {
+    gm13fLoading = true;
+    authedFetch('/api/gvv-live?m13f=1').then(async r => { gm13f = r.ok ? await r.json() : { error: true }; })
+      .catch(() => { gm13f = { error: true }; })
+      .finally(() => { gm13fLoading = false; if (gmTab === 'intel') gmRender(); });
+    return `<div style="${GM_CARD};margin-bottom:14px;color:var(--gray-400)">Cargando 13F institucional…</div>`;
+  }
+  const D = gm13f;
+  if (!D || D.error || !(D.cruce || []).length) return '';
+  const fm = v => (v >= 0 ? '+' : '-') + '$' + (Math.abs(v) >= 1e9 ? (Math.abs(v) / 1e9).toFixed(1) + 'B' : Math.round(Math.abs(v) / 1e6).toLocaleString('en-US') + 'M');
+  const q = (D.quarters || [])[0] || '';
+  const pendientes = Object.entries(D.estatus || {}).filter(([, v]) => v !== q).map(([k]) => k);
+  const chipF = f => `<span style="display:inline-block;font-size:10px;padding:2px 8px;border-radius:99px;margin:1px 2px;background:${f.diff >= 0 ? '#e9f5ee' : '#fdf0ef'};color:${f.diff >= 0 ? '#0d6e3c' : '#c62828'}">${escapeHtml(f.fund.split(' ')[0])} ${fm(f.diff)}${f.nueva ? ' · NUEVA' : (f.cerrada ? ' · CERRADA' : '')}</span>`;
+  const filas = D.cruce.slice(0, 14).map(c => `<tr>
+    <td style="font-weight:600;white-space:nowrap">${escapeHtml(c.ticker)} <span style="font-size:10px;color:var(--gray-400)">${c.peso}%</span></td>
+    <td>${c.flujos.slice(0, 4).map(chipF).join('')}</td>
+    <td class="num" style="font-weight:700;color:${gmColor(c.neto)}">${fm(c.neto)}</td></tr>`).join('');
+  const cons = (D.consenso || []).slice(0, 10).map(c => `
+    <div style="display:flex;gap:8px;align-items:baseline;padding:4px 10px;border-radius:8px;margin:3px 0;font-size:12px;background:${c.en_cartera ? '#eef3fa' : 'var(--gray-50)'}">
+      ${c.en_cartera ? '<span style="font-size:9px;font-weight:800;color:#1c4e80">EN CARTERA</span>' : ''}
+      <span style="font-weight:600">${escapeHtml(c.issuer)}</span>
+      <span style="font-weight:700;color:${c.dir === 'compra' ? '#0d6e3c' : '#c62828'}">${c.dir.toUpperCase()} ×${c.n}</span>
+      <span style="margin-left:auto;font-weight:700;color:${gmColor(c.neto)}">${fm(c.neto)}</span></div>`).join('');
+  return `<div style="${GM_CARD};margin-bottom:14px">
+    <div style="font-weight:700;margin-bottom:2px"><i class="fa-solid fa-landmark"></i> Smart money — 13F institucional
+      <span style="font-weight:400;font-size:11px;color:var(--gray-400)">· Q al ${escapeHtml(q)} vs trimestre previo · Citadel, Berkshire, Pershing, Bridgewater, Third Point, AQR${pendientes.length ? ' · pendiente Q nuevo: ' + pendientes.join(', ') : ''}</span></div>
+    <div style="font-size:10.5px;color:var(--gray-400);margin-bottom:8px">${escapeHtml(D.nota || '')}</div>
+    <div style="font-weight:600;font-size:12px;margin:6px 0 4px">Qué hicieron con NUESTRAS emisoras</div>
+    <div style="overflow-x:auto"><table class="camp-table" style="width:100%;font-size:12px">
+      <tr><th>Posición (peso)</th><th>Movimientos del trimestre</th><th>Neto</th></tr>${filas}</table></div>
+    <div style="font-weight:600;font-size:12px;margin:12px 0 4px">Consenso institucional (2+ fondos misma dirección)</div>
+    ${cons}</div>`;
+}
+
 let gmPrivados = null, gmPrivLoading = false;
 function gmPrivadosCard() {
   if (!gmPrivados && !gmPrivLoading) {
@@ -18892,7 +18928,8 @@ function gmTabIntel(s) {
   <div style="${GM_CARD}"><div style="font-weight:700;margin-bottom:8px"><i class="fa-solid fa-bullseye"></i> Analistas <span style="font-weight:400;font-size:11px;color:var(--gray-400)">· consenso best-effort + registro propio por banco</span></div>
     ${ptRows ? `<div style="overflow-x:auto"><table class="camp-table" style="width:100%;font-size:12px"><tr><th>Ticker</th><th>PT medio</th><th>Upside</th><th># analistas</th><th>Buy</th><th>Hold</th><th>Sell</th></tr>${ptRows}</table></div>` : '<div style="color:var(--gray-400);font-size:12px">Consenso en construcción.</div>'}
     ${bancoHtml ? `<div style="font-weight:600;font-size:12px;margin:10px 0 4px">Movimientos de bancos capturados</div>${bancoHtml}` : ''}
-  </div>`;
+  </div>
+  ${gm13fCard()}`;
 }
 
 
