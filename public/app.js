@@ -11488,7 +11488,7 @@ const FUND_TRACKERS = {
       { company: 'Cohesity Global, Inc.',                       invested: 4799372,  pct: 0.037, mtm: 4799372,  moic: 1.0000, corpVal: 6.389,  pps: 17,      entry: 17,      shares: 282316,   fdso: 375.8 },
       { company: 'Trusted, Inc.',                               invested: 3970451,  pct: 0.031, mtm: 3204906,  moic: 0.8072, corpVal: 0.162,  pps: 0.28,    entry: 1.31,    shares: 7617310,  fdso: 582.1 },
       { company: 'Forto Logistics GmbH & Co',                   invested: 3000000,  pct: 0.023, mtm: 2658222,  moic: 0.8861, corpVal: 1.785,  pps: 9198,    entry: 10380.62,shares: 289,      fdso: 0.2   },
-      { company: 'Revolut Ltd',                                 invested: 2061842,  pct: 0.016, mtm: 5466235,  moic: 2.6511, corpVal: 75,     pps: 1381.06, entry: 520.93,  shares: 3958,     fdso: 54.3  },
+      { company: 'Revolut Ltd',                                 invested: 2061842,  pct: 0.016, mtm: 7983286,  moic: 3.8719, corpVal: 115,    pps: 2017.00, entry: 520.93,  shares: 3958,     fdso: 54.3  },
       { company: 'Quantstamp, Inc.',                            invested: 1999995,  pct: 0.016, mtm: 2010394,  moic: 1.0052, corpVal: 1.024,  pps: 123.52,  entry: 122.88,  shares: 16276,    fdso: 8.3   },
       { company: 'Groq, Inc.',                                  invested: 293834,   pct: 0.002, mtm: 1383861,  moic: 4.7097, corpVal: 15.087, pps: 73.0,    entry: 15.5,    shares: 18957,    fdso: 206.7 },
       { company: 'IONQ (Capella Space Corp.)',                  invested: 1366439,  pct: 0.011, mtm: 1209681,  moic: 0.8853, corpVal: 9.558,  pps: 27,      entry: 30.5,    shares: 44803,    fdso: 354   },
@@ -11502,7 +11502,7 @@ const FUND_TRACKERS = {
       { company: 'Payward Inc., DBA Kraken',                    invested: 248200,   pct: 0.002, mtm: 337347,   moic: 1.3592, corpVal: 20,     pps: 61.47,   entry: 45.23,   shares: 5488,     fdso: 325.4 },
       { company: 'Turo, Inc.',                                  invested: 99750,    pct: 0.001, mtm: 99750,    moic: 1.0000, corpVal: 2.906,  pps: 21,      entry: 21,      shares: 4750,     fdso: 140.2 }
     ],
-    activeTotal:      { invested: 94878914,  mtm: 156912570, moic: 1.6538 },
+    activeTotal:      { invested: 94878914,  mtm: 159429621, moic: 1.6804 },
     distributed: [
       { company: 'Klarna Holding AB',           invested: 11297454, pct: 0.088, mtm: 9286151,  moic: 0.8220, corpVal: 6.292,  pps: 15.05, entry: 18.31, shares: 617020, fdso: 418.1 },
       { company: 'Bolt Financial, Inc.',        invested: 7505795,  pct: 0.058, mtm: 401219,   moic: 0.0535, corpVal: 0.323,  pps: 1.47,  entry: 27.5,  shares: 272938, fdso: 219.5 },
@@ -11512,8 +11512,8 @@ const FUND_TRACKERS = {
       { company: 'Udemy',                       invested: 960094,   pct: 0.007, mtm: 308052,   moic: 0.3209, corpVal: 1.261,  pps: 9.22,  entry: 28.74, shares: 33406,  fdso: 136.8 },
       { company: 'Figure AI Inc.',              invested: 426634,   pct: 0.003, mtm: 5446374,  moic: 12.7659,corpVal: 34.812, pps: 174,   entry: 13.63, shares: 31301,  fdso: 200.1 }
     ],
-    overallTotal:     { invested: 161119217, mtm: 315109202, moic: 1.9558 },
-    overallTotal2:    { label: 'Total — Overall (Commitment)', invested: 154000000, mtm: 196438047, moic: 1.2756 },
+    overallTotal:     { invested: 161119217, mtm: 317626253, moic: 1.9714 },
+    overallTotal2:    { label: 'Total — Overall (Commitment)', invested: 154000000, mtm: 198955098, moic: 1.2919 },
     logos: {
       'RapidSOS, Inc.':'rapidsos.com',
       'BlueVoyant, Inc.':'bluevoyant.com',
