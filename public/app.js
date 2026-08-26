@@ -18775,6 +18775,25 @@ function gmTabOpciones(s) {
     <div style="${GM_CARD}"><div style="font-size:10.5px;color:var(--gray-500);text-transform:uppercase">Vencen hoy</div><div style="font-size:26px;font-weight:800;color:#b26a00">${vivos.filter(o => o.dte === 0).length}</div></div>
     <div style="${GM_CARD}"><div style="font-size:10.5px;color:var(--gray-500);text-transform:uppercase">P&L abierto</div><div style="font-size:26px;font-weight:800;color:${gmColor(pl)}">${gmFmtUsd(pl)}</div></div>
   </div>
+  ${(() => {
+    // Escenario→veredicto: qué se consolida esta semana si ningún strike se cruza
+    const hoy = new Date(); const aVie = (5 - hoy.getDay() + 7) % 7;
+    const sem = vivos.filter(o => o.dte <= aVie);
+    const vOtm = sem.filter(o => o.cv === 'Venta' && o.estado === 'OTM');
+    const cOtm = sem.filter(o => o.cv === 'Compra' && o.estado === 'OTM');
+    if (!vOtm.length && !cOtm.length) return '';
+    const tv = vOtm.reduce((a, o) => a + (o.pl || 0), 0);
+    const tc = cOtm.reduce((a, o) => a + (o.pl || 0), 0);
+    const cuerda = sem.filter(o => o.dist_strike_pct != null && Math.abs(o.dist_strike_pct) < 3);
+    return `<div style="${GM_CARD};margin-bottom:14px;border-left:4px solid ${tv > 0 ? '#0d6e3c' : 'var(--gray-300)'}">
+      <div style="font-weight:700;margin-bottom:4px"><i class="fa-solid fa-hourglass-half"></i> Primas de la semana</div>
+      <div style="font-size:13px;line-height:1.6">Si ningún strike se cruza al viernes: se consolidan
+        <strong style="color:${gmColor(tv)}">${gmFmtUsd(tv)}</strong> en ${vOtm.length} venta(s) OTM${cOtm.length
+          ? ` · ${cOtm.length} compra(s) OTM expirarían sin valor (<span style="color:${gmColor(tc)}">${gmFmtUsd(tc)}</span>, ya en el P&L)` : ''}.
+        ${cuerda.length ? `<div style="font-size:11.5px;color:#b26a00;margin-top:4px">En la cuerda floja: ${cuerda.map(o =>
+          `${escapeHtml(o.ticker)} ${escapeHtml(o.cv || '')} ${escapeHtml(o.pc || '')} a ${gmPct(o.dist_strike_pct, 1)} del strike`).join(' · ')}</div>` : ''}
+      </div></div>`;
+  })()}
   <div style="${GM_CARD};margin-bottom:14px"><div style="font-weight:700;margin-bottom:2px"><i class="fa-solid fa-stairs"></i> Escalera de vencimientos <span style="font-weight:400;font-size:11px;color:var(--gray-400)">· burbuja = # posiciones (rojo = incluye ITM) · click en una burbuja para su detalle</span></div>
     ${gmDteLadder(ops, 900, 90)}
     ${gmDteSel != null ? (() => {
