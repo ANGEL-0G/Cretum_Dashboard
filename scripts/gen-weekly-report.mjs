@@ -344,7 +344,7 @@ ${STYLE()}
           <span class="tag">${ICON('globe', 'ti')} <b id="newsMetaCount">cargando…</b></span>
           <span class="tag">${ICON('clock', 'ti')} <span id="newsMetaWhenLbl">actualizado</span> <b id="newsMetaWhen">—</b></span>
         </div>
-        <p class="news-disclaimer reveal" id="newsDisclaimer" style="--d:340ms">${ICON('clock', 'ti')} <span>Se actualiza solo <b>3 veces al día</b> (aprox. 7:00, 13:00 y 17:00 h, CDMX).</span></p>
+        <p class="news-disclaimer reveal" id="newsDisclaimer" style="--d:340ms">${ICON('clock', 'ti')} <span>Se actualiza automáticamente <b>cada hora</b>.</span></p>
       </div>
     </header>
     <div class="wrap sec">
@@ -592,8 +592,8 @@ const SUMMARY = ${JSON.stringify(summaryText)};
     }
     var disc = document.getElementById('newsDisclaimer');
     if (disc) { var span = disc.querySelector('span'); if (span) span.innerHTML = NT(
-      'Se actualiza solo <b>3 veces al día</b> (aprox. 7:00, 13:00 y 17:00 h, CDMX).',
-      'Refreshes automatically <b>3 times a day</b> (around 7:00, 13:00 and 17:00, CDMX time).'
+      'Se actualiza automáticamente <b>cada hora</b>.',
+      'Refreshes automatically <b>every hour</b>.'
     ); }
   }
   function renderMeta(){
