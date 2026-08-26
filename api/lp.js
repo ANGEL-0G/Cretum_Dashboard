@@ -2,18 +2,17 @@
  * api/lp.js — Portal de LP's (información privada por inversionista)
  *
  * DOS mundos en un endpoint (mismo patrón que api/portal.js), pero SISTEMA APARTE:
- *  · PÚBLICO (sin Supabase Auth): el LP entra con un ENLACE MÁGICO
- *    (cretumdesk.com/lp?k=<token>). El token es su credencial; se cambia por un
+ *  · PÚBLICO (sin Supabase Auth): un solo enlace (cretumdesk.com/lp); el LP entra
+ *    con su USUARIO + CONTRASEÑA y ve solo su información. Al validar se emite un
  *    token de sesión propio (HMAC, PORTAL_JWT_SECRET, namespace k:'lp'). Se sirve
  *    con SERVICE ROLE (omite RLS); las tablas lp_* tienen RLS cerrada.
- *      action=access {k}            → { token, name, documents:[{id,title,name,mime}] }
- *      action=file   {token, id}    → { url, mime, name }   (URL firmada 1h)
+ *      action=access {username, password} → { token, name, documents:[...] }
+ *      action=file   {token, id}          → { url, mime, name }   (URL firmada 1h)
  *  · ADMIN (Supabase Auth, editor/admin): gestión desde el desk.
- *      action=admin_list                                   → { lps:[...] }
- *      action=save_lp   {id?, name, email, active}         → { id, token }
- *      action=regen_link {id}                              → { token }
+ *      action=admin_list                                              → { lps:[...] }
+ *      action=save_lp   {id?, name, email, username, password, active} → { id }
  *      action=delete_lp {id}
- *      action=lp_docs   {lp_user_id}                       → { documents:[...] }
+ *      action=lp_docs   {lp_user_id}                                  → { documents:[...] }
  *      action=save_doc  {lp_user_id, title, file_path, file_mime, file_name}
  *      action=delete_doc {id}
  */
@@ -60,8 +59,22 @@ function verifyTokenStr(token, secret) {
   } catch { return null; }
 }
 
-// Secreto del enlace mágico de un LP (token en la URL). URL-safe, difícil de adivinar.
+// Secreto del enlace de un LP (token en la URL). URL-safe, difícil de adivinar.
 function newAccessToken() { return crypto.randomBytes(24).toString('base64url'); }
+
+// Contraseña del LP: hash scrypt (`salt$hash`), igual que el portal de clientes.
+function hashPassword(pw) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.scryptSync(String(pw), salt, 64).toString('hex');
+  return `${salt}$${hash}`;
+}
+function verifyPassword(pw, stored) {
+  const [salt, hash] = String(stored || '').split('$');
+  if (!salt || !hash) return false;
+  const calc = crypto.scryptSync(String(pw), salt, 64).toString('hex');
+  const a = Buffer.from(calc, 'hex'), b = Buffer.from(hash, 'hex');
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
 
 // Gestión: editores y admins (las tablas tienen RLS cerrada; el gate es esto).
 async function canManage(req) {
@@ -86,16 +99,21 @@ export default async function handler(req, res) {
   try {
     /* ───────── PÚBLICO (enlace mágico) ───────── */
     if (action === 'access') {
-      const k = String(req.body.k || '').trim();
-      if (!k) return res.status(400).json({ error: 'Falta el enlace de acceso' });
-      // Rate limit: por IP (amplio) y por token (estricto), antes de tocar la BD.
+      const username = String(req.body.username || '').trim().toLowerCase();
+      const password = String(req.body.password || '');
+      if (!username || !password) return res.status(400).json({ error: 'Escribe tu usuario y contraseña.' });
+      // Rate limit ANTES del scrypt: por IP (amplio) y por usuario (estricto).
       const okIp = await rateLimit(`lp:rl:ip:${clientIp(req)}`, 60, 600);
-      const okTok = await rateLimit(`lp:rl:k:${k.slice(0, 16)}`, 20, 600);
-      if (!okIp || !okTok) return res.status(429).json({ error: 'Demasiados intentos. Espera unos minutos.' });
+      const okUser = await rateLimit(`lp:rl:u:${username}`, 10, 600);
+      if (!okIp || !okUser) return res.status(429).json({ error: 'Demasiados intentos. Espera unos minutos.' });
 
+      // username se guarda normalizado en minúsculas → comparación exacta (sin wildcards).
       const { data: lp } = await sb.from('lp_portal_users')
-        .select('id, name, active').eq('token', k).maybeSingle();
-      if (!lp || !lp.active) return res.status(401).json({ error: 'Enlace inválido o desactivado. Contacta a tu asesor.' });
+        .select('id, name, active, password_hash, data').eq('username', username).maybeSingle();
+      // Mismo mensaje exista o no el usuario (anti-enumeración).
+      const ok = lp && lp.active && lp.password_hash && verifyPassword(password, lp.password_hash);
+      if (!ok) return res.status(401).json({ error: 'Usuario o contraseña incorrectos.' });
+      try { const r = getRedis(); if (r) await r.del(`lp:rl:u:${username}`); } catch {}   // login OK → limpia contador
 
       // Marca último acceso (best-effort) y arma la sesión.
       sb.from('lp_portal_users').update({ last_access_at: new Date().toISOString() }).eq('id', lp.id).then(() => {}, () => {});
@@ -104,7 +122,7 @@ export default async function handler(req, res) {
         .select('id, title, file_name, file_mime').eq('lp_user_id', lp.id)
         .order('position', { ascending: true }).order('created_at', { ascending: true });
       const documents = (docs || []).map(d => ({ id: d.id, title: d.title, name: d.file_name || '', mime: d.file_mime || '' }));
-      return res.status(200).json({ token, name: lp.name || '', documents });
+      return res.status(200).json({ token, name: lp.name || '', documents, data: lp.data || null });
     }
 
     if (action === 'file') {
@@ -121,17 +139,20 @@ export default async function handler(req, res) {
     }
 
     /* ───────── ADMIN (sesión de la app, editor/admin) ───────── */
-    const KNOWN = ['admin_list', 'save_lp', 'regen_link', 'delete_lp', 'lp_docs', 'save_doc', 'delete_doc'];
+    const KNOWN = ['admin_list', 'save_lp', 'delete_lp', 'lp_docs', 'save_doc', 'delete_doc'];
     if (!KNOWN.includes(action)) return res.status(400).json({ error: `Acción inválida: ${action}` });
     if (!(await canManage(req))) return res.status(403).json({ error: 'Solo editores o admins' });
 
     if (action === 'admin_list') {
       const { data: lps } = await sb.from('lp_portal_users')
-        .select('id, name, email, token, active, last_access_at, created_at').order('created_at', { ascending: false });
+        .select('id, name, email, username, active, last_access_at, created_at, password_hash').order('created_at', { ascending: false });
       const { data: docs } = await sb.from('lp_portal_docs').select('lp_user_id');
       const counts = {};
       (docs || []).forEach(d => { counts[d.lp_user_id] = (counts[d.lp_user_id] || 0) + 1; });
-      return res.status(200).json({ lps: (lps || []).map(l => ({ ...l, docs: counts[l.id] || 0 })) });
+      return res.status(200).json({ lps: (lps || []).map(l => {
+        const { password_hash, ...rest } = l;   // nunca sale el hash
+        return { ...rest, docs: counts[l.id] || 0, has_password: !!password_hash };
+      }) });
     }
 
     if (action === 'save_lp') {
@@ -139,25 +160,31 @@ export default async function handler(req, res) {
       if (!name) return res.status(400).json({ error: 'Falta el nombre del LP' });
       const email = String(req.body.email || '').trim() || null;
       const active = req.body.active !== false;
+      const password = String(req.body.password || '');
+      const username = String(req.body.username || '').trim().toLowerCase();
+      if (username && !/^[a-z0-9._@-]{3,}$/.test(username)) {
+        return res.status(400).json({ error: 'Usuario inválido (mínimo 3, solo letras, números y . _ - @)' });
+      }
       if (req.body.id) {
-        const { error } = await sb.from('lp_portal_users')
-          .update({ name, email, active, updated_at: new Date().toISOString() }).eq('id', req.body.id);
+        // Edición: usuario y contraseña solo cambian si se mandan.
+        const patch = { name, email, active, updated_at: new Date().toISOString() };
+        if (username) patch.username = username;
+        if (password) {
+          if (password.length < 8) return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres' });
+          patch.password_hash = hashPassword(password);
+        }
+        const { error } = await sb.from('lp_portal_users').update(patch).eq('id', req.body.id);
         if (error) throw error;
         return res.status(200).json({ ok: true, id: req.body.id });
       }
-      const token = newAccessToken();
+      // Alta: usuario y contraseña obligatorios (login = usuario + contraseña).
+      if (!username) return res.status(400).json({ error: 'Falta el usuario' });
+      if (!password || password.length < 8) return res.status(400).json({ error: 'La contraseña es obligatoria (mínimo 8 caracteres)' });
       const { data, error } = await sb.from('lp_portal_users')
-        .insert({ name, email, active, token, org: 'cretum' }).select('id, token').single();
+        .insert({ name, email, active, username, token: newAccessToken(), org: 'cretum', password_hash: hashPassword(password) })
+        .select('id').single();
       if (error) throw error;
-      return res.status(200).json({ ok: true, id: data.id, token: data.token });
-    }
-
-    if (action === 'regen_link') {
-      const token = newAccessToken();
-      const { error } = await sb.from('lp_portal_users')
-        .update({ token, updated_at: new Date().toISOString() }).eq('id', req.body.id);
-      if (error) throw error;
-      return res.status(200).json({ ok: true, token });
+      return res.status(200).json({ ok: true, id: data.id });
     }
 
     if (action === 'delete_lp') {

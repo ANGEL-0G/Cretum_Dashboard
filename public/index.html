@@ -5819,12 +5819,15 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   .lp-badge{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 8px;border-radius:999px}
   .lp-badge.off{background:#fce8e8;color:#c0392b}
   [data-theme="dark"] .lp-badge.off{background:rgba(192,57,43,.2);color:#f0a0a0}
+  .lp-badge.warn{background:#fdefd6;color:#a15c00}
+  [data-theme="dark"] .lp-badge.warn{background:rgba(237,120,36,.2);color:#f0b27a}
   .pt-btn{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;font-family:inherit;color:var(--ink-soft,#556);background:var(--white,#fff);border:1px solid var(--line,#dde3ec);border-radius:8px;padding:7px 11px;cursor:pointer;transition:border-color .15s,color .15s}
   .pt-btn:hover{border-color:var(--navy);color:var(--navy)}
   .pt-btn.danger:hover{border-color:#c0392b;color:#c0392b}
   .lp-flabel{display:block;font-size:12.5px;font-weight:600;color:var(--ink-soft,#667);margin:12px 0 5px}
   .lp-finput{width:100%;font:inherit;font-size:14px;color:var(--ink,#1c2740);background:var(--white,#fff);border:1px solid var(--line,#d7dde8);border-radius:9px;padding:10px 12px;outline:none}
   .lp-finput:focus{border-color:var(--navy)}
+  .lp-fhint{font-size:12px;color:var(--ink-soft,#889);margin-top:6px;line-height:1.45}
   .lp-fcheck{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--ink,#1c2740);margin-top:14px;cursor:pointer}
   .lp-uprow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:6px}
   .lp-uprow .lp-finput{flex:1;min-width:180px}
@@ -6519,7 +6522,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
     <div class="db-title-block"><i class="fa-solid fa-user-tie"></i> Portal de LP's</div>
     <button class="btn-primary" id="lpNewBtn" type="button" onclick="lpNew()" style="display:none"><i class="fa-solid fa-plus"></i> Nuevo LP</button>
   </div>
-  <p class="lp-intro">Cada LP entra con su propio <b>enlace</b> (sin contraseña). Crea el LP, copia su enlace para compartirlo y súbele documentos. La página que ve el LP: <span class="lp-code">cretumdesk.com/lp</span></p>
+  <p class="lp-intro">Todos entran por <span class="lp-code">cretumdesk.com/lp</span> con su <b>usuario y contraseña</b>, y cada uno ve solo su información. Da de alta al LP con su usuario y contraseña, y súbele sus documentos. Comparte la contraseña por un canal aparte.</p>
   <div class="lp-list" id="lpList"></div>
 </div>
 
@@ -6535,6 +6538,11 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
       <input type="text" id="lpfName" class="lp-finput" placeholder="Ej. Familia Pérez / Fondo X" autocomplete="off">
       <label class="lp-flabel">Correo (opcional, referencia)</label>
       <input type="email" id="lpfEmail" class="lp-finput" placeholder="correo@ejemplo.com" autocomplete="off">
+      <label class="lp-flabel">Usuario (con el que inicia sesión)</label>
+      <input type="text" id="lpfUser" class="lp-finput" placeholder="ej. jperez o su correo" autocomplete="off" autocapitalize="none" spellcheck="false">
+      <label class="lp-flabel" id="lpfPassLabel">Contraseña de acceso</label>
+      <input type="text" id="lpfPass" class="lp-finput" placeholder="Mínimo 8 caracteres" autocomplete="new-password">
+      <div class="lp-fhint" id="lpfPassHint">El LP entra con su enlace + esta contraseña. Compártela por un canal aparte del enlace.</div>
       <label class="lp-fcheck"><input type="checkbox" id="lpfActive" checked> Acceso activo</label>
       <div class="camp-modal-msg" id="lpModalMsg"></div>
     </div>
@@ -7425,7 +7433,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   </div>
 </div>
 
-<script src="/i18n.js?v=20260824-infra1"></script>
-<script src="/app.js?v=20260824-infra1"></script>
+<script src="/i18n.js?v=20260824-lppw2"></script>
+<script src="/app.js?v=20260824-lppw2"></script>
 </body>
 </html>

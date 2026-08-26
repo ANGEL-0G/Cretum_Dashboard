@@ -6841,9 +6841,10 @@ async function portalApi(body) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   PORTAL DE LP's — sistema aparte (api/lp.js). Cada LP entra por un
-   ENLACE MÁGICO (cretumdesk.com/lp?k=<token>). Aquí (admin del desk)
-   se dan de alta, se copia su enlace y se les suben documentos.
+   PORTAL DE LP's — sistema aparte (api/lp.js). Un solo enlace
+   (cretumdesk.com/lp); cada LP entra con su USUARIO + CONTRASEÑA y
+   ve solo su información. Aquí (admin del desk) se dan de alta con su
+   usuario/contraseña y se les suben documentos.
    Gestión: editores/admins (el backend usa can_manage; colaborador no).
 ═══════════════════════════════════════════════════════════════ */
 let lpList = [];
@@ -6860,7 +6861,6 @@ async function lpApi(body) {
   if (!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
   return d;
 }
-function lpLinkFor(token) { return location.origin + '/lp?k=' + encodeURIComponent(token); }
 function lpFmtDate(iso) {
   if (!iso) return '—';
   const d = new Date(iso); if (isNaN(d)) return '—';
@@ -6892,24 +6892,15 @@ function renderLpList() {
   list.innerHTML = lpList.map(l => `
     <div class="lp-item">
       <div class="lp-item-main">
-        <div class="lp-item-name">${escapeHtml(l.name)} ${l.active ? '' : '<span class="lp-badge off">inactivo</span>'}</div>
-        <div class="lp-item-meta">${l.email ? escapeHtml(l.email) + ' · ' : ''}${l.docs} doc${l.docs === 1 ? '' : 's'} · último acceso: ${lpFmtDate(l.last_access_at)}</div>
+        <div class="lp-item-name">${escapeHtml(l.name)} ${l.active ? '' : '<span class="lp-badge off">inactivo</span>'}${l.has_password ? '' : '<span class="lp-badge warn">sin contraseña</span>'}</div>
+        <div class="lp-item-meta">${l.username ? 'usuario: <b>' + escapeHtml(l.username) + '</b> · ' : '<span class="lp-badge warn">sin usuario</span> · '}${l.docs} doc${l.docs === 1 ? '' : 's'} · último acceso: ${lpFmtDate(l.last_access_at)}</div>
       </div>
       <div class="lp-item-acts">
-        <button class="pt-btn" onclick="lpCopyLink('${l.id}')" title="Copiar enlace de acceso"><i class="fa-solid fa-link"></i> Enlace</button>
         <button class="pt-btn" onclick="lpDocsOpen('${l.id}')" title="Documentos"><i class="fa-solid fa-folder-open"></i> Docs</button>
         ${manage ? `<button class="pt-btn" onclick="lpEdit('${l.id}')" title="Editar"><i class="fa-solid fa-pen"></i></button>
-        <button class="pt-btn" onclick="lpRegen('${l.id}')" title="Regenerar enlace (invalida el anterior)"><i class="fa-solid fa-rotate"></i></button>
         <button class="pt-btn danger" onclick="lpDelete('${l.id}')" title="Borrar"><i class="fa-solid fa-trash"></i></button>` : ''}
       </div>
     </div>`).join('');
-}
-
-async function lpCopyLink(id) {
-  const l = lpList.find(x => x.id === id); if (!l) return;
-  const url = lpLinkFor(l.token);
-  try { await navigator.clipboard.writeText(url); toast('Enlace copiado'); }
-  catch (e) { prompt('Copia el enlace de acceso del LP:', url); }
 }
 
 function lpNew() {
@@ -6917,7 +6908,11 @@ function lpNew() {
   document.getElementById('lpModalTitle').textContent = "Nuevo LP";
   document.getElementById('lpfName').value = '';
   document.getElementById('lpfEmail').value = '';
+  document.getElementById('lpfUser').value = '';
   document.getElementById('lpfActive').checked = true;
+  const pw = document.getElementById('lpfPass'); pw.value = ''; pw.placeholder = 'Mínimo 8 caracteres';
+  document.getElementById('lpfPassLabel').textContent = 'Contraseña de acceso';
+  document.getElementById('lpfPassHint').textContent = 'El LP entra con su enlace + esta contraseña. Compártela por un canal aparte del enlace.';
   const msg = document.getElementById('lpModalMsg'); if (msg) { msg.textContent = ''; msg.className = 'camp-modal-msg'; }
   document.getElementById('lpModal').classList.add('show');
 }
@@ -6927,7 +6922,14 @@ function lpEdit(id) {
   document.getElementById('lpModalTitle').textContent = 'Editar LP';
   document.getElementById('lpfName').value = l.name || '';
   document.getElementById('lpfEmail').value = l.email || '';
+  document.getElementById('lpfUser').value = l.username || '';
   document.getElementById('lpfActive').checked = l.active !== false;
+  const pw = document.getElementById('lpfPass'); pw.value = '';
+  pw.placeholder = l.has_password ? 'Dejar en blanco para no cambiarla' : 'Mínimo 8 caracteres (aún sin contraseña)';
+  document.getElementById('lpfPassLabel').textContent = l.has_password ? 'Cambiar contraseña (opcional)' : 'Contraseña de acceso';
+  document.getElementById('lpfPassHint').textContent = l.has_password
+    ? 'Solo escribe algo si quieres cambiarla. El LP entra con su enlace + contraseña.'
+    : 'Este LP aún no tiene contraseña — ponle una para que pueda entrar.';
   const msg = document.getElementById('lpModalMsg'); if (msg) { msg.textContent = ''; msg.className = 'camp-modal-msg'; }
   document.getElementById('lpModal').classList.add('show');
 }
@@ -6936,23 +6938,23 @@ function lpModalClose() { document.getElementById('lpModal').classList.remove('s
 async function lpSave() {
   const name = document.getElementById('lpfName').value.trim();
   const email = document.getElementById('lpfEmail').value.trim();
+  const username = document.getElementById('lpfUser').value.trim().toLowerCase();
   const active = document.getElementById('lpfActive').checked;
+  const password = document.getElementById('lpfPass').value.trim();
   const msg = document.getElementById('lpModalMsg');
   if (!name) { msg.textContent = 'Pon el nombre del LP.'; msg.className = 'camp-modal-msg err'; return; }
+  if (!lpEditId && !username) { msg.textContent = 'Pon el usuario con el que iniciará sesión.'; msg.className = 'camp-modal-msg err'; return; }
+  if (!lpEditId && (!password || password.length < 8)) { msg.textContent = 'La contraseña es obligatoria (mínimo 8 caracteres).'; msg.className = 'camp-modal-msg err'; return; }
+  if (password && password.length < 8) { msg.textContent = 'La contraseña debe tener al menos 8 caracteres.'; msg.className = 'camp-modal-msg err'; return; }
   try {
     const body = { action: 'save_lp', name, email, active };
+    if (username) body.username = username;
+    if (password) body.password = password;
     if (lpEditId) body.id = lpEditId;
-    const d = await lpApi(body);
+    await lpApi(body);
     lpModalClose();
     await loadLpAdmin();
-    if (!lpEditId && d.token) {
-      // LP nuevo: ofrece copiar su enlace de inmediato.
-      const url = lpLinkFor(d.token);
-      try { await navigator.clipboard.writeText(url); toast('LP creado · enlace copiado'); }
-      catch (e) { prompt('LP creado. Copia su enlace de acceso:', url); }
-    } else {
-      toast('LP actualizado');
-    }
+    toast(lpEditId ? 'LP actualizado' : 'LP creado');
   } catch (err) { msg.textContent = err.message; msg.className = 'camp-modal-msg err'; }
 }
 
@@ -6961,17 +6963,6 @@ async function lpDelete(id) {
   if (!confirm(`¿Borrar a "${l.name}"? Se elimina su acceso y sus documentos. No se puede deshacer.`)) return;
   try { await lpApi({ action: 'delete_lp', id }); toast('LP borrado'); loadLpAdmin(); }
   catch (err) { toast('Error: ' + err.message); }
-}
-
-async function lpRegen(id) {
-  if (!confirm('¿Generar un enlace nuevo? El enlace anterior dejará de funcionar de inmediato.')) return;
-  try {
-    const d = await lpApi({ action: 'regen_link', id });
-    const l = lpList.find(x => x.id === id); if (l && d.token) l.token = d.token;
-    const url = lpLinkFor(d.token);
-    try { await navigator.clipboard.writeText(url); toast('Enlace nuevo copiado'); }
-    catch (e) { prompt('Nuevo enlace de acceso:', url); }
-  } catch (err) { toast('Error: ' + err.message); }
 }
 
 /* ── Documentos de un LP ── */
