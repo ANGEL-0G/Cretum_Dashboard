@@ -11594,9 +11594,9 @@ const FUND_TRACKERS = {
       { company: 'Saronic Technologies', invested: 20000000, pct: 0.124, mtm: 20000000, moic: 1.0000, corpVal: 9.25, pps: 27.45, entry: 27.45, shares: 728730, fdso: 337 },
       { company: 'Anthropic PBC', invested: 18587304, pct: 0.115, mtm: 62330216, moic: 3.3534, corpVal: 965, pps: 589.01, entry: 175.65, shares: 105822, fdso: 1638.34 },
       { company: 'X.AI Corp. (SpaceX)',    invested: 15000870, pct: 0.099, mtm: 53228475,   moic: 3.5484,  corpVal: 1770,   pps: 135,    entry: 38.05,  shares: 394285,    fdso: 11869  },
-      { company: 'Mach Industries', invested: 9999998, pct: 0.062, mtm: 9999998, moic: 1.0000, corpVal: 1.8, pps: 3.62, entry: 3.62, shares: 2762430, fdso: 497.2 },
+      { company: 'Mach Industries', invested: 9999998, pct: 0.062, mtm: 10790052, moic: 1.0790, corpVal: 1.8, pps: 3.906, entry: 3.62, shares: 2762430, fdso: 497.2 },
       { company: 'CHAOS Industries', invested: 9999962, pct: 0.062, mtm: 9999962, moic: 1.0000, corpVal: 4.441, pps: 138.94, entry: 138.94, shares: 71975, fdso: 32 },
-      { company: 'Base Power, Inc.', invested: 9280871, pct: 0.058, mtm: 24917972, moic: 2.6849, corpVal: 12, pps: 32.47, entry: 12.09, shares: 767510, fdso: 369.6 },
+      { company: 'Base Power, Inc.', invested: 9280871, pct: 0.058, mtm: 26433044, moic: 2.8481, corpVal: 13, pps: 34.44, entry: 12.09, shares: 767510, fdso: 369.6 },
       { company: 'Second Front Systems', invested: 7500000, pct: 0.047, mtm: 7500000, moic: 1.0000, corpVal: 1.1, pps: 1, entry: 1, shares: 7500000, fdso: 1100 },
       { company: 'Payward (Kraken)', invested: 6375000, pct: 0.040, mtm: 8557300, moic: 1.3423, corpVal: 20.55, pps: 61.47, entry: 45.79, shares: 139211, fdso: 334.3 },
       { company: 'Agility Robotics', invested: 5211514, pct: 0.032, mtm: 11453569, moic: 2.1977, corpVal: 4.187, pps: 145.37, entry: 66.15, shares: 78789, fdso: 28.8 },
@@ -11609,7 +11609,7 @@ const FUND_TRACKERS = {
       { company: 'Figure AI Inc.', invested: 1300007, pct: 0.008, mtm: 18592184, moic: 14.3016, corpVal: 39.0, pps: 194.93, entry: 13.63, shares: 95378, fdso: 200.1 },
       { company: 'Groq, Inc.', invested: 462047, pct: 0.003, mtm: 1475476, moic: 3.1933, corpVal: 15.087, pps: 73.0, entry: 22.86, shares: 20212, fdso: 206.7 }
     ],
-    activeTotal:      { invested: 153300600, mtm: 291261893, moic: 1.8999 },
+    activeTotal:      { invested: 153300600, mtm: 293567019, moic: 1.9150 },
     pendingTitle: 'Pending Positions (Q2 2026)',
     pending: [],
     pendingTotal:     { invested: 0, mtm: 0, moic: 0 },
@@ -11618,8 +11618,8 @@ const FUND_TRACKERS = {
       { company: 'Klarna Holding AB', invested: 436638, pct: 0.003, mtm: 274076, moic: 0.6277, corpVal: 5.595, pps: 13.38, entry: 21.32, shares: 20484, fdso: 418.2 }
     ],
     overallLabel:     'Total — Overall (Invested)',
-    overallTotal:     { invested: 151119219, mtm: 297699128, moic: 1.9700 },
-    overallTotal2:    { label: 'Total — Overall (Commitment)', invested: 293000000, mtm: 446989985, moic: 1.5256 },
+    overallTotal:     { invested: 151119219, mtm: 300004254, moic: 1.9852 },
+    overallTotal2:    { label: 'Total — Overall (Commitment)', invested: 293000000, mtm: 449295111, moic: 1.5334 },
     // Dominio para el logo (Clearbit). Fallback a monograma si no carga.
     logos: {
       'Decart.AI, Inc.':          'decart.ai',
