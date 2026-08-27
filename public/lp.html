@@ -112,7 +112,9 @@
   .kpi-v.big{font-size:24px}
   .kpi-sub{font-size:12px;color:var(--ink-mute);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .pos{color:#1f9d57} .neg{color:#d64545}
-  @media (prefers-color-scheme:dark){.pos{color:#5fd08b} .neg{color:#ff9a9a}}
+  .mv td.amt.pos,.statement td.pos,.fs-v.pos{color:#1f9d57}
+  .mv td.amt.neg,.statement td.neg,.fs-v.neg{color:#d64545}
+  @media (prefers-color-scheme:dark){.pos,.mv td.amt.pos,.statement td.pos,.fs-v.pos{color:#5fd08b} .neg,.mv td.amt.neg,.statement td.neg,.fs-v.neg{color:#ff9a9a}}
   .panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 18px 14px;margin-bottom:14px}
   .panel-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:10px}
   .panel-t{font-size:14px;font-weight:600;color:var(--ink)}
@@ -163,6 +165,7 @@
   .chip{display:inline-flex;align-items:center;gap:6px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;
     font-weight:700;color:var(--brand-2);background:var(--field);border:1px solid var(--line);border-radius:99px;padding:5px 12px}
   .chip.demo{color:#b26a00;border-color:#e8c489}
+  @media (prefers-color-scheme:dark){.chip.demo{color:#f0b35e;border-color:#8a6a33}}
   .statement{width:100%;border-collapse:collapse;font-size:13.5px}
   .statement th{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-mute);font-weight:600;
     text-align:right;padding:4px 8px 8px;border-bottom:1px solid var(--line)}
@@ -176,7 +179,7 @@
   .fs-k{font-size:10.5px;letter-spacing:.06em;color:var(--ink-mute);font-weight:600;text-transform:uppercase}
   .fs-v{font-family:var(--serif);font-weight:700;font-size:21px;color:var(--ink);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
   .fs-sub{font-size:11px;color:var(--ink-mute);margin-top:3px}
-  .donut3{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:14px}
+  .donut3{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr));gap:14px;margin-bottom:14px}
   .donut3 .panel{margin-bottom:0}
   .tops{display:flex;flex-wrap:wrap;gap:9px}
   .top-chip{font-size:13px;font-weight:600;color:var(--ink);background:var(--surface);border:1px solid var(--line);
@@ -188,7 +191,7 @@
   .term-k{font-size:10.5px;letter-spacing:.06em;color:var(--ink-mute);font-weight:600;text-transform:uppercase}
   .term-v{font-size:13.5px;color:var(--ink);font-weight:600;margin-top:4px;line-height:1.35}
   .note{font-size:11.5px;color:var(--ink-mute);font-style:italic;margin-top:10px}
-  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;margin-bottom:14px}
+  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));gap:14px;margin-bottom:14px}
   .grid2 .panel{margin-bottom:0}
 
   footer{color:var(--ink-mute);font-size:11.5px;padding:18px 0;border-top:1px solid var(--line)}
@@ -375,7 +378,7 @@
   }
   // Dibujo animado de la dona y la línea (como si se generara).
   function animateGraphs() {
-    var segs = document.querySelectorAll('#dash .donut .seg');
+    var segs = document.querySelectorAll('.donut .seg');
     var line = document.getElementById('lcLine');
     if (REDUCE) {
       Array.prototype.forEach.call(segs, function (s) { s.style.strokeDashoffset = '0'; });
@@ -425,7 +428,7 @@
   function kpiCard(k, kind, val, cur, big, sub, subcls, valcls) {
     var fin = kind === 'pct' ? fmtPct(val) : kind === 'pct2' ? ((Number(val) < 0 ? '\u2212' : '+') + Math.abs(Number(val) || 0).toFixed(2) + '%') : kind === 'moic' ? (Number(val || 0).toFixed(2) + 'x') : fmtMoney(val, cur);
     return '<div class="kpi"><div class="kpi-k">' + k + '</div>'
-      + '<div class="kpi-v' + (big ? ' big' : '') + (valcls ? ' ' + valcls : '') + '" data-kind="' + kind + '" data-target="' + (Number(val) || 0) + '" data-cur="' + (cur || '') + '">' + fin + '</div>'
+      + '<div class="kpi-v' + (big ? ' big' : '') + (valcls ? ' ' + valcls : '') + '" data-kind="' + kind + '" data-target="' + (Number(val) || 0) + '" data-cur="' + esc(cur || '') + '">' + fin + '</div>'
       + (sub ? '<div class="kpi-sub' + (subcls ? ' ' + subcls : '') + '">' + sub + '</div>' : '') + '</div>';
   }
   function renderDash(d) {
@@ -446,9 +449,9 @@
   }
 
   // ── GVV v2: estado de cuenta del LP + informacion del fondo ──
-  function fmtC(n) {
+  function fmtC(n, ceroReal) {
     n = Number(n) || 0;
-    if (Math.abs(n) < 0.005) return '—';
+    if (Math.abs(n) < 0.005) return ceroReal ? '$0.00' : '—';
     var s;
     try { s = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Math.abs(n)); }
     catch (e) { s = Math.abs(n).toFixed(2); }
@@ -488,17 +491,18 @@
       + (Math.abs(ytd.add || 0) >= 0.01 ? kpiCard('Aportaciones del año', 'money', ytd.add, cur, false, '', '', '') : '')
       + (Math.abs(ytd.red || 0) >= 0.01 ? kpiCard('Retiros del año', 'money', Math.abs(ytd.red), cur, false, '', '', '') : '');
     function filaS(lbl, k) {
-      return '<tr><td>' + lbl + '</td><td>' + fmtC(mtd[k]) + '</td><td>' + fmtC(qtd[k]) + '</td><td>' + fmtC(ytd[k]) + '</td></tr>';
+      var cr = (k === 'bb' || k === 'end');   // saldo en cero es un dato real, no ausencia
+      return '<tr><td>' + lbl + '</td><td>' + fmtC(mtd[k], cr) + '</td><td>' + fmtC(qtd[k], cr) + '</td><td>' + fmtC(ytd[k], cr) + '</td></tr>';
     }
     var stTable = '<div class="panel"><div class="panel-h"><span class="panel-t">Resumen del período</span>'
       + '<span class="panel-note">cifras del administrador</span></div>'
-      + '<table class="statement"><tr><th></th><th>Mes (MTD)</th><th>Trimestre (QTD)</th><th>Año (YTD)</th></tr>'
+      + '<div style="overflow-x:auto"><table class="statement"><tr><th></th><th>Mes (MTD)</th><th>Trimestre (QTD)</th><th>Año (YTD)</th></tr>'
       + filaS('Saldo inicial', 'bb') + filaS('Aportaciones', 'add') + filaS('Retiros', 'red')
       + filaS('Rendimiento neto', 'ni')
-      + '<tr class="total"><td>Saldo final</td><td>' + fmtC(mtd.end) + '</td><td>' + fmtC(qtd.end) + '</td><td>' + fmtC(ytd.end) + '</td></tr>'
+      + '<tr class="total"><td>Saldo final</td><td>' + fmtC(mtd.end, true) + '</td><td>' + fmtC(qtd.end, true) + '</td><td>' + fmtC(ytd.end, true) + '</td></tr>'
       + '<tr class="ror"><td>Tasa de rendimiento</td><td class="' + ((mtd.ror || 0) < 0 ? 'neg' : 'pos') + '">' + fmtRor(mtd.ror)
       + '</td><td class="' + ((qtd.ror || 0) < 0 ? 'neg' : 'pos') + '">' + fmtRor(qtd.ror)
-      + '</td><td class="' + ((ytd.ror || 0) < 0 ? 'neg' : 'pos') + '">' + fmtRor(ytd.ror) + '</td></tr></table>'
+      + '</td><td class="' + ((ytd.ror || 0) < 0 ? 'neg' : 'pos') + '">' + fmtRor(ytd.ror) + '</td></tr></table></div>'
       + '<div class="note">Información preliminar sujeta a revisión del administrador (NAV Fund Services).</div></div>';
     host.innerHTML = demoChip + '<div class="kpis">' + kpis + '</div>'
       + '<div class="grid2">' + (renderChart(g.serie, cur) || '') + stTable + '</div>'
@@ -516,7 +520,7 @@
       function pn(v) { return v == null ? '—' : ((v < 0 ? '−' : '+') + Math.abs(v).toFixed(2) + '%'); }
       var band = '<div class="fund-band">'
         + fsCard('Activos del fondo', fmtMoney(fdo.aum, 'USD'), 'al corte de ' + esc(fdo.asOf || ''))
-        + fsCard('Posiciones', (fdo.n_posiciones || '—') + '', (fdo.n_companias || '') + ' compañías')
+        + fsCard('Posiciones', esc(fdo.n_posiciones != null ? fdo.n_posiciones : '—'), fdo.n_companias ? esc(fdo.n_companias) + ' compañías' : '')
         + (net.ytd != null ? fsCard('Rendimiento del año', pn(net.ytd), 'neto de comisiones', net.ytd < 0 ? 'neg' : 'pos') : '')
         + (net.oneYr != null ? fsCard('Últimos 12 meses', pn(net.oneYr), 'neto de comisiones', net.oneYr < 0 ? 'neg' : 'pos') : '')
         + (net.cagr5 != null ? fsCard('Anualizado 5 años', pn(net.cagr5), 'neto de comisiones', net.cagr5 < 0 ? 'neg' : 'pos') : '')
@@ -596,9 +600,11 @@
         return;
       }
       SESSION = res.j.token;
-      $('greeting').textContent = 'Hola, ' + (res.j.name || '');
-      var d = res.j.data || null;
-      if (d && d.gvv) { renderGvv(d.gvv); } else { renderDash(d); }
+      $('greeting').textContent = res.j.name ? 'Hola, ' + res.j.name : 'Hola';
+      try {
+        var d = res.j.data || null;
+        if (d && d.gvv) { renderGvv(d.gvv); } else { renderDash(d); }
+      } catch (e) { try { $('dashSec').hidden = true; } catch (e2) {} }
       renderDocs(res.j.documents || []);
       hide($('login')); show($('content'));
       window.scrollTo(0, 0);
