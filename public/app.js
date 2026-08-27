@@ -6912,7 +6912,7 @@ function lpMensaje(id) {
 
 Su portal de inversionista del fondo Cretum Partners GVV ya está disponible. Ahí encontrará su estado de cuenta e información del fondo.
 
-Acceso: https://cretumdesk.com/lp?v=2
+Acceso: https://cretumdesk.com/lp?v=3
 Usuario: ${l.username}
 Contraseña: ${l.password}
 
