@@ -23,7 +23,8 @@ export default async function handler(req, res) {
   const sb = getSupabaseAdmin();
   if (!sb) return res.status(500).json({ error: 'Sin service role' });
   let key = 'cretum/_internal/gvv-live.json';
-  if (req.query.analytics) key = 'cretum/_internal/gvv-analytics.json';
+  if (req.query.trackernews) key = 'mvp/_internal/tracker-news.json';
+  else if (req.query.analytics) key = 'cretum/_internal/gvv-analytics.json';
   else if (req.query.riesgo) key = 'cretum/_internal/gvv-riesgo.json';
   else if (req.query.m13f) key = 'cretum/_internal/gvv-13f.json';
   else if (req.query.privados) key = 'cretum/_internal/gvv-privados.json';
