@@ -6893,14 +6893,22 @@ function renderLpList() {
     <div class="lp-item">
       <div class="lp-item-main">
         <div class="lp-item-name">${escapeHtml(l.name)} ${l.active ? '' : '<span class="lp-badge off">inactivo</span>'}${l.has_password ? '' : '<span class="lp-badge warn">sin contraseña</span>'}</div>
-        <div class="lp-item-meta">${l.username ? 'usuario: <b>' + escapeHtml(l.username) + '</b> · ' : '<span class="lp-badge warn">sin usuario</span> · '}${l.docs} doc${l.docs === 1 ? '' : 's'} · último acceso: ${lpFmtDate(l.last_access_at)}</div>
+        <div class="lp-item-meta">${l.username ? 'usuario: <b>' + escapeHtml(l.username) + '</b> · ' : '<span class="lp-badge warn">sin usuario</span> · '}${l.password ? 'contraseña: <b style="font-family:var(--mono,monospace)">' + escapeHtml(l.password) + '</b> · ' : ''}${l.docs} doc${l.docs === 1 ? '' : 's'} · último acceso: ${lpFmtDate(l.last_access_at)}</div>
       </div>
       <div class="lp-item-acts">
+        <button class="pt-btn" onclick="lpPortalOpen('${l.id}')" title="Abrir su portal (sin contraseña)"><i class="fa-solid fa-arrow-up-right-from-square"></i> Portal</button>
         <button class="pt-btn" onclick="lpDocsOpen('${l.id}')" title="Documentos"><i class="fa-solid fa-folder-open"></i> Docs</button>
         ${manage ? `<button class="pt-btn" onclick="lpEdit('${l.id}')" title="Editar"><i class="fa-solid fa-pen"></i></button>
         <button class="pt-btn danger" onclick="lpDelete('${l.id}')" title="Borrar"><i class="fa-solid fa-trash"></i></button>` : ''}
       </div>
     </div>`).join('');
+}
+
+async function lpPortalOpen(id) {
+  try {
+    const d = await lpApi({ action: 'impersonate', id });
+    window.open('/lp#it=' + encodeURIComponent(d.token), '_blank', 'noopener');
+  } catch (err) { toast('Error: ' + err.message); }
 }
 
 function lpNew() {

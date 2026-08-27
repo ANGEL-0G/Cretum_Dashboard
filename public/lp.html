@@ -610,7 +610,30 @@
     }).catch(function () { if (go) go.innerHTML = prev; alert('No se pudo abrir el documento.'); });
   }
 
-  hide($('loading')); show($('login'));
+  function montar(j, token) {
+    SESSION = token;
+    $('greeting').textContent = j.name ? 'Hola, ' + j.name : 'Hola';
+    try {
+      var d = j.data || null;
+      if (d && d.gvv) { renderGvv(d.gvv); } else { renderDash(d); }
+    } catch (e) { try { $('dashSec').hidden = true; } catch (e2) {} }
+    renderDocs(j.documents || []);
+    hide($('login')); hide($('loading')); show($('content'));
+    window.scrollTo(0, 0);
+  }
+
+  // Acceso directo desde el desk (admin): /lp#it=<token de impersonación>
+  var _it = (location.hash || '').match(/it=([^&]+)/);
+  if (_it) {
+    var _tk = decodeURIComponent(_it[1]);
+    try { history.replaceState(null, '', location.pathname); } catch (e) {}
+    api({ action: 'session', token: _tk }).then(function (res) {
+      if (res.ok && res.j && res.j.name !== undefined) { montar(res.j, _tk); }
+      else { hide($('loading')); show($('login')); }
+    }).catch(function () { hide($('loading')); show($('login')); });
+  } else {
+    hide($('loading')); show($('login'));
+  }
   var uEl = $('user'); if (uEl) uEl.focus();
 
   $('loginForm').addEventListener('submit', function (e) {
@@ -626,15 +649,7 @@
         btn.disabled = false; btn.textContent = 'Entrar';
         return;
       }
-      SESSION = res.j.token;
-      $('greeting').textContent = res.j.name ? 'Hola, ' + res.j.name : 'Hola';
-      try {
-        var d = res.j.data || null;
-        if (d && d.gvv) { renderGvv(d.gvv); } else { renderDash(d); }
-      } catch (e) { try { $('dashSec').hidden = true; } catch (e2) {} }
-      renderDocs(res.j.documents || []);
-      hide($('login')); show($('content'));
-      window.scrollTo(0, 0);
+      montar(res.j, res.j.token);
     }).catch(function () {
       errEl.textContent = 'Sin conexión. Inténtalo de nuevo.';
       btn.disabled = false; btn.textContent = 'Entrar';

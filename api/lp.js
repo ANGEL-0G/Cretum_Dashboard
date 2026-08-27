@@ -122,14 +122,30 @@ export default async function handler(req, res) {
         .select('id, title, file_name, file_mime').eq('lp_user_id', lp.id)
         .order('position', { ascending: true }).order('created_at', { ascending: true });
       const documents = (docs || []).map(d => ({ id: d.id, title: d.title, name: d.file_name || '', mime: d.file_mime || '' }));
-      return res.status(200).json({ token, name: lp.name || '', documents, data: lp.data || null });
+      const { admin: _priv, ...dataPub } = (lp.data && typeof lp.data === 'object') ? lp.data : {};
+      return res.status(200).json({ token, name: lp.name || '', documents, data: lp.data ? dataPub : null });
+    }
+
+    if (action === 'session') {
+      // Sesión por token ya emitido (login previo o impersonación de un admin).
+      const payload = verifyTokenStr(req.body.token, secret);
+      if (!payload) return res.status(401).json({ error: 'Sesión inválida o expirada.' });
+      const { data: lp } = await sb.from('lp_portal_users')
+        .select('id, name, active, data').eq('id', payload.lp).maybeSingle();
+      if (!lp || (!lp.active && !payload.imp)) return res.status(401).json({ error: 'Acceso desactivado — contacta a tu asesor.' });
+      const { data: docs } = await sb.from('lp_portal_docs')
+        .select('id, title, file_name, file_mime').eq('lp_user_id', lp.id)
+        .order('position', { ascending: true }).order('created_at', { ascending: true });
+      const documents = (docs || []).map(d => ({ id: d.id, title: d.title, name: d.file_name || '', mime: d.file_mime || '' }));
+      const { admin: _priv2, ...dataPub2 } = (lp.data && typeof lp.data === 'object') ? lp.data : {};
+      return res.status(200).json({ name: lp.name || '', documents, data: lp.data ? dataPub2 : null, imp: !!payload.imp });
     }
 
     if (action === 'file') {
       const payload = verifyTokenStr(req.body.token, secret);
       if (!payload) return res.status(401).json({ error: 'Sesión expirada — vuelve a abrir tu enlace.' });
       const { data: lp } = await sb.from('lp_portal_users').select('active').eq('id', payload.lp).maybeSingle();
-      if (!lp || !lp.active) return res.status(401).json({ error: 'Acceso desactivado — contacta a tu asesor.' });
+      if (!lp || (!lp.active && !payload.imp)) return res.status(401).json({ error: 'Acceso desactivado — contacta a tu asesor.' });
       const { data: doc } = await sb.from('lp_portal_docs')
         .select('file_path, file_mime, file_name').eq('id', req.body.id).eq('lp_user_id', payload.lp).maybeSingle();
       if (!doc || !doc.file_path) return res.status(404).json({ error: 'Documento no encontrado' });
@@ -139,19 +155,20 @@ export default async function handler(req, res) {
     }
 
     /* ───────── ADMIN (sesión de la app, editor/admin) ───────── */
-    const KNOWN = ['admin_list', 'save_lp', 'delete_lp', 'lp_docs', 'save_doc', 'delete_doc'];
+    const KNOWN = ['admin_list', 'save_lp', 'delete_lp', 'lp_docs', 'save_doc', 'delete_doc', 'impersonate'];
     if (!KNOWN.includes(action)) return res.status(400).json({ error: `Acción inválida: ${action}` });
     if (!(await canManage(req))) return res.status(403).json({ error: 'Solo editores o admins' });
 
     if (action === 'admin_list') {
       const { data: lps } = await sb.from('lp_portal_users')
-        .select('id, name, email, username, active, last_access_at, created_at, password_hash').order('created_at', { ascending: false });
+        .select('id, name, email, username, active, last_access_at, created_at, password_hash, data').order('created_at', { ascending: false });
       const { data: docs } = await sb.from('lp_portal_docs').select('lp_user_id');
       const counts = {};
       (docs || []).forEach(d => { counts[d.lp_user_id] = (counts[d.lp_user_id] || 0) + 1; });
       return res.status(200).json({ lps: (lps || []).map(l => {
-        const { password_hash, ...rest } = l;   // nunca sale el hash
-        return { ...rest, docs: counts[l.id] || 0, has_password: !!password_hash };
+        const { password_hash, data, ...rest } = l;   // nunca sale el hash ni el data completo
+        return { ...rest, docs: counts[l.id] || 0, has_password: !!password_hash,
+                 password: (data && data.admin && data.admin.pw) || null };
       }) });
     }
 
@@ -172,6 +189,9 @@ export default async function handler(req, res) {
         if (password) {
           if (password.length < 8) return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres' });
           patch.password_hash = hashPassword(password);
+          const { data: cur } = await sb.from('lp_portal_users').select('data').eq('id', req.body.id).maybeSingle();
+          const dataCur = (cur && cur.data && typeof cur.data === 'object') ? cur.data : {};
+          patch.data = { ...dataCur, admin: { ...(dataCur.admin || {}), pw: password } };
         }
         const { error } = await sb.from('lp_portal_users').update(patch).eq('id', req.body.id);
         if (error) throw error;
@@ -181,10 +201,18 @@ export default async function handler(req, res) {
       if (!username) return res.status(400).json({ error: 'Falta el usuario' });
       if (!password || password.length < 8) return res.status(400).json({ error: 'La contraseña es obligatoria (mínimo 8 caracteres)' });
       const { data, error } = await sb.from('lp_portal_users')
-        .insert({ name, email, active, username, token: newAccessToken(), org: 'cretum', password_hash: hashPassword(password) })
+        .insert({ name, email, active, username, token: newAccessToken(), org: 'cretum',
+                  password_hash: hashPassword(password), data: { admin: { pw: password } } })
         .select('id').single();
       if (error) throw error;
       return res.status(200).json({ ok: true, id: data.id });
+    }
+
+    if (action === 'impersonate') {
+      const { data: lp } = await sb.from('lp_portal_users').select('id').eq('id', req.body.id).maybeSingle();
+      if (!lp) return res.status(404).json({ error: 'LP no encontrado' });
+      const token = signToken({ lp: lp.id, k: 'lp', imp: true, exp: Date.now() + 60 * 60 * 1000 }, secret);
+      return res.status(200).json({ token });
     }
 
     if (action === 'delete_lp') {
