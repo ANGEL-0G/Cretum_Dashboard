@@ -6897,11 +6897,32 @@ function renderLpList() {
       </div>
       <div class="lp-item-acts">
         <button class="pt-btn" onclick="lpPortalOpen('${l.id}')" title="Abrir su portal (sin contraseña)"><i class="fa-solid fa-arrow-up-right-from-square"></i> Portal</button>
+        ${l.username && l.password ? `<button class="pt-btn" onclick="lpMensaje('${l.id}')" title="Copiar mensaje con instrucciones de acceso"><i class="fa-solid fa-envelope"></i> Mensaje</button>` : ''}
         <button class="pt-btn" onclick="lpDocsOpen('${l.id}')" title="Documentos"><i class="fa-solid fa-folder-open"></i> Docs</button>
         ${manage ? `<button class="pt-btn" onclick="lpEdit('${l.id}')" title="Editar"><i class="fa-solid fa-pen"></i></button>
         <button class="pt-btn danger" onclick="lpDelete('${l.id}')" title="Borrar"><i class="fa-solid fa-trash"></i></button>` : ''}
       </div>
     </div>`).join('');
+}
+
+function lpMensaje(id) {
+  const l = lpList.find(x => x.id === id);
+  if (!l || !l.username || !l.password) { toast('Este LP no tiene usuario/contraseña'); return; }
+  const txt = `Estimado(a) ${l.name}:
+
+Su portal de inversionista del fondo Cretum Partners GVV ya está disponible. Ahí encontrará su estado de cuenta e información del fondo.
+
+Acceso: https://cretumdesk.com/lp
+Usuario: ${l.username}
+Contraseña: ${l.password}
+
+Le recomendamos guardar esta información en un lugar seguro. Quedamos a sus órdenes para cualquier duda.
+
+Cretum Partners`;
+  const listo = () => toast('Mensaje copiado — listo para enviar a ' + l.name);
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(txt).then(listo, () => window.prompt('Copia el mensaje:', txt));
+  } else { window.prompt('Copia el mensaje:', txt); }
 }
 
 async function lpPortalOpen(id) {
