@@ -175,17 +175,39 @@
   .statement tr.total td{font-weight:700;background:var(--field);border-top:1.5px solid var(--brand-2)}
   .statement tr.ror td{font-weight:700}
   .fund-band{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:13px;margin-bottom:14px}
+  .fund-band.two{grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr))}
+  .fund-band.two .fs{padding:20px 22px}
+  .fund-band.two .fs-v{font-size:30px}
+  .fund-band.two .fs-sub{font-size:12px}
   .fs{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 15px;min-width:0}
   .fs-k{font-size:10.5px;letter-spacing:.06em;color:var(--ink-mute);font-weight:600;text-transform:uppercase}
   .fs-v{font-family:var(--serif);font-weight:700;font-size:21px;color:var(--ink);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
   .fs-sub{font-size:11px;color:var(--ink-mute);margin-top:3px}
   .donut3{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr));gap:14px;margin-bottom:14px}
   .donut3 .panel{margin-bottom:0}
+    .top-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(290px,100%),1fr));gap:10px}
+  .top-item{display:flex;gap:13px;align-items:center;background:var(--surface);border:1px solid var(--line);
+    border-radius:12px;padding:12px 14px;min-width:0;transition:border-color .18s var(--ease)}
+  .top-item:hover{border-color:var(--brand-2)}
+  .top-rank{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:13.5px;
+    flex:0 0 auto;color:var(--brand-2);background:var(--field);border:1px solid var(--line);font-variant-numeric:tabular-nums}
+  .top-item.podio .top-rank{background:var(--brand);color:#fff;border-color:var(--brand)}
+  @media (prefers-color-scheme:dark){.top-item.podio .top-rank{background:var(--brand-2);border-color:var(--brand-2);color:#081327}}
+  .top-body{min-width:0}
+  .top-name{font-weight:700;font-size:14.5px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .top-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+  .tag{font-size:10.5px;color:var(--ink-soft);background:var(--field);border:1px solid var(--line-2);border-radius:99px;padding:2px 9px;white-space:nowrap}
   .tops{display:flex;flex-wrap:wrap;gap:9px}
   .top-chip{font-size:13px;font-weight:600;color:var(--ink);background:var(--surface);border:1px solid var(--line);
     border-radius:10px;padding:9px 14px;display:inline-flex;align-items:center;gap:8px;transition:border-color .18s var(--ease)}
   .top-chip:hover{border-color:var(--brand-2)}
   .top-chip .n{font-size:10px;color:var(--ink-mute);font-weight:700}
+    .tbl-terms{width:100%;border-collapse:collapse;font-size:13.5px}
+  .tbl-terms tr:nth-child(even) td{background:var(--field)}
+  .tbl-terms td{padding:12px 14px;border-top:1px solid var(--line-2)}
+  .tbl-terms tr:first-child td{border-top:0}
+  .tbl-terms td.k{width:34%;color:var(--ink-mute);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:600}
+  .tbl-terms td.v{font-weight:600;color:var(--ink)}
   .terms-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
   .term{background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:13px 15px}
   .term-k{font-size:10.5px;letter-spacing:.06em;color:var(--ink-mute);font-weight:600;text-transform:uppercase}
@@ -494,8 +516,7 @@
       var cr = (k === 'bb' || k === 'end');   // saldo en cero es un dato real, no ausencia
       return '<tr><td>' + lbl + '</td><td>' + fmtC(mtd[k], cr) + '</td><td>' + fmtC(qtd[k], cr) + '</td><td>' + fmtC(ytd[k], cr) + '</td></tr>';
     }
-    var stTable = '<div class="panel"><div class="panel-h"><span class="panel-t">Resumen del período</span>'
-      + '<span class="panel-note">cifras del administrador</span></div>'
+    var stTable = '<div class="panel"><div class="panel-h"><span class="panel-t">Resumen del período</span></div>'
       + '<div style="overflow-x:auto"><table class="statement"><tr><th></th><th>Mes (MTD)</th><th>Trimestre (QTD)</th><th>Año (YTD)</th></tr>'
       + filaS('Saldo inicial', 'bb') + filaS('Aportaciones', 'add') + filaS('Retiros', 'red')
       + filaS('Rendimiento neto', 'ni')
@@ -505,7 +526,7 @@
       + '</td><td class="' + ((ytd.ror || 0) < 0 ? 'neg' : 'pos') + '">' + fmtRor(ytd.ror) + '</td></tr></table></div>'
       + '<div class="note">Información preliminar sujeta a revisión del administrador (NAV Fund Services).</div></div>';
     host.innerHTML = demoChip + '<div class="kpis">' + kpis + '</div>'
-      + '<div class="grid2">' + (renderChart(g.serie, cur) || '') + stTable + '</div>'
+      + (renderChart(g.serie, cur) || '') + stTable
       + renderMovs(g.movimientos, cur);
     if (sec) sec.hidden = false;
 
@@ -516,14 +537,9 @@
         return '<div class="fs"><div class="fs-k">' + k + '</div><div class="fs-v' + (cls ? ' ' + cls : '') + '">' + v + '</div>'
           + (sub ? '<div class="fs-sub">' + sub + '</div>' : '') + '</div>';
       }
-      var net = fdo.net || {};
-      function pn(v) { return v == null ? '—' : ((v < 0 ? '−' : '+') + Math.abs(v).toFixed(2) + '%'); }
-      var band = '<div class="fund-band">'
+      var band = '<div class="fund-band two">'
         + fsCard('Activos del fondo', fmtMoney(fdo.aum, 'USD'), 'al corte de ' + esc(fdo.asOf || ''))
         + fsCard('Posiciones', esc(fdo.n_posiciones != null ? fdo.n_posiciones : '—'), fdo.n_companias ? esc(fdo.n_companias) + ' compañías' : '')
-        + (net.ytd != null ? fsCard('Rendimiento del año', pn(net.ytd), 'neto de comisiones', net.ytd < 0 ? 'neg' : 'pos') : '')
-        + (net.oneYr != null ? fsCard('Últimos 12 meses', pn(net.oneYr), 'neto de comisiones', net.oneYr < 0 ? 'neg' : 'pos') : '')
-        + (net.cagr5 != null ? fsCard('Anualizado 5 años', pn(net.cagr5), 'neto de comisiones', net.cagr5 < 0 ? 'neg' : 'pos') : '')
         + '</div>';
       function dn(arr, title, centerLabel) {
         return renderDonut((arr || []).map(function (a) { return { name: a.label, v: a.pct }; }), 'USD',
@@ -533,19 +549,30 @@
         + dn(fdo.geo, 'Geografía', 'Cartera') + dn(fdo.ccy, 'Divisas', 'Cartera') + '</div>';
       var tops = '';
       if (fdo.top10 && fdo.top10.length) {
+        var items10 = fdo.top10.map(function (x, i) {
+          var nombre = typeof x === 'string' ? x : (x.name || '');
+          var tags = '';
+          if (typeof x === 'object') {
+            tags = (x.tipo ? '<span class="tag">' + esc(x.tipo) + '</span>' : '')
+                 + (x.region ? '<span class="tag">' + esc(x.region) + '</span>' : '');
+          }
+          return '<div class="top-item' + (i < 3 ? ' podio' : '') + '">'
+            + '<div class="top-rank">' + (i + 1) + '</div>'
+            + '<div class="top-body"><div class="top-name">' + esc(nombre) + '</div>'
+            + (tags ? '<div class="top-meta">' + tags + '</div>' : '') + '</div></div>';
+        }).join('');
         tops = '<div class="panel"><div class="panel-h"><span class="panel-t">Principales posiciones</span>'
-          + '<span class="panel-note">por tamaño · al ' + esc(fdo.asOf || '') + '</span></div><div class="tops">'
-          + fdo.top10.map(function (n, i) {
-              return '<span class="top-chip"><span class="n">' + (i + 1) + '</span>' + esc(n) + '</span>';
-            }).join('')
-          + '</div><div class="note">Los pesos y montos por posición se omiten por política de la firma.</div></div>';
+          + '<span class="panel-note">por tamaño · al ' + esc(fdo.asOf || '') + '</span></div>'
+          + '<div class="top-grid">' + items10 + '</div>'
+          + '<div class="note">Los pesos y montos por posición se omiten por política de la firma.</div></div>';
       }
       var terms = '';
       if (fdo.terms && fdo.terms.length) {
-        terms = '<div class="panel"><div class="panel-h"><span class="panel-t">Términos del fondo</span></div><div class="terms-grid">'
+        terms = '<div class="panel"><div class="panel-h"><span class="panel-t">Términos del fondo</span></div>'
+          + '<div style="overflow-x:auto"><table class="tbl-terms">'
           + fdo.terms.map(function (x) {
-              return '<div class="term"><div class="term-k">' + esc(x.k) + '</div><div class="term-v">' + esc(x.v) + '</div></div>';
-            }).join('') + '</div></div>';
+              return '<tr><td class="k">' + esc(x.k) + '</td><td class="v">' + esc(x.v) + '</td></tr>';
+            }).join('') + '</table></div></div>';
       }
       fhost.innerHTML = band + donuts + tops + terms;
       fsec.hidden = false;
