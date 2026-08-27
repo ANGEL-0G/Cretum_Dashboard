@@ -3650,16 +3650,25 @@ function saveHomeLayout(layout) {
   try { localStorage.setItem(homeLayoutKey(), JSON.stringify(all)); } catch (e) {}
 }
 
-// Funciones Beta: un módulo con `beta:true` solo lo ven los admins (siempre) y
-// quien haya activado el switch "Funciones Beta" en su perfil (auto-servicio).
+// Funciones Beta: un módulo en beta solo lo ven los admins (siempre) y quien
+// haya activado el switch "Funciones Beta" (auto-servicio). Un módulo es beta
+// mientras `hoy < betaUntil` (fecha 'YYYY-MM-DD'): se marca con betaUntil = fecha
+// del último cambio + 1 mes; si pasa un mes sin tocarlo, se gradúa solo y queda
+// visible para todos. `beta:true` = beta permanente (hasta quitar la marca).
 function betaVisible() { return currentProfile?.role === 'admin' || !!currentProfile?.beta_optin; }
+function moduleIsBeta(m) {
+  if (m.beta === true) return true;
+  if (!m.betaUntil) return false;
+  const until = new Date(m.betaUntil + 'T23:59:59');
+  return !isNaN(until) && Date.now() < until.getTime();
+}
 function homeAllowedModules() {
   const isAdmin = currentProfile?.role === 'admin';
   const isColab = currentProfile?.role === 'colaborador';
   const isEditorOrAdmin = isAdmin || currentProfile?.role === 'editor' || isColab;
   return (ORG_MODULES[currentOrg] || []).filter(m =>
     (!m.adminOnly || isAdmin) && (!m.editorOrAdmin || isEditorOrAdmin) && !(m.hideColaborador && isColab)
-    && (!m.beta || betaVisible()) && moduleAllowed(m.view));
+    && (!moduleIsBeta(m) || betaVisible()) && moduleAllowed(m.view));
 }
 
 // Aplica orden guardado (los desconocidos van al final, en su orden original) y separa ocultos.
@@ -3693,7 +3702,7 @@ function homeModuleHTML(m, editing) {
     </div>`;
   }
   const badge = m.disabled ? `<span class="home-module-badge">${t('Pronto')}</span>`
-    : (m.beta ? '<span class="home-module-badge beta">Beta</span>' : '');
+    : (moduleIsBeta(m) ? '<span class="home-module-badge beta">Beta</span>' : '');
   const pulse = (!m.disabled && m.view === 'tasks' && pendingInviteCount() > 0)
     ? '<span class="home-module-pulse" aria-label="Tienes tareas por aceptar"></span>' : '';
   return `<button class="home-module${m.disabled ? ' disabled' : ''}" data-mod="${m.view}"${m.disabled ? ' disabled aria-disabled="true"' : ` onclick="switchView('${m.view}')"`}>
@@ -5246,11 +5255,11 @@ function renderNavList() {
   const isEditorOrAdmin = isAdmin || currentProfile?.role === 'editor' || isColab;
   const items = (currentOrg ? ORG_NAV[currentOrg] : []).filter(it =>
     (!it.adminOnly || isAdmin) && (!it.editorOrAdmin || isEditorOrAdmin) && !(it.hideColaborador && isColab)
-    && (!it.beta || betaVisible()) && moduleAllowed(it.view));
+    && (!moduleIsBeta(it) || betaVisible()) && moduleAllowed(it.view));
   list.innerHTML = items.map(it => `
     <button class="nav-item" data-view="${it.view}" onclick="switchView('${it.view}')">
       <i class="${it.brand ? 'fa-brands' : 'fa-solid'} ${it.icon}"></i>
-      <span>${t(it.label)}</span>${it.beta ? '<span class="beta-tag">Beta</span>' : ''}
+      <span>${t(it.label)}</span>${moduleIsBeta(it) ? '<span class="beta-tag">Beta</span>' : ''}
     </button>
   `).join('');
   highlightActiveNav();
@@ -6508,7 +6517,7 @@ function applyRoute() {
     const isAdmin = currentProfile?.role === 'admin';
     const isColab = currentProfile?.role === 'colaborador';
     const isEditorOrAdmin = isAdmin || currentProfile?.role === 'editor' || isColab;
-    const allowed = (ORG_NAV[org] || []).some(it => it.view === view && (!it.adminOnly || isAdmin) && (!it.editorOrAdmin || isEditorOrAdmin) && !(it.hideColaborador && isColab) && (!it.beta || betaVisible()));
+    const allowed = (ORG_NAV[org] || []).some(it => it.view === view && (!it.adminOnly || isAdmin) && (!it.editorOrAdmin || isEditorOrAdmin) && !(it.hideColaborador && isColab) && (!moduleIsBeta(it) || betaVisible()));
     switchView(allowed ? view : 'home', true);
   } else {
     switchView('selector', true);
