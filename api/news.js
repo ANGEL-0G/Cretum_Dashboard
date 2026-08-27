@@ -191,19 +191,26 @@ async function fetchCompany(c) {
 }
 
 // Genera el set completo (fetch + dedup + traducción) para una lista de empresas.
+// v2 2026-08-27: en LOTES PARALELOS — el ciclo serial con ~67 empresas rebasaba los
+// 300s de maxDuration y el cron moría sin escribir a Redis (feed congelado).
 async function generate(companies) {
   const all = [];
-  for (const c of companies) {
-    all.push(...await fetchCompany(c));
-    await new Promise(r => setTimeout(r, 200));
+  for (let i = 0; i < companies.length; i += 8) {
+    const chunk = companies.slice(i, i + 8);
+    const res = await Promise.all(chunk.map(c => fetchCompany(c).catch(() => [])));
+    res.forEach(r => all.push(...r));
+    await new Promise(r => setTimeout(r, 150));
   }
   const seen = new Set();
   const items = all
     .filter(x => { if (seen.has(x.url)) return false; seen.add(x.url); return true; })
     .sort((a, b) => (b.published || '').localeCompare(a.published || ''));
-  for (const it of items) {
-    it.title_es = (await translateES(it.title)) || it.title;
-    await new Promise(r => setTimeout(r, 100));
+  for (let i = 0; i < items.length; i += 10) {
+    const chunk = items.slice(i, i + 10);
+    await Promise.all(chunk.map(async it => {
+      it.title_es = (await translateES(it.title)) || it.title;
+    }));
+    await new Promise(r => setTimeout(r, 80));
   }
   return items;
 }
@@ -227,8 +234,9 @@ export default async function handler(req, res) {
     if (!isCron) return res.status(401).json({ error: 'No autorizado' });
     const r = getRedis();
     if (!r) return res.status(500).json({ error: 'Sin Redis' });
-    const [mvp, cretum] = [await generate(COMPANIES), await generate(CRETUM_COMPANIES)];
+    const mvp = await generate(COMPANIES);
     await r.set('news:mvp', JSON.stringify(blob(mvp, COMPANIES)));
+    const cretum = await generate(CRETUM_COMPANIES);
     await r.set('news:cretum', JSON.stringify(blob(cretum, CRETUM_COMPANIES)));
     return res.status(200).json({ ok: true, mvp: mvp.length, cretum: cretum.length });
   }
