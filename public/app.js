@@ -12495,6 +12495,7 @@ function renderFundTrackerDetail(fundId) {
   const host = document.getElementById('ftDetailContent');
   if (!f || !host) return;
   computeFundTotals(f);
+  if (f.companyInfo && !_trackerNewsCache) fetchTrackerNews();
 
   if (f.placeholder) {
     host.innerHTML = `
@@ -12622,6 +12623,32 @@ function renderFundTrackerDetail(fundId) {
     ${companiesPanel}`;
 }
 
+// ── Noticias curadas por empresa (cron tracker-news de la Mini → bucket → gvv-live) ──
+let _trackerNewsCache = null;      // { byRow: { '<fila>': [{t,te,url,src,date}] } }
+let _trackerNewsFetched = false;
+function fetchTrackerNews() {
+  if (_trackerNewsCache) return Promise.resolve(_trackerNewsCache);
+  return authedFetch('/api/gvv-live?trackernews=1')
+    .then(r => r.ok ? r.json() : null)
+    .then(d => {
+      _trackerNewsCache = (d && d.byRow) ? d : { byRow: {} };
+      // primera llegada: re-render del detalle si está abierto (las cards ya montadas)
+      if (!_trackerNewsFetched) {
+        _trackerNewsFetched = true;
+        const det = document.getElementById('ftDetail');
+        if (det && det.classList.contains('show') && _spcxCurrentFund) renderFundTrackerDetail(_spcxCurrentFund);
+      }
+      return _trackerNewsCache;
+    })
+    .catch(() => (_trackerNewsCache = { byRow: {} }));
+}
+function ftNewsFor(company) {
+  const byRow = (_trackerNewsCache && _trackerNewsCache.byRow) || {};
+  if (byRow[company]) return byRow[company];
+  const base = String(company || '').replace(/\s*\((?:Distributed|X)\)\s*$/i, '').trim();
+  return byRow[base] || [];
+}
+
 // Construye las tarjetas de empresas (reutilizado por la pestaña y por export HTML/PDF)
 // Fichas de empresas en INGLÉS (para exports de Empresas en EN). Mismo key que companyInfo.
 const FT_CO_EN = {
@@ -12670,7 +12697,8 @@ function ftCompanyCards(f, opts) {
     cube: '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>',
     globe: '<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',
     trend: '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>',
-    info: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>'
+    info: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>',
+    news: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>'
   };
   const svgIco = (name, size) => `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle">${SVG_ICONS[name] || ''}</svg>`;
   const sec = (icon, title, body) =>
@@ -12748,6 +12776,15 @@ function ftCompanyCards(f, opts) {
         ${info.product ? sec('cube', (EN ? 'Product · ' : 'Producto · ') + info.product.name, `<div class="ft-co-sec-t">${escapeHtml(info.product.desc)}</div>`) : ''}
         ${info.markets ? sec('globe', EN ? 'Target market' : 'Mercado objetivo', `<div class="ft-co-chips">${info.markets.map(m => `<span class="ft-co-chip">${escapeHtml(m)}</span>`).join('')}</div>`) : ''}
         ${info.thesis ? sec('trend', EN ? 'Investment thesis' : 'Tesis de inversión', `<div class="ft-co-sec-t">${escapeHtml(info.thesis)}</div>`) : ''}
+        ${(() => {
+          const news = (opts.news != null) ? (opts.news[r.company] || opts.news[(r.company || '').replace(/\s*\((?:Distributed|X)\)\s*$/i, '').trim()] || []) : ftNewsFor(r.company);
+          if (!news.length) return '';
+          const items = news.slice(0, 3).map(n =>
+            `<a class="ft-co-news-it" href="${escapeHtml(n.url)}" target="_blank" rel="noopener">` +
+            `<span class="ft-co-news-t">${escapeHtml(EN ? (n.te || n.t) : n.t)}</span>` +
+            `<span class="ft-co-news-m">${escapeHtml(n.src)} · ${escapeHtml(n.date)}</span></a>`).join('');
+          return sec('news', EN ? 'Recent news' : 'Noticias', `<div class="ft-co-news">${items}</div>`);
+        })()}
       </div>`;
   }).join('');
 }
@@ -12788,6 +12825,11 @@ body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;backgro
 .ft-co-sec{display:flex;gap:12px;margin-bottom:14px}
 .ft-co-sec-ico{flex:0 0 auto;width:22px;text-align:center;color:#e8650d;font-size:15px;padding-top:1px}
 .ft-co-sec-body{min-width:0}
+.ft-co-news{display:flex;flex-direction:column;gap:7px}
+.ft-co-news-it{display:block;text-decoration:none}
+.ft-co-news-t{display:block;font-size:12.5px;color:#1a1f2e;line-height:1.35;font-weight:500}
+.ft-co-news-it:hover .ft-co-news-t{color:#e8650d}
+.ft-co-news-m{display:block;font-size:11px;color:#6b7589;margin-top:1px}
 .ft-co-sec-h{font-size:14px;font-weight:700;color:#1a1f2e;margin-bottom:4px}
 .ft-co-sec-t{font-size:13px;color:#3d4559;line-height:1.5}
 .ft-co-chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:2px}
@@ -12994,6 +13036,7 @@ async function exportCompaniesHTML(fundId, btn) {
   const orig = btn ? btn.innerHTML : '';
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generando…'; }
   try {
+    await fetchTrackerNews();
     const logos = await ftEmbedLogos(f);
     const blob = new Blob([ftCompaniesDocHtml(f, lang, logos)], { type: 'text/html;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -13062,6 +13105,7 @@ async function exportCompaniesPDF(fundId, btn) {
   })) };
   if (btn) { btn.disabled = true; }
   try {
+    await fetchTrackerNews();
     await loadJsPDF();
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
@@ -13191,6 +13235,31 @@ async function exportCompaniesPDF(fundId, btn) {
       if (info.product) drawSec((EN ? 'Product - ' : 'Producto - ') + info.product.name, false, info.product.desc);
       if (info.markets) drawSec(EN ? 'Target market' : 'Mercado objetivo', true, info.markets);
       if (info.thesis)  drawSec(EN ? 'Investment thesis' : 'Tesis de inversion', false, info.thesis);
+      const news = ftNewsFor(r.company).slice(0, 3);
+      if (news.length) {
+        doc.setFont('helvetica','bold'); doc.setFontSize(10);
+        if (draw) {
+          doc.setFillColor.apply(doc, ORANGE); doc.roundedRect(ix, cy - 2.6, 2.4, 2.4, 0.6, 0.6, 'F');
+          doc.setTextColor.apply(doc, NAVY); T(EN ? 'Recent news' : 'Noticias', ix + 4.5, cy);
+        }
+        cy += lh(10) + 1.5;
+        for (const n of news) {
+          const title = EN ? (n.te || n.t) : n.t;
+          doc.setFont('helvetica','normal'); doc.setFontSize(9);
+          const tl = split(title, iw - 2);
+          if (draw) {
+            doc.setTextColor.apply(doc, NAVY);
+            tl.forEach((ln, i) => {
+              if (i === 0) doc.textWithLink(_san(ln), ix, cy, { url: n.url });
+              else T(ln, ix, cy + i * lh(9));
+            });
+          }
+          cy += tl.length * lh(9);
+          doc.setFontSize(7.5);
+          if (draw) { doc.setTextColor.apply(doc, GRAY); T(n.src + ' - ' + n.date, ix, cy + 2); }
+          cy += lh(7.5) + 3;
+        }
+      }
 
       cy += pad - 2;
       return cy - yTop;
