@@ -2790,6 +2790,11 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 }
 [data-theme="dark"] .home-module.disabled{background:rgba(255,255,255,.02)}
 [data-theme="dark"] .home-module-badge{background:rgba(255,255,255,.04)}
+/* Insignia "Beta" (funciones en prueba) */
+.home-module-badge.beta{color:#a15c00;background:#fdefd6;border-color:#f6d9a8}
+[data-theme="dark"] .home-module-badge.beta{color:#f0b27a;background:rgba(237,120,36,.16);border-color:rgba(237,120,36,.3)}
+.beta-tag{margin-left:auto;font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#a15c00;background:#fdefd6;border:1px solid #f6d9a8;padding:1px 6px;border-radius:99px}
+[data-theme="dark"] .beta-tag{color:#f0b27a;background:rgba(237,120,36,.16);border-color:rgba(237,120,36,.3)}
 
 /* Pulso de notificación en el módulo To Do: avisa que hay invitaciones de
    tarea por aceptar. Aro que late (radar), sutil, ease-out sin rebote.
@@ -4234,6 +4239,16 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
         <button type="button" class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
       </div>
     </div>
+    <label class="settings-row">
+      <div style="flex:1">
+        <div class="settings-row-lbl">Funciones Beta</div>
+        <div class="settings-row-sub">Prueba funciones nuevas antes que nadie · pueden estar incompletas</div>
+      </div>
+      <span class="toggle">
+        <input type="checkbox" id="betaToggle" onchange="setBetaOptin(this.checked)">
+        <span class="toggle-track"></span>
+      </span>
+    </label>
     <!-- Vista del home (solo Cretum por ahora): Principal clásica o ventanas modulares -->
     <div class="settings-row" id="homeViewRow" style="display:none">
       <div style="flex:1">
@@ -6075,6 +6090,11 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
           <button type="button" class="cdd-btn" onclick="usrGenPw('usrfPw')" style="flex:none;white-space:nowrap">Generar</button>
         </div>
       </div>
+      <div id="usrfModBlock">
+        <label class="camp-f-lbl" style="margin-top:14px">Acceso a módulos</label>
+        <label class="usr-mod-all"><input type="checkbox" id="usrfModAll" checked onchange="usrfModToggleAll(this.checked)"><span><b>Acceso a todo</b><br>Sin restricción — ve todos los módulos que permite su rol. Desmárcalo para elegir solo algunos.</span></label>
+        <div class="usr-mod-list" id="usrfModList" style="margin-top:8px"></div>
+      </div>
       <div class="camp-modal-msg" id="usrfMsg"></div>
     </div>
     <div class="camp-modal-foot">
@@ -7438,7 +7458,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   </div>
 </div>
 
-<script src="/i18n.js?v=20260824-lppw2"></script>
-<script src="/app.js?v=20260824-lppw2"></script>
+<script src="/i18n.js?v=20260826-beta1"></script>
+<script src="/app.js?v=20260826-beta1"></script>
 </body>
 </html>

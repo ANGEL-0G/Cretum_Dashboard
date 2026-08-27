@@ -44,7 +44,7 @@ async function initSupabase() {
 async function loadProfile(userId) {
   const { data, error } = await sb
     .from('profiles')
-    .select('id, full_name, initials, role, allowed_modules')
+    .select('id, full_name, initials, role, allowed_modules, beta_optin')
     .eq('id', userId)
     .single();
   if (error) throw error;
@@ -3157,6 +3157,7 @@ function toggleSettings(e) {
     document.getElementById('dropdownAv').textContent = currentProfile.initials || '—';
     document.getElementById('dropdownUserName').textContent = currentProfile.full_name || '—';
     document.getElementById('dropdownUserRole').textContent = currentProfile.role || '';
+    const bt = document.getElementById('betaToggle'); if (bt) bt.checked = !!currentProfile.beta_optin;
     applyThemeToggleState();
     // Toggle "Ver como" — solo para quien es admin REAL (sirve para probar la UI de editor/viewer)
     const showSwitch = roleReal === 'admin';
@@ -3348,6 +3349,19 @@ async function setReminderEnabled(on) {
     updateReminderBanner();
     toast(on ? 'Recordatorios activados' : 'Recordatorios desactivados');
   } catch (e) { toast('Error al guardar: ' + e.message); }
+}
+
+// Funciones Beta (auto-servicio): guarda la preferencia en el perfil y refresca
+// menú/home para mostrar u ocultar los módulos marcados `beta`.
+async function setBetaOptin(on) {
+  try {
+    const { error } = await sb.from('profiles').update({ beta_optin: on }).eq('id', currentUser);
+    if (error) throw error;
+  } catch (e) { toast('No se pudo guardar: ' + e.message); const bt = document.getElementById('betaToggle'); if (bt) bt.checked = !on; return; }
+  if (currentProfile) currentProfile.beta_optin = on;
+  renderNavList();
+  if (currentView === 'home') renderHomeModules();
+  toast(on ? 'Funciones Beta activadas' : 'Funciones Beta desactivadas');
 }
 
 async function setReminderDay(d) {
@@ -3636,13 +3650,16 @@ function saveHomeLayout(layout) {
   try { localStorage.setItem(homeLayoutKey(), JSON.stringify(all)); } catch (e) {}
 }
 
+// Funciones Beta: un módulo con `beta:true` solo lo ven los admins (siempre) y
+// quien haya activado el switch "Funciones Beta" en su perfil (auto-servicio).
+function betaVisible() { return currentProfile?.role === 'admin' || !!currentProfile?.beta_optin; }
 function homeAllowedModules() {
   const isAdmin = currentProfile?.role === 'admin';
   const isColab = currentProfile?.role === 'colaborador';
   const isEditorOrAdmin = isAdmin || currentProfile?.role === 'editor' || isColab;
   return (ORG_MODULES[currentOrg] || []).filter(m =>
     (!m.adminOnly || isAdmin) && (!m.editorOrAdmin || isEditorOrAdmin) && !(m.hideColaborador && isColab)
-    && moduleAllowed(m.view));
+    && (!m.beta || betaVisible()) && moduleAllowed(m.view));
 }
 
 // Aplica orden guardado (los desconocidos van al final, en su orden original) y separa ocultos.
@@ -3675,7 +3692,8 @@ function homeModuleHTML(m, editing) {
       ${homeModuleInner(m)}
     </div>`;
   }
-  const badge = m.disabled ? `<span class="home-module-badge">${t('Pronto')}</span>` : '';
+  const badge = m.disabled ? `<span class="home-module-badge">${t('Pronto')}</span>`
+    : (m.beta ? '<span class="home-module-badge beta">Beta</span>' : '');
   const pulse = (!m.disabled && m.view === 'tasks' && pendingInviteCount() > 0)
     ? '<span class="home-module-pulse" aria-label="Tienes tareas por aceptar"></span>' : '';
   return `<button class="home-module${m.disabled ? ' disabled' : ''}" data-mod="${m.view}"${m.disabled ? ' disabled aria-disabled="true"' : ` onclick="switchView('${m.view}')"`}>
@@ -5228,11 +5246,11 @@ function renderNavList() {
   const isEditorOrAdmin = isAdmin || currentProfile?.role === 'editor' || isColab;
   const items = (currentOrg ? ORG_NAV[currentOrg] : []).filter(it =>
     (!it.adminOnly || isAdmin) && (!it.editorOrAdmin || isEditorOrAdmin) && !(it.hideColaborador && isColab)
-    && moduleAllowed(it.view));
+    && (!it.beta || betaVisible()) && moduleAllowed(it.view));
   list.innerHTML = items.map(it => `
     <button class="nav-item" data-view="${it.view}" onclick="switchView('${it.view}')">
       <i class="${it.brand ? 'fa-brands' : 'fa-solid'} ${it.icon}"></i>
-      <span>${t(it.label)}</span>
+      <span>${t(it.label)}</span>${it.beta ? '<span class="beta-tag">Beta</span>' : ''}
     </button>
   `).join('');
   highlightActiveNav();
@@ -6490,7 +6508,7 @@ function applyRoute() {
     const isAdmin = currentProfile?.role === 'admin';
     const isColab = currentProfile?.role === 'colaborador';
     const isEditorOrAdmin = isAdmin || currentProfile?.role === 'editor' || isColab;
-    const allowed = (ORG_NAV[org] || []).some(it => it.view === view && (!it.adminOnly || isAdmin) && (!it.editorOrAdmin || isEditorOrAdmin) && !(it.hideColaborador && isColab));
+    const allowed = (ORG_NAV[org] || []).some(it => it.view === view && (!it.adminOnly || isAdmin) && (!it.editorOrAdmin || isEditorOrAdmin) && !(it.hideColaborador && isColab) && (!it.beta || betaVisible()));
     switchView(allowed ? view : 'home', true);
   } else {
     switchView('selector', true);
@@ -16186,9 +16204,25 @@ function usrCreateOpen() {
   document.getElementById('usrfRoleBlock').style.display = '';
   document.getElementById('usrfPwBlock').style.display = '';
   document.getElementById('usrfPw').value = '';
+  // Selector de módulos: crear ya restringido en un solo paso (default = todo).
+  document.getElementById('usrfModBlock').style.display = '';
+  document.getElementById('usrfModAll').checked = true;
+  document.getElementById('usrfModList').innerHTML = allModulesForAccess().map(m => `
+    <label class="usr-mod-item"><input type="checkbox" value="${escapeHtml(m.view)}" checked>
+      <span class="usr-mod-ic"><i class="${m.brand ? 'fa-brands' : 'fa-solid'} ${m.icon}"></i></span>
+      <span>${escapeHtml(m.label)}</span></label>`).join('');
+  usrfModSetDisabled(true);
   const m = document.getElementById('usrfMsg'); m.textContent = ''; m.className = 'camp-modal-msg';
   document.getElementById('usrModal').classList.add('show');
   setTimeout(() => document.getElementById('usrfNombre').focus(), 60);
+}
+function usrfModSetDisabled(on) {
+  document.querySelectorAll('#usrfModList input[type=checkbox]').forEach(c => { c.disabled = on; });
+  document.getElementById('usrfModList').classList.toggle('is-all', on);
+}
+function usrfModToggleAll(on) {
+  document.querySelectorAll('#usrfModList input[type=checkbox]').forEach(c => { c.checked = on; });
+  usrfModSetDisabled(on);
 }
 
 function usrEditOpen(id) {
@@ -16200,6 +16234,7 @@ function usrEditOpen(id) {
   document.getElementById('usrfRole').value = u.role || 'viewer';
   document.getElementById('usrfRoleBlock').style.display = 'none';   // el rol se cambia inline en la lista
   document.getElementById('usrfPwBlock').style.display = 'none';
+  document.getElementById('usrfModBlock').style.display = 'none';    // módulos se editan en "Módulos y accesos"
   const m = document.getElementById('usrfMsg'); m.textContent = ''; m.className = 'camp-modal-msg';
   document.getElementById('usrModal').classList.add('show');
   setTimeout(() => document.getElementById('usrfNombre').focus(), 60);
@@ -16224,7 +16259,10 @@ async function usrSave() {
       const role = document.getElementById('usrfRole').value;
       const pw = document.getElementById('usrfPw').value.trim();
       if (pw.length < 8) { fail('La contraseña debe tener al menos 8 caracteres.'); return; }
-      await usrApi({ action: 'users_create', full_name: full, email, role, password: pw });
+      const allAccess = document.getElementById('usrfModAll').checked;
+      const allowed_modules = allAccess ? null
+        : [...document.querySelectorAll('#usrfModList input[type=checkbox]:checked')].map(c => c.value);
+      await usrApi({ action: 'users_create', full_name: full, email, role, password: pw, allowed_modules });
       toast('Usuario creado');
     }
     usrClose(); await reloadUsuarios();

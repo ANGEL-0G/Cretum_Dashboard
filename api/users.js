@@ -64,7 +64,9 @@ export default async function handler(req, res) {
       if (!password || password.length < 8) return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres' });
       const { data: created, error: e } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
       if (e) return res.status(400).json({ error: e.message });
-      const { error: pe } = await admin.from('profiles').upsert({ id: created.user.id, full_name: full, initials: initialsOf(full), role });
+      // allowed_modules opcional: array = solo esos módulos; null/omitido = sin restricción.
+      const allowed_modules = Array.isArray(body.allowed_modules) ? body.allowed_modules.map(String) : null;
+      const { error: pe } = await admin.from('profiles').upsert({ id: created.user.id, full_name: full, initials: initialsOf(full), role, allowed_modules });
       if (pe) throw pe;
       return res.status(200).json({ ok: true, id: created.user.id });
     }
