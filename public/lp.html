@@ -97,9 +97,9 @@
   .doc:hover{border-color:var(--brand-2);background:var(--line-2)}
   .doc-ic{width:42px;height:42px;border-radius:10px;flex:0 0 auto;display:grid;place-items:center;color:var(--brand-2);background:var(--field);border:1px solid var(--line)}
   .doc-ic svg{width:20px;height:20px}
-  .doc-body{min-width:0;flex:1}
-  .doc-t{font-weight:600;font-size:15px;letter-spacing:-.01em;line-height:1.3;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .doc-m{font-size:12.5px;color:var(--ink-mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px}
+  .doc-body{display:block;min-width:0;flex:1}
+  .doc-t{display:block;font-weight:600;font-size:15px;letter-spacing:-.01em;line-height:1.3;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .doc-m{display:block;font-size:12.5px;color:var(--ink-mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px}
   .doc-go{color:var(--ink-mute);flex:0 0 auto} .doc-go svg{width:16px;height:16px}
   .doc:hover .doc-go{color:var(--brand-2)}
   .empty{grid-column:1/-1;padding:44px 24px;text-align:center;color:var(--ink-soft);font-size:14.5px;background:var(--surface);border:1px dashed var(--line);border-radius:12px}
@@ -159,6 +159,38 @@
   @media (prefers-reduced-motion:reduce){.spin{animation:none}}
   .loading{flex:1;display:flex;align-items:center;justify-content:center}
 
+  /* ── GVV v2 ── */
+  .chip{display:inline-flex;align-items:center;gap:6px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    font-weight:700;color:var(--brand-2);background:var(--field);border:1px solid var(--line);border-radius:99px;padding:5px 12px}
+  .chip.demo{color:#b26a00;border-color:#e8c489}
+  .statement{width:100%;border-collapse:collapse;font-size:13.5px}
+  .statement th{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-mute);font-weight:600;
+    text-align:right;padding:4px 8px 8px;border-bottom:1px solid var(--line)}
+  .statement th:first-child{text-align:left}
+  .statement td{padding:9px 8px;text-align:right;font-variant-numeric:tabular-nums;color:var(--ink);border-top:1px solid var(--line-2)}
+  .statement td:first-child{text-align:left;color:var(--ink-soft)}
+  .statement tr.total td{font-weight:700;background:var(--field);border-top:1.5px solid var(--brand-2)}
+  .statement tr.ror td{font-weight:700}
+  .fund-band{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:13px;margin-bottom:14px}
+  .fs{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 15px;min-width:0}
+  .fs-k{font-size:10.5px;letter-spacing:.06em;color:var(--ink-mute);font-weight:600;text-transform:uppercase}
+  .fs-v{font-family:var(--serif);font-weight:700;font-size:21px;color:var(--ink);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+  .fs-sub{font-size:11px;color:var(--ink-mute);margin-top:3px}
+  .donut3{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:14px}
+  .donut3 .panel{margin-bottom:0}
+  .tops{display:flex;flex-wrap:wrap;gap:9px}
+  .top-chip{font-size:13px;font-weight:600;color:var(--ink);background:var(--surface);border:1px solid var(--line);
+    border-radius:10px;padding:9px 14px;display:inline-flex;align-items:center;gap:8px;transition:border-color .18s var(--ease)}
+  .top-chip:hover{border-color:var(--brand-2)}
+  .top-chip .n{font-size:10px;color:var(--ink-mute);font-weight:700}
+  .terms-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+  .term{background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:13px 15px}
+  .term-k{font-size:10.5px;letter-spacing:.06em;color:var(--ink-mute);font-weight:600;text-transform:uppercase}
+  .term-v{font-size:13.5px;color:var(--ink);font-weight:600;margin-top:4px;line-height:1.35}
+  .note{font-size:11.5px;color:var(--ink-mute);font-style:italic;margin-top:10px}
+  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;margin-bottom:14px}
+  .grid2 .panel{margin-bottom:0}
+
   footer{color:var(--ink-mute);font-size:11.5px;padding:18px 0;border-top:1px solid var(--line)}
   footer .wrap{display:flex;flex-wrap:wrap;gap:6px 16px;justify-content:space-between;align-items:center}
   .hidden{display:none!important}
@@ -212,8 +244,14 @@
     </section>
     <section class="sec" id="dashSec" hidden>
       <div class="wrap">
-        <p class="sec-h">Tu posición · Fondo GVV</p>
+        <p class="sec-h" id="dashSecH">Tu cuenta · Cretum Partners GVV Fund, LP</p>
         <div id="dash"></div>
+      </div>
+    </section>
+    <section class="sec" id="fundSec" hidden>
+      <div class="wrap">
+        <p class="sec-h">El fondo</p>
+        <div id="fund"></div>
       </div>
     </section>
     <section class="sec">
@@ -291,10 +329,12 @@
       + svg + '<div class="chart-x">' + labels + '</div></div>';
   }
 
-  function renderDonut(alloc, cur) {
+  function renderDonut(alloc, cur, opts) {
+    opts = opts || {};
     alloc = (alloc || []).filter(function (a) { return a && isFinite(+a.v) && +a.v > 0; });
     if (!alloc.length) return '';
     var total = alloc.reduce(function (s, a) { return s + (+a.v); }, 0) || 1;
+    var fmtVal = opts.pct ? function (v) { return (Math.round(v * 10) / 10) + '%'; } : function (v) { return fmtMoney(v, cur); };
     var R = 60, CX = 75, CY = 75, C = 2 * Math.PI * R;
     var segs = '', cum = 0, legend = '';
     alloc.forEach(function (a, i) {
@@ -304,14 +344,14 @@
         + ' transform="rotate(' + rot.toFixed(2) + ' ' + CX + ' ' + CY + ')" style="transition-delay:' + (i * 90) + 'ms"/>';
       legend += '<div class="leg-item"><span class="leg-dot" style="background:' + col + '"></span>'
         + '<span class="leg-name">' + esc(a.name || '') + '</span>'
-        + '<span class="leg-val">' + fmtMoney(a.v, cur) + ' · ' + Math.round(f * 100) + '%</span></div>';
+        + '<span class="leg-val">' + (opts.pct ? fmtVal(+a.v) : fmtMoney(a.v, cur) + ' · ' + Math.round(f * 100) + '%') + '</span></div>';
       cum += f;
     });
     var svg = '<svg class="donut" viewBox="0 0 150 150" role="img" aria-label="Diversificacion">'
       + '<circle class="track" r="' + R + '" cx="' + CX + '" cy="' + CY + '"/>' + segs
-      + '<text class="donut-c-v" x="75" y="74" text-anchor="middle">' + fmtMoney(total, cur) + '</text>'
-      + '<text class="donut-c-k" x="75" y="88" text-anchor="middle">Total</text></svg>';
-    return '<div class="panel"><div class="panel-h"><span class="panel-t">Diversificación</span></div>'
+      + '<text class="donut-c-v" x="75" y="74" text-anchor="middle">' + (opts.center || fmtMoney(total, cur)) + '</text>'
+      + '<text class="donut-c-k" x="75" y="88" text-anchor="middle">' + esc(opts.centerLabel || 'Total') + '</text></svg>';
+    return '<div class="panel"><div class="panel-h"><span class="panel-t">' + esc(opts.title || 'Diversificación') + '</span></div>'
       + '<div class="donut-wrap">' + svg + '<div class="leg">' + legend + '</div></div></div>';
   }
 
@@ -320,7 +360,7 @@
     if (REDUCE) return;
     Array.prototype.forEach.call(document.querySelectorAll('#dash .kpi-v[data-target]'), function (el, idx) {
       var target = parseFloat(el.getAttribute('data-target')) || 0, kind = el.getAttribute('data-kind'), cur = el.getAttribute('data-cur');
-      function fmt(v) { return kind === 'pct' ? fmtPct(v) : kind === 'moic' ? (v.toFixed(2) + 'x') : fmtMoney(v, cur); }
+      function fmt(v) { return kind === 'pct' ? fmtPct(v) : kind === 'pct2' ? ((v < 0 ? '\u2212' : '+') + Math.abs(v).toFixed(2) + '%') : kind === 'moic' ? (v.toFixed(2) + 'x') : fmtMoney(v, cur); }
       var dur = 1000, t0 = null;
       el.textContent = fmt(0);
       // escalonado: cada KPI arranca junto con la entrada de su tarjeta.
@@ -383,7 +423,7 @@
   }
 
   function kpiCard(k, kind, val, cur, big, sub, subcls, valcls) {
-    var fin = kind === 'pct' ? fmtPct(val) : kind === 'moic' ? (Number(val || 0).toFixed(2) + 'x') : fmtMoney(val, cur);
+    var fin = kind === 'pct' ? fmtPct(val) : kind === 'pct2' ? ((Number(val) < 0 ? '\u2212' : '+') + Math.abs(Number(val) || 0).toFixed(2) + '%') : kind === 'moic' ? (Number(val || 0).toFixed(2) + 'x') : fmtMoney(val, cur);
     return '<div class="kpi"><div class="kpi-k">' + k + '</div>'
       + '<div class="kpi-v' + (big ? ' big' : '') + (valcls ? ' ' + valcls : '') + '" data-kind="' + kind + '" data-target="' + (Number(val) || 0) + '" data-cur="' + (cur || '') + '">' + fin + '</div>'
       + (sub ? '<div class="kpi-sub' + (subcls ? ' ' + subcls : '') + '">' + sub + '</div>' : '') + '</div>';
@@ -403,6 +443,111 @@
       + renderMovs(d.movimientos, cur);
     if (sec) sec.hidden = false;
     animateKPIs(); animateGraphs(); wireChart();
+  }
+
+  // ── GVV v2: estado de cuenta del LP + informacion del fondo ──
+  function fmtC(n) {
+    n = Number(n) || 0;
+    if (Math.abs(n) < 0.005) return '—';
+    var s;
+    try { s = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Math.abs(n)); }
+    catch (e) { s = Math.abs(n).toFixed(2); }
+    return (n < 0 ? '(' : '') + '$' + s + (n < 0 ? ')' : '');
+  }
+  function fmtRor(r) {
+    if (r == null || !isFinite(+r)) return '—';
+    return (r < 0 ? '−' : '') + Math.abs(r * 100).toFixed(2) + '%';
+  }
+  // Cinturón de seguridad: si las animaciones no corren (motores viejos,
+  // rAF congelado, impresión), TODO queda visible y con sus valores finales.
+  function settleUI() {
+    Array.prototype.forEach.call(document.querySelectorAll('#dash .kpi, #dash .panel, #fund .panel, #content'), function (e) {
+      e.style.animation = 'none'; e.style.opacity = '1'; e.style.transform = 'none'; e.style.filter = 'none';
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('#dash .kpi-v[data-target]'), function (el) {
+      var target = parseFloat(el.getAttribute('data-target')) || 0, kind = el.getAttribute('data-kind'), cur = el.getAttribute('data-cur');
+      el.textContent = kind === 'pct' ? fmtPct(target)
+        : kind === 'pct2' ? ((target < 0 ? '\u2212' : '+') + Math.abs(target).toFixed(2) + '%')
+        : kind === 'moic' ? (target.toFixed(2) + 'x') : fmtMoney(target, cur);
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('.donut .seg'), function (s) { s.style.strokeDashoffset = '0'; });
+    var line = document.getElementById('lcLine');
+    if (line) { line.style.transition = 'none'; line.style.strokeDasharray = 'none'; line.style.strokeDashoffset = '0'; }
+  }
+
+  function renderGvv(g) {
+    var cur = g.moneda || 'USD';
+    var c = g.cuenta || {}, mtd = c.mtd || {}, qtd = c.qtd || {}, ytd = c.ytd || {};
+    var host = $('dash'), sec = $('dashSec');
+    var demoChip = g.demo ? '<span class="chip demo" style="margin-bottom:12px">Datos ilustrativos</span> ' : '';
+    var kpis = kpiCard('Valor de tu cuenta', 'money', mtd.end, cur, true, 'USD · al ' + esc(g.corte || ''), '', '')
+      + kpiCard('Rendimiento del mes', 'pct2', (mtd.ror || 0) * 100, '', false,
+                ((mtd.ni || 0) < 0 ? '−' : '+') + fmtMoney(Math.abs(mtd.ni || 0), cur), (mtd.ror || 0) < 0 ? 'neg' : 'pos', (mtd.ror || 0) < 0 ? 'neg' : 'pos')
+      + kpiCard('Rendimiento del año', 'pct2', (ytd.ror || 0) * 100, '', false,
+                ((ytd.ni || 0) < 0 ? '−' : '+') + fmtMoney(Math.abs(ytd.ni || 0), cur), (ytd.ror || 0) < 0 ? 'neg' : 'pos', (ytd.ror || 0) < 0 ? 'neg' : 'pos')
+      + (Math.abs(ytd.add || 0) >= 0.01 ? kpiCard('Aportaciones del año', 'money', ytd.add, cur, false, '', '', '') : '')
+      + (Math.abs(ytd.red || 0) >= 0.01 ? kpiCard('Retiros del año', 'money', Math.abs(ytd.red), cur, false, '', '', '') : '');
+    function filaS(lbl, k) {
+      return '<tr><td>' + lbl + '</td><td>' + fmtC(mtd[k]) + '</td><td>' + fmtC(qtd[k]) + '</td><td>' + fmtC(ytd[k]) + '</td></tr>';
+    }
+    var stTable = '<div class="panel"><div class="panel-h"><span class="panel-t">Resumen del período</span>'
+      + '<span class="panel-note">cifras del administrador</span></div>'
+      + '<table class="statement"><tr><th></th><th>Mes (MTD)</th><th>Trimestre (QTD)</th><th>Año (YTD)</th></tr>'
+      + filaS('Saldo inicial', 'bb') + filaS('Aportaciones', 'add') + filaS('Retiros', 'red')
+      + filaS('Rendimiento neto', 'ni')
+      + '<tr class="total"><td>Saldo final</td><td>' + fmtC(mtd.end) + '</td><td>' + fmtC(qtd.end) + '</td><td>' + fmtC(ytd.end) + '</td></tr>'
+      + '<tr class="ror"><td>Tasa de rendimiento</td><td class="' + ((mtd.ror || 0) < 0 ? 'neg' : 'pos') + '">' + fmtRor(mtd.ror)
+      + '</td><td class="' + ((qtd.ror || 0) < 0 ? 'neg' : 'pos') + '">' + fmtRor(qtd.ror)
+      + '</td><td class="' + ((ytd.ror || 0) < 0 ? 'neg' : 'pos') + '">' + fmtRor(ytd.ror) + '</td></tr></table>'
+      + '<div class="note">Información preliminar sujeta a revisión del administrador (NAV Fund Services).</div></div>';
+    host.innerHTML = demoChip + '<div class="kpis">' + kpis + '</div>'
+      + '<div class="grid2">' + (renderChart(g.serie, cur) || '') + stTable + '</div>'
+      + renderMovs(g.movimientos, cur);
+    if (sec) sec.hidden = false;
+
+    var fdo = g.fondo;
+    var fsec = $('fundSec'), fhost = $('fund');
+    if (fdo && fhost) {
+      function fsCard(k, v, sub, cls) {
+        return '<div class="fs"><div class="fs-k">' + k + '</div><div class="fs-v' + (cls ? ' ' + cls : '') + '">' + v + '</div>'
+          + (sub ? '<div class="fs-sub">' + sub + '</div>' : '') + '</div>';
+      }
+      var net = fdo.net || {};
+      function pn(v) { return v == null ? '—' : ((v < 0 ? '−' : '+') + Math.abs(v).toFixed(2) + '%'); }
+      var band = '<div class="fund-band">'
+        + fsCard('Activos del fondo', fmtMoney(fdo.aum, 'USD'), 'al corte de ' + esc(fdo.asOf || ''))
+        + fsCard('Posiciones', (fdo.n_posiciones || '—') + '', (fdo.n_companias || '') + ' compañías')
+        + (net.ytd != null ? fsCard('Rendimiento del año', pn(net.ytd), 'neto de comisiones', net.ytd < 0 ? 'neg' : 'pos') : '')
+        + (net.oneYr != null ? fsCard('Últimos 12 meses', pn(net.oneYr), 'neto de comisiones', net.oneYr < 0 ? 'neg' : 'pos') : '')
+        + (net.cagr5 != null ? fsCard('Anualizado 5 años', pn(net.cagr5), 'neto de comisiones', net.cagr5 < 0 ? 'neg' : 'pos') : '')
+        + '</div>';
+      function dn(arr, title, centerLabel) {
+        return renderDonut((arr || []).map(function (a) { return { name: a.label, v: a.pct }; }), 'USD',
+          { pct: true, title: title, center: '100%', centerLabel: centerLabel });
+      }
+      var donuts = '<div class="donut3">' + dn(fdo.alloc, 'Asignación de activos', 'Cartera')
+        + dn(fdo.geo, 'Geografía', 'Cartera') + dn(fdo.ccy, 'Divisas', 'Cartera') + '</div>';
+      var tops = '';
+      if (fdo.top10 && fdo.top10.length) {
+        tops = '<div class="panel"><div class="panel-h"><span class="panel-t">Principales posiciones</span>'
+          + '<span class="panel-note">por tamaño · al ' + esc(fdo.asOf || '') + '</span></div><div class="tops">'
+          + fdo.top10.map(function (n, i) {
+              return '<span class="top-chip"><span class="n">' + (i + 1) + '</span>' + esc(n) + '</span>';
+            }).join('')
+          + '</div><div class="note">Los pesos y montos por posición se omiten por política de la firma.</div></div>';
+      }
+      var terms = '';
+      if (fdo.terms && fdo.terms.length) {
+        terms = '<div class="panel"><div class="panel-h"><span class="panel-t">Términos del fondo</span></div><div class="terms-grid">'
+          + fdo.terms.map(function (x) {
+              return '<div class="term"><div class="term-k">' + esc(x.k) + '</div><div class="term-v">' + esc(x.v) + '</div></div>';
+            }).join('') + '</div></div>';
+      }
+      fhost.innerHTML = band + donuts + tops + terms;
+      fsec.hidden = false;
+    }
+    animateKPIs(); animateGraphs(); wireChart();
+    setTimeout(settleUI, 2200);
   }
 
   function renderDocs(list) {
@@ -452,7 +597,8 @@
       }
       SESSION = res.j.token;
       $('greeting').textContent = 'Hola, ' + (res.j.name || '');
-      renderDash(res.j.data);
+      var d = res.j.data || null;
+      if (d && d.gvv) { renderGvv(d.gvv); } else { renderDash(d); }
       renderDocs(res.j.documents || []);
       hide($('login')); show($('content'));
       window.scrollTo(0, 0);
