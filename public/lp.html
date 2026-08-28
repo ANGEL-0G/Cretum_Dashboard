@@ -619,25 +619,31 @@
     if (live) live.addEventListener('click', function () { openStatement(live); });
   }
 
+  var STATEMENT_URL = 'https://mac-mini-de-cretum.tail4eeacb.ts.net:8443/gvv-statement';
   function openStatement(btn) {
     if (!SESSION) return;
     var go = btn.querySelector('.doc-go'); var prev = go ? go.innerHTML : '';
     if (go) go.innerHTML = '<span class="spin" style="width:16px;height:16px;border-width:2px"></span>';
-    // ventana abierta DENTRO del click (los bloqueadores de popups lo exigen)
+    // ventana abierta DENTRO del click (los bloqueadores de popups lo exigen);
+    // el PDF se pide por POST (el token viaja en el cuerpo, nunca en la URL)
     var w = window.open('', '_blank');
-    api({ action: 'statement_link', token: SESSION }).then(function (res) {
-      if (go) go.innerHTML = prev;
-      if (!res.ok || !res.j.url) {
+    if (w) { try { w.document.write('<title>Generando estado de cuenta…</title><p style="font-family:sans-serif;color:#555">Generando tu estado de cuenta…</p>'); } catch (e) {} }
+    fetch(STATEMENT_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                           body: JSON.stringify({ token: SESSION }) })
+      .then(function (r) {
+        if (!r.ok) return r.json().then(function (j) { throw new Error(j.error || ('HTTP ' + r.status)); });
+        return r.blob();
+      })
+      .then(function (blob) {
+        if (go) go.innerHTML = prev;
+        var url = URL.createObjectURL(blob);
+        if (w) { w.location = url; } else { window.open(url, '_blank', 'noopener'); }
+      })
+      .catch(function (e) {
+        if (go) go.innerHTML = prev;
         if (w) w.close();
-        alert(res.j && res.j.error ? res.j.error : 'No se pudo generar el estado de cuenta.');
-        return;
-      }
-      if (w) { w.location = res.j.url; } else { window.open(res.j.url, '_blank', 'noopener'); }
-    }).catch(function () {
-      if (go) go.innerHTML = prev;
-      if (w) w.close();
-      alert('No se pudo generar el estado de cuenta.');
-    });
+        alert('No se pudo generar el estado de cuenta. ' + (e && e.message ? e.message : ''));
+      });
   }
 
   function openDoc(id, btn) {
