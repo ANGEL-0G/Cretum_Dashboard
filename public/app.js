@@ -531,7 +531,11 @@ function setSyncStatus(s) {
   const dot = document.getElementById('syncDot');
   const lbl = document.getElementById('syncLabel');
   dot.className = 'sync-dot' + (s === 'saving' ? ' saving' : s === 'error' ? ' error' : '');
-  lbl.textContent = s === 'loading' ? t('Cargando…') : s === 'saving' ? t('Guardando…') : s === 'error' ? t('Sin conexión') : t('Sincronizado');
+  const txt = s === 'loading' ? t('Cargando…') : s === 'saving' ? t('Guardando…') : s === 'error' ? t('Sin conexión') : t('Sincronizado');
+  lbl.textContent = txt;
+  // El texto está oculto (solo se ve el puntito): el estado va en el tooltip.
+  const box = document.getElementById('syncStatus');
+  if (box) box.title = txt + ' · ' + t('clic para sincronizar ahora');
 }
 
 /* ═══════════════════════════════════════════

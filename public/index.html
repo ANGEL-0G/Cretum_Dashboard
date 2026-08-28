@@ -174,7 +174,7 @@ select.camp-f-inp::-ms-expand,select.form-input::-ms-expand{display:none}
 .header-brand{
   display:flex;align-items:center;gap:9px;
   background:white;border:none;border-radius:var(--r-md);
-  padding:4px 14px 4px 4px;flex-shrink:0;
+  padding:4px 14px 4px 4px;flex-shrink:0;margin-right:auto;   /* empuja el grupo derecho (System/Noticias/cuenta) a la derecha */
   font-family:var(--font);cursor:pointer;
   transition:box-shadow .15s,transform .12s;
 }
@@ -218,14 +218,19 @@ select.camp-f-inp::-ms-expand,select.form-input::-ms-expand{display:none}
   background:rgba(255,255,255,.22);
   display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;
 }
+/* Indicador de sincronizado: puntito flotante abajo-izquierda (el FAB usa la
+   esquina derecha). Solo el dot; el estado va en el tooltip. Clic = sincronizar. */
 .header-sync{
-  display:flex;align-items:center;gap:6px;font-size:11px;
-  background:rgba(255,255,255,.12);padding:5px 12px;border-radius:20px;
-  cursor:pointer;transition:background .15s;
-  margin-left:auto;   /* inicia el grupo derecho: estado + cuenta */
+  position:fixed;bottom:18px;left:18px;z-index:40;
+  display:grid;place-items:center;width:30px;height:30px;border-radius:50%;
+  background:var(--white);border:1px solid var(--gray-200);
+  box-shadow:0 2px 8px rgba(15,23,42,.10);
+  cursor:pointer;transition:transform .12s cubic-bezier(.23,1,.32,1),border-color .15s;
 }
-.header-sync:hover{background:rgba(255,255,255,.22)}
-.header-sync[title]{position:relative}
+.header-sync:hover{transform:scale(1.08);border-color:var(--navy)}
+.header-sync:active{transform:scale(.94)}
+.header-sync span{display:none}   /* solo el puntito */
+.header-sync .sync-dot{width:8px;height:8px}
 /* Botón "System": abre el mapa del sistema (grafo) en pestaña nueva */
 .header-sys{
   display:flex;align-items:center;gap:6px;font-size:11px;
@@ -3991,8 +3996,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   .header-brand{padding:3px 11px 3px 3px;gap:6px}
   .header-mark{width:28px;height:28px;padding:3px}
   .header-title{font-size:11px;letter-spacing:.2px;white-space:nowrap}
-  .header-sync{padding:4px 9px;font-size:10px;gap:4px}
-  .header-sync span{display:none}
+  .header-sync{bottom:14px;left:14px}   /* puntito flotante (móvil) */
   .header-sys{padding:4px 9px;font-size:10px;gap:4px}
   .header-sys span{display:none}
   .header-user{padding:4px 10px 4px 4px;gap:6px}
