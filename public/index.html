@@ -222,7 +222,8 @@ select.camp-f-inp::-ms-expand,select.form-input::-ms-expand{display:none}
 /* Indicador de sincronizado: puntito flotante abajo-izquierda (el FAB usa la
    esquina derecha). Solo el dot; el estado va en el tooltip. Clic = sincronizar. */
 .header-sync{
-  position:fixed;bottom:18px;left:18px;z-index:40;
+  /* apilado ENCIMA del botón Reportar (que va abajo-izquierda) para no taparse */
+  position:fixed;bottom:calc(72px + env(safe-area-inset-bottom,0px));left:20px;z-index:40;
   display:grid;place-items:center;width:30px;height:30px;border-radius:50%;
   background:var(--white);border:1px solid var(--gray-200);
   box-shadow:0 2px 8px rgba(15,23,42,.10);
@@ -3999,7 +4000,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   .header-brand{padding:3px 11px 3px 3px;gap:6px}
   .header-mark{width:28px;height:28px;padding:3px}
   .header-title{font-size:11px;letter-spacing:.2px;white-space:nowrap}
-  .header-sync{bottom:14px;left:14px}   /* puntito flotante (móvil) */
+  .header-sync{bottom:calc(64px + env(safe-area-inset-bottom,0px));left:14px}   /* encima del Reportar (móvil) */
   .header-sys{padding:4px 9px;font-size:10px;gap:4px}
   .header-sys span{display:none}
   .header-user{padding:4px 10px 4px 4px;gap:6px}
