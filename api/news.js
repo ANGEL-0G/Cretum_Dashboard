@@ -265,21 +265,38 @@ async function resolveGoogleNews(url) {
 }
 
 // ── Imágenes: og:image real del artículo (best-effort) con respaldo al logo del medio ──
+const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 async function fetchOgImage(url) {
   try {
     const ctrl = new AbortController();
-    const to = setTimeout(() => ctrl.abort(), 3500);
+    const to = setTimeout(() => ctrl.abort(), 4000);
     const r = await fetch(url, {
       redirect: 'follow', signal: ctrl.signal,
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; CretumDesk/1.0; +https://cretumdesk.com)' },
+      headers: {
+        'User-Agent': BROWSER_UA,
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
     });
     clearTimeout(to);
     if (!r.ok) return '';
-    const html = (await r.text()).slice(0, 250000);
-    const m = html.match(/<meta[^>]+(?:property|name)=["'](?:og:image(?::secure_url)?|twitter:image(?::src)?)["'][^>]+content=["']([^"']+)["']/i)
-      || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["'](?:og:image|twitter:image)["']/i);
-    let img = m ? decode(m[1]) : '';
-    if (img && img.startsWith('//')) img = 'https:' + img;
+    const html = (await r.text()).slice(0, 300000);
+    let img = '';
+    const pats = [
+      /<meta[^>]+(?:property|name)=["'](?:og:image:secure_url|og:image:url|og:image|twitter:image:src|twitter:image)["'][^>]+content=["']([^"']+)["']/i,
+      /<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["'](?:og:image|twitter:image)["']/i,
+      /<link[^>]+rel=["']image_src["'][^>]+href=["']([^"']+)["']/i,
+    ];
+    for (const p of pats) { const m = html.match(p); if (m) { img = m[1]; break; } }
+    if (!img) {   // JSON-LD "image"
+      const ld = html.match(/"image"\s*:\s*"([^"]+)"/i)
+        || html.match(/"image"\s*:\s*\[\s*"([^"]+)"/i)
+        || html.match(/"image"\s*:\s*\{[^}]*"url"\s*:\s*"([^"]+)"/i);
+      if (ld) img = ld[1];
+    }
+    img = decode(img || '').trim();
+    if (img.startsWith('//')) img = 'https:' + img;
+    else if (img.startsWith('/')) { try { img = new URL(img, url).href; } catch (e) {} }
     return /^https?:\/\//.test(img) ? img : '';
   } catch (e) { return ''; }
 }
@@ -294,13 +311,11 @@ async function enrichImages(items) {
       const real = await resolveGoogleNews(it.url);   // enlace del medio (no el de Google)
       if (real && real !== it.url) it.url = real;      // "Leer" abre directo al editor
       const og = await fetchOgImage(it.url);
-      it.image = og || (it.domain ? 'https://logo.clearbit.com/' + it.domain : '');
+      it.image = og || '';   // sin foto → tarjeta con degradado limpio (no logo roto)
     }));
     await new Promise(r => setTimeout(r, 60));
   }
-  for (const it of items.slice(TOP)) {
-    it.image = it.domain ? 'https://logo.clearbit.com/' + it.domain : '';
-  }
+  for (const it of items.slice(TOP)) it.image = '';
 }
 function blob(items, companies) {
   return { generated: new Date().toISOString(), count: items.length, companies: companies.map(c => c.name), items };
