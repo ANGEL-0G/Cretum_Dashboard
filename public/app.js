@@ -18434,14 +18434,14 @@ async function openLettersModal() {
    ═══════════════════════════════════════════════════════════════════════════ */
 let gmTimer = null, gmSnap = null, gmTab = 'resumen', gmExpanded = null;
 let gmSort = { key: 'absPl', dir: -1 }, gmFiltroStrat = '';
-const GM_CARD = 'background:#fff;border:1px solid var(--gray-200);border-radius:12px;padding:16px 18px';
+const GM_CARD = 'background:var(--white);border:1px solid var(--gray-200);border-radius:12px;padding:16px 18px';
 
 function gmFmtUsd(x, dec = 0) {
   const sign = x < 0 ? '-' : '';
   return sign + '$' + Math.abs(x).toLocaleString('en-US', { maximumFractionDigits: dec, minimumFractionDigits: dec });
 }
 function gmPct(x, dec = 2) { return (x > 0 ? '+' : '') + x.toFixed(dec) + '%'; }
-function gmColor(x) { return x > 0 ? '#0d6e3c' : (x < 0 ? '#c62828' : 'var(--gray-500)'); }
+function gmColor(x) { return x > 0 ? 'var(--green)' : (x < 0 ? 'var(--red)' : 'var(--gray-500)'); }
 function gmHeatColor(dp) {
   // -5%..+5% → rojo→blanco→verde (para el treemap)
   const v = Math.max(-5, Math.min(5, dp || 0)) / 5;
@@ -18469,7 +18469,7 @@ async function gmLoad(manual = false) {
     gmRender();
     if (manual) toast('Snapshot actualizado');
   } catch (err) {
-    if (root) root.innerHTML = `<div style="padding:40px;text-align:center;color:#c62828">No se pudo cargar el snapshot: ${escapeHtml(err.message)}</div>`;
+    if (root) root.innerHTML = `<div style="padding:40px;text-align:center;color:var(--red)">No se pudo cargar el snapshot: ${escapeHtml(err.message)}</div>`;
   }
 }
 
@@ -18517,7 +18517,7 @@ function gmSignals(s) {
 
 function gmSignalsCard(s) {
   const sig = gmSignals(s);
-  const SEV = { crit: ['#c62828', '#fdf0ef', 'CRÍTICO'], warn: ['#b26a00', '#fdf3e7', 'VIGILAR'], info: ['#5a6b82', 'var(--gray-50)', 'INFO'] };
+  const SEV = { crit: ['var(--red)', 'var(--red-bg)', 'CRÍTICO'], warn: ['var(--amber)', 'var(--amber-bg)', 'VIGILAR'], info: ['#5a6b82', 'var(--gray-50)', 'INFO'] };
   const TEMAS = {
     opciones: ['fa-layer-group', 'Opciones'], movimientos: ['fa-bolt', 'Movimientos del día'],
     cartera: ['fa-scale-unbalanced', 'Cartera y liquidez'], higiene: ['fa-broom', 'Higiene de datos'],
@@ -18531,7 +18531,7 @@ function gmSignalsCard(s) {
     if (!items.length) return '';
     const peor = items[0].sev;
     const [ic, titulo] = TEMAS[tema];
-    return `<div style="border:1px solid var(--gray-200);border-left:4px solid ${SEV[peor][0]};border-radius:10px;padding:10px 14px;margin:8px 0;background:#fff">
+    return `<div style="border:1px solid var(--gray-200);border-left:4px solid ${SEV[peor][0]};border-radius:10px;padding:10px 14px;margin:8px 0;background:var(--white)">
       <div style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:12.5px;margin-bottom:6px;color:var(--gray-800)">
         <i class="fa-solid ${ic}" style="color:${SEV[peor][0]}"></i> ${titulo}
         <span style="font-weight:400;font-size:10px;color:var(--gray-400)">${items.length} señal${items.length === 1 ? '' : 'es'}</span></div>
@@ -18612,7 +18612,7 @@ function gmBarsGrupo(titulo, grupos, aum) {
   const filas = grupos.map(g => `
     <div style="display:flex;align-items:center;gap:8px;margin:4px 0">
       <span style="width:120px;font-size:10.5px;color:var(--gray-500);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(g.label)}</span>
-      <div style="flex:1;background:var(--gray-100);border-radius:3px;height:11px"><div style="background:#1c4e80;height:11px;width:${Math.min(100, g.pct).toFixed(1)}%;border-radius:3px"></div></div>
+      <div style="flex:1;background:var(--gray-100);border-radius:3px;height:11px"><div style="background:var(--navy);height:11px;width:${Math.min(100, g.pct).toFixed(1)}%;border-radius:3px"></div></div>
       <span style="width:40px;text-align:right;font-size:10.5px">${g.pct.toFixed(1)}%</span>
       <span style="width:52px;text-align:right;font-size:10px;color:${gmColor(g.pl || 0)}">${g.pl != null ? gmFmtUsd(g.pl / 1000, 0) + 'k' : ''}</span>
     </div>`).join('');
@@ -18631,11 +18631,11 @@ function gmDteLadder(ops, w, h) {
     const sel = gmDteSel === +d;
     const r = Math.min(16, 5 + Math.sqrt(list.length) * 3);
     return `<g onclick="gmDteSel=gmDteSel===${d}?null:${d};gmRender()" style="cursor:pointer">
-      ${sel ? `<circle cx="${x(+d)}" cy="${h / 2 - 6}" r="${r + 4}" fill="none" stroke="#0f2849" stroke-width="2"/>` : ''}
+      ${sel ? `<circle cx="${x(+d)}" cy="${h / 2 - 6}" r="${r + 4}" fill="none" stroke="var(--navy)" stroke-width="2"/>` : ''}
       <circle cx="${x(+d)}" cy="${h / 2 - 6}" r="${r}" fill="${itm ? `rgba(198,40,40,${sel ? '1' : '.75'})` : `rgba(28,78,128,${sel ? '1' : '.75'})`}">
       <title>DTE ${d}: ${list.length} posiciones (${itm} ITM) — click para el detalle</title></circle>
       <text x="${x(+d)}" y="${h / 2 - 6 + 3.5}" text-anchor="middle" font-size="9.5" font-weight="700" fill="#fff" pointer-events="none">${list.length}</text>
-      <text x="${x(+d)}" y="${h - 4}" text-anchor="middle" font-size="9" fill="${sel ? '#0f2849' : 'var(--gray-500)'}" font-weight="${sel ? 700 : 400}">${d}d</text></g>`;
+      <text x="${x(+d)}" y="${h - 4}" text-anchor="middle" font-size="9" fill="${sel ? 'var(--navy)' : 'var(--gray-500)'}" font-weight="${sel ? 700 : 400}">${d}d</text></g>`;
   }).join('');
   return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;display:block">
     <line x1="26" y1="${h / 2 - 6}" x2="${w - 12}" y2="${h / 2 - 6}" stroke="var(--gray-200)"/>${dots}</svg>`;
@@ -18653,7 +18653,7 @@ function gmStressAsignacion(s) {
     return `<tr><td style="font-weight:600">S&P ${sh}%</td>
       <td class="num">${puts.length}</td>
       <td class="num">${gmFmtUsd(necesita)}</td>
-      <td class="num" style="color:${cubre ? '#0d6e3c' : '#c62828'};font-weight:700">${cubre ? 'Cubierto' : 'FALTA ' + gmFmtUsd(necesita - cash)}</td>
+      <td class="num" style="color:${cubre ? 'var(--green)' : 'var(--red)'};font-weight:700">${cubre ? 'Cubierto' : 'FALTA ' + gmFmtUsd(necesita - cash)}</td>
       <td style="font-size:10.5px;color:var(--gray-500)">${[...new Set(puts.map(o => o.ticker))].slice(0, 8).join(', ')}</td></tr>`;
   }).join('');
   return `<div style="font-weight:700;margin-bottom:2px"><i class="fa-solid fa-vial"></i> Stress de asignación (puts vendidos)</div>
@@ -18671,14 +18671,14 @@ function gmRender() {
   const ts = new Date(s.ts);
   if (badge) {
     badge.textContent = (s.market_open ? 'Mercado abierto' : 'Mercado cerrado') + ' · ' + ts.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
-    badge.style.background = s.market_open ? '#e6f4ea' : 'var(--gray-100)';
-    badge.style.color = s.market_open ? '#0d6e3c' : 'var(--gray-500)';
+    badge.style.background = s.market_open ? 'var(--green-bg)' : 'var(--gray-100)';
+    badge.style.color = s.market_open ? 'var(--green)' : 'var(--gray-500)';
   }
   const tabs = [['resumen', 'fa-gauge-high', 'Resumen'], ['posiciones', 'fa-table-list', 'Posiciones'],
                 ['opciones', 'fa-layer-group', 'Opciones'], ['riesgo', 'fa-shield-halved', 'Riesgo'],
                 ['intel', 'fa-brain', 'Inteligencia']];
   const tabBar = `<div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">${tabs.map(([k, ic, lbl]) =>
-    `<button onclick="gmSetTab('${k}')" style="border:1.5px solid ${gmTab === k ? '#0f2849' : 'var(--gray-200)'};background:${gmTab === k ? '#0f2849' : '#fff'};color:${gmTab === k ? '#fff' : 'var(--gray-600)'};border-radius:99px;padding:7px 16px;font-size:12.5px;font-weight:600;cursor:pointer"><i class="fa-solid ${ic}"></i> ${lbl}</button>`).join('')}</div>`;
+    `<button onclick="gmSetTab('${k}')" style="border:1.5px solid ${gmTab === k ? '#0f2849' : 'var(--gray-200)'};background:${gmTab === k ? '#0f2849' : 'var(--white)'};color:${gmTab === k ? '#fff' : 'var(--gray-600)'};border-radius:99px;padding:7px 16px;font-size:12.5px;font-weight:600;cursor:pointer"><i class="fa-solid ${ic}"></i> ${lbl}</button>`).join('')}</div>`;
   const fn = { resumen: gmTabResumen, posiciones: gmTabPosiciones, opciones: gmTabOpciones, riesgo: gmTabRiesgo, intel: gmTabIntel }[gmTab] || gmTabResumen;
   root.innerHTML = tabBar + fn(s) +
     `<div style="margin-top:10px;font-size:10.5px;color:var(--gray-400)">Snapshot del robot cada 10 min en horario de mercado · posiciones del Excel oficial · quotes en vivo · privados y MX con precio del Excel. Señales v1 con umbrales fijos; pasarán a percentiles contra la propia historia del fondo conforme se acumule serie.</div>`;
@@ -18714,9 +18714,9 @@ function gmTabResumen(s) {
     const filas = [5, 10, 20].map(pct => {
       const req = aum * pct / 100;
       let verd, col;
-      if (req <= cash) { verd = 'Cubierto con efectivo'; col = '#0d6e3c'; }
-      else if (req <= cash + pubLiq) { verd = `Vender ${gmFmtUsd(req - cash)} de públicos`; col = '#b26a00'; }
-      else { verd = `INSUFICIENTE sin tocar privados (faltan ${gmFmtUsd(req - cash - pubLiq)})`; col = '#c62828'; }
+      if (req <= cash) { verd = 'Cubierto con efectivo'; col = 'var(--green)'; }
+      else if (req <= cash + pubLiq) { verd = `Vender ${gmFmtUsd(req - cash)} de públicos`; col = 'var(--amber)'; }
+      else { verd = `INSUFICIENTE sin tocar privados (faltan ${gmFmtUsd(req - cash - pubLiq)})`; col = 'var(--red)'; }
       return `<tr><td style="font-weight:600">Redenciones ${pct}% del AUM</td>
         <td class="num">${gmFmtUsd(req)}</td>
         <td class="num" style="color:${col};font-weight:700">${verd}</td></tr>`;
@@ -18737,13 +18737,13 @@ function gmTabResumen(s) {
       return `<div style="display:flex;gap:9px;align-items:baseline;padding:5px 10px;border-radius:8px;background:var(--gray-50);margin:3px 0;font-size:12px;${res ? 'opacity:.55' : ''}">
         <span style="color:var(--gray-400);font-size:10.5px;font-variant-numeric:tabular-nums">${escapeHtml(a.ts)}</span>
         <span style="flex:1;${res ? 'text-decoration:line-through solid rgba(90,107,130,.35)' : ''}">${escapeHtml(a.text)}</span>
-        <span style="flex:none;font-size:9px;font-weight:700;letter-spacing:.4px;padding:2px 8px;border-radius:99px;${res ? 'background:var(--gray-100);color:var(--gray-400)' : 'background:#fdf3e7;color:#b26a00'}">${res ? 'RESUELTA' : (a.activa ? 'ACTIVA' : 'ENVIADA')}</span></div>`;
+        <span style="flex:none;font-size:9px;font-weight:700;letter-spacing:.4px;padding:2px 8px;border-radius:99px;${res ? 'background:var(--gray-100);color:var(--gray-400)' : 'background:var(--amber-bg);color:var(--amber)'}">${res ? 'RESUELTA' : (a.activa ? 'ACTIVA' : 'ENVIADA')}</span></div>`;
     }).join('')}</div>
   </details>` : ''}
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-bottom:14px">
-    <div style="${GM_CARD}"><div style="font-weight:700;margin-bottom:6px;color:#c62828"><i class="fa-solid fa-arrow-trend-down"></i> Bajan hoy</div>
+    <div style="${GM_CARD}"><div style="font-weight:700;margin-bottom:6px;color:var(--red)"><i class="fa-solid fa-arrow-trend-down"></i> Bajan hoy</div>
       <table class="camp-table" style="width:100%">${s.top_down.map(moverRow).join('')}</table></div>
-    <div style="${GM_CARD}"><div style="font-weight:700;margin-bottom:6px;color:#0d6e3c"><i class="fa-solid fa-arrow-trend-up"></i> Suben hoy</div>
+    <div style="${GM_CARD}"><div style="font-weight:700;margin-bottom:6px;color:var(--green)"><i class="fa-solid fa-arrow-trend-up"></i> Suben hoy</div>
       <table class="camp-table" style="width:100%">${s.top_up.map(moverRow).join('')}</table></div>
   </div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px">
@@ -18793,8 +18793,8 @@ function gmTabPosiciones(s) {
   const secChips = Object.entries(secAgg).sort((a, b) => b[1].v - a[1].v).map(([k, x]) => {
     const on = gmFiltroSector === k;
     return `<button onclick="gmFiltroSector=gmFiltroSector==='${escapeHtml(k).replace(/'/g, "\\'")}'?'':'${escapeHtml(k).replace(/'/g, "\\'")}';gmExpanded=null;gmRender()"
-      style="flex:none;border:1.5px solid ${on ? '#0f2849' : 'var(--gray-200)'};background:${on ? '#0f2849' : '#fff'};border-radius:10px;padding:7px 12px;cursor:pointer;text-align:left;min-width:118px">
-      <div style="font-size:10px;font-weight:700;color:${on ? '#cfe0f5' : 'var(--gray-500)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px">${escapeHtml(k)}</div>
+      style="flex:none;border:1.5px solid ${on ? '#0f2849' : 'var(--gray-200)'};background:${on ? '#0f2849' : 'var(--white)'};border-radius:10px;padding:7px 12px;cursor:pointer;text-align:left;min-width:118px">
+      <div style="font-size:10px;font-weight:700;color:${on ? 'var(--navy-pale)' : 'var(--gray-500)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px">${escapeHtml(k)}</div>
       <div style="font-size:12.5px;font-weight:800;color:${on ? '#fff' : 'var(--gray-800)'}">${(x.v / aum * 100).toFixed(1)}%</div>
       <div style="font-size:10.5px;font-weight:600;color:${on ? (x.pl >= 0 ? '#9be3b3' : '#f5a3a3') : gmColor(x.pl)}">${gmFmtUsd(x.pl)}</div></button>`;
   }).join('');
@@ -18817,7 +18817,7 @@ function gmTabPosiciones(s) {
     const bancos = (f3.pt_bancos || []).filter(b => b.sym === sym).slice(0, 3);
     const r = pt?.reco;
     const rk = rmap[p.ticker];
-    return `<tr><td colspan="10" style="background:#fbfdff;border-bottom:2px solid var(--gray-200);padding:12px 16px">
+    return `<tr><td colspan="10" style="background:var(--navy-ghost);border-bottom:2px solid var(--gray-200);padding:12px 16px">
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;font-size:12px">
         <div><div style="font-weight:700;margin-bottom:4px">${escapeHtml(p.company || p.ticker)}${p.tramos > 1 ? ` <span style="font-size:10px;color:var(--gray-400)">· ${p.tramos} tramos consolidados</span>` : ''}</div>
           <div style="color:var(--gray-500)">${escapeHtml(p.sector || '')} · ${escapeHtml(p.region || '')} · ${escapeHtml(p.strat || '')}</div>
@@ -18825,11 +18825,11 @@ function gmTabPosiciones(s) {
           <div>P&L total: <strong style="color:${gmColor(p.pl || 0)}">${gmFmtUsd(p.pl || 0)} (${p.plpct != null ? gmPct(p.plpct, 1) : '—'})</strong></div>
           ${rk ? `<div style="margin-top:4px;color:var(--gray-600)">Beta ${rk.beta ?? '—'} · Vol ${rk.vol != null ? rk.vol + '%' : '—'} · ${rk.dias != null ? rk.dias + ' días en cartera' : ''} ${rk.cagr != null ? '· CAGR desde entrada ' + gmPct(rk.cagr, 1) : ''}</div>` : ''}</div>
         <div><div style="font-weight:700;margin-bottom:4px">Analistas</div>
-          ${r ? `<div>Buy <strong style="color:#0d6e3c">${r.buy}</strong> · Hold <strong>${r.hold}</strong> · Sell <strong style="color:#c62828">${r.sell}</strong></div>` : '<div style="color:var(--gray-400)">Sin datos aún</div>'}
+          ${r ? `<div>Buy <strong style="color:var(--green)">${r.buy}</strong> · Hold <strong>${r.hold}</strong> · Sell <strong style="color:var(--red)">${r.sell}</strong></div>` : '<div style="color:var(--gray-400)">Sin datos aún</div>'}
           ${pt?.mean ? `<div>PT consenso: <strong>$${pt.mean.toLocaleString('en-US')}</strong>${p.live_price ? ` (${gmPct((pt.mean / p.live_price - 1) * 100, 1)} upside)` : ''}</div>` : ''}
           ${bancos.map(b => `<div style="font-size:11px;color:var(--gray-600)">${escapeHtml(b.bank)} ${escapeHtml(b.action)} PT $${b.pt.toLocaleString('en-US')}</div>`).join('')}</div>
         <div><div style="font-weight:700;margin-bottom:4px">Noticias recientes</div>
-          ${news.length ? news.map(a => `<div style="margin:3px 0;font-size:11.5px"><a href="${escapeHtml(a.url || '#')}" target="_blank" rel="noopener" style="color:#1c4e80;text-decoration:none">${escapeHtml(a.h)}</a> <span style="color:var(--gray-400);font-size:10px">${gmAgo(a.t)}</span></div>`).join('') : '<div style="color:var(--gray-400)">Sin noticias en 72h</div>'}</div>
+          ${news.length ? news.map(a => `<div style="margin:3px 0;font-size:11.5px"><a href="${escapeHtml(a.url || '#')}" target="_blank" rel="noopener" style="color:var(--navy);text-decoration:none">${escapeHtml(a.h)}</a> <span style="color:var(--gray-400);font-size:10px">${gmAgo(a.t)}</span></div>`).join('') : '<div style="color:var(--gray-400)">Sin noticias en 72h</div>'}</div>
       </div></td></tr>`;
   };
 
@@ -18839,9 +18839,9 @@ function gmTabPosiciones(s) {
     let sigma = null;
     if (p.day_chg_pct != null && rk?.vol) sigma = p.day_chg_pct / (rk.vol / Math.sqrt(252));
     const sigChip = sigma != null && Math.abs(sigma) >= 2
-      ? ` <span style="font-size:9px;font-weight:800;color:#fff;background:${sigma < 0 ? '#c62828' : '#0d6e3c'};border-radius:99px;padding:1px 6px">${Math.abs(sigma).toFixed(1)}σ</span>` : '';
+      ? ` <span style="font-size:9px;font-weight:800;color:#fff;background:${sigma < 0 ? 'var(--red)' : 'var(--green)'};border-radius:99px;padding:1px 6px">${Math.abs(sigma).toFixed(1)}σ</span>` : '';
     const key = p.ticker;
-    return `<tr onclick="gmExpanded=gmExpanded==='${escapeHtml(key)}'?null:'${escapeHtml(key)}';gmRender()" style="cursor:pointer${gmExpanded === key ? ';background:#eef3fa' : ''}">
+    return `<tr onclick="gmExpanded=gmExpanded==='${escapeHtml(key)}'?null:'${escapeHtml(key)}';gmRender()" style="cursor:pointer${gmExpanded === key ? ';background:var(--navy-pale)' : ''}">
     <td style="font-weight:600;white-space:nowrap">${escapeHtml(p.ticker)}${p.tramos > 1 ? ` <span style="font-size:9px;color:var(--gray-400)">×${p.tramos}</span>` : ''} <i class="fa-solid fa-chevron-${gmExpanded === key ? 'up' : 'down'}" style="font-size:8px;color:var(--gray-300)"></i></td>
     <td style="max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(p.company || '')}</td>
     <td class="num">${(p.live_value / aum * 100).toFixed(1)}%</td>
@@ -18875,7 +18875,7 @@ function gmTabPosiciones(s) {
   <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:10px">${secChips}</div>
   <div style="${GM_CARD}">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:10px;flex-wrap:wrap">
-      <div style="font-weight:700"><i class="fa-solid fa-table-list"></i> Posiciones (${rows.length})${gmFiltroSector ? ` <span style="font-size:11px;color:#1c4e80">· ${escapeHtml(gmFiltroSector)} <a onclick="gmFiltroSector='';gmRender()" style="cursor:pointer">✕</a></span>` : ''} <span style="font-weight:400;font-size:11px;color:var(--gray-400)">· click en una fila para su ficha</span></div>
+      <div style="font-weight:700"><i class="fa-solid fa-table-list"></i> Posiciones (${rows.length})${gmFiltroSector ? ` <span style="font-size:11px;color:var(--navy)">· ${escapeHtml(gmFiltroSector)} <a onclick="gmFiltroSector='';gmRender()" style="cursor:pointer">✕</a></span>` : ''} <span style="font-weight:400;font-size:11px;color:var(--gray-400)">· click en una fila para su ficha</span></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <select onchange="gmGroupBy=this.value;gmExpanded=null;gmRender()" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px">
           ${Object.entries(GROUPS).map(([k, [lbl]]) => `<option value="${k}" ${gmGroupBy === k ? 'selected' : ''}>Agrupar: ${lbl}</option>`).join('')}</select>
@@ -18899,9 +18899,9 @@ function gmTabOpciones(s) {
   const primas = vivos.reduce((a, o) => a + (o.primas || 0), 0);
   const pl = vivos.reduce((a, o) => a + (o.pl || 0), 0);
   const optRow = o => {
-    const dteCol = o.dte <= 7 ? '#b26a00' : 'inherit';
-    const dCol = o.dist_strike_pct != null && Math.abs(o.dist_strike_pct) < 3 && o.cv === 'Venta' ? '#c62828' : 'inherit';
-    return `<tr${o.estado === 'ITM' ? ' style="background:#fdf0ef"' : ''}>
+    const dteCol = o.dte <= 7 ? 'var(--amber)' : 'inherit';
+    const dCol = o.dist_strike_pct != null && Math.abs(o.dist_strike_pct) < 3 && o.cv === 'Venta' ? 'var(--red)' : 'inherit';
+    return `<tr${o.estado === 'ITM' ? ' style="background:var(--red-bg)"' : ''}>
       <td style="font-weight:600">${escapeHtml(o.ticker)}</td><td>${escapeHtml(o.cv || '')} ${escapeHtml(o.pc || '')}</td>
       <td class="num">${o.strike}</td><td class="num">${o.spot ?? '—'}</td>
       <td class="num" style="color:${dCol}">${o.dist_strike_pct != null ? gmPct(o.dist_strike_pct, 1) : '—'}</td>
@@ -18913,8 +18913,8 @@ function gmTabOpciones(s) {
   return `
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:14px">
     <div style="${GM_CARD}"><div style="font-size:10.5px;color:var(--gray-500);text-transform:uppercase">Posiciones vivas</div><div style="font-size:26px;font-weight:800">${vivos.length}</div></div>
-    <div style="${GM_CARD}"><div style="font-size:10.5px;color:var(--gray-500);text-transform:uppercase">ITM</div><div style="font-size:26px;font-weight:800;color:${itm.length ? '#c62828' : 'inherit'}">${itm.length}</div></div>
-    <div style="${GM_CARD}"><div style="font-size:10.5px;color:var(--gray-500);text-transform:uppercase">Vencen hoy</div><div style="font-size:26px;font-weight:800;color:#b26a00">${vivos.filter(o => o.dte === 0).length}</div></div>
+    <div style="${GM_CARD}"><div style="font-size:10.5px;color:var(--gray-500);text-transform:uppercase">ITM</div><div style="font-size:26px;font-weight:800;color:${itm.length ? 'var(--red)' : 'inherit'}">${itm.length}</div></div>
+    <div style="${GM_CARD}"><div style="font-size:10.5px;color:var(--gray-500);text-transform:uppercase">Vencen hoy</div><div style="font-size:26px;font-weight:800;color:var(--amber)">${vivos.filter(o => o.dte === 0).length}</div></div>
     <div style="${GM_CARD}"><div style="font-size:10.5px;color:var(--gray-500);text-transform:uppercase">P&L abierto</div><div style="font-size:26px;font-weight:800;color:${gmColor(pl)}">${gmFmtUsd(pl)}</div></div>
   </div>
   ${(() => {
@@ -18927,12 +18927,12 @@ function gmTabOpciones(s) {
     const tv = vOtm.reduce((a, o) => a + (o.pl || 0), 0);
     const tc = cOtm.reduce((a, o) => a + (o.pl || 0), 0);
     const cuerda = sem.filter(o => o.dist_strike_pct != null && Math.abs(o.dist_strike_pct) < 3);
-    return `<div style="${GM_CARD};margin-bottom:14px;border-left:4px solid ${tv > 0 ? '#0d6e3c' : 'var(--gray-300)'}">
+    return `<div style="${GM_CARD};margin-bottom:14px;border-left:4px solid ${tv > 0 ? 'var(--green)' : 'var(--gray-300)'}">
       <div style="font-weight:700;margin-bottom:4px"><i class="fa-solid fa-hourglass-half"></i> Primas de la semana</div>
       <div style="font-size:13px;line-height:1.6">Si ningún strike se cruza al viernes: se consolidan
         <strong style="color:${gmColor(tv)}">${gmFmtUsd(tv)}</strong> en ${vOtm.length} venta(s) OTM${cOtm.length
           ? ` · ${cOtm.length} compra(s) OTM expirarían sin valor (<span style="color:${gmColor(tc)}">${gmFmtUsd(tc)}</span>, ya en el P&L)` : ''}.
-        ${cuerda.length ? `<div style="font-size:11.5px;color:#b26a00;margin-top:4px">En la cuerda floja: ${cuerda.map(o =>
+        ${cuerda.length ? `<div style="font-size:11.5px;color:var(--amber);margin-top:4px">En la cuerda floja: ${cuerda.map(o =>
           `${escapeHtml(o.ticker)} ${escapeHtml(o.cv || '')} ${escapeHtml(o.pc || '')} a ${gmPct(o.dist_strike_pct, 1)} del strike`).join(' · ')}</div>` : ''}
       </div></div>`;
   })()}
@@ -18949,10 +18949,10 @@ function gmTabOpciones(s) {
           <a onclick="gmDteSel=null;gmRender()" style="cursor:pointer;margin-left:auto;font-size:11px;color:var(--gray-400)">cerrar ✕</a></div>
         <div style="overflow-x:auto"><table class="camp-table" style="width:100%;font-size:12px">
           <tr><th>Ticker</th><th>Tipo</th><th>Strike</th><th>Spot</th><th>Dist. strike</th><th>Dist. BE</th><th>Títulos</th><th>Prima</th><th>P&L</th><th>Estado</th></tr>
-          ${sel.sort((a, b) => (a.estado === 'ITM' ? 0 : 1) - (b.estado === 'ITM' ? 0 : 1)).map(o => `<tr${o.estado === 'ITM' ? ' style="background:#fdf0ef"' : ''}>
+          ${sel.sort((a, b) => (a.estado === 'ITM' ? 0 : 1) - (b.estado === 'ITM' ? 0 : 1)).map(o => `<tr${o.estado === 'ITM' ? ' style="background:var(--red-bg)"' : ''}>
             <td style="font-weight:600">${escapeHtml(o.ticker)}</td><td>${escapeHtml(o.cv || '')} ${escapeHtml(o.pc || '')}</td>
             <td class="num">${o.strike}</td><td class="num">${o.spot ?? '—'}</td>
-            <td class="num" style="color:${o.dist_strike_pct != null && Math.abs(o.dist_strike_pct) < 3 && o.cv === 'Venta' ? '#c62828' : 'inherit'}">${o.dist_strike_pct != null ? gmPct(o.dist_strike_pct, 1) : '—'}</td>
+            <td class="num" style="color:${o.dist_strike_pct != null && Math.abs(o.dist_strike_pct) < 3 && o.cv === 'Venta' ? 'var(--red)' : 'inherit'}">${o.dist_strike_pct != null ? gmPct(o.dist_strike_pct, 1) : '—'}</td>
             <td class="num">${o.dist_be_pct != null ? gmPct(o.dist_be_pct, 1) : '—'}</td>
             <td class="num">${(o.titulos || 0).toLocaleString('en-US')}</td>
             <td class="num">${o.prima != null ? o.prima : '—'}</td>
@@ -18983,23 +18983,23 @@ function gm13fCard() {
   const q = (D.quarters || [])[0] || '';
   const pendientes = Object.entries(D.estatus || {}).filter(([, v]) => v !== q).map(([k]) => k.split(' ')[0]);
   const H = D.hero || {};
-  const secStyle = 'border:1px solid var(--gray-200);border-radius:10px;margin:8px 0;padding:2px 14px;background:#fff';
+  const secStyle = 'border:1px solid var(--gray-200);border-radius:10px;margin:8px 0;padding:2px 14px;background:var(--white)';
   const sumStyle = 'cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;font-weight:700;font-size:13px;padding:10px 0';
-  const chipF = f => `<span style="display:inline-block;font-size:10px;padding:2px 8px;border-radius:99px;margin:1px 2px;background:${f.diff >= 0 ? '#e9f5ee' : '#fdf0ef'};color:${f.diff >= 0 ? '#0d6e3c' : '#c62828'}">${escapeHtml(f.fund.split(' ')[0])} ${fm(f.diff)}${f.nueva ? ' · NUEVA' : (f.cerrada ? ' · CERRADA' : '')}</span>`;
+  const chipF = f => `<span style="display:inline-block;font-size:10px;padding:2px 8px;border-radius:99px;margin:1px 2px;background:${f.diff >= 0 ? 'var(--green-bg)' : 'var(--red-bg)'};color:${f.diff >= 0 ? 'var(--green)' : 'var(--red)'}">${escapeHtml(f.fund.split(' ')[0])} ${fm(f.diff)}${f.nueva ? ' · NUEVA' : (f.cerrada ? ' · CERRADA' : '')}</span>`;
   const trendMini = (tr) => (tr || []).map((v, ix) => {
     const h = Math.min(14, Math.max(3, Math.log10(Math.abs(v) + 1) * 1.6));
-    return `<span style="display:inline-block;width:7px;height:${h}px;margin-right:2px;border-radius:1.5px;background:${v > 0 ? '#0d6e3c' : (v < 0 ? '#c62828' : 'var(--gray-200)')};vertical-align:baseline" title="${fm(v)}"></span>`;
+    return `<span style="display:inline-block;width:7px;height:${h}px;margin-right:2px;border-radius:1.5px;background:${v > 0 ? 'var(--green)' : (v < 0 ? 'var(--red)' : 'var(--gray-200)')};vertical-align:baseline" title="${fm(v)}"></span>`;
   }).join('');
 
   // ── 1) cartera × smart money (abierto) ──
   const filas = D.cruce.slice(0, 16).map(c => `<tr>
     <td style="font-weight:600;white-space:nowrap">${escapeHtml(c.ticker)} <span style="font-size:10px;color:var(--gray-400)">${c.peso}%</span></td>
-    <td style="white-space:nowrap">${trendMini(c.trend)}${c.racha >= 2 ? `<span style="font-size:9px;font-weight:700;color:${c.neto >= 0 ? '#0d6e3c' : '#c62828'};margin-left:4px">${c.racha}T ${c.neto >= 0 ? 'comprando' : 'vendiendo'}</span>` : ''}</td>
+    <td style="white-space:nowrap">${trendMini(c.trend)}${c.racha >= 2 ? `<span style="font-size:9px;font-weight:700;color:${c.neto >= 0 ? 'var(--green)' : 'var(--red)'};margin-left:4px">${c.racha}T ${c.neto >= 0 ? 'comprando' : 'vendiendo'}</span>` : ''}</td>
     <td>${c.flujos.slice(0, 4).map(chipF).join('')}</td>
     <td class="num" style="font-weight:700;color:${gmColor(c.neto)}">${fm(c.neto)}</td>
     <td class="num" style="color:${gmColor(c.plpct || 0)};font-size:11px">${c.plpct != null ? gmPct(c.plpct, 1) : '—'}</td></tr>`).join('');
   const sec1 = `<details open style="${secStyle}"><summary style="${sumStyle}">
-      <i class="fa-solid fa-briefcase" style="color:#1c4e80"></i> Nuestra cartera × smart money
+      <i class="fa-solid fa-briefcase" style="color:var(--navy)"></i> Nuestra cartera × smart money
       <span style="font-weight:400;font-size:10.5px;color:var(--gray-400)">· tendencia = flujo institucional de los últimos 4 trimestres · P&L = nuestra posición</span></summary>
     <div style="overflow-x:auto;padding-bottom:10px"><table class="camp-table" style="width:100%;font-size:12px">
       <tr><th>Posición</th><th>Tendencia 4T</th><th>Movimientos del trimestre</th><th>Neto Q</th><th>Nuestro P&L</th></tr>${filas}</table></div></details>`;
@@ -19007,8 +19007,8 @@ function gm13fCard() {
   // ── 2) por manager (desplegable con sub-desplegables) ──
   const fondosHtml = (D.fondos || []).map(f => {
     const serie = (f.serie || []).map(s2 => `<span style="font-size:9.5px;color:var(--gray-400);margin-right:8px">${escapeHtml(String(s2.q).slice(2, 7))}: ${fmAbs(s2.total)}</span>`).join('');
-    const tb = (f.top_buys || []).map(x => `<div style="font-size:11.5px;margin:2px 0"><span style="color:#0d6e3c;font-weight:700">${fm(x.diff)}</span> ${escapeHtml(x.name)}${x.nueva ? ' <span style="font-size:8.5px;font-weight:800;color:#1c4e80">NUEVA</span>' : ''}</div>`).join('');
-    const ts2 = (f.top_sells || []).map(x => `<div style="font-size:11.5px;margin:2px 0"><span style="color:#c62828;font-weight:700">${fm(x.diff)}</span> ${escapeHtml(x.name)}${x.cerrada ? ' <span style="font-size:8.5px;font-weight:800;color:#c62828">CERRADA</span>' : ''}</div>`).join('');
+    const tb = (f.top_buys || []).map(x => `<div style="font-size:11.5px;margin:2px 0"><span style="color:var(--green);font-weight:700">${fm(x.diff)}</span> ${escapeHtml(x.name)}${x.nueva ? ' <span style="font-size:8.5px;font-weight:800;color:var(--navy)">NUEVA</span>' : ''}</div>`).join('');
+    const ts2 = (f.top_sells || []).map(x => `<div style="font-size:11.5px;margin:2px 0"><span style="color:var(--red);font-weight:700">${fm(x.diff)}</span> ${escapeHtml(x.name)}${x.cerrada ? ' <span style="font-size:8.5px;font-weight:800;color:var(--red)">CERRADA</span>' : ''}</div>`).join('');
     return `<details style="border-top:1px solid var(--gray-100);padding:4px 0"><summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;font-size:12.5px;padding:7px 0">
         <strong style="min-width:150px">${escapeHtml(f.name)}</strong>
         <span style="color:var(--gray-500)">${fmAbs(f.total)} en 13F</span>
@@ -19018,30 +19018,30 @@ function gm13fCard() {
       <div style="padding:4px 0 10px 12px">
         <div style="margin-bottom:6px">${serie}</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px">
-          <div><div style="font-size:10.5px;font-weight:700;color:#0d6e3c;margin-bottom:3px">TOP COMPRAS DEL TRIMESTRE</div>${tb || '<span style="font-size:11px;color:var(--gray-400)">—</span>'}</div>
-          <div><div style="font-size:10.5px;font-weight:700;color:#c62828;margin-bottom:3px">TOP VENTAS DEL TRIMESTRE</div>${ts2 || '<span style="font-size:11px;color:var(--gray-400)">—</span>'}</div>
+          <div><div style="font-size:10.5px;font-weight:700;color:var(--green);margin-bottom:3px">TOP COMPRAS DEL TRIMESTRE</div>${tb || '<span style="font-size:11px;color:var(--gray-400)">—</span>'}</div>
+          <div><div style="font-size:10.5px;font-weight:700;color:var(--red);margin-bottom:3px">TOP VENTAS DEL TRIMESTRE</div>${ts2 || '<span style="font-size:11px;color:var(--gray-400)">—</span>'}</div>
         </div></div></details>`;
   }).join('');
   const sec2 = `<details style="${secStyle}"><summary style="${sumStyle}">
-      <i class="fa-solid fa-user-tie" style="color:#1c4e80"></i> Por manager
+      <i class="fa-solid fa-user-tie" style="color:var(--navy)"></i> Por manager
       <span style="font-weight:400;font-size:10.5px;color:var(--gray-400)">· portafolio 13F, evolución 5 trimestres y sus top movimientos — click en cada uno</span></summary>
     <div style="padding-bottom:8px">${fondosHtml}</div></details>`;
 
   // ── 3) consenso en cartera / 4) ideas fuera de cartera ──
   const consRow = c => `
-    <div style="display:flex;gap:8px;align-items:baseline;padding:4px 10px;border-radius:8px;margin:3px 0;font-size:12px;background:${c.en_cartera ? '#eef3fa' : 'var(--gray-50)'}">
+    <div style="display:flex;gap:8px;align-items:baseline;padding:4px 10px;border-radius:8px;margin:3px 0;font-size:12px;background:${c.en_cartera ? 'var(--navy-pale)' : 'var(--gray-50)'}">
       <span style="font-weight:600">${escapeHtml(c.issuer)}</span>
-      <span style="font-weight:700;color:${c.dir === 'compra' ? '#0d6e3c' : '#c62828'}">${c.dir.toUpperCase()} ×${c.n}</span>
+      <span style="font-weight:700;color:${c.dir === 'compra' ? 'var(--green)' : 'var(--red)'}">${c.dir.toUpperCase()} ×${c.n}</span>
       <span style="font-size:10px;color:var(--gray-400)">${c.fondos.map(f2 => escapeHtml(f2.fund.split(' ')[0])).join(' · ')}</span>
       <span style="margin-left:auto;font-weight:700;color:${gmColor(c.neto)}">${fm(c.neto)}</span></div>`;
   const enCart = (D.consenso || []).filter(c => c.en_cartera);
   const fueraCart = (D.consenso || []).filter(c => !c.en_cartera);
   const sec3 = enCart.length ? `<details open style="${secStyle}"><summary style="${sumStyle}">
-      <i class="fa-solid fa-handshake" style="color:#0d6e3c"></i> Consenso institucional EN nuestra cartera
+      <i class="fa-solid fa-handshake" style="color:var(--green)"></i> Consenso institucional EN nuestra cartera
       <span style="font-weight:400;font-size:10.5px;color:var(--gray-400)">· 2+ managers en la misma dirección</span></summary>
     <div style="padding-bottom:10px">${enCart.slice(0, 8).map(consRow).join('')}</div></details>` : '';
   const sec4 = fueraCart.length ? `<details style="${secStyle}"><summary style="${sumStyle}">
-      <i class="fa-solid fa-lightbulb" style="color:#b26a00"></i> Radar — consenso FUERA de nuestra cartera
+      <i class="fa-solid fa-lightbulb" style="color:var(--amber)"></i> Radar — consenso FUERA de nuestra cartera
       <span style="font-weight:400;font-size:10.5px;color:var(--gray-400)">· lo que el smart money mueve y nosotros no tenemos</span></summary>
     <div style="padding-bottom:10px">${fueraCart.slice(0, 10).map(consRow).join('')}</div></details>` : '';
 
@@ -19049,12 +19049,12 @@ function gm13fCard() {
     <div style="font-weight:700;margin-bottom:2px"><i class="fa-solid fa-landmark"></i> Smart money — 13F institucional
       <span style="font-weight:400;font-size:11px;color:var(--gray-400)">· Q al ${escapeHtml(q)} vs previo · SEC EDGAR, rezago ~45 días, solo largos US${pendientes.length ? ' · con Q anterior: ' + pendientes.join(', ') : ''}</span></div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:10px 0">
-      <div style="background:${(H.neto_cartera || 0) >= 0 ? '#e9f5ee' : '#fdf0ef'};border-radius:10px;padding:10px 14px">
+      <div style="background:${(H.neto_cartera || 0) >= 0 ? 'var(--green-bg)' : 'var(--red-bg)'};border-radius:10px;padding:10px 14px">
         <div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--gray-500)">Flujo neto hacia nuestra cartera</div>
         <div style="font-size:22px;font-weight:800;color:${gmColor(H.neto_cartera || 0)}">${fm(H.neto_cartera || 0)}</div></div>
       <div style="background:var(--gray-50);border-radius:10px;padding:10px 14px">
         <div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--gray-500)">Emisoras nuestras compradas / vendidas</div>
-        <div style="font-size:22px;font-weight:800"><span style="color:#0d6e3c">${H.n_compradas ?? '—'}</span> / <span style="color:#c62828">${H.n_vendidas ?? '—'}</span></div></div>
+        <div style="font-size:22px;font-weight:800"><span style="color:var(--green)">${H.n_compradas ?? '—'}</span> / <span style="color:var(--red)">${H.n_vendidas ?? '—'}</span></div></div>
       <div style="background:var(--gray-50);border-radius:10px;padding:10px 14px">
         <div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--gray-500)">Mayor flujo del trimestre</div>
         <div style="font-size:22px;font-weight:800;color:${gmColor(H.mayor?.neto || 0)}">${H.mayor ? escapeHtml(H.mayor.ticker) + ' ' + fm(H.mayor.neto) : '—'}</div></div>
@@ -19100,7 +19100,7 @@ function gmPrivadosCard() {
       if (!conPrem.length) return '';
       const delta = conPrem.reduce((a, c) => a + c.gvv.valor * c.premium_pct / 100, 0);
       const aumP = gmSnap?.aum_live || 0;
-      return `<div style="margin-top:8px;padding:9px 13px;border-radius:8px;background:${delta >= 0 ? '#e9f5ee' : '#fdf0ef'};font-size:12.5px">
+      return `<div style="margin-top:8px;padding:9px 13px;border-radius:8px;background:${delta >= 0 ? 'var(--green-bg)' : 'var(--red-bg)'};font-size:12.5px">
         <strong>Si el secundario tiene razón</strong> (marcar estas ${conPrem.length} al premium/descuento de Caplight): impacto de
         <strong style="color:${gmColor(delta)}">${gmFmtUsd(delta)}</strong> al NAV${aumP ? ` <strong style="color:${gmColor(delta)}">(${gmPct(delta / aumP * 100)})</strong>` : ''}
         <span style="color:var(--gray-500);font-size:10.5px">— aproximación: aplica el premium a nivel compañía sobre el mark actual del fondo; no es un mark oficial.</span></div>`;
@@ -19110,7 +19110,7 @@ function gmPrivadosCard() {
 function gmTabIntel(s) {
   const f3 = s.fase3;
   if (!f3) return gmPrivadosCard() + `<div style="${GM_CARD};color:var(--gray-400)">La capa de inteligencia se está llenando (el robot rota emisoras cada corrida).</div>`;
-  const tipoChip = { earnings: ['EARNINGS', '#eef3fa', '#1c4e80'], vencimiento: ['VENCIMIENTO', '#fdf3e7', '#b26a00'], macro: ['MACRO', '#f3e8fd', '#6b21a8'] };
+  const tipoChip = { earnings: ['EARNINGS', 'var(--navy-pale)', 'var(--navy)'], vencimiento: ['VENCIMIENTO', 'var(--amber-bg)', 'var(--amber)'], macro: ['MACRO', '#f3e8fd', '#6b21a8'] };
   const calHtml = (f3.calendar || []).length ? (f3.calendar || []).map(c => {
     const [lbl, bg, fg] = tipoChip[c.tipo] || ['EVENTO', 'var(--gray-100)', 'var(--gray-500)'];
     const d = new Date(c.date + 'T12:00:00');
@@ -19121,7 +19121,7 @@ function gmTabIntel(s) {
   }).join('') : '<div style="color:var(--gray-400);font-size:12px">Sin eventos próximos.</div>';
   const newsHtml = (f3.news || []).slice(0, 20).map(a => `
     <a href="${escapeHtml(a.url || '#')}" target="_blank" rel="noopener" style="display:flex;gap:9px;align-items:baseline;padding:5px 10px;border-radius:8px;margin:3px 0;font-size:12.5px;text-decoration:none;color:var(--gray-800)" onmouseover="this.style.background='var(--gray-50)'" onmouseout="this.style.background=''">
-      <span style="min-width:52px;font-weight:700;color:#1c4e80">${escapeHtml(a.sym)}</span>
+      <span style="min-width:52px;font-weight:700;color:var(--navy)">${escapeHtml(a.sym)}</span>
       <span style="flex:1">${escapeHtml(a.h)}</span>
       <span style="color:var(--gray-400);font-size:10.5px;white-space:nowrap">${escapeHtml(a.src || '')} · ${gmAgo(a.t)}</span></a>`).join('')
     || '<div style="color:var(--gray-400);font-size:12px">Aún sin noticias de las últimas 48h.</div>';
@@ -19135,11 +19135,11 @@ function gmTabIntel(s) {
       <td class="num">${v.mean != null ? '$' + v.mean.toLocaleString('en-US', { maximumFractionDigits: 1 }) : '—'}</td>
       <td class="num" style="color:${upv == null ? 'inherit' : gmColor(upv)}">${upv != null ? gmPct(upv, 1) : '—'}</td>
       <td class="num">${v.n ?? '—'}</td>
-      <td class="num" style="color:#0d6e3c">${r.buy ?? '—'}</td><td class="num">${r.hold ?? '—'}</td><td class="num" style="color:#c62828">${r.sell ?? '—'}</td></tr>`;
+      <td class="num" style="color:var(--green)">${r.buy ?? '—'}</td><td class="num">${r.hold ?? '—'}</td><td class="num" style="color:var(--red)">${r.sell ?? '—'}</td></tr>`;
   }).join('');
   const bancoHtml = (f3.pt_bancos || []).slice(0, 10).map(b => `
     <div style="display:flex;gap:9px;align-items:baseline;padding:4px 10px;border-radius:8px;background:var(--gray-50);margin:3px 0;font-size:12px">
-      <span style="min-width:52px;font-weight:700;color:#1c4e80">${escapeHtml(b.sym)}</span>
+      <span style="min-width:52px;font-weight:700;color:var(--navy)">${escapeHtml(b.sym)}</span>
       <span><strong>${escapeHtml(b.bank)}</strong> ${escapeHtml(b.action)} PT a $${b.pt.toLocaleString('en-US')}</span>
       <span style="color:var(--gray-400);font-size:10.5px;margin-left:auto">${escapeHtml(b.date)}</span></div>`).join('');
   return `
@@ -19171,7 +19171,7 @@ function gmTabRiesgo(s) {
     return `<div style="${GM_CARD};color:var(--gray-400)">Cargando análisis de riesgo…</div>`;
   }
   const R = gmRiesgo;
-  if (!R || R.error) return `<div style="${GM_CARD};color:#c62828">No se pudo cargar el análisis de riesgo${R?.error ? ': ' + escapeHtml(R.error) : ''}. El robot corre diario a las 6:40.</div>`;
+  if (!R || R.error) return `<div style="${GM_CARD};color:var(--red)">No se pudo cargar el análisis de riesgo${R?.error ? ': ' + escapeHtml(R.error) : ''}. El robot corre diario a las 6:40.</div>`;
   const libro = R.libro || {};
   const corte = new Date(R.ts).toLocaleString('es-MX', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
@@ -19180,8 +19180,8 @@ function gmTabRiesgo(s) {
     <td class="num" style="color:${gmColor(e.impacto_usd)};font-weight:700">${gmFmtUsd(e.impacto_usd)}</td></tr>`).join('');
 
   const clustersHtml = (R.clusters || []).length ? R.clusters.map(c =>
-    `<div style="display:flex;gap:9px;align-items:baseline;padding:6px 10px;border-radius:8px;background:#fdf3e7;margin:4px 0;font-size:12.5px">
-      <i class="fa-solid fa-link" style="color:#b26a00"></i>
+    `<div style="display:flex;gap:9px;align-items:baseline;padding:6px 10px;border-radius:8px;background:var(--amber-bg);margin:4px 0;font-size:12.5px">
+      <i class="fa-solid fa-link" style="color:var(--amber)"></i>
       <span><strong>${c.tickers.join(' · ')}</strong> se mueven como una sola apuesta (ρ>0.75) — juntas pesan <strong>${c.peso}%</strong> del fondo</span></div>`).join('')
     : '<div style="color:var(--gray-400);font-size:12px">Sin clusters de correlación >0.75 en el top 15 — el libro está razonablemente diversificado.</div>';
 
@@ -19192,7 +19192,7 @@ function gmTabRiesgo(s) {
       if (v == null) return '<td style="background:var(--gray-50)"></td>';
       const a = Math.min(1, Math.abs(v));
       const bg = v >= 0 ? `rgba(28,78,128,${(a * 0.85).toFixed(2)})` : `rgba(198,40,40,${(a * 0.85).toFixed(2)})`;
-      return `<td style="background:${bg};color:${a > 0.55 ? '#fff' : '#1a2332'};text-align:center;font-size:9px;padding:3px 2px;min-width:30px" title="${v}">${(v * 100).toFixed(0)}</td>`;
+      return `<td style="background:${bg};color:${a > 0.55 ? '#fff' : 'var(--gray-900)'};text-align:center;font-size:9px;padding:3px 2px;min-width:30px" title="${v}">${(v * 100).toFixed(0)}</td>`;
     };
     matriz = `<div style="overflow-x:auto"><table cellspacing="1" style="border-collapse:separate;margin-top:6px">
       <tr><td></td>${R.top_syms.map(x => `<td style="font-size:8.5px;color:var(--gray-500);text-align:center;padding:2px">${escapeHtml(x)}</td>`).join('')}</tr>
@@ -19213,11 +19213,11 @@ function gmTabRiesgo(s) {
       <div style="font-size:30px;font-weight:800;color:var(--gray-800)">${R.beta_portafolio}</div>
       <div style="font-size:10px;color:var(--gray-400)">${escapeHtml(R.nota_beta)}</div></div>
     <div style="${GM_CARD}"><div style="font-size:10.5px;color:var(--gray-500);text-transform:uppercase">Win rate del libro</div>
-      <div style="font-size:30px;font-weight:800;color:${(libro.win_rate || 0) >= 50 ? '#0d6e3c' : '#c62828'}">${libro.win_rate ?? '—'}%</div>
+      <div style="font-size:30px;font-weight:800;color:${(libro.win_rate || 0) >= 50 ? 'var(--green)' : 'var(--red)'}">${libro.win_rate ?? '—'}%</div>
       <div style="font-size:10px;color:var(--gray-400)">${libro.n ?? 0} posiciones con fecha de entrada</div></div>
     <div style="${GM_CARD}"><div style="font-size:10.5px;color:var(--gray-500);text-transform:uppercase">Ganadoras vs perdedoras</div>
-      <div style="font-size:15px;font-weight:700;margin-top:6px"><span style="color:#0d6e3c">${libro.pl_medio_ganadoras != null ? gmPct(libro.pl_medio_ganadoras, 1) : '—'}</span> · ${libro.dias_medio_ganadoras ?? '—'}d
-      &nbsp;vs&nbsp; <span style="color:#c62828">${libro.pl_medio_perdedoras != null ? gmPct(libro.pl_medio_perdedoras, 1) : '—'}</span> · ${libro.dias_medio_perdedoras ?? '—'}d</div>
+      <div style="font-size:15px;font-weight:700;margin-top:6px"><span style="color:var(--green)">${libro.pl_medio_ganadoras != null ? gmPct(libro.pl_medio_ganadoras, 1) : '—'}</span> · ${libro.dias_medio_ganadoras ?? '—'}d
+      &nbsp;vs&nbsp; <span style="color:var(--red)">${libro.pl_medio_perdedoras != null ? gmPct(libro.pl_medio_perdedoras, 1) : '—'}</span> · ${libro.dias_medio_perdedoras ?? '—'}d</div>
       <div style="font-size:10px;color:var(--gray-400)">P&L medio y días en cartera de cada grupo</div></div>
   </div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin-bottom:14px">
@@ -19230,14 +19230,14 @@ function gmTabRiesgo(s) {
     <div style="font-weight:700;margin-bottom:2px"><i class="fa-solid fa-cloud-bolt"></i> Stress empírico — "el peor día de cada una, todas a la vez"</div>
     <div style="font-size:10.5px;color:var(--gray-400);margin-bottom:8px">Cada pública repite su PEOR día del último año (dato histórico real, no supuesto) simultáneamente — cota extrema de un día de pánico. ${R.stress_empirico.n} posiciones con historia.</div>
     <div style="display:flex;gap:22px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px">
-      <div><span style="font-size:26px;font-weight:800;color:#c62828">${gmFmtUsd(R.stress_empirico.total_usd)}</span>
-        <span style="font-size:13px;color:#c62828;font-weight:600"> (${gmPct(R.stress_empirico.total_pct)})</span></div>
+      <div><span style="font-size:26px;font-weight:800;color:var(--red)">${gmFmtUsd(R.stress_empirico.total_usd)}</span>
+        <span style="font-size:13px;color:var(--red);font-weight:600"> (${gmPct(R.stress_empirico.total_pct)})</span></div>
       <span style="font-size:11px;color:var(--gray-500)">peores contribuyentes:</span></div>
     <table class="camp-table" style="width:100%;font-size:12px"><tr><th>Ticker</th><th>Su peor día (1a)</th><th>Cuándo fue</th><th>Impacto al fondo</th></tr>
       ${R.stress_empirico.top.map(z => `<tr><td style="font-weight:600">${escapeHtml(z.t)}</td>
-        <td class="num" style="color:#c62828">${gmPct(z.pct, 1)}</td>
+        <td class="num" style="color:var(--red)">${gmPct(z.pct, 1)}</td>
         <td style="color:var(--gray-500);font-size:11px">${escapeHtml(z.fecha || '')}</td>
-        <td class="num" style="color:#c62828;font-weight:600">${gmFmtUsd(z.usd)}</td></tr>`).join('')}</table></div>` : ''}
+        <td class="num" style="color:var(--red);font-weight:600">${gmFmtUsd(z.usd)}</td></tr>`).join('')}</table></div>` : ''}
   <div style="${GM_CARD};margin-bottom:14px"><div style="font-weight:700;margin-bottom:2px"><i class="fa-solid fa-table-cells"></i> Matriz de correlación — top 15 por peso <span style="font-weight:400;font-size:11px;color:var(--gray-400)">· 6 meses de retornos diarios · azul = juntas, rojo = opuestas</span></div>${matriz}</div>
   ${(R.cerradas_recientes || []).length ? `<div style="${GM_CARD};margin-bottom:14px">
     <div style="font-weight:700;margin-bottom:6px"><i class="fa-solid fa-box-archive"></i> Post-mortem — posiciones cerradas recientes</div>
