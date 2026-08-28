@@ -141,6 +141,23 @@ export default async function handler(req, res) {
       return res.status(200).json({ name: lp.name || '', documents, data: lp.data ? dataPub2 : null, imp: !!payload.imp });
     }
 
+    if (action === 'statement_link') {
+      // Estado de cuenta GVV al momento: valida la sesión del LP y emite la URL
+      // firmada (HMAC con la service role compartida) hacia el servicio de la Mini.
+      const payload = verifyTokenStr(req.body.token, secret);
+      if (!payload) return res.status(401).json({ error: 'Sesión inválida o expirada.' });
+      const { data: lp } = await sb.from('lp_portal_users')
+        .select('active, data').eq('id', payload.lp).maybeSingle();
+      if (!lp || (!lp.active && !payload.imp)) return res.status(401).json({ error: 'Acceso desactivado.' });
+      const lpId = lp.data && lp.data.gvv && lp.data.gvv.lp_id;
+      if (!lpId || lpId === 'demo') return res.status(404).json({ error: 'Sin estado de cuenta disponible.' });
+      const ts = Math.floor(Date.now() / 1000);
+      const sig = crypto.createHmac('sha256', process.env.SUPABASE_SERVICE_ROLE_KEY)
+        .update(`${lpId}|${ts}`).digest('hex');
+      const url = `https://mac-mini-de-cretum.tail4eeacb.ts.net:8443/gvv-statement?lp_id=${encodeURIComponent(lpId)}&ts=${ts}&sig=${sig}`;
+      return res.status(200).json({ url });
+    }
+
     if (action === 'file') {
       const payload = verifyTokenStr(req.body.token, secret);
       if (!payload) return res.status(401).json({ error: 'Sesión expirada — vuelve a abrir tu enlace.' });

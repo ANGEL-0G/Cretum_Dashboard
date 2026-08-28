@@ -592,21 +592,51 @@
     setTimeout(settleUI, 2200);
   }
 
-  function renderDocs(list) {
+  function renderDocs(list, conEstado) {
     var box = $('docs');
-    if (!list || !list.length) {
+    var vivo = conEstado
+      ? '<button class="doc" id="docLive">'
+        + '<span class="doc-ic">' + IC_DOC + '</span>'
+        + '<span class="doc-body"><span class="doc-t">Estado de Cuenta</span>'
+        + '<span class="doc-m">Se genera al momento · corte vigente · PDF</span></span>'
+        + '<span class="doc-go">' + IC_GO + '</span></button>'
+      : '';
+    if ((!list || !list.length) && !vivo) {
       box.innerHTML = '<div class="empty">Por el momento no hay documentos disponibles, se le hará saber en cuanto lo estén.</div>';
       return;
     }
-    box.innerHTML = list.map(function (d) {
+    box.innerHTML = vivo + (list || []).map(function (d) {
       return '<button class="doc" data-id="' + esc(d.id) + '">' +
         '<span class="doc-ic">' + docIcon(d.mime, d.name) + '</span>' +
         '<span class="doc-body"><span class="doc-t">' + esc(d.title) + '</span>' +
         '<span class="doc-m">' + esc(d.name || 'Abrir documento') + '</span></span>' +
         '<span class="doc-go">' + IC_GO + '</span></button>';
     }).join('');
-    Array.prototype.forEach.call(box.querySelectorAll('.doc'), function (btn) {
+    Array.prototype.forEach.call(box.querySelectorAll('.doc[data-id]'), function (btn) {
       btn.addEventListener('click', function () { openDoc(btn.getAttribute('data-id'), btn); });
+    });
+    var live = document.getElementById('docLive');
+    if (live) live.addEventListener('click', function () { openStatement(live); });
+  }
+
+  function openStatement(btn) {
+    if (!SESSION) return;
+    var go = btn.querySelector('.doc-go'); var prev = go ? go.innerHTML : '';
+    if (go) go.innerHTML = '<span class="spin" style="width:16px;height:16px;border-width:2px"></span>';
+    // ventana abierta DENTRO del click (los bloqueadores de popups lo exigen)
+    var w = window.open('', '_blank');
+    api({ action: 'statement_link', token: SESSION }).then(function (res) {
+      if (go) go.innerHTML = prev;
+      if (!res.ok || !res.j.url) {
+        if (w) w.close();
+        alert(res.j && res.j.error ? res.j.error : 'No se pudo generar el estado de cuenta.');
+        return;
+      }
+      if (w) { w.location = res.j.url; } else { window.open(res.j.url, '_blank', 'noopener'); }
+    }).catch(function () {
+      if (go) go.innerHTML = prev;
+      if (w) w.close();
+      alert('No se pudo generar el estado de cuenta.');
     });
   }
 
@@ -628,7 +658,8 @@
       var d = j.data || null;
       if (d && d.gvv) { renderGvv(d.gvv); } else { renderDash(d); }
     } catch (e) { try { $('dashSec').hidden = true; } catch (e2) {} }
-    renderDocs(j.documents || []);
+    var conEstado = !!(j.data && j.data.gvv && j.data.gvv.lp_id && !j.data.gvv.demo);
+    renderDocs(j.documents || [], conEstado);
     hide($('login')); hide($('loading')); show($('content'));
     window.scrollTo(0, 0);
   }
