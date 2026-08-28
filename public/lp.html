@@ -145,7 +145,7 @@
   .chart .line{fill:none;stroke:var(--brand-2);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}
   .chart .grid{stroke:var(--line);stroke-width:1}
   .chart .dot{fill:var(--surface);stroke:var(--brand-2);stroke-width:2.5}
-  .chart-x{display:flex;justify-content:space-between;margin-top:8px;font-size:11px;color:var(--ink-mute)}
+  .chart-x{position:relative;height:16px;margin-top:8px;font-size:11px;color:var(--ink-mute)}
   .chart-x span{flex:1;text-align:center}
   .chart-x span:first-child{text-align:left} .chart-x span:last-child{text-align:right}
   .mv{width:100%;border-collapse:collapse;font-size:13.5px}
@@ -357,7 +357,7 @@
   function fmtPct(n) { n = Number(n) || 0; return (n >= 0 ? '+' : '') + n.toFixed(1) + '%'; }
 
   function renderChart(serie, cur) {
-    serie = (serie || []).filter(function (p) { return p && isFinite(+p.v); });
+    serie = (serie || []).filter(function (p) { return p && p.v != null && p.v !== '' && isFinite(+p.v); });
     if (serie.length < 2) return '';
     var W = 700, H = 200, px = 12, py = 22, n = serie.length;
     var vals = serie.map(function (p) { return +p.v; });
@@ -369,6 +369,8 @@
     var area = line + ' L ' + X(n - 1).toFixed(1) + ' ' + H + ' L ' + X(0).toFixed(1) + ' ' + H + ' Z';
     _lc = { serie: serie, cur: cur, W: W, H: H, X: X, Y: Y };
     var svg = '<div class="lc-wrap" id="lcWrap"><svg class="chart" id="lcSvg" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Evolucion de la posicion">'
+      + '<text x="' + (W - 2) + '" y="12" text-anchor="end" style="font-size:10px;fill:var(--ink-mute)">' + esc(fmtMoney(max, cur)) + '</text>'
+      + '<text x="' + (W - 2) + '" y="' + (H - 8) + '" text-anchor="end" style="font-size:10px;fill:var(--ink-mute)">' + esc(fmtMoney(min, cur)) + '</text>'
       + '<path class="area" d="' + area + '"/>'
       + '<line class="lc-guide" id="lcGuide" y1="6" y2="' + (H - 4) + '"/>'
       + '<path class="line" id="lcLine" d="' + line + '"/>'
@@ -376,7 +378,17 @@
       + '<circle class="dot" cx="' + X(n - 1).toFixed(1) + '" cy="' + Y(vals[n - 1]).toFixed(1) + '" r="4.5"/></svg>'
       + '<div class="lc-tip" id="lcTip"></div></div>';
     var step = Math.ceil(n / 6), labels = '';
-    serie.forEach(function (p, i) { if (i % step === 0 || i === n - 1) labels += '<span>' + esc(p.t || '') + '</span>'; });
+    serie.forEach(function (p, i) {
+      if (i % step === 0 || i === n - 1) {
+        if (i > 0 && i === n - 1 && (i % step) < step / 2 && n > 10) {
+          // muy pegada a la anterior: la ultima etiqueta sustituye, no se encima
+          labels = labels.replace(/<span[^>]*>[^<]*<\/span>$/, '');
+        }
+        var lx = X(i) / W * 100;
+        var tx = i === 0 ? 'translateX(0)' : (i === n - 1 ? 'translateX(-100%)' : 'translateX(-50%)');
+        labels += '<span style="position:absolute;left:' + lx.toFixed(2) + '%;transform:' + tx + ';white-space:nowrap">' + esc(p.t || '') + '</span>';
+      }
+    });
     return '<div class="panel"><div class="panel-h"><span class="panel-t">Evolución de tu posición</span>'
       + '<span class="panel-note">Pasa el cursor para ver cada periodo</span></div>'
       + svg + '<div class="chart-x">' + labels + '</div></div>';
@@ -447,7 +459,8 @@
         guide = document.getElementById('lcGuide'), cursor = document.getElementById('lcCursor');
     function at(clientX) {
       var rect = svg.getBoundingClientRect(); if (!rect.width) return;
-      var rel = (clientX - rect.left) / rect.width; rel = Math.max(0, Math.min(1, rel));
+      var xSvg = (clientX - rect.left) / rect.width * _lc.W;
+      var rel = (xSvg - 12) / (_lc.W - 24); rel = Math.max(0, Math.min(1, rel));
       var i = Math.round(rel * (_lc.serie.length - 1)), vx = _lc.X(i), vy = _lc.Y(+_lc.serie[i].v);
       guide.setAttribute('x1', vx); guide.setAttribute('x2', vx); guide.classList.add('on');
       cursor.setAttribute('cx', vx); cursor.setAttribute('cy', vy); cursor.classList.add('on');
