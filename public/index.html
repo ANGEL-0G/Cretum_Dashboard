@@ -2795,6 +2795,12 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 [data-theme="dark"] .home-module-badge.beta{color:#f0b27a;background:rgba(237,120,36,.16);border-color:rgba(237,120,36,.3)}
 .beta-tag{margin-left:auto;font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#a15c00;background:#fdefd6;border:1px solid #f6d9a8;padding:1px 6px;border-radius:99px}
 [data-theme="dark"] .beta-tag{color:#f0b27a;background:rgba(237,120,36,.16);border-color:rgba(237,120,36,.3)}
+/* Aviso 2FA (temporal) — usa tokens del tema para verse bien en los 3 modos */
+.aviso2fa-h{font-size:12px;color:var(--gray-500);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin:16px 0 8px}
+.aviso2fa-apps{display:flex;flex-direction:column;gap:8px}
+.aviso2fa-app{display:flex;align-items:center;gap:11px;padding:11px 14px;border:1px solid var(--gray-200);border-radius:10px;color:var(--gray-800);text-decoration:none;font-size:13.5px;font-weight:500;background:var(--white);transition:border-color .15s,background .15s}
+.aviso2fa-app:hover{border-color:var(--navy);background:var(--navy-ghost)}
+.aviso2fa-app i{color:var(--navy);width:18px;text-align:center;font-size:15px}
 
 /* Pulso de notificación en el módulo To Do: avisa que hay invitaciones de
    tarea por aceptar. Aro que late (radar), sutil, ease-out sin rebote.
@@ -5646,6 +5652,29 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
     </div>
   </div>
 
+  <!-- Aviso temporal: 2FA obligatorio el lunes 31 de agosto -->
+  <div class="camp-modal-backdrop" id="aviso2faModal" onclick="if(event.target===this)aviso2faClose(true)">
+    <div class="camp-modal">
+      <div class="camp-modal-head">
+        <div class="camp-modal-title"><i class="fa-solid fa-shield-halved"></i> El 2FA será obligatorio el lunes 31 de agosto</div>
+        <button class="camp-modal-x" onclick="aviso2faClose(true)" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="camp-modal-body">
+        <p style="margin:0 0 4px;font-size:14px;color:var(--gray-700);line-height:1.55">A partir del <b>lunes 31 de agosto</b>, la verificación en dos pasos (2FA) se activará para <b>todas las cuentas</b>. Te recomendamos <b>activarla desde hoy</b> con una app de autenticación para que la transición sea sin contratiempos.</p>
+        <div class="aviso2fa-h">Descarga una app de autenticación</div>
+        <div class="aviso2fa-apps">
+          <a class="aviso2fa-app" href="https://www.microsoft.com/en-us/security/mobile-authenticator-app" target="_blank" rel="noopener"><i class="fa-brands fa-microsoft"></i> Microsoft Authenticator</a>
+          <a class="aviso2fa-app" href="https://support.google.com/accounts/answer/1066447" target="_blank" rel="noopener"><i class="fa-brands fa-google"></i> Google Authenticator</a>
+        </div>
+        <p style="margin:14px 0 0;font-size:12.5px;color:var(--gray-500)">También puedes activarlo cuando quieras desde tu <b>menú de perfil → Verificación en dos pasos</b>.</p>
+      </div>
+      <div class="camp-modal-foot">
+        <button class="camp-prev-cancel" onclick="aviso2faClose(true)">Recordar después</button>
+        <button class="btn-primary" onclick="aviso2faActivar()"><i class="fa-solid fa-shield-halved"></i> Activar 2FA ahora</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal: Detalle de interacción por LP (todos los usuarios) -->
   <div class="camp-modal-backdrop" id="campLpModal" onclick="if(event.target===this)campLpClose()">
     <div class="camp-modal">
@@ -7458,7 +7487,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   </div>
 </div>
 
-<script src="/i18n.js?v=20260827-noauto"></script>
-<script src="/app.js?v=20260827-noauto"></script>
+<script src="/i18n.js?v=20260827-aviso2fa"></script>
+<script src="/app.js?v=20260827-aviso2fa"></script>
 </body>
 </html>

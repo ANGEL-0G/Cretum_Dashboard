@@ -198,6 +198,7 @@ async function doLogin() {
   err.classList.remove('show');
   document.getElementById('loginPass').value = '';
   await enterApp(data.user);
+  maybeShowAviso2fa();
 }
 
 async function doLogout() {
@@ -333,6 +334,26 @@ function mfaLoginCancel() {
   if (mfaLoginResolve) { mfaLoginResolve(false); mfaLoginResolve = null; }
 }
 
+// ── Aviso temporal: el 2FA será obligatorio el lunes 31 de agosto 2026 ──
+// Se muestra tras iniciar sesión a quien AÚN no tiene 2FA, hasta esa fecha.
+// "Recordar después" lo pospone 12 h; al activar 2FA deja de aparecer solo.
+const AVISO2FA_DEADLINE = Date.parse('2026-08-31T00:00:00-06:00');   // CDMX
+async function maybeShowAviso2fa() {
+  try {
+    if (Date.now() >= AVISO2FA_DEADLINE) return;                       // ya pasó la fecha
+    const sn = +(localStorage.getItem('cretum_aviso2fa_snooze') || 0);
+    if (sn && Date.now() - sn < 12 * 3600 * 1000) return;             // pospuesto hace poco
+    const { data } = await sb.auth.mfa.listFactors();
+    if ((data?.totp || []).some(f => f.status === 'verified')) return; // ya tiene 2FA → no molesta
+  } catch (e) { /* si listFactors falla, mejor mostrarlo igual */ }
+  const m = document.getElementById('aviso2faModal'); if (m) m.classList.add('show');
+}
+function aviso2faClose(snooze) {
+  document.getElementById('aviso2faModal')?.classList.remove('show');
+  if (snooze) { try { localStorage.setItem('cretum_aviso2fa_snooze', String(Date.now())); } catch (_) {} }
+}
+function aviso2faActivar() { aviso2faClose(false); mfaOpen(); }
+
 // ── Gestión desde el perfil: enrolar / desactivar ──
 function mfaRender(html) { document.getElementById('mfaBody').innerHTML = html; }
 async function mfaOpen() {
@@ -443,6 +464,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         if (!ok) { await sb.auth.signOut(); return; }  // queda en la pantalla de login
       }
       await enterApp(data.session.user);
+      maybeShowAviso2fa();
     }
   } catch (e) {
     console.error('Boot error', e);
