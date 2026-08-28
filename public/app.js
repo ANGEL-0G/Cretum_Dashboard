@@ -38,7 +38,13 @@ async function initSupabase() {
   if (!cfg.supabaseUrl || !cfg.supabaseAnonKey) {
     throw new Error('Configuración de Supabase incompleta');
   }
-  sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+  // persistSession:false → la sesión NO se guarda entre recargas: al abrir la
+  // pestaña siempre se muestra el login (no auto-inicia). El navegador sigue
+  // autocompletando usuario/contraseña (eso es del gestor de contraseñas, aparte).
+  // autoRefreshToken sigue activo para refrescar el token DURANTE la sesión abierta.
+  sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, {
+    auth: { persistSession: false, autoRefreshToken: true },
+  });
 }
 
 async function loadProfile(userId) {
