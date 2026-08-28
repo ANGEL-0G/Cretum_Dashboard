@@ -215,6 +215,55 @@ async function generate(companies) {
   await enrichImages(items);
   return items;
 }
+const UA = 'Mozilla/5.0 (compatible; CretumDesk/1.0; +https://cretumdesk.com)';
+
+// ── Decodifica el enlace de Google News (redirección) a la URL real del medio ──
+// Método batchexecute (2024+): 1) baja la página del artículo para sacar firma+timestamp,
+// 2) los manda a Google y responde con la URL del editor. Si algo falla, devuelve el enlace
+// original (og:image caerá y usaremos el logo del medio) — nunca rompe el cron.
+async function resolveGoogleNews(url) {
+  try {
+    const u = new URL(url);
+    if (!/(^|\.)news\.google\.com$/i.test(u.hostname)) return url;   // ya es del medio
+    const parts = u.pathname.split('/');
+    const gnId = parts[parts.indexOf('articles') + 1] || '';
+    if (!gnId) return url;
+    // 1) firma + timestamp desde la página del artículo
+    const c1 = new AbortController(); const t1 = setTimeout(() => c1.abort(), 3500);
+    const r1 = await fetch(url, { signal: c1.signal, headers: { 'User-Agent': UA } });
+    clearTimeout(t1);
+    const html = await r1.text();
+    const sg = (html.match(/data-n-a-sg="([^"]+)"/) || [])[1];
+    const ts = (html.match(/data-n-a-ts="(\d+)"/) || [])[1];
+    if (!sg || !ts) return url;
+    // 2) batchexecute → URL real
+    const inner = `["garturlreq",[["X","X",["X","X"],null,null,1,1,"US:en",null,1,null,null,null,null,null,0,1],"X","X",1,[1,1,1],1,1,null,0,0,null,0],"${gnId}",${ts},"${sg}"]`;
+    const freq = JSON.stringify([[['Fbv4je', inner, null, 'generic']]]);
+    const c2 = new AbortController(); const t2 = setTimeout(() => c2.abort(), 3500);
+    const r2 = await fetch('https://news.google.com/_/DotsSplashUi/data/batchexecute', {
+      method: 'POST', signal: c2.signal,
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8', 'User-Agent': UA },
+      body: 'f.req=' + encodeURIComponent(freq),
+    });
+    clearTimeout(t2);
+    const raw = await r2.text();
+    for (const line of raw.split('\n')) {
+      const s = line.trim();
+      if (s[0] !== '[') continue;
+      try {
+        for (const e of JSON.parse(s)) {
+          if (Array.isArray(e) && typeof e[2] === 'string' && e[2].indexOf('http') !== -1) {
+            const arr = JSON.parse(e[2]);
+            const found = (Array.isArray(arr) ? arr : []).find(x => typeof x === 'string' && /^https?:\/\//.test(x));
+            if (found) return found;
+          }
+        }
+      } catch (_) {}
+    }
+    return url;
+  } catch (e) { return url; }
+}
+
 // ── Imágenes: og:image real del artículo (best-effort) con respaldo al logo del medio ──
 async function fetchOgImage(url) {
   try {
@@ -237,11 +286,13 @@ async function fetchOgImage(url) {
 // Enriquece las notas con imagen. Solo baja el HTML de las que se muestran (top),
 // para no rebasar maxDuration; el resto usa el logo del medio (sin fetch).
 async function enrichImages(items) {
-  const TOP = 30;
+  const TOP = 24;
   const top = items.slice(0, TOP);
-  for (let i = 0; i < top.length; i += 10) {
-    const chunk = top.slice(i, i + 10);
+  for (let i = 0; i < top.length; i += 8) {
+    const chunk = top.slice(i, i + 8);
     await Promise.all(chunk.map(async it => {
+      const real = await resolveGoogleNews(it.url);   // enlace del medio (no el de Google)
+      if (real && real !== it.url) it.url = real;      // "Leer" abre directo al editor
       const og = await fetchOgImage(it.url);
       it.image = og || (it.domain ? 'https://logo.clearbit.com/' + it.domain : '');
     }));
