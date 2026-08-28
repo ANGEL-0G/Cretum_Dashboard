@@ -1672,7 +1672,9 @@ body:has(.modal-backdrop.show,.camp-modal-backdrop.show,.home-picker-backdrop.sh
 
 /* ── DROPDOWN MENU ── */
 .settings-pop{
-  position:absolute;top:62px;right:14px;
+  /* fixed (no absolute): el menú queda pegado al viewport bajo el botón del
+     header sticky, así no se "pierde" al abrirlo con la página scrolleada. */
+  position:fixed;top:62px;right:14px;
   /* Fondo glass: translúcido + blur del contenido detrás */
   background:rgba(255,255,255,.80);
   -webkit-backdrop-filter:blur(14px) saturate(160%);
