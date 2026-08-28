@@ -307,7 +307,7 @@
         <div id="fund"></div>
       </div>
     </section>
-    <section class="sec">
+    <section class="sec" id="docsSec" hidden>
       <div class="wrap">
         <p class="sec-h">Documentos</p>
         <div id="docs" class="docs"></div>
@@ -608,10 +608,13 @@
         + '<span class="doc-m">Se genera al momento · corte vigente · PDF</span></span>'
         + '<span class="doc-go">' + IC_GO + '</span></button>'
       : '';
+    var sec = document.getElementById('docsSec');
     if ((!list || !list.length) && !vivo) {
-      box.innerHTML = '<div class="empty">Por el momento no hay documentos disponibles, se le hará saber en cuanto lo estén.</div>';
+      if (sec) sec.hidden = true;
+      box.innerHTML = '';
       return;
     }
+    if (sec) sec.hidden = false;
     box.innerHTML = vivo + (list || []).map(function (d) {
       return '<button class="doc" data-id="' + esc(d.id) + '">' +
         '<span class="doc-ic">' + docIcon(d.mime, d.name) + '</span>' +
