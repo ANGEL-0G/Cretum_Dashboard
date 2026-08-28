@@ -3441,6 +3441,8 @@ function setDarkMode(on) {
   else document.documentElement.removeAttribute('data-theme');
   localStorage.setItem('theme', on ? 'dark' : 'light');
   toast(on ? 'Modo oscuro activado' : 'Modo claro activado');
+  // El treemap de GVV Mesa genera sus colores en JS según el tema → repintar
+  if (currentView === 'gvvmesa' && typeof gmRender === 'function' && gmSnap) gmRender();
 }
 
 function applyThemeToggleState() {
@@ -18469,8 +18471,15 @@ function gmFmtUsd(x, dec = 0) {
 function gmPct(x, dec = 2) { return (x > 0 ? '+' : '') + x.toFixed(dec) + '%'; }
 function gmColor(x) { return x > 0 ? 'var(--green)' : (x < 0 ? 'var(--red)' : 'var(--gray-500)'); }
 function gmHeatColor(dp) {
-  // -5%..+5% → rojo→blanco→verde (para el treemap)
+  // -5%..+5% → rojo→neutro→verde (para el treemap).
+  // Claro: neutro blanco. Oscuro: invertido — neutro azul oscuro (letras siempre blancas).
   const v = Math.max(-5, Math.min(5, dp || 0)) / 5;
+  if (document.documentElement.getAttribute('data-theme') === 'dark') {
+    const mix = (a, b, t) => Math.round(a + (b - a) * t);
+    const base = [33, 40, 56], green = [24, 128, 74], red = [176, 46, 46];
+    const to = v >= 0 ? green : red, t = Math.abs(v);
+    return `rgb(${mix(base[0], to[0], t)},${mix(base[1], to[1], t)},${mix(base[2], to[2], t)})`;
+  }
   if (v >= 0) { const k = Math.round(238 - v * 100); return `rgb(${Math.round(238 - v * 225)},${k + Math.round(v * 8)},${Math.round(238 - v * 178)})`.replace(/^rgb\((\d+),(\d+),(\d+)\)$/, (m,a,b,c)=>`rgb(${a},${b},${c})`); }
   const k = -v; return `rgb(${Math.round(238 + k * 12)},${Math.round(238 - k * 160)},${Math.round(238 - k * 160)})`;
 }
@@ -18625,8 +18634,9 @@ function gmTreemap(s, w, h) {
     const cw = r.x1 - r.x0, ch = r.y1 - r.y0;
     const big = cw > 52 && ch > 30, med = cw > 34 && ch > 18;
     const fill = r.otros ? 'var(--gray-100)' : gmHeatColor(r.dp);
-    const tcol = Math.abs(r.dp || 0) > 3.4 ? '#fff' : '#1a2332';
-    return `<g><rect x="${r.x0 + 1}" y="${r.y0 + 1}" width="${Math.max(0, cw - 2)}" height="${Math.max(0, ch - 2)}" rx="3" fill="${fill}" stroke="#fff">
+    const gmDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const tcol = gmDark ? '#fff' : (Math.abs(r.dp || 0) > 3.4 ? '#fff' : '#1a2332');
+    return `<g><rect x="${r.x0 + 1}" y="${r.y0 + 1}" width="${Math.max(0, cw - 2)}" height="${Math.max(0, ch - 2)}" rx="3" fill="${fill}" stroke="var(--white)">
       <title>${escapeHtml(r.t)} · ${r.w.toFixed(1)}% del fondo · ${r.dp != null ? gmPct(r.dp) : 's/quote'} hoy · ${gmFmtUsd(r.pl || 0)}</title></rect>
       ${med ? `<text x="${(r.x0 + r.x1) / 2}" y="${(r.y0 + r.y1) / 2 + (big ? -3 : 3)}" text-anchor="middle" font-size="${big ? 11 : 8.5}" font-weight="700" fill="${tcol}" pointer-events="none">${escapeHtml(r.t)}</text>` : ''}
       ${big ? `<text x="${(r.x0 + r.x1) / 2}" y="${(r.y0 + r.y1) / 2 + 11}" text-anchor="middle" font-size="8.5" fill="${tcol}" pointer-events="none">${r.dp != null ? gmPct(r.dp, 1) : '—'}</text>` : ''}</g>`;
