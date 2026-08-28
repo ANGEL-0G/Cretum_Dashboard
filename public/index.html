@@ -169,7 +169,8 @@ select.camp-f-inp::-ms-expand,select.form-input::-ms-expand{display:none}
   background:var(--navy);color:white;
   padding:0 24px;height:56px;
   display:flex;align-items:center;gap:12px;
-  position:sticky;top:0;z-index:10;
+  /* fixed (no sticky): visible SIEMPRE al scrollear, en todas las vistas */
+  position:fixed;top:0;left:0;right:0;z-index:10;
 }
 .header-brand{
   display:flex;align-items:center;gap:9px;
@@ -413,7 +414,8 @@ select.camp-f-inp::-ms-expand,select.form-input::-ms-expand{display:none}
 [data-theme="dark"] .fi:focus{box-shadow:0 0 0 3px rgba(93,143,245,.18)}
 
 /* ── APP (hidden until login) ── */
-#app{display:none}
+/* padding-top compensa el header fixed (56px desktop / 52px móvil) */
+#app{display:none;padding-top:56px}
 
 /* ── TOPBAR ── */
 .tk-topbar{display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap}
@@ -3992,6 +3994,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 
   /* Header compacto */
   .header{padding:0 14px;height:52px;gap:8px}
+  #app{padding-top:52px}   /* compensa el header fixed en móvil */
   .header-mark{width:32px;height:32px;padding:4px}
   .header-brand{padding:3px 11px 3px 3px;gap:6px}
   .header-mark{width:28px;height:28px;padding:3px}
