@@ -233,14 +233,26 @@ select.camp-f-inp::-ms-expand,select.form-input::-ms-expand{display:none}
 .header-sync:active{transform:scale(.94)}
 .header-sync span{display:none}   /* solo el puntito */
 .header-sync .sync-dot{width:8px;height:8px}
-/* Botón "System": abre el mapa del sistema (grafo) en pestaña nueva */
+/* Botones "System"/"Noticias": solo icono; el texto se revela al hover
+   (grid-template-columns 0fr→1fr: plegado animable sin thrash) */
 .header-sys{
-  display:flex;align-items:center;gap:6px;font-size:11px;
-  background:rgba(255,255,255,.12);padding:5px 12px;border-radius:20px;
+  display:flex;align-items:center;font-size:11px;
+  background:rgba(255,255,255,.12);padding:6px 10px;border-radius:20px;
   cursor:pointer;transition:background .15s;color:inherit;border:0;font-family:inherit;
 }
 .header-sys:hover{background:rgba(255,255,255,.22)}
 .header-sys i{font-size:11px}
+.hs-tx{display:grid;grid-template-columns:0fr;transition:grid-template-columns .22s cubic-bezier(.23,1,.32,1)}
+.hs-tx>span{
+  overflow:hidden;white-space:nowrap;min-width:0;
+  opacity:0;margin-left:0;
+  transition:opacity .16s ease,margin-left .22s cubic-bezier(.23,1,.32,1);
+}
+@media (hover:hover) and (pointer:fine){
+  .header-sys:hover .hs-tx,.header-sys:focus-visible .hs-tx{grid-template-columns:1fr}
+  .header-sys:hover .hs-tx>span,.header-sys:focus-visible .hs-tx>span{opacity:1;margin-left:6px}
+}
+@media (prefers-reduced-motion:reduce){.hs-tx,.hs-tx>span{transition:opacity .15s ease}}
 /* Fila "Instalar app": clickable; se oculta si ya corre instalada (standalone) */
 .settings-row-install{border-radius:10px;transition:background .15s}
 .settings-row-install:hover{background:var(--navy-ghost)}
@@ -4204,13 +4216,13 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
       <div class="sync-dot" id="syncDot"></div>
       <span id="syncLabel">Sincronizado</span>
     </div>
-    <button class="header-sys" id="systemMapBtn" onclick="window.open('/system-map','_blank','noopener')" title="Mapa del sistema" data-i18n-title>
+    <button class="header-sys" id="systemMapBtn" onclick="window.open('/system-map','_blank','noopener')" title="Mapa del sistema" data-i18n-title aria-label="System">
       <i class="fa-solid fa-circle-nodes"></i>
-      <span>System</span>
+      <span class="hs-tx"><span>System</span></span>
     </button>
-    <button class="header-sys" id="blogBtn" onclick="openNewsPage()" title="Noticias de las empresas en seguimiento" data-i18n-title>
+    <button class="header-sys" id="blogBtn" onclick="openNewsPage()" title="Noticias de las empresas en seguimiento" data-i18n-title aria-label="Noticias">
       <i class="fa-solid fa-newspaper"></i>
-      <span>Noticias</span>
+      <span class="hs-tx"><span>Noticias</span></span>
     </button>
     <button class="header-user" id="headerUserBtn" onclick="toggleSettings(event)" title="Tu cuenta" data-i18n-title>
       <div class="header-av" id="headerAv">—</div>
