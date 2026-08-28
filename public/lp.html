@@ -95,7 +95,17 @@
   .signout{font:inherit;font-size:13px;color:var(--ink-soft);background:transparent;border:1px solid var(--line);border-radius:9px;padding:8px 13px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:border-color .18s,color .18s}
   .signout:hover{color:var(--ink);border-color:var(--brand-2)}
   .signout svg{width:15px;height:15px}
-  .hero{padding:40px 0 6px}
+    .hero{padding:40px 0 6px}
+  .hero-row{display:flex;align-items:flex-end;justify-content:space-between;gap:22px;flex-wrap:wrap}
+  .cta-statement{display:inline-flex;align-items:center;gap:13px;font:inherit;text-align:left;cursor:pointer;
+    background:var(--btn);color:var(--btn-ink);border:0;border-radius:13px;padding:15px 20px;
+    transition:background .18s var(--ease),transform .16s var(--ease);flex:0 0 auto}
+  .cta-statement:hover{background:var(--btn-hover)}
+  .cta-statement:active{transform:scale(.98)}
+  .cta-ic{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:rgba(255,255,255,.14)}
+  .cta-ic svg{width:20px;height:20px}
+  .cta-t{display:block;font-weight:700;font-size:15px}
+  .cta-m{display:block;font-size:11.5px;opacity:.75;margin-top:1px}
   .hero .eyebrow{text-align:left}
   .greeting{font-family:var(--serif);font-weight:700;font-size:clamp(28px,5vw,42px);line-height:1.06;margin:0 0 12px;color:var(--ink);text-wrap:balance}
   .lede{font-size:clamp(15px,2.2vw,16.5px);color:var(--ink-soft);max-width:56ch;margin:0}
@@ -272,10 +282,17 @@
       </div>
     </div>
     <section class="hero">
-      <div class="wrap">
-        <p class="eyebrow">Tu información</p>
-        <h1 class="greeting" id="greeting">Hola</h1>
-        <p class="lede">Aquí encontrarás los documentos e información sobre tu posición en el fondo GVV.</p>
+      <div class="wrap hero-row">
+        <div>
+          <p class="eyebrow">Tu información</p>
+          <h1 class="greeting" id="greeting"></h1>
+          <p class="lede">Aquí encontrarás los documentos e información sobre tu posición en el fondo GVV.</p>
+        </div>
+        <button class="cta-statement" id="ctaStatement" hidden type="button">
+          <span class="cta-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/></svg></span>
+          <span class="cta-body"><span class="cta-t">Estado de Cuenta</span>
+          <span class="cta-m">PDF · se genera al momento</span></span>
+        </button>
       </div>
     </section>
     <section class="sec" id="dashSec" hidden>
@@ -548,10 +565,7 @@
         return '<div class="fs"><div class="fs-k">' + k + '</div><div class="fs-v' + (cls ? ' ' + cls : '') + '">' + v + '</div>'
           + (sub ? '<div class="fs-sub">' + sub + '</div>' : '') + '</div>';
       }
-      var band = '<div class="fund-band two">'
-        + fsCard('Activos del fondo', fmtMoney(fdo.aum, 'USD'), 'al corte de ' + esc(fdo.asOf || ''))
-        + fsCard('Posiciones', esc(fdo.n_posiciones != null ? fdo.n_posiciones : '—'), fdo.n_companias ? esc(fdo.n_companias) + ' compañías' : '')
-        + '</div>';
+      var band = '';
       function dn(arr, title, centerLabel) {
         return renderDonut((arr || []).map(function (a) { return { name: a.label, v: a.pct }; }), 'USD',
           { pct: true, title: title, center: '100%', centerLabel: centerLabel });
@@ -578,13 +592,6 @@
           + '<div class="note">Los pesos y montos por posición se omiten por política de la firma.</div></div>';
       }
       var terms = '';
-      if (fdo.terms && fdo.terms.length) {
-        terms = '<div class="panel"><div class="panel-h"><span class="panel-t">Términos del fondo</span></div>'
-          + '<div style="overflow-x:auto"><table class="tbl-terms">'
-          + fdo.terms.map(function (x) {
-              return '<tr><td class="k">' + esc(x.k) + '</td><td class="v">' + esc(x.v) + '</td></tr>';
-            }).join('') + '</table></div></div>';
-      }
       fhost.innerHTML = band + donuts + tops + terms;
       fsec.hidden = false;
     }
@@ -622,8 +629,8 @@
   var STATEMENT_URL = 'https://mac-mini-de-cretum.tail4eeacb.ts.net:8443/gvv-statement';
   function openStatement(btn) {
     if (!SESSION) return;
-    var go = btn.querySelector('.doc-go'); var prev = go ? go.innerHTML : '';
-    if (go) go.innerHTML = '<span class="spin" style="width:16px;height:16px;border-width:2px"></span>';
+    var go = btn.querySelector('.doc-go') || btn.querySelector('.cta-ic'); var prev = go ? go.innerHTML : '';
+    if (go) go.innerHTML = '<span class="spin" style="width:16px;height:16px;border-width:2px;border-top-color:#fff"></span>';
     // ventana abierta DENTRO del click (los bloqueadores de popups lo exigen);
     // el PDF se pide por POST (el token viaja en el cuerpo, nunca en la URL)
     var w = window.open('', '_blank');
@@ -659,13 +666,18 @@
 
   function montar(j, token) {
     SESSION = token;
-    $('greeting').textContent = j.name ? 'Hola, ' + j.name : 'Hola';
+    $('greeting').textContent = j.name || 'Tu portal';
     try {
       var d = j.data || null;
       if (d && d.gvv) { renderGvv(d.gvv); } else { renderDash(d); }
     } catch (e) { try { $('dashSec').hidden = true; } catch (e2) {} }
     var conEstado = !!(j.data && j.data.gvv && j.data.gvv.lp_id && !j.data.gvv.demo);
-    renderDocs(j.documents || [], conEstado);
+    var cta = $('ctaStatement');
+    if (cta) {
+      cta.hidden = !conEstado;
+      if (conEstado && !cta._wired) { cta._wired = true; cta.addEventListener('click', function () { openStatement(cta); }); }
+    }
+    renderDocs(j.documents || [], false);
     hide($('login')); hide($('loading')); show($('content'));
     window.scrollTo(0, 0);
   }
