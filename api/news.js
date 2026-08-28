@@ -212,7 +212,44 @@ async function generate(companies) {
     }));
     await new Promise(r => setTimeout(r, 80));
   }
+  await enrichImages(items);
   return items;
+}
+// ── Imágenes: og:image real del artículo (best-effort) con respaldo al logo del medio ──
+async function fetchOgImage(url) {
+  try {
+    const ctrl = new AbortController();
+    const to = setTimeout(() => ctrl.abort(), 3500);
+    const r = await fetch(url, {
+      redirect: 'follow', signal: ctrl.signal,
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; CretumDesk/1.0; +https://cretumdesk.com)' },
+    });
+    clearTimeout(to);
+    if (!r.ok) return '';
+    const html = (await r.text()).slice(0, 250000);
+    const m = html.match(/<meta[^>]+(?:property|name)=["'](?:og:image(?::secure_url)?|twitter:image(?::src)?)["'][^>]+content=["']([^"']+)["']/i)
+      || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["'](?:og:image|twitter:image)["']/i);
+    let img = m ? decode(m[1]) : '';
+    if (img && img.startsWith('//')) img = 'https:' + img;
+    return /^https?:\/\//.test(img) ? img : '';
+  } catch (e) { return ''; }
+}
+// Enriquece las notas con imagen. Solo baja el HTML de las que se muestran (top),
+// para no rebasar maxDuration; el resto usa el logo del medio (sin fetch).
+async function enrichImages(items) {
+  const TOP = 30;
+  const top = items.slice(0, TOP);
+  for (let i = 0; i < top.length; i += 10) {
+    const chunk = top.slice(i, i + 10);
+    await Promise.all(chunk.map(async it => {
+      const og = await fetchOgImage(it.url);
+      it.image = og || (it.domain ? 'https://logo.clearbit.com/' + it.domain : '');
+    }));
+    await new Promise(r => setTimeout(r, 60));
+  }
+  for (const it of items.slice(TOP)) {
+    it.image = it.domain ? 'https://logo.clearbit.com/' + it.domain : '';
+  }
 }
 function blob(items, companies) {
   return { generated: new Date().toISOString(), count: items.length, companies: companies.map(c => c.name), items };
