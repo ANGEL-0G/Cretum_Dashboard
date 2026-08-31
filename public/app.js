@@ -18483,6 +18483,23 @@ function gmHeatColor(dp) {
   if (v >= 0) { const k = Math.round(238 - v * 100); return `rgb(${Math.round(238 - v * 225)},${k + Math.round(v * 8)},${Math.round(238 - v * 178)})`.replace(/^rgb\((\d+),(\d+),(\d+)\)$/, (m,a,b,c)=>`rgb(${a},${b},${c})`); }
   const k = -v; return `rgb(${Math.round(238 + k * 12)},${Math.round(238 - k * 160)},${Math.round(238 - k * 160)})`;
 }
+/* Vencimiento legible de una opción: "25 sep", "hoy", "mañana" (venc = dd/mm/aaaa del Excel). */
+function gmVencCorto(o) {
+  const MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(String(o.venc || ''));
+  const fecha = m ? `${+m[1]} ${MES[+m[2] - 1] || ''}`.trim() : '';
+  const d = typeof o.dte === 'number' ? o.dte : null;
+  if (d === 0) return fecha ? `hoy ${fecha}` : 'hoy';
+  if (d === 1) return fecha ? `mañana ${fecha}` : 'mañana';
+  return fecha || (d != null ? `${d}d` : '—');
+}
+/* Frase completa para las señales: "vence 25 sep (25d)". */
+function gmVencFrase(o) {
+  const corto = gmVencCorto(o);
+  const d = typeof o.dte === 'number' ? o.dte : null;
+  return (d != null && d > 1) ? `vence ${corto} (${d}d)` : `vence ${corto}`;
+}
+
 function gmAgo(ts) {
   if (!ts) return '';
   const h = (Date.now() / 1000 - ts) / 3600;
@@ -18516,12 +18533,24 @@ function gmSignals(s) {
 
   // OPCIONES — riesgo de asignación (lo más accionable primero)
   const tight = s.options.filter(o => o.cv === 'Venta' && o.dist_strike_pct != null && typeof o.dte === 'number' && o.dte >= 0 && Math.abs(o.dist_strike_pct) < 3);
-  for (const o of tight)
-    push('opciones', 'crit', `${o.ticker} ${o.pc === 'P' ? 'put' : 'call'} vendido a ${Math.abs(o.dist_strike_pct).toFixed(1)}% del strike ${o.strike} (spot ${o.spot})`, 'decidir roll / cierre');
+  for (const o of [...tight].sort((a, b) => a.dte - b.dte))
+    push('opciones', 'crit', `${o.ticker} ${o.pc === 'P' ? 'put' : 'call'} vendido a ${Math.abs(o.dist_strike_pct).toFixed(1)}% del strike ${o.strike} (spot ${o.spot}) · ${gmVencFrase(o)}`, 'decidir roll / cierre');
   const itm = s.options.filter(o => o.estado === 'ITM' && typeof o.dte === 'number' && o.dte >= 0);
-  if (itm.length) push('opciones', 'warn', `${itm.length} opciones ITM vivas: ${[...new Set(itm.map(o => o.ticker))].join(', ')}`, 'revisar en pestaña Opciones');
+  if (itm.length) {
+    const porVenc = [...new Map([...itm].sort((a, b) => a.dte - b.dte)
+      .map(o => [`${o.ticker}|${o.venc}`, o])).values()];
+    push('opciones', 'warn',
+      `${itm.length} opciones ITM vivas · vencen: ${porVenc.map(o => `${o.ticker} ${gmVencCorto(o)}`).join(' · ')}`,
+      'revisar en pestaña Opciones');
+  }
   const nearExp = s.options.filter(o => typeof o.dte === 'number' && o.dte >= 0 && o.dte <= 7);
-  if (nearExp.length) push('opciones', 'warn', `${nearExp.length} vencen en ≤7 días: ${[...new Set(nearExp.map(o => `${o.ticker} (${o.dte}d)`))].join(', ')}`, 'planear la semana');
+  if (nearExp.length) {
+    const grupos = [...new Map([...nearExp].sort((a, b) => a.dte - b.dte)
+      .map(o => [`${o.ticker}|${o.venc}`, o])).values()];
+    push('opciones', 'warn',
+      `${nearExp.length} vencen en ≤7 días: ${grupos.map(o => `${o.ticker} (${gmVencCorto(o)})`).join(' · ')}`,
+      'planear la semana');
+  }
 
   // MOVIMIENTOS del día
   for (const p of s.positions) {
