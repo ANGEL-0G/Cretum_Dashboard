@@ -11593,7 +11593,7 @@ const FUND_TRACKERS = {
       { company: 'Udemy',                       invested: 960094,   pct: 0.007, mtm: 308052,   moic: 0.3209, corpVal: 1.261,  pps: 9.22,  entry: 28.74, shares: 33406,  fdso: 136.8 },
       { company: 'Figure AI Inc.',              invested: 426634,   pct: 0.003, mtm: 5446374,  moic: 12.7659,corpVal: 34.812, pps: 174,   entry: 13.63, shares: 31301,  fdso: 200.1 }
     ],
-    overallTotal:     { invested: 161119217, mtm: 317626253, moic: 1.9714 },
+    overallTotal:     { invested: 128568084, mtm: 212243362, moic: 1.6508 },   // semilla; computeFundTotals la recalcula desde las filas
     overallTotal2:    { label: 'Total — Overall (Commitment)', invested: 154000000, mtm: 198955098, moic: 1.2919 },
     logos: {
       'RapidSOS, Inc.':'rapidsos.com',
@@ -11708,7 +11708,7 @@ const FUND_TRACKERS = {
       { company: 'Klarna Holding AB', invested: 436638, pct: 0.003, mtm: 274076, moic: 0.6277, corpVal: 5.595, pps: 13.38, entry: 21.32, shares: 20484, fdso: 418.2 }
     ],
     overallLabel:     'Total — Overall (Invested)',
-    overallTotal:     { invested: 151119219, mtm: 300004254, moic: 1.9852 },
+    overallTotal:     { invested: 161119217, mtm: 317414328, moic: 1.9701 },   // semilla; computeFundTotals la recalcula desde las filas
     overallTotal2:    { label: 'Total — Overall (Commitment)', invested: 293000000, mtm: 449295111, moic: 1.5334 },
     // Dominio para el logo (Clearbit). Fallback a monograma si no carga.
     logos: {
