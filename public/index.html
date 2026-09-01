@@ -6596,6 +6596,10 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 <div class="page page-db" id="pageLp">
   <div class="db-toolbar">
     <div class="db-title-block"><i class="fa-solid fa-user-tie"></i> Portal de LP's</div>
+    <div class="db-search">
+      <i class="fa-solid fa-magnifying-glass db-search-ico"></i>
+      <input id="lpSearch" class="db-search-inp" placeholder="Buscar por nombre o usuario…" oninput="renderLpList()" autocomplete="off">
+    </div>
     <button class="btn-primary" id="lpNewBtn" type="button" onclick="lpNew()" style="display:none"><i class="fa-solid fa-plus"></i> Nuevo LP</button>
   </div>
   <p class="lp-intro">Todos entran por <span class="lp-code">cretumdesk.com/lp</span> con su <b>usuario y contraseña</b>, y cada uno ve solo su información. Da de alta al LP con su usuario y contraseña, y súbele sus documentos. Comparte la contraseña por un canal aparte.</p>
@@ -7509,7 +7513,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   </div>
 </div>
 
-<script src="/i18n.js?v=20260827-aviso2fa"></script>
-<script src="/app.js?v=20260827-aviso2fa"></script>
+<script src="/i18n.js?v=20260901-lpsearch"></script>
+<script src="/app.js?v=20260901-lpsearch"></script>
 </body>
 </html>

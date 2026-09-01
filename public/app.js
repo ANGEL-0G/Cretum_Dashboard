@@ -6949,8 +6949,17 @@ function renderLpList() {
     list.innerHTML = `<div class="pt-empty">Aún no hay LP's.${lpCanManage() ? ' Crea el primero con “Nuevo LP”.' : ''}</div>`;
     return;
   }
+  // Buscador (mismo patrón que Base de Datos / Contactos): filtra por nombre o usuario.
+  const q = (document.getElementById('lpSearch')?.value || '').trim().toLowerCase();
+  const rows = q
+    ? lpList.filter(l => (l.name || '').toLowerCase().includes(q) || (l.username || '').toLowerCase().includes(q))
+    : lpList;
+  if (!rows.length) {
+    list.innerHTML = `<div class="pt-empty">Sin resultados para “${escapeHtml(q)}”.</div>`;
+    return;
+  }
   const manage = lpCanManage();
-  list.innerHTML = lpList.map(l => `
+  list.innerHTML = rows.map(l => `
     <div class="lp-item">
       <div class="lp-item-main">
         <div class="lp-item-name">${escapeHtml(l.name)} ${l.active ? '' : '<span class="lp-badge off">inactivo</span>'}${l.has_password ? '' : '<span class="lp-badge warn">sin contraseña</span>'}</div>
