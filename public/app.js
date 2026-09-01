@@ -18749,6 +18749,122 @@ function gmRender() {
     `<div style="margin-top:10px;font-size:10.5px;color:var(--gray-400)">Snapshot del robot cada 10 min en horario de mercado · posiciones del Excel oficial · quotes en vivo · privados y MX con precio del Excel. Señales v1 con umbrales fijos; pasarán a percentiles contra la propia historia del fondo conforme se acumule serie.</div>`;
 }
 
+/* ── Curva del fondo: 1D intradía + historia oficial por rangos (gvv-track) ── */
+let gmTrack = null, gmTrackLoading = false, gmRango = '1D';
+let gmCmp = { s: false, n: false, b: false };
+
+function gmEnsureTrack() {
+  if (gmTrack || gmTrackLoading) return;
+  gmTrackLoading = true;
+  authedFetch('/api/gvv-live?track=1')
+    .then(r => (r.ok ? r.json() : null))
+    .then(d => { gmTrack = d || { orden: [], series: {} }; })
+    .catch(() => { gmTrack = { orden: [], series: {} }; })
+    .finally(() => { gmTrackLoading = false; if (gmTab === 'resumen') gmRender(); });
+}
+function gmSetRango(k) { gmRango = k; gmRender(); }
+function gmToggleCmp(k) { gmCmp[k] = !gmCmp[k]; gmRender(); }
+
+/* 1D se arma del snapshot intradía (única fuente en vivo); el resto viene ya
+   calculado del robot (misma regla del proyecto: estructura por código). */
+function gmSerie1D(s) {
+  const h = (s._hist || []).filter(p => p && p.day_pl != null);
+  if (h.length < 2) return null;
+  return {
+    t: h.map(p => new Date(p.ts).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })),
+    f: h.map(p => p.day_pl), tipo: 'usd',
+    sub: 'P&L del día · snapshot cada 10 min en horario de mercado',
+  };
+}
+
+function gmTieneSerie(a) { return Array.isArray(a) && a.some(v => v != null); }
+
+function gmCurvaSvg(d, w, h) {
+  const usd = d.tipo === 'usd';
+  const f = d.f;
+  const extras = [];
+  if (!usd) {
+    if (gmCmp.s && gmTieneSerie(d.s)) extras.push({ v: d.s, col: 'var(--gray-400)', dash: '6,3', lbl: 'S&P 500' });
+    if (gmCmp.n && gmTieneSerie(d.n)) extras.push({ v: d.n, col: '#a855f7', dash: '2,3', lbl: 'NASDAQ 100' });
+    if (gmCmp.b && gmTieneSerie(d.b)) extras.push({ v: d.b, col: '#0891b2', dash: '5,3', lbl: 'Benchmark' });
+  }
+  const m = { l: 58, r: 12, t: 12, b: 22 };
+  const vals = f.filter(v => v != null);
+  const todos = vals.concat(...extras.map(e => e.v.filter(v => v != null))).concat([0]);
+  const lo = Math.min(...todos), hi = Math.max(...todos);
+  const pad = Math.max((hi - lo) * 0.12, usd ? 400 : 0.3);
+  const y0 = lo - pad, y1 = hi + pad;
+  const y = v => h - m.b - (v - y0) / ((y1 - y0) || 1) * (h - m.t - m.b);
+  const x = i => m.l + i / Math.max(1, f.length - 1) * (w - m.l - m.r);
+  const last = f[f.length - 1] || 0;
+  const pos = last >= 0;
+  const col = pos ? 'var(--green)' : 'var(--red)';
+  const fill = pos ? 'rgba(13,110,60,.16)' : 'rgba(198,40,40,.13)';
+  const etq = v => usd ? gmFmtUsd(v / 1000, 0) + 'k' : v.toFixed(1) + '%';
+  let grid = '';
+  for (let i = 0; i < 4; i++) {
+    const gv = y0 + (y1 - y0) * i / 3;
+    grid += `<line x1="${m.l}" y1="${y(gv)}" x2="${w - m.r}" y2="${y(gv)}" stroke="var(--gray-100)"/>`
+      + `<text x="${m.l - 6}" y="${y(gv) + 3.5}" text-anchor="end" font-size="9" fill="var(--gray-400)">${etq(gv)}</text>`;
+  }
+  const pts = f.map((v, i) => `${x(i).toFixed(1)},${y(v == null ? 0 : v).toFixed(1)}`);
+  const area = `<polygon points="${m.l},${y(y0)} ${pts.join(' ')} ${x(f.length - 1).toFixed(1)},${y(y0)}" fill="${fill}"/>`;
+  const base = `<line x1="${m.l}" y1="${y(0)}" x2="${w - m.r}" y2="${y(0)}" stroke="var(--gray-300)" stroke-dasharray="3,3"/>`;
+  const linea = `<polyline points="${pts.join(' ')}" fill="none" stroke="${col}" stroke-width="2.2" stroke-linejoin="round"/>`;
+  const otras = extras.map(e => {
+    const p = e.v.map((v, i) => (v == null ? null : `${x(i).toFixed(1)},${y(v).toFixed(1)}`)).filter(Boolean);
+    return p.length > 1 ? `<polyline points="${p.join(' ')}" fill="none" stroke="${e.col}" stroke-width="1.7" stroke-dasharray="${e.dash}"/>` : '';
+  }).join('');
+  const dot = `<circle cx="${x(f.length - 1).toFixed(1)}" cy="${y(last).toFixed(1)}" r="3.6" fill="${col}"/>`;
+  // bandas invisibles con tooltip nativo (sobreviven al re-render del innerHTML)
+  const paso = (w - m.l - m.r) / Math.max(1, f.length - 1);
+  const bandas = f.map((v, i) => {
+    const det = [`GVV ${v == null ? '—' : (usd ? gmFmtUsd(v) : gmPct(v))}`]
+      .concat(extras.map(e => e.v[i] == null ? null : `${e.lbl} ${gmPct(e.v[i])}`).filter(Boolean));
+    return `<rect x="${(x(i) - paso / 2).toFixed(1)}" y="${m.t}" width="${paso.toFixed(1)}" height="${h - m.t - m.b}" fill="transparent">
+      <title>${escapeHtml(d.t[i] || '')} — ${escapeHtml(det.join(' · '))}</title></rect>`;
+  }).join('');
+  const n = f.length;
+  const idx = [...new Set([0, Math.floor(n / 3), Math.floor(2 * n / 3), n - 1])];
+  const ejeX = idx.map(i => `<text x="${x(i).toFixed(1)}" y="${h - 6}" text-anchor="middle" font-size="9" fill="var(--gray-400)">${escapeHtml(d.t[i] || '')}</text>`).join('');
+  return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;display:block">${grid}${area}${base}${otras}${linea}${dot}${bandas}${ejeX}</svg>`;
+}
+
+function gmCurvaCard(s) {
+  gmEnsureTrack();
+  const rangos = ['1D'].concat((gmTrack && gmTrack.orden) || []);
+  if (!rangos.includes(gmRango)) gmRango = '1D';
+  const d = gmRango === '1D' ? gmSerie1D(s) : ((gmTrack && gmTrack.series[gmRango]) || null);
+  const usd = d && d.tipo === 'usd';
+  const last = d ? d.f[d.f.length - 1] : null;
+  const hayCmp = d && !usd && (gmTieneSerie(d.s) || gmTieneSerie(d.n) || gmTieneSerie(d.b));
+  const btn = (k) => `<button onclick="gmSetRango('${k}')" style="border:1.5px solid ${gmRango === k ? '#0f2849' : 'var(--gray-200)'};background:${gmRango === k ? '#0f2849' : 'var(--white)'};color:${gmRango === k ? '#fff' : 'var(--gray-500)'};border-radius:8px;padding:4px 11px;font-size:11.5px;font-weight:700;cursor:pointer">${k}</button>`;
+  const chk = (k, lbl, colr) => `<label style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--gray-500);cursor:pointer${(d && gmTieneSerie(d[k])) ? '' : ';opacity:.35;pointer-events:none'}">
+    <input type="checkbox" ${gmCmp[k] ? 'checked' : ''} onchange="gmToggleCmp('${k}')" style="cursor:pointer"> <span style="color:${colr}">■</span> ${lbl}</label>`;
+  const cabeza = d
+    ? `<div style="font-size:30px;font-weight:800;color:${gmColor(last || 0)};line-height:1.1">${usd ? gmFmtUsd(last) : gmPct(last)}</div>
+       <div style="font-size:11.5px;color:var(--gray-400)">${escapeHtml(d.sub || '')}</div>`
+    : `<div style="font-size:13px;color:var(--gray-400);padding:6px 0">${gmTrackLoading ? 'Cargando historia…' : 'Sin datos para este rango todavía.'}</div>`;
+  return `<div style="${GM_CARD};margin-bottom:14px">
+    <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start;margin-bottom:8px">
+      <div style="flex:1;min-width:200px">
+        <div style="font-weight:700;margin-bottom:2px"><i class="fa-solid fa-chart-area"></i> Curva del fondo</div>
+        ${cabeza}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:7px;align-items:flex-end">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end">
+          ${hayCmp ? chk('s', 'S&P 500', 'var(--gray-400)') + chk('n', 'NASDAQ 100', '#a855f7') + chk('b', 'Benchmark', '#0891b2') : ''}
+        </div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end">${rangos.map(btn).join('')}</div>
+      </div>
+    </div>
+    ${d ? gmCurvaSvg(d, 900, 190) : ''}
+    <div style="margin-top:6px;font-size:10px;color:var(--gray-400)">${gmRango === '1D'
+      ? 'Intradía del robot. El tramo plano inicial es correcto: hasta que un símbolo opera hoy su P&L del día es cero.'
+      : escapeHtml((gmTrack && gmTrack.nota) || '')}</div>
+  </div>`;
+}
+
 function gmTabResumen(s) {
   const aum = s.aum_live || 1;
   const cash = s.positions.filter(p => p.ac === 'Cash').reduce((a, p) => a + p.live_value, 0);
@@ -18767,7 +18883,7 @@ function gmTabResumen(s) {
       <div style="font-size:32px;font-weight:800;color:var(--gray-800)">${gmFmtUsd(s.aum_live)}</div>
       <div style="font-size:12px;color:var(--gray-400)">Excel: ${gmFmtUsd(s.aum_excel)} · quotes ${s.quotes_ok}/${s.quotes_total} · efectivo ${(cash / aum * 100).toFixed(1)}%</div></div>
   </div>
-  <div style="${GM_CARD};margin-bottom:14px"><div style="font-weight:700;margin-bottom:4px"><i class="fa-solid fa-chart-area"></i> Curva del día</div>${gmAreaChart(s._hist, 900, 170)}</div>
+  ${gmCurvaCard(s)}
   <div style="${GM_CARD};margin-bottom:14px"><div style="font-weight:700;margin-bottom:6px"><i class="fa-solid fa-map"></i> Mapa del portafolio <span style="font-weight:400;font-size:11px;color:var(--gray-400)">· tamaño = peso · color = movimiento del día (pasa el cursor)</span></div>
     ${gmTreemap(s, 900, 340)}
     <div style="display:flex;gap:4px;align-items:center;margin-top:8px;font-size:9.5px;color:var(--gray-500)">-5%

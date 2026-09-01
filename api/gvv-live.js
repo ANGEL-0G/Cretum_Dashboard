@@ -8,6 +8,7 @@
  *   GET /api/gvv-live?hist=1       → gvv-hist-YYYYMMDD.json (serie del día, CDMX)
  *   GET /api/gvv-live?privados=1   → gvv-privados.json
  *   GET /api/gvv-live?riesgo=1     → gvv-riesgo.json
+ *   GET /api/gvv-live?track=1      → gvv-track.json (curva histórica por rangos)
  *   GET /api/gvv-live?analytics=1  → gvv-analytics.json
  *
  * (Antes vivía dentro de /api/prices por el tope de 12 funciones de Vercel
@@ -25,6 +26,7 @@ export default async function handler(req, res) {
   let key = 'cretum/_internal/gvv-live.json';
   if (req.query.trackernews) key = 'mvp/_internal/tracker-news.json';
   else if (req.query.analytics) key = 'cretum/_internal/gvv-analytics.json';
+  else if (req.query.track) key = 'cretum/_internal/gvv-track.json';
   else if (req.query.riesgo) key = 'cretum/_internal/gvv-riesgo.json';
   else if (req.query.m13f) key = 'cretum/_internal/gvv-13f.json';
   else if (req.query.privados) key = 'cretum/_internal/gvv-privados.json';
