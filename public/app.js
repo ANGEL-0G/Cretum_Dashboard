@@ -5109,11 +5109,12 @@ let _mvpKpisLoaded = false;
 // Calcula el snapshot MVP-LATAM (live desde la DB). Reusado por el panel de Inicio
 // y por el modal "Full LATAM MVP Snapshot" de Base de Datos.
 async function _computeMvpSnapshot() {
-  const [inv, dist, comps] = await Promise.all([
+  const [inv, distRaw, comps] = await Promise.all([
     sbFetchAll('investments', 'id,investor_id,company_id,commitment,commitment_actual,distributed_at'),
     sbFetchAll('investment_distributions', 'investment_id,value_in_kind,cash_proceeds,distribution_date,notes'),
     sbFetchAll('companies', 'id,name')
   ]);
+  const dist = distRaw.filter(d => !isLockupPartial(d));
   const n = v => (Number(v) || 0);
   // Neteo de reinversiones 22F→26A QP (no inflar comprometido ni distribuido).
   let netTot = { totalRecycled: 0, totalReinvested: 0 };
@@ -7857,10 +7858,10 @@ async function repGenerate() {
     let dists = [];
     if (ids.length) {
       const { data, error } = await sb.from('investment_distributions')
-        .select('investment_id, letter_type, underlying_company, distribution_date, shares_distributed, value_in_kind, cash_proceeds, letter_url')
+        .select('investment_id, letter_type, underlying_company, distribution_date, shares_distributed, value_in_kind, cash_proceeds, letter_url, notes')
         .in('investment_id', ids);
       if (error) throw error;
-      dists = data || [];
+      dists = (data || []).filter(d => !isLockupPartial(d));
     }
     repLastDoc = repBuildDoc(inv, investments, dists);
     document.getElementById('repFrame').srcdoc = repLastDoc;
@@ -8634,6 +8635,11 @@ async function exportPDF(cols, rows) {
    tomar efectivo (sin 26A → R=0). Cretum es cruzado entre entidades (119↔615): excepción.
    positions: [{ seriesName, commitment, dists:[{cash_proceeds,value_in_kind,notes}] }]
 ═══════════════════════════════════════════ */
+// [LOCKUP-PARCIAL]: distros parciales del lock-up de SpaceX. Su valor sigue dentro de la
+// posición activa (shares intactas), así que NO cuentan como "Distribuido" en ningún agregado
+// hasta la liquidación total de la posición (decisión Eugenio 2026-09-01; invariante
+// spacex-lockup-parciales-shares-intactas). Se listan en las tablas con etiqueta.
+const isLockupPartial = d => /\[LOCKUP-PARCIAL\]/.test((d && d.notes) || '');
 const SPX_REINV_IS_26AQP = s => /26A\s*QP/i.test(s || '') && !/closing/i.test(s || '');
 // Groq 3a dist (2026-07-09): parte se reinvirtió en la Serie VI-26I QC (Groq 2.0) — mismo patrón que 22F→26A QP.
 const REINV_IS_26I = s => /26I/i.test(s || '');
@@ -8718,7 +8724,7 @@ function buildInvestorExport(posId) {
   if (posId != null) positions = positions.filter(p => p.id === posId);
 
   const pos = positions.map(p => {
-    const dists = p.investment_distributions || [];
+    const dists = (p.investment_distributions || []).filter(d => !isLockupPartial(d));
     let inkind = 0, cash = 0, distShares = 0;
     dists.forEach(x => { inkind += +x.value_in_kind || 0; cash += +x.cash_proceeds || 0; distShares += +x.shares_distributed || 0; });
     // "De qué fue" la distribución: empresas subyacentes repartidas (únicas)
@@ -10553,7 +10559,7 @@ function renderDistrosBlock(title, rows) {
               <td>${escapeHtml(d.distribution_date || '—')}</td>
               <td>${escapeHtml(d.underlying_company || d._company)}</td>
               <td class="hide-mobile">${escapeHtml(d._series)}</td>
-              <td>${d.letter_type === 'distribution_cash' ? 'Cash' : 'In-Kind'}</td>
+              <td>${d.letter_type === 'distribution_cash' ? 'Cash' : 'In-Kind'}${isLockupPartial(d) ? ' <span class="badge off" title="Distribución parcial del lock-up de SpaceX: su valor sigue dentro de la posición activa, no suma en Distribuido hasta la liquidación total">parcial lock-up</span>' : ''}</td>
               <td class="num">${d.cash_proceeds != null ? fmtMoney(+d.cash_proceeds) : '—'}</td>
               <td class="num hide-mobile">${d.shares_distributed != null ? Number(d.shares_distributed).toLocaleString('en-US') : '—'}</td>
               <td class="num hide-mobile">${d.price_per_share != null ? '$' + (+d.price_per_share).toFixed(2) : '—'}</td>
@@ -10719,7 +10725,7 @@ function buildLp360(positions, investorIds) {
   const net = computeReinvestNetting(positions.map(p => ({ seriesName: p.series?.name, commitment: num(p.commitment), dists: p.investment_distributions })), investorIds || []);
   const committedNet = positions.reduce((a, p) => a + num(p.commitment), 0) - net.recycledPaidIn;   // paid-in real
   let distrib = 0;
-  positions.forEach(p => (p.investment_distributions || []).forEach(d => { distrib += num(d.value_in_kind) + num(d.cash_proceeds); }));
+  positions.forEach(p => (p.investment_distributions || []).forEach(d => { if (isLockupPartial(d)) return; distrib += num(d.value_in_kind) + num(d.cash_proceeds); }));
   distrib -= net.reinvestedDist;                                                                     // distribuido real
   const committedActive = committedNet;
   const moic = committedNet ? (navActive + distrib) / committedNet : 0;   // MOIC/TVPI: (valor activo + distribuido) / paid-in real
@@ -12307,14 +12313,14 @@ async function loadDirectOppsData(force) {
   if (_doData && !force) return _doData;
   const [inv, dists, comps] = await Promise.all([
     sbFetchAll('investments', 'id,investor_id,company_id,commitment,commitment_actual,distributed_at,current_ev_pps,carry_pct,investors(name),series(name)'),
-    sbFetchAll('investment_distributions', 'investment_id,cash_proceeds,value_in_kind'),
+    sbFetchAll('investment_distributions', 'investment_id,cash_proceeds,value_in_kind,notes'),
     sbFetchAll('companies', 'id,name,is_public'),
   ]);
   let net = { totalRecycled: 0, totalReinvested: 0 };
   try { net = await loadReinvestNettingMap(); } catch (e) { console.warn('netting', e); }
   const n = v => Number(v) || 0;
   const distByInv = {};
-  dists.forEach(d => { distByInv[d.investment_id] = (distByInv[d.investment_id] || 0) + n(d.cash_proceeds) + n(d.value_in_kind); });
+  dists.forEach(d => { if (isLockupPartial(d)) return; distByInv[d.investment_id] = (distByInv[d.investment_id] || 0) + n(d.cash_proceeds) + n(d.value_in_kind); });
   const cinfo = Object.fromEntries(comps.map(c => [c.id, c]));
   const co = {};
   inv.forEach(r => {
