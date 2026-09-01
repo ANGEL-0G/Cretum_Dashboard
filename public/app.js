@@ -18826,7 +18826,10 @@ function gmCurvaSvg(d, w, h) {
   }).join('');
   const n = f.length;
   const idx = [...new Set([0, Math.floor(n / 3), Math.floor(2 * n / 3), n - 1])];
-  const ejeX = idx.map(i => `<text x="${x(i).toFixed(1)}" y="${h - 6}" text-anchor="middle" font-size="9" fill="var(--gray-400)">${escapeHtml(d.t[i] || '')}</text>`).join('');
+  const ejeX = idx.map(i => {
+    const anc = i === 0 ? 'start' : (i === n - 1 ? 'end' : 'middle');  // extremos anclados: no se cortan
+    return `<text x="${x(i).toFixed(1)}" y="${h - 6}" text-anchor="${anc}" font-size="9" fill="var(--gray-400)">${escapeHtml(d.t[i] || '')}</text>`;
+  }).join('');
   return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;display:block">${grid}${area}${base}${otras}${linea}${dot}${bandas}${ejeX}</svg>`;
 }
 
