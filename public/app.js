@@ -18775,8 +18775,11 @@ function gmSerie1D(s) {
   const ms = h.map(p => new Date(p.ts).getTime());
   // índices alineados al eje del fondo: último valor conocido ≤ ese instante
   const alinea = (k) => {
-    const pts = (s._intra && s._intra.dia === new Date(h[0].ts).toLocaleDateString('en-CA')
-                 && Array.isArray(s._intra.p)) ? s._intra.p : null;
+    // `ts` viene con el huso de la Mini (…-06:00) y `dia` es su fecha de calendario:
+    // comparar los primeros 10 caracteres es exacto sin importar el huso del navegador
+    // (con toLocaleDateString, un usuario fuera de CDMX veía otro día y perdía la línea).
+    const pts = (s._intra && Array.isArray(s._intra.p)
+                 && s._intra.dia === String(h[0].ts).slice(0, 10)) ? s._intra.p : null;
     if (!pts || !pts.length) return null;
     const tt = pts.map(x => new Date(x.t).getTime());
     let i = 0, ult = null;
