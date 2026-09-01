@@ -18784,7 +18784,7 @@ function gmCurvaSvg(d, w, h) {
   const f = d.f;
   const extras = [];
   if (!usd) {
-    if (gmCmp.s && gmTieneSerie(d.s)) extras.push({ v: d.s, col: 'var(--gray-400)', dash: '6,3', lbl: 'S&P 500' });
+    if (gmCmp.s && gmTieneSerie(d.s)) extras.push({ v: d.s, col: 'var(--gray-400)', dash: '6,3', lbl: 'S&P 500 (RT)' });
     if (gmCmp.n && gmTieneSerie(d.n)) extras.push({ v: d.n, col: '#a855f7', dash: '2,3', lbl: 'NASDAQ 100' });
     if (gmCmp.b && gmTieneSerie(d.b)) extras.push({ v: d.b, col: '#0891b2', dash: '5,3', lbl: 'Benchmark' });
   }
@@ -18856,7 +18856,7 @@ function gmCurvaCard(s) {
       </div>
       <div style="display:flex;flex-direction:column;gap:7px;align-items:flex-end">
         <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end">
-          ${hayCmp ? chk('s', 'S&P 500', 'var(--gray-400)') + chk('n', 'NASDAQ 100', '#a855f7') + chk('b', 'Benchmark', '#0891b2') : ''}
+          ${hayCmp ? chk('s', 'S&P 500 (RT)', 'var(--gray-400)') + chk('n', 'NASDAQ 100', '#a855f7') + chk('b', 'Benchmark', '#0891b2') : ''}
         </div>
         <div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end">${rangos.map(btn).join('')}</div>
       </div>
