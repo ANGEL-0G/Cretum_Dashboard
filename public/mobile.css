@@ -1,0 +1,1179 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+/* ══════════════════════════════════════════════════════════════════════════
+   mobile.css — Rediseño móvil de CretumDesk (Fase 1: shell)
+   Dirección: proyecto Claude Design "CretumdeskPhone".
+   Capa ADITIVA: solo actúa en móvil (≤768px), mismo HTML/JS, escritorio intacto.
+   Colorea por --data-org (navy Cretum / naranja MVP) y respeta data-theme oscuro.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Tokens de marca (globales; solo se USAN dentro del @media móvil) ── */
+:root{
+  --mob-grad:linear-gradient(135deg,#1a3a6b 0%,#274b82 55%,#3a6199 100%);
+  --mob-accent:#1a3a6b;
+  --mob-tint:#eef2f9;
+  --mob-tintfg:#12294c;
+  --mob-sf:#ffffff;
+  --mob-sf2:linear-gradient(165deg,#ffffff 0%,#eef2f9 175%);
+  --mob-line:#e6ebf4;
+  --mob-page:linear-gradient(180deg,#fbfcfe 0%,#f4f6fb 40%,#eef2f8 100%);
+  --mob-tx:#1d1f20;
+  --mob-tx2:#6b7280;
+  --mob-navbg:rgba(255,255,255,.92);
+  --mob-sh1:0 2px 10px rgba(18,41,76,.06);
+  --mob-sh2:0 8px 24px rgba(18,41,76,.12);
+  --mob-font:'Plus Jakarta Sans',system-ui,-apple-system,sans-serif;
+}
+[data-org="mvp"]{
+  --mob-grad:linear-gradient(135deg,#e06714 0%,#ed7824 55%,#f59247 100%);
+  --mob-accent:#ed7824;
+  --mob-tint:#fdf1e6;
+  --mob-tintfg:#b6560f;
+  --mob-sf2:linear-gradient(165deg,#ffffff 0%,#fdf1e6 175%);
+}
+[data-theme="dark"]{
+  --mob-sf:#171d27;
+  --mob-sf2:linear-gradient(165deg,#1c232f 0%,#151b25 100%);
+  --mob-line:#2b3442;
+  --mob-page:linear-gradient(180deg,#0f141c 0%,#141a24 60%,#111721 100%);
+  --mob-tx:#eef2f8;
+  --mob-tx2:#98a2b3;
+  --mob-navbg:rgba(23,29,39,.92);
+  --mob-tint:rgba(120,162,228,.16);
+  --mob-tintfg:#9fc0ee;
+  --mob-sh1:0 2px 10px rgba(0,0,0,.40);
+  --mob-sh2:0 8px 24px rgba(0,0,0,.50);
+}
+[data-theme="dark"][data-org="mvp"]{
+  --mob-tint:rgba(237,120,36,.20);
+  --mob-tintfg:#f4a86c;
+  /* Superficies CÁLIDAS (no las azules de Cretum) — dark MVp naranja como en la página */
+  --mob-sf:#1c1710;
+  --mob-sf2:linear-gradient(165deg,#211a11 0%,#171009 100%);
+  --mob-line:#3a2f1e;
+  --mob-page:linear-gradient(180deg,#12100a 0%,#171209 60%,#100d07 100%);
+  --mob-navbg:rgba(28,23,16,.92);
+}
+
+/* Sin el recuadro azul/gris de "tap" al tocar botones y enlaces en móvil.
+   (No afecta el foco por teclado: :focus-visible sigue funcionando.) */
+*{-webkit-tap-highlight-color:transparent}
+
+/* Piezas inyectadas: existen siempre en el DOM pero SOLO se muestran en móvil. */
+.mob-tabbar{display:none}
+.mob-orgtoggle{display:none}
+#mobHome{display:none}
+.mob-feed{display:none}
+.mob-sheet{display:none}
+.mob-prof-ov{display:none}
+.mob-seg-nav{display:none}
+.nt-note-folder{display:none}   /* etiqueta de carpeta: solo en móvil */
+.li-project,.li-createdat,.li-dueflag{display:none}   /* proyecto + hora + indicador: solo en móvil */
+.tk-done-clear{display:none}   /* botón "Vaciar" dentro de Completadas: solo en móvil */
+.mob-newfolder{display:none}   /* botón "＋ Carpeta": solo en móvil */
+#mobNoteSave{display:none}     /* FAB guardar nota: solo en móvil, al editar */
+@keyframes mobSheetUp{from{transform:translateY(100%)}to{transform:none}}
+
+/* Transición de marca Cretum ↔ MVP (overlay a pantalla completa con el gradiente destino) */
+.mob-orgfx{position:fixed;inset:0;z-index:3000;opacity:0;pointer-events:none;display:grid;place-items:center;
+  transition:opacity .22s cubic-bezier(.23,1,.32,1)}
+.mob-orgfx.show{opacity:1}
+.mob-orgfx.org-cretum{background:linear-gradient(135deg,#1a3a6b 0%,#274b82 55%,#3a6199 100%)}
+.mob-orgfx.org-mvp{background:linear-gradient(135deg,#e06714 0%,#ed7824 55%,#f59247 100%)}
+.mob-orgfx-logo{width:min(58vw,240px);height:auto;object-fit:contain;opacity:0;transform:scale(.9);
+  filter:drop-shadow(0 6px 20px rgba(0,0,0,.22));
+  transition:opacity .28s cubic-bezier(.23,1,.32,1),transform .28s cubic-bezier(.23,1,.32,1)}
+.mob-orgfx.show .mob-orgfx-logo{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){.mob-orgfx,.mob-orgfx-logo{transition:none}}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   TODO lo demás: solo móvil (≤768px)
+   ══════════════════════════════════════════════════════════════════════════ */
+@media (max-width:768px){
+
+  /* — Tipografía y fondo general — */
+  #app{
+    font-family:var(--mob-font);
+    background:var(--mob-page);
+    background-attachment:fixed;
+  }
+  #app input,#app textarea,#app select,#app button,
+  #app .header-title,#app .home-greeting,#app .home-question,
+  #app .home-module,#app h1,#app h2,#app h3,#app h4{
+    font-family:var(--mob-font);
+  }
+
+  /* ══ Anti-desbordamiento en TODOS los módulos (móvil) ══
+     La causa #1 en layouts flex/grid es min-width:auto (los hijos no encogen y se salen);
+     además los valores/números/nombres largos deben partir línea, no rebasar su tarjeta. */
+  #app .page *{min-width:0}
+  #app [class*="-kpi"],#app [class*="-stat"],#app [class*="-tile"],#app [class*="-card"]{overflow:hidden}
+  #app [class*="-kpi-v"],#app [class*="-stat-n"],#app [class*="-stat-v"],#app [class*="-val"],
+  #app [class*="-num"],#app [class*="-name"]{overflow-wrap:anywhere}
+  #app table{max-width:100%}
+  /* Encabezados de tablero (Slack/eventos): el título NO debe encoger (nowrap) y su
+     subtítulo apretado se oculta en móvil para no amontonarse. */
+  #app .hb-title{flex:0 0 auto}
+  #app .hb-desc{display:none}
+
+  /* Fundraising (MVP Fund Rising) — el caso que reportaste */
+  #pageFundraising .fr-kpis,#pageFundraising .fr-det-kpis{grid-template-columns:1fr 1fr;gap:10px}
+  #pageFundraising .fr-kpi{padding:12px 14px}
+  #pageFundraising .fr-kpi-v{font-size:19px}
+  #pageFundraising .fr-card-top{flex-wrap:wrap}
+
+  /* — Header: banda con gradiente de marca (recolorea al cambiar Cretum/MVP) — */
+  .header{
+    background:var(--mob-grad);
+    padding:0 14px;
+    box-shadow:0 6px 22px rgba(18,41,76,.16);
+  }
+
+  /* — Home: saludo CENTRADO y sin caja/etiqueta (#app gana a los overrides de dark) — */
+  #app .home-hero{
+    text-align:center;background:transparent;border:0;box-shadow:none;
+    padding:20px 8px 14px;margin-bottom:14px;
+  }
+  #app .home-greeting{
+    font-size:28px;font-weight:600;letter-spacing:-.5px;color:var(--mob-tx);margin-bottom:4px;
+  }
+  #app .home-question{font-size:14px;color:var(--mob-tx2)}
+
+  /* — Rejilla de módulos: fichas CUADRADAS, solo ícono + nombre — */
+  .home-modules{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:10px;
+    justify-content:stretch;
+    margin-bottom:18px;
+  }
+  .home-module{
+    width:auto;height:auto;min-height:0;aspect-ratio:1/1;
+    padding:10px 8px;gap:10px;
+    background:var(--mob-sf2);
+    border:1px solid var(--mob-line);
+    border-radius:18px;
+    box-shadow:var(--mob-sh1);
+    color:var(--mob-tx);
+  }
+  .home-module:hover{transform:none;box-shadow:var(--mob-sh2);border-color:var(--mob-line)}
+  .home-module:active{transform:scale(.96)}
+  .home-module-ico{
+    width:42px;height:42px;border-radius:14px;font-size:19px;
+    background:var(--mob-tint);color:var(--mob-tintfg);
+  }
+  .home-module:hover .home-module-ico{transform:none}
+  .home-module-content{gap:0}
+  .home-module-title{font-size:12.5px;line-height:1.2;font-weight:600;color:var(--mob-tx)}
+  .home-module-desc{display:none}   /* fuera la descripción en móvil */
+
+  /* Padre de las páginas: aire abajo para no quedar bajo la barra inferior */
+  .page{padding:16px 14px calc(104px + env(safe-area-inset-bottom,0px))}
+
+  /* — El FAB contextual viejo se reemplaza por el FAB central de la barra — */
+  .notes-fab{display:none !important}
+
+  /* — Botón Reportar + puntito de sincronizado: por ENCIMA de la barra — */
+  .report-fab{bottom:calc(94px + env(safe-area-inset-bottom,0px));left:14px}
+  .header-sync{bottom:calc(146px + env(safe-area-inset-bottom,0px));left:16px}
+
+  /* ── Barra de navegación inferior (píldora flotante) ── */
+  .mob-tabbar{
+    /* Anclada al FONDO (bottom:0) y a todo el ancho: así el área tapeable coincide
+       con lo visual (la barra flotante desfasa el hit-test en Brave/Android). */
+    position:fixed;z-index:2100;   /* por encima del feed (2000): nav persistente */
+    left:0;right:0;bottom:0;
+    height:calc(66px + env(safe-area-inset-bottom,0px));
+    padding-bottom:env(safe-area-inset-bottom,0px);
+    display:flex;align-items:stretch;
+    background:var(--mob-navbg);
+    -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+    border-top:1px solid var(--mob-line);
+    border-radius:22px 22px 0 0;
+    box-shadow:0 -6px 24px rgba(18,41,76,.12);
+  }
+  .mob-tab{
+    position:relative;
+    flex:1;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:5px;
+    border:0;background:transparent;cursor:pointer;
+    font-family:var(--mob-font);color:var(--mob-tx2);
+    -webkit-tap-highlight-color:transparent;touch-action:manipulation;
+    transition:color .15s,transform .12s cubic-bezier(.23,1,.32,1);
+  }
+  .mob-tab svg{width:24px;height:24px;display:block}
+  .mob-tab span{font-weight:600;font-size:11px;letter-spacing:.04em}
+  .mob-tab:active{transform:scale(.9)}
+  .mob-tab.active{color:var(--mob-tintfg)}
+
+  /* Ranura y botón central de crear (elevado, círculo con gradiente de marca) */
+  .mob-fab-slot{flex:1;display:grid;place-items:center}
+  .mob-fab{
+    width:56px;height:56px;margin-top:-24px;box-sizing:border-box;
+    display:flex;align-items:center;justify-content:center;line-height:0;padding:0;
+    border:3px solid var(--mob-sf);
+    border-radius:999px;
+    background:var(--mob-grad);color:#fff;cursor:pointer;
+    box-shadow:0 10px 24px rgba(18,41,76,.30);
+    -webkit-tap-highlight-color:transparent;
+    transition:transform .16s cubic-bezier(.23,1,.32,1);
+  }
+  .mob-fab svg{width:24px;height:24px;display:block;margin:0}
+  .mob-fab:active{transform:scale(.92)}
+
+  /* ── Header móvil: fuera hamburguesa/system/noticias/marca; toggle de marca ── */
+  .hamburger,#systemMapBtn,#blogBtn,.header-brand{display:none !important}
+  .header-user{padding:5px;gap:0}
+  .header-user #headerUser,.header-user .chev{display:none}
+  .mob-orgtoggle{
+    display:flex;gap:3px;padding:3px;margin-right:auto;
+    border-radius:999px;background:rgba(255,255,255,.16);
+  }
+  .mob-orgtoggle button{
+    border:0;background:transparent;color:#fff;cursor:pointer;
+    font-family:var(--mob-font);font-weight:600;font-size:12px;line-height:1;
+    letter-spacing:.08em;text-transform:uppercase;padding:8px 15px;border-radius:999px;
+    transition:background .15s,color .15s;
+  }
+  .mob-orgtoggle button.on{background:#fff;color:var(--mob-accent)}
+
+  /* ── Secciones inyectadas del home (portafolio + noticias + calendario) ── */
+  #mobHome{display:block;margin-bottom:18px}
+  .mob-sec{margin-bottom:18px}
+  .mob-sec-h{
+    display:flex;align-items:center;gap:10px;margin:0 4px 10px;
+  }
+  .mob-sec-h>span{font-weight:700;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--mob-tx2)}
+  .mob-sec-a{
+    margin-left:auto;border:0;background:transparent;cursor:pointer;
+    font-family:var(--mob-font);font-weight:600;font-size:13px;color:var(--mob-tintfg);
+  }
+  .rail{
+    display:flex;gap:10px;overflow-x:auto;padding:2px 4px 4px;
+    scroll-snap-type:x proximity;scrollbar-width:none;-webkit-overflow-scrolling:touch;
+  }
+  .rail::-webkit-scrollbar{height:0;width:0}
+
+  /* Tarjetas de portafolio (mover) */
+  .mob-pf-card{
+    flex:none;width:96px;scroll-snap-align:start;
+    padding:11px 13px;border-radius:16px;background:var(--mob-sf);
+    border:1px solid var(--mob-line);box-shadow:var(--mob-sh1);
+  }
+  .mob-pf-tk{font-weight:700;font-size:14px;color:var(--mob-tx);letter-spacing:.01em}
+  .mob-pf-pct{font-weight:600;font-size:13px;margin-top:3px}
+  .mob-pf-card.up .mob-pf-pct{color:#1f7a45}
+  .mob-pf-card.dn .mob-pf-pct{color:#b33a3a}
+  [data-theme="dark"] .mob-pf-card.up .mob-pf-pct{color:#6fd39b}
+  [data-theme="dark"] .mob-pf-card.dn .mob-pf-pct{color:#f28d8d}
+
+  /* Tarjetas de noticias (riel) */
+  .mob-news-card{
+    flex:none;width:250px;scroll-snap-align:start;text-align:left;
+    padding:0;overflow:hidden;border-radius:20px;background:var(--mob-sf);
+    border:1px solid var(--mob-line);box-shadow:var(--mob-sh1);
+    cursor:pointer;font-family:var(--mob-font);color:var(--mob-tx);display:block;
+  }
+  .mob-news-img{height:118px;background-size:cover;background-position:center;background-color:var(--mob-tint)}
+  .mob-news-body{display:flex;flex-direction:column;gap:8px;padding:14px}
+  .mob-news-card:active{transform:scale(.98)}
+  .mob-news-top{display:flex;align-items:center;gap:8px}
+  .mob-news-top .chip{
+    padding:3px 10px;border-radius:999px;background:var(--mob-tint);
+    color:var(--mob-tintfg);font-weight:600;font-size:11px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;
+  }
+  .mob-news-top .t{margin-left:auto;font-size:11px;color:var(--mob-tx2)}
+  .mob-news-h{font-weight:600;font-size:15px;line-height:1.3;
+    display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  .mob-news-src{font-size:12px;color:var(--mob-tx2)}
+
+  /* Botón "+ Calendario" y bloque de calendario (apagado por default) */
+  .mob-calrow{padding:0 4px}
+  .mob-calbtn{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:9px 16px;border-radius:999px;
+    background:var(--mob-tint);color:var(--mob-tintfg);border:0;cursor:pointer;
+    font-family:var(--mob-font);font-weight:600;font-size:13px;
+  }
+  .mob-calbtn:active{transform:scale(.97)}
+  #homeEvents{display:none}                 /* calendario oculto por default */
+  body.mob-cal-on #homeEvents{display:block}
+  #homeNews{display:none}                    /* el riel inyectado lo reemplaza */
+
+  /* ── Feed de noticias "tipo TikTok" (pantalla completa, vertical) ── */
+  .mob-feed{
+    /* deja libre la franja inferior para que el nav (z 2100) quede visible/usable */
+    position:fixed;top:0;left:0;right:0;
+    bottom:0;padding-bottom:calc(96px + env(safe-area-inset-bottom,0px));
+    z-index:2000;flex-direction:column;background:var(--mob-page);
+  }
+  .mob-feed.open{display:flex}
+  .mob-feed-bar{
+    flex:none;display:flex;align-items:center;gap:12px;
+    padding:calc(12px + env(safe-area-inset-top,0px)) 16px 12px;
+  }
+  .mob-feed-x{
+    width:40px;height:40px;display:grid;place-items:center;border:0;border-radius:999px;
+    background:var(--mob-tint);color:var(--mob-tintfg);cursor:pointer;
+  }
+  .mob-feed-x svg{width:18px;height:18px}
+  .mob-feed-ttl{font-weight:700;font-size:16px;color:var(--mob-tx)}
+  .mob-feed-scroll{
+    flex:1;min-height:0;overflow-y:auto;scroll-snap-type:y mandatory;
+    scrollbar-width:none;-webkit-overflow-scrolling:touch;
+  }
+  .mob-feed-scroll::-webkit-scrollbar{width:0;height:0}
+  .mob-feed-card{
+    height:calc(100% - 10px);
+    scroll-snap-align:start;
+    display:flex;flex-direction:column;justify-content:flex-end;
+    margin:0 12px 10px;padding:26px 22px;border-radius:26px;
+    background:var(--mob-sf2);color:var(--mob-tx);box-shadow:var(--mob-sh2);
+  }
+  .mob-feed-card.lead{background:var(--mob-grad);color:#fff}
+  .mob-feed-card.hasimg{background-size:cover;background-position:center;color:#fff}
+  .mob-feed-card.hasimg .mob-feed-meta .chip{background:rgba(255,255,255,.22);color:#fff}
+  .mob-feed-card.hasimg .mob-feed-read{background:#fff;color:var(--mob-accent)}
+  /* Sin foto: logo del medio centrado (tarjeta de logo, siempre carga) */
+  .mob-feed-card.logo{position:relative}
+  .mob-feed-logo{position:absolute;top:0;left:0;right:0;height:52%;display:grid;place-items:center;pointer-events:none}
+  .mob-feed-logo-img{width:78px;height:78px;border-radius:20px;background:#fff;padding:15px;object-fit:contain;box-shadow:0 6px 20px rgba(18,41,76,.16)}
+  .mob-feed-meta{display:flex;align-items:center;gap:8px;margin-bottom:16px}
+  .mob-feed-meta .chip{
+    font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+    padding:5px 12px;border-radius:999px;background:var(--mob-tint);color:var(--mob-tintfg);
+  }
+  .mob-feed-card.lead .mob-feed-meta .chip{background:rgba(255,255,255,.22);color:#fff}
+  .mob-feed-meta .t{font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.75}
+  .mob-feed-title{font-family:var(--mob-font);font-weight:600;font-size:27px;line-height:1.2;letter-spacing:-.02em;margin:0}
+  .mob-feed-foot{display:flex;align-items:center;gap:10px;margin-top:22px}
+  .mob-feed-foot .src{font-size:13px;opacity:.8}
+  .mob-feed-read{
+    margin-left:auto;text-decoration:none;
+    padding:11px 22px;border-radius:999px;font-weight:600;font-size:14px;
+    background:var(--mob-tintfg);color:var(--mob-sf);
+  }
+  .mob-feed-card.lead .mob-feed-read{background:#fff;color:var(--mob-accent)}
+  .mob-feed-empty{padding:40px 22px;color:var(--mob-tx2);font-size:15px}
+
+  /* ── Hoja "Crear rápido" del + central ── */
+  .mob-sheet{position:fixed;inset:0;z-index:2200}
+  .mob-sheet.open{display:block}
+  .mob-sheet-back{position:absolute;inset:0;background:rgba(18,41,76,.42);
+    -webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+  .mob-sheet-panel{
+    position:absolute;left:0;right:0;bottom:0;
+    background:var(--mob-sf);border-radius:26px 26px 0 0;
+    padding:12px 16px calc(22px + env(safe-area-inset-bottom,0px));
+    box-shadow:0 -8px 30px rgba(18,41,76,.18);
+    animation:mobSheetUp .24s cubic-bezier(.22,1,.36,1);
+  }
+  .mob-sheet-grab{width:44px;height:4px;border-radius:999px;background:var(--mob-line);margin:2px auto 14px}
+  .mob-sheet-h{font-family:var(--mob-font);font-weight:600;font-size:20px;color:var(--mob-tx);margin:0 4px 14px}
+  .mob-sheet-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .mob-sheet-opt{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+    padding:18px 16px;border:1px solid var(--mob-line);border-radius:20px;
+    background:var(--mob-sf2);box-shadow:var(--mob-sh1);cursor:pointer;
+    font-family:var(--mob-font);color:var(--mob-tx);text-align:center;
+    transition:transform .14s cubic-bezier(.23,1,.32,1);
+  }
+  .mob-sheet-opt .ic{width:46px;height:46px;flex:none;display:grid;place-items:center;
+    border-radius:14px;background:var(--mob-tint);color:var(--mob-tintfg)}
+  .mob-sheet-opt .ic svg{width:20px;height:20px;display:block}
+  .mob-sheet-opt .lb{font-weight:600;font-size:15px}
+  .mob-sheet-opt:active{transform:scale(.97)}
+
+  /* ══ Rediseño de tarjetas: To Do y Notas (como el design) ══ */
+  /* To Do (móvil): rejilla — título arriba, proyecto+hora abajo, indicador de vencimiento a la derecha */
+  #pageTasks .list-item{
+    display:grid;grid-template-columns:1fr auto;
+    grid-template-areas:"name flag" "meta flag";
+    align-items:center;column-gap:12px;row-gap:6px;
+    background:var(--mob-sf);border:1px solid var(--mob-line);
+    border-radius:18px;box-shadow:var(--mob-sh1);
+    padding:14px;margin-bottom:9px;
+    transition:transform .16s cubic-bezier(.23,1,.32,1),box-shadow .16s;
+  }
+  #pageTasks .list-item:active{transform:scale(.985)}
+  #pageTasks .li-wrap{margin-bottom:0}
+  #pageTasks .li-name{grid-area:name;font-size:15px;font-weight:400;line-height:1.35;color:var(--mob-tx)}
+  #pageTasks .li-body{grid-area:name;min-width:0}
+  #pageTasks .li-meta{grid-area:meta;display:flex;align-items:center;gap:8px;margin:0;padding:0}
+  /* fuera de la vista previa: estatus, editar/borrar, incrementos, check y el meta viejo */
+  #pageTasks .tk-status-seg,#pageTasks .li-edit,#pageTasks .li-del,
+  #pageTasks .li-inc,#pageTasks .li-chk,
+  #pageTasks .li-created,#pageTasks .li-prio,#pageTasks .li-due,#pageTasks .li-tag{display:none}
+  #pageTasks .li-project{
+    display:inline-flex;align-items:center;max-width:70%;
+    padding:3px 11px;border-radius:999px;
+    background:var(--mob-tint);color:var(--mob-tintfg);font-weight:600;font-size:11px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  #pageTasks .li-createdat{display:inline;color:var(--mob-tx2);font-size:11.5px}
+  #pageTasks .li-dueflag{grid-area:flag;display:grid;place-items:center;width:30px;height:30px;border-radius:999px}
+  #pageTasks .li-dueflag i{font-size:13px}
+  #pageTasks .li-dueflag.lf-od{background:var(--red-bg);color:var(--red)}
+  #pageTasks .li-dueflag.lf-soon{background:var(--amber-bg);color:var(--amber)}
+  #pageTasks .li-dueflag.lf-far{background:var(--blue-bg);color:var(--blue)}
+  /* Notas en CUADRÍCULA de 2 columnas (como el design) */
+  #pageNotes .nt-notes{
+    display:grid;grid-template-columns:1fr 1fr;gap:10px;
+    padding:2px 4px 16px;align-content:start;
+  }
+  /* Tarjeta de nota: carpeta arriba (su color) · línea de color · título negritas · fecha abajo-der gris */
+  #pageNotes .nt-note{
+    position:relative;display:flex;flex-direction:column;gap:5px;width:auto;min-height:132px;
+    background:var(--mob-sf2);border:1px solid var(--mob-line);
+    border-radius:20px;box-shadow:var(--mob-sh1);
+    padding:14px;margin:0;overflow:hidden;
+    transition:transform .14s cubic-bezier(.23,1,.32,1),box-shadow .16s;
+  }
+  #pageNotes .nt-note:active{transform:scale(.98)}
+  #pageNotes .nt-note-folder{
+    display:block;order:0;font-family:var(--mob-font);font-weight:700;
+    font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--mob-tx2);
+  }
+  #pageNotes .nt-note-bar{
+    order:1;position:static;width:100%;height:3px;border-radius:999px;margin:3px 0 5px;
+  }
+  #pageNotes .nt-note-t{order:2;font-size:15px;font-weight:700;line-height:1.25;color:var(--mob-tx);
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  #pageNotes .nt-note-x{order:3;flex:1;font-size:13px;line-height:1.45;color:var(--mob-tx2);
+    display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  #pageNotes .nt-note-d{order:4;text-align:right;font-size:11px;color:var(--mob-tx2);opacity:.7;margin-top:4px}
+
+  /* Editor de nota SIMPLE en móvil: solo título + cuerpo + color + carpeta.
+     Fuera la barra de formato, "Añadir al To Do" y Compartir (menos opciones, captura rápida). */
+  #pageNotes #ntToolbar{display:none !important}
+  #pageNotes #ntTodoBtn{display:none !important}
+  #pageNotes .nt-doc-head button[onclick*="shareNote"]{display:none !important}
+  #pageNotes .nt-body{font-size:16px;padding-top:6px}
+
+  /* Al editar una nota: modo FOCO — la barra inferior fuera (si no, tapa el botón Guardar). */
+  body:has(#pageNotes .nt-shell.nt-editing) .mob-tabbar{display:none}
+  /* Editor a pantalla completa; el pie deja de ser barra (el Guardar flota). */
+  #pageNotes .nt-doc{display:flex;flex-direction:column;height:100%}
+  #pageNotes .nt-body-wrap{flex:1;min-height:0;overflow-y:auto;padding-bottom:88px}
+  #pageNotes .nt-doc-foot{display:none}   /* el Guardar del pie: reemplazado por el FAB en body */
+  #pageNotes .nt-saved{display:none}
+  /* Guardar = FAB circular en <body> (position:fixed REAL, no atrapado por el transform del editor)
+     → siempre visible en cualquier pantalla, solo mientras se edita una nota. */
+  body:has(#pageNotes .nt-shell.nt-editing) #mobNoteSave{
+    display:grid;place-items:center;position:fixed;z-index:2200;
+    right:18px;bottom:calc(18px + env(safe-area-inset-bottom,0px));
+    width:56px;height:56px;border:0;border-radius:999px;cursor:pointer;
+    background:var(--mob-grad);color:#fff;box-shadow:0 10px 26px rgba(18,41,76,.32);
+    transition:transform .16s cubic-bezier(.23,1,.32,1),background .2s;
+  }
+  #mobNoteSave i{font-size:20px;color:#fff}
+  #mobNoteSave.ok{background:#16a34a}
+  #mobNoteSave:active{transform:scale(.92)}
+
+  /* Carpetas = desplegable propio "Carpetas". Ocultamos el riel de pastillas
+     (la app lo sigue renderizando oculto para leer las carpetas). */
+  #pageNotes .nt-folders{display:none !important}
+  #pageNotes .nt-col-title{display:none}          /* "General" redundante: ya está en el desplegable */
+  #pageNotes #ntFolderEdit{display:none !important}  /* editar carpeta va dentro del desplegable */
+  .mob-folderrow{margin:2px 0 12px}
+  .mob-dd-opt .fdot{width:14px;height:14px;flex:none;border-radius:4px;background:var(--mob-tint);display:grid;place-items:center}
+  .mob-dd-opt .fdot i{font-size:9px;color:var(--mob-tintfg)}
+  .mob-dd-opt.mob-dd-new,.mob-dd-opt.mob-dd-edit{color:var(--mob-tintfg);font-weight:600}
+
+  /* Quick-add de To Do */
+  .mob-quick{display:flex;gap:8px;margin:0 0 12px}
+  .mob-quick-in{
+    flex:1;height:48px;padding:0 16px;border:1px solid var(--mob-line);border-radius:16px;
+    background:var(--mob-sf);font-family:var(--mob-font);font-size:15px;color:var(--mob-tx);box-shadow:var(--mob-sh1);
+  }
+  .mob-quick-in::placeholder{color:var(--mob-tx2)}
+  .mob-quick-add{
+    width:48px;height:48px;flex:none;display:grid;place-items:center;border:0;border-radius:16px;
+    background:var(--mob-grad);color:#fff;cursor:pointer;box-shadow:0 6px 16px rgba(18,41,76,.18);
+    transition:transform .14s cubic-bezier(.23,1,.32,1);
+  }
+  .mob-quick-add svg{width:20px;height:20px}
+  .mob-quick-add:active{transform:scale(.94)}
+  /* En móvil: una sola vista de lista + sin "Nueva tarea" (la creación va por el + y el quick-add).
+     Llevan display inline desde render() → hace falta !important. */
+  #pageTasks #viewToggle{display:none !important}
+  #pageTasks #newTaskBtn{display:none !important}
+
+  /* Scope: solo Mis tareas / Equipo, deslizable como el segmentado To Do/Notas */
+  #pageTasks .tk-toggle{
+    display:flex;gap:4px;padding:4px;width:100%;position:relative;
+    border-radius:999px;background:var(--mob-sf);border:1px solid var(--mob-line);box-shadow:var(--mob-sh1);
+  }
+  #pageTasks .tk-tog-slider{display:none}
+  #pageTasks #togOtros{display:none}
+  #pageTasks .tk-tog-btn{
+    flex:1;min-height:42px;border:0;border-radius:999px;background:transparent;cursor:pointer;
+    font-family:var(--mob-font);font-weight:600;font-size:14px;color:var(--mob-tx2);
+    display:inline-flex;align-items:center;justify-content:center;gap:7px;transition:color .15s;
+  }
+  #pageTasks .tk-tog-btn.on{background:transparent;color:#fff}
+  #pageTasks .tk-tog-btn i{font-size:12px}
+
+  /* Contadores más chicos: una fila compacta de tres */
+  #pageTasks .tk-stats{gap:6px;margin:10px 0 12px}
+  #pageTasks .tk-stat{min-width:0;flex:1 1 0;padding:7px 9px;gap:6px}
+  #pageTasks .tk-stat-n{font-size:15px}
+  #pageTasks .tk-stat-l{font-size:9px;letter-spacing:.02em}
+  #pageTasks .tk-group-label{font-size:11px;letter-spacing:.08em}
+  #pageTasks .tk-group-n,#pageTasks .tk-done-head .tk-group-n{font-size:10px}
+
+  /* Filtro de proyectos: desplegable desde "Todas" (oculta las chips laterales) */
+  #pageTasks #tkProjects{display:none}
+  .mob-projrow{margin:0 0 12px}
+  /* Desplegable PROPIO (no nativo): botón + menú con el diseño de la página */
+  .mob-dd{position:relative}
+  .mob-dd-btn{
+    width:100%;height:46px;display:flex;align-items:center;gap:10px;padding:0 14px;
+    border:1px solid var(--mob-line);border-radius:14px;background:var(--mob-sf);
+    color:var(--mob-tx);font-family:var(--mob-font);font-size:14px;font-weight:600;cursor:pointer;
+    box-shadow:var(--mob-sh1);transition:transform .14s cubic-bezier(.23,1,.32,1),border-color .15s;
+  }
+  .mob-dd-btn:active{transform:scale(.99)}
+  .mob-dd.open .mob-dd-btn{border-color:var(--mob-tintfg)}
+  .mob-dd-lead{color:var(--mob-tintfg);font-size:13px}
+  .mob-dd-label{flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mob-dd-chev{width:16px;height:16px;flex:none;color:var(--mob-tx2);transition:transform .18s cubic-bezier(.23,1,.32,1)}
+  .mob-dd.open .mob-dd-chev{transform:rotate(180deg)}
+  .mob-dd-menu{
+    position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:60;
+    background:var(--mob-sf);border:1px solid var(--mob-line);border-radius:16px;
+    box-shadow:0 14px 34px rgba(18,41,76,.18);padding:6px;
+    max-height:52vh;overflow-y:auto;scrollbar-width:none;
+    transform-origin:top center;opacity:0;transform:scale(.97) translateY(-4px);pointer-events:none;
+    transition:opacity .18s cubic-bezier(.23,1,.32,1),transform .18s cubic-bezier(.23,1,.32,1);
+  }
+  .mob-dd-menu::-webkit-scrollbar{width:0;height:0}
+  .mob-dd.open .mob-dd-menu{opacity:1;transform:none;pointer-events:auto}
+  .mob-dd-opt{
+    width:100%;display:flex;align-items:center;gap:10px;padding:11px 12px;border:0;border-radius:11px;
+    background:transparent;color:var(--mob-tx);font-family:var(--mob-font);font-size:14px;font-weight:500;
+    cursor:pointer;text-align:left;transition:background .12s;
+  }
+  .mob-dd-opt>span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mob-dd-opt:active{background:var(--mob-tint)}
+  .mob-dd-opt.on{color:var(--mob-tintfg);font-weight:600}
+  .mob-dd-opt .ck{width:16px;height:16px;flex:none;color:var(--mob-tintfg)}
+  @media (hover:hover) and (pointer:fine){ .mob-dd-opt:hover{background:var(--mob-tint)} }
+
+  /* Detalle de tarea: que el control de estatus quepa y no ensanche el modal */
+  #taskDetailModal .td-box{width:min(560px,94vw);max-width:94vw;overflow-x:hidden}
+  #taskDetailModal .td-status{padding:0 16px 6px}
+  #taskDetailModal .tds-seg{width:100%;max-width:100%}
+  #taskDetailModal .tds-seg .seg-btn{
+    flex:1 1 0;min-width:0;padding:9px 6px;font-size:12px;gap:0;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  #taskDetailModal .tds-seg .seg-btn i{display:none}   /* solo etiqueta, para que quepan las 3 */
+
+  /* Botón "Vaciar completadas" dentro de la sección de Completadas */
+  .tk-done-clear{
+    display:inline-flex;align-items:center;gap:8px;margin:12px 2px 2px;
+    padding:10px 16px;border:1px solid var(--mob-line);border-radius:999px;
+    background:transparent;color:var(--mob-tx2);font-family:var(--mob-font);font-weight:600;font-size:13px;cursor:pointer;
+    transition:transform .14s cubic-bezier(.23,1,.32,1),color .15s,border-color .15s;
+  }
+  .tk-done-clear:active{transform:scale(.97)}
+  .tk-done-clear:hover{color:#d9534f;border-color:#d9534f}
+  .tk-done-clear i{font-size:12px}
+
+  /* Tareas urgentes en el home */
+  .mob-urg-list{display:grid;gap:8px}
+  .mob-urg-item{
+    display:flex;align-items:center;gap:12px;width:100%;text-align:left;
+    padding:13px 14px;border:1px solid var(--mob-line);border-radius:16px;
+    background:var(--mob-sf);box-shadow:var(--mob-sh1);cursor:pointer;font-family:var(--mob-font);
+    transition:transform .14s cubic-bezier(.23,1,.32,1);
+  }
+  .mob-urg-item:active{transform:scale(.99)}
+  .mob-urg-item .dot{flex:none;width:8px;height:8px;border-radius:999px;background:var(--mob-tintfg)}
+  .mob-urg-item .dot.od{background:#d9534f}
+  .mob-urg-item .tx{flex:1;min-width:0;font-size:14px;color:var(--mob-tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mob-urg-item .due{flex:none;font-size:12px;color:var(--mob-tx2)}
+  .mob-urg-item .due.od{color:#d9534f;font-weight:600}
+
+  /* Miniatura (favicon del medio) en noticias */
+  .mob-fav{width:18px;height:18px;border-radius:5px;flex:none;object-fit:cover;background:var(--mob-tint)}
+  .mob-fav.lg{width:24px;height:24px;border-radius:7px}
+
+  /* ── Segmentado To Do / Notas ── */
+  .mob-seg{
+    display:flex;gap:4px;padding:4px;border-radius:999px;
+    background:var(--mob-sf);border:1px solid var(--mob-line);box-shadow:var(--mob-sh1);
+  }
+  .mob-seg button{
+    flex:1;min-height:42px;border:0;border-radius:999px;background:transparent;cursor:pointer;
+    font-family:var(--mob-font);font-weight:600;font-size:14px;color:var(--mob-tx2);
+    transition:color .15s;
+  }
+  .mob-seg button.on{background:var(--mob-grad);color:#fff}
+  .mob-seg-nav{display:flex;margin:0 0 14px}
+  /* Espacio superior parejo (y un poco más amplio) en AMBAS vistas.
+     To Do lo hereda del padding de .page; Notas (padding:0) lo recibe aquí. */
+  #pageTasks .mob-seg-nav{margin-top:8px}
+  #pageNotes .mob-seg-nav{margin:22px 12px 16px}
+
+  /* Pastilla deslizante (Emil): indicador que se mueve al botón activo con easing */
+  .mob-seg-nav,#pageTasks .tk-toggle{position:relative;overflow:hidden}
+  .mob-pill{
+    position:absolute;top:4px;bottom:4px;left:0;border-radius:999px;background:var(--mob-grad);z-index:0;
+    transition:transform .24s cubic-bezier(.32,.72,0,1),width .24s cubic-bezier(.32,.72,0,1);
+  }
+  .mob-seg-nav button,#pageTasks .tk-tog-btn{position:relative;z-index:1}
+  .mob-seg-nav button.on{background:transparent;color:#fff}
+
+  /* Toast: píldora centrada POR ENCIMA del nav inferior (si no, queda tapado) */
+  .toast{
+    z-index:2300;left:50%;right:auto;
+    bottom:calc(88px + env(safe-area-inset-bottom,0px));
+    max-width:92vw;flex-wrap:wrap;justify-content:center;text-align:center;
+    transform:translate(-50%,14px);
+  }
+  .toast.show{transform:translate(-50%,0)}
+
+  /* ── Pantalla de Perfil ── */
+  .mob-prof-ov{
+    position:fixed;top:56px;left:0;right:0;
+    bottom:0;padding-bottom:calc(96px + env(safe-area-inset-bottom,0px));
+    z-index:2000;flex-direction:column;background:var(--mob-page);
+  }
+  .mob-prof-ov.open{display:flex}
+  .mob-prof-scroll{flex:1;min-height:0;overflow-y:auto;padding:16px 16px 28px;
+    scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .mob-prof-scroll::-webkit-scrollbar{width:0;height:0}
+  .mob-prof-head{
+    display:flex;align-items:center;gap:14px;padding:18px 16px;border-radius:22px;
+    background:var(--mob-sf2);border:1px solid var(--mob-line);box-shadow:var(--mob-sh2);
+  }
+  .mob-prof-head .av{
+    flex:none;width:58px;height:58px;border-radius:999px;display:grid;place-items:center;
+    background:var(--mob-grad);color:#fff;font-weight:600;font-size:20px;
+  }
+  .mob-prof-head .nm{font-weight:600;font-size:21px;letter-spacing:-.01em;color:var(--mob-tx)}
+  .mob-prof-head .rl{font-size:11px;letter-spacing:.16em;color:var(--mob-tx2);margin-top:3px}
+  .mob-prof-sec-h{font-weight:700;font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--mob-tx2);margin:18px 4px 10px}
+  .mob-prow,.mob-arow{
+    width:100%;display:flex;align-items:center;gap:14px;padding:15px 16px;
+    border:1px solid var(--mob-line);border-radius:18px;background:var(--mob-sf);
+    box-shadow:var(--mob-sh1);cursor:pointer;font-family:var(--mob-font);text-align:left;margin-bottom:8px;
+    transition:transform .14s cubic-bezier(.23,1,.32,1);
+  }
+  .mob-prow:active,.mob-arow:active{transform:scale(.99)}
+  .mob-prow .tx,.mob-arow .tx{flex:1;min-width:0}
+  .mob-prow .l,.mob-arow .l{font-weight:600;font-size:16px;color:var(--mob-tx)}
+  .mob-prow .h,.mob-arow .h{font-size:12px;color:var(--mob-tx2);margin-top:2px}
+  .mob-prow .sw{
+    flex:none;width:48px;height:28px;border-radius:999px;background:var(--mob-line);
+    display:flex;padding:3px;justify-content:flex-start;transition:background .16s;
+  }
+  .mob-prow .sw.on{background:var(--mob-grad);justify-content:flex-end}
+  .mob-prow .sw .kn{width:22px;height:22px;border-radius:999px;background:#fff;box-shadow:0 1px 3px rgba(18,41,76,.25)}
+  .mob-arow .chev{flex:none;color:var(--mob-tx2)}
+  .mob-arow .chev svg{width:18px;height:18px;display:block}
+  .mob-roles button{font-size:12px;min-height:40px}
+  .mob-prof-note{padding:10px 4px 0;font-size:12px;line-height:1.5;color:var(--mob-tx2);margin:0}
+  .mob-logout{
+    width:100%;margin-top:18px;padding:15px;border:1px solid var(--mob-line);border-radius:18px;
+    background:transparent;color:#b33a3a;font-family:var(--mob-font);font-weight:600;font-size:15px;cursor:pointer;
+  }
+  .mob-logout:active{transform:scale(.99)}
+
+  /* ══════════ Campañas: restyle móvil (selector GVV/Apertura · tabs · ranking) ══════════ */
+  /* Selector de frente = píldora de marca (activo relleno, sin slider) */
+  #pageCampaigns .camp-frente{
+    background:var(--mob-sf);border:1px solid var(--mob-line);border-radius:999px;
+    padding:4px;box-shadow:var(--mob-sh1);margin:0 0 12px;
+  }
+  #pageCampaigns .camp-frente .seg-ind{display:none}
+  #pageCampaigns .camp-frente .seg-btn{
+    flex:1;min-width:0;min-height:42px;border-radius:999px;background:transparent;
+    color:var(--mob-tx2);font-family:var(--mob-font);font-weight:600;font-size:11.5px;gap:6px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  #pageCampaigns .camp-frente .seg-btn.on{background:var(--mob-grad);color:#fff}
+  #pageCampaigns .camp-frente .seg-btn i{font-size:12px;flex:none}
+
+  /* Título grande redundante fuera (el selector ya dice el frente) */
+  #pageCampaigns .db-toolbar{margin-top:0 !important;display:block}
+  #pageCampaigns .db-title-block{display:none}
+
+  /* Tabs = píldoras deslizables horizontales, activa en gradiente */
+  #pageCampaigns .camp-tabs{
+    display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;
+    background:transparent;border:0;padding:2px 0 12px;box-shadow:none;margin:0;
+  }
+  #pageCampaigns .camp-tabs::-webkit-scrollbar{height:0;width:0}
+  #pageCampaigns .camp-tabs .seg-ind{display:none}
+  #pageCampaigns .camp-tab{
+    flex:none;white-space:nowrap;min-height:38px;border-radius:999px;padding:0 15px;
+    background:var(--mob-sf);border:1px solid var(--mob-line);color:var(--mob-tx2);
+    font-family:var(--mob-font);font-weight:600;font-size:13px;
+  }
+  #pageCampaigns .camp-tab.on{background:var(--mob-grad);color:#fff;border-color:transparent}
+  #pageCampaigns .camp-tab i{font-size:12px}
+
+  /* Ranking = tarjetas suaves con barra de marca */
+  #pageCampaigns .camp-rank-head{padding:0 2px 10px}
+  #pageCampaigns .camp-rank-title{font-size:18px;font-weight:600;color:var(--mob-tx)}
+  #pageCampaigns .camp-rank-sub{font-size:12px;color:var(--mob-tx2);font-weight:400}
+  #pageCampaigns .camp-rank-list{display:grid;gap:8px}
+  #pageCampaigns .camp-rank-row{
+    background:var(--mob-sf);border:1px solid var(--mob-line);border-radius:20px;
+    box-shadow:var(--mob-sh1);padding:11px 14px;
+  }
+  #pageCampaigns .camp-rank-pos{color:var(--mob-tintfg);font-weight:700}
+  #pageCampaigns .camp-rank-name{color:var(--mob-tx)}
+  #pageCampaigns .camp-rank-bar-wrap{background:var(--mob-tint)}
+  #pageCampaigns .camp-rank-bar{background:var(--mob-grad)}
+  #pageCampaigns .camp-rank-score{color:var(--mob-tx)}
+  #pageCampaigns .camp-rank-veces{color:var(--mob-tx2)}
+
+  /* ── Detalle de persona y modales de Gestión = hoja inferior deslizable (como el diseño) ── */
+  @keyframes campSheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+  :is(#campLpModal,#campContactModal,#campPickModal,#campImportModal,#campTplModal,#campAperturaModal,#ccModal).camp-modal-backdrop{align-items:flex-end;padding:0}
+  :is(#campLpModal,#campContactModal,#campPickModal,#campImportModal,#campTplModal,#campAperturaModal,#ccModal) .camp-modal{
+    width:100%;max-width:100%;max-height:84vh;margin:0;
+    border-radius:26px 26px 0 0;background:var(--mob-sf2);border:0;
+    box-shadow:0 -8px 30px rgba(18,41,76,.22);
+    display:flex;flex-direction:column;
+    animation:campSheetUp .24s cubic-bezier(.22,1,.36,1);
+  }
+  :is(#campLpModal,#campContactModal,#campPickModal,#campImportModal,#campTplModal,#campAperturaModal,#ccModal) .camp-modal::before{content:"";width:44px;height:4px;border-radius:999px;background:var(--mob-line);margin:10px auto 2px;flex:none}
+  :is(#campLpModal,#campContactModal,#campPickModal,#campImportModal,#campTplModal,#campAperturaModal,#ccModal) .camp-modal-head{border:0;padding:6px 18px 10px;flex:none}
+  :is(#campLpModal,#campContactModal,#campPickModal,#campImportModal,#campTplModal,#campAperturaModal,#ccModal) .camp-modal-title{font-size:18px;font-weight:600;color:var(--mob-tx)}
+  :is(#campLpModal,#campContactModal,#campPickModal,#campImportModal,#campTplModal,#campAperturaModal,#ccModal) .camp-modal-x{width:38px;height:38px;border-radius:999px;background:var(--mob-tint);color:var(--mob-tintfg);border:0;display:grid;place-items:center}
+  :is(#campLpModal,#campContactModal,#campPickModal,#campImportModal,#campTplModal,#campAperturaModal,#ccModal) .camp-modal-body{padding:0 16px 24px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  /* segmentado Información / Histórico dentro de la hoja */
+  #campLpModal .pd-seg{background:var(--mob-tint);border:0;border-radius:999px;padding:4px;margin:2px 0 14px}
+  #campLpModal .pd-seg .seg-ind{background:var(--mob-sf);border-radius:999px;box-shadow:var(--mob-sh1)}
+  #campLpModal .pd-seg .seg-btn{font-family:var(--mob-font);font-size:12.5px;font-weight:600;color:var(--mob-tx2);min-height:38px}
+  #campLpModal .pd-seg .seg-btn.on{color:var(--mob-tx)}
+  /* resumen + mosaico de stats */
+  #campLpModal .camp-lp-summary{font-size:14px;line-height:1.6;color:var(--mob-tx)}
+  #campLpModal .camp-lp-summary strong{color:var(--mob-tintfg)}
+  #campLpModal .camp-lp-stats{gap:8px;margin-bottom:16px}
+  #campLpModal .camp-lp-stat{flex:1;background:var(--mob-tint);border:0;border-radius:16px;padding:13px 8px}
+  #campLpModal .camp-lp-stat-n{color:var(--mob-tintfg);font-size:20px}
+  #campLpModal .camp-lp-stat-n.sm{font-size:13px}
+  #campLpModal .camp-lp-stat-l{color:var(--mob-tx2)}
+  /* histórico mes con mes (barras) con tokens del tema móvil */
+  #campLpModal .camp-lp-mtitle{color:var(--mob-tx2);margin:16px 0 10px}
+  #campLpModal .camp-lp-mrow{background:var(--mob-sf)}
+  #campLpModal .camp-lp-mm{color:var(--mob-tx)}
+  #campLpModal .camp-lp-mbar{background:var(--mob-tint)}
+  #campLpModal .camp-lp-mfill{background:var(--mob-grad)}
+  #campLpModal .camp-lp-mn{color:var(--mob-tx)}
+  /* encabezado de la hoja: avatar de marca + nombre/correo */
+  #campLpModal .camp-modal-title{gap:10px}
+  #campLpModal .pd-av{background:var(--mob-grad);color:#fff}
+  #campLpModal .pd-hnm{color:var(--mob-tx)}
+  #campLpModal .pd-hem{color:var(--mob-tx2)}
+  /* pane de información (campos + nota) con tokens del tema */
+  #campLpModal .ccd-row{border-color:var(--mob-line)}
+  #campLpModal .ccd-k{color:var(--mob-tx2)}
+  #campLpModal .ccd-v{color:var(--mob-tx)}
+  #campLpModal .ccd-nota{background:var(--mob-sf);border:1px solid var(--mob-line);border-radius:14px;color:var(--mob-tx)}
+
+  /* ── Tabla de contactos: buscador redondeado + conteo ── */
+  #pageCampaigns .ctbl-bar{gap:10px;padding:0 0 12px;border:0;flex-wrap:wrap}
+  #pageCampaigns .ctbl-search{flex:1;min-width:0}
+  #pageCampaigns .ctbl-search .db-search-inp{
+    height:46px;border-radius:16px;background:var(--mob-sf);border:1px solid var(--mob-line);
+    color:var(--mob-tx);font-size:15px;
+  }
+  #pageCampaigns .ctbl-bar .db-count{font-size:12px;color:var(--mob-tx2)}
+  /* tabla → tarjetas apiladas (nombre+correo / aperturas+último) */
+  #pageCampaigns .cc-tablewrap{border:0;overflow:visible;background:transparent}
+  #pageCampaigns .ctbl-table{display:block;width:100%;border:0}
+  #pageCampaigns .ctbl-table thead{display:none}
+  #pageCampaigns .ctbl-table tbody{display:grid;gap:8px}
+  #pageCampaigns .ctbl-table tr{
+    display:grid;grid-template-columns:1fr auto;gap:2px 12px;align-items:center;
+    background:var(--mob-sf);border:1px solid var(--mob-line);border-radius:16px;
+    box-shadow:var(--mob-sh1);padding:11px 14px;
+  }
+  #pageCampaigns .ctbl-table td{border:0;padding:0}
+  #pageCampaigns .ctbl-table td.ctbl-nm{grid-column:1;grid-row:1;font-weight:600;font-size:14px;color:var(--mob-tx)}
+  #pageCampaigns .ctbl-table td.ctbl-em{grid-column:1;grid-row:2;font-size:12px;color:var(--mob-tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #pageCampaigns .ctbl-table td:nth-child(3){grid-column:2;grid-row:1;text-align:right;font-weight:700;font-size:16px;color:var(--mob-tx)}
+  #pageCampaigns .ctbl-table td:nth-child(4){grid-column:2;grid-row:2;text-align:right;font-size:11px;color:var(--mob-tx2)}
+  /* lista de personas (Contactos) al estilo del diseño */
+  #pageCampaigns .cc-chips{margin-bottom:12px}
+  #pageCampaigns .cc-chip{background:var(--mob-sf);border-color:var(--mob-line);color:var(--mob-tx2);font-family:var(--mob-font)}
+  #pageCampaigns .cc-chip.on{background:var(--mob-grad);border-color:transparent;color:#fff}
+  #pageCampaigns .cc-person{background:var(--mob-sf);border-color:var(--mob-line);border-radius:20px;box-shadow:var(--mob-sh1)}
+  #pageCampaigns .cc-av{background:var(--mob-tint);color:var(--mob-tintfg)}
+  #pageCampaigns .cc-nm{color:var(--mob-tx)}
+  #pageCampaigns .cc-em{color:var(--mob-tx2)}
+  #pageCampaigns .cc-op{color:var(--mob-tx)}
+  #pageCampaigns .cc-dt{color:var(--mob-tx2)}
+
+  /* ── Gestión (GVV) en móvil: tarjetas por LP con heatmap por mes ── */
+  #pageCampaigns #campMatrix{overflow:visible}
+  #pageCampaigns .cg-list{display:grid;gap:8px}
+  #pageCampaigns .cg-card{background:var(--mob-sf);border:1px solid var(--mob-line);border-radius:20px;box-shadow:var(--mob-sh1);padding:12px 14px}
+  #pageCampaigns .cg-card.cg-cancel{opacity:.55}
+  #pageCampaigns .cg-card.cg-cancel .cc-nm{text-decoration:line-through}
+  #pageCampaigns .cg-top{display:flex;align-items:center;gap:12px}
+  #pageCampaigns .cg-acts{flex:none;display:flex;gap:4px}
+  #pageCampaigns .cg-hm{display:flex;gap:4px;margin:11px 0 9px}
+  #pageCampaigns .cg-cell{flex:1;height:16px;border-radius:5px;background:var(--mob-tint)}
+  #pageCampaigns .cg-cell.cg-l1{background:color-mix(in srgb,var(--mob-accent) 35%,transparent)}
+  #pageCampaigns .cg-cell.cg-l2{background:color-mix(in srgb,var(--mob-accent) 65%,transparent)}
+  #pageCampaigns .cg-cell.cg-l3{background:var(--mob-accent)}
+  #pageCampaigns .cg-foot{display:flex;align-items:center;gap:8px;font-size:12px}
+  #pageCampaigns .cg-range{color:var(--mob-tx2);white-space:nowrap}
+  #pageCampaigns .cg-mom{margin-left:auto;font-weight:600;padding:3px 10px;border-radius:999px;white-space:nowrap}
+  #pageCampaigns .cg-mom.cg-up{color:#0f7a3d;background:rgba(22,163,74,.14)}
+  #pageCampaigns .cg-mom.cg-down{color:#b4541a;background:rgba(230,126,34,.16)}
+  #pageCampaigns .cg-mom.cg-flat{color:var(--mob-tintfg);background:var(--mob-tint)}
+  #pageCampaigns .cg-mom.cg-mut{color:var(--mob-tx2);background:var(--mob-tint)}
+  #pageCampaigns .cg-vistos{color:var(--mob-tx2);white-space:nowrap}
+  #pageCampaigns .cg-vistos b{color:var(--mob-tx);font-size:15px}
+  #pageCampaigns .cg-card .camp-cancel-badge{font-size:9px;padding:1px 5px;border-radius:5px;background:rgba(230,126,34,.16);color:#b4541a;margin-left:4px}
+  #pageCampaigns #campSearch{height:44px;border-radius:14px}
+  /* tarjeta hero (Campaña Actual): gradiente de marca según tema/org */
+  #pageCampaigns .camp-hero{background:var(--mob-grad);box-shadow:var(--mob-sh2);border-radius:24px}
+
+  /* ══════════ Gestión: acciones como "lista de ajustes" (design 3a) ══════════
+     Las 6 acciones en UNA tarjeta, como filas icono-en-cuadro + etiqueta + chevron
+     (mismo patrón que Perfil). Los desplegables (.cdd) se abren en acordeón dentro
+     de la tarjeta en vez de panel flotante. Solo capa visual: mismo markup/JS. */
+  #pageCampaigns .camp-actions{
+    display:block;padding:0;gap:0;margin-bottom:14px;
+    background:var(--mob-sf);border:1px solid var(--mob-line);
+    border-radius:20px;box-shadow:var(--mob-sh1);overflow:hidden;
+  }
+  #pageCampaigns .camp-actions > * + *{border-top:1px solid var(--mob-line)}
+  #pageCampaigns .camp-actions > .cdd{width:100%;min-width:0}
+  #pageCampaigns .camp-actions > .cdd-btn,
+  #pageCampaigns .camp-actions > .cdd > .cdd-btn{
+    width:100%;max-width:none;height:auto;min-height:52px;
+    display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:12px;
+    padding:0 14px;border:0;border-radius:0;background:transparent;box-shadow:none;
+    font-family:var(--mob-font);font-weight:600;font-size:14px;color:var(--mob-tx);
+    text-align:left;line-height:1.3;
+  }
+  /* icono en cuadro de tinta de marca (30px, radio 10) */
+  #pageCampaigns .camp-actions > .cdd-btn > i:first-child,
+  #pageCampaigns .camp-actions > .cdd > .cdd-btn > .cdd-ico{
+    flex:none;width:30px;height:30px;display:grid;place-items:center;
+    border-radius:10px;background:var(--mob-tint);color:var(--mob-tintfg);font-size:13px;
+  }
+  /* chevron: › en botones simples; ▾ (rota) en los desplegables */
+  #pageCampaigns .camp-actions > .cdd-btn::after{
+    content:"\f054";font-family:"Font Awesome 6 Free";font-weight:900;
+    font-size:11px;color:var(--mob-tx2);margin-left:auto;
+  }
+  #pageCampaigns .camp-actions .cdd-chev{display:block;margin-left:auto;font-size:11px;color:var(--mob-tx2)}
+  #pageCampaigns .camp-actions .cdd-label{flex:1}
+  #pageCampaigns .camp-actions .cdd.open > .cdd-btn{background:var(--mob-tint);color:var(--mob-tx);box-shadow:none}
+  /* panel del desplegable = acordeón dentro de la tarjeta (no flotante) */
+  #pageCampaigns .camp-actions .cdd-panel{
+    display:none;position:static;opacity:1;visibility:visible;transform:none;transition:none;
+    width:100%;min-width:0;max-width:none;max-height:none;
+    border:0;border-radius:0;box-shadow:none;background:transparent;padding:4px 8px 10px;
+  }
+  #pageCampaigns .camp-actions .cdd.open .cdd-panel{display:block}
+  #pageCampaigns .camp-actions .cdd-opt{
+    display:flex;align-items:center;gap:10px;min-height:44px;padding:0 12px 0 48px;
+    border-radius:12px;font-size:13.5px;font-weight:500;color:var(--mob-tx);white-space:normal;
+  }
+  #pageCampaigns .camp-actions .cdd-opt:hover{background:var(--mob-tint);color:var(--mob-tintfg);padding-left:48px}
+  #pageCampaigns .camp-actions .cdd-opt i{width:16px;text-align:center;color:var(--mob-tx2);flex:none}
+  #pageCampaigns .camp-actions .cdd-opt:hover i{color:var(--mob-tintfg)}
+  /* fila peligrosa (Borrar mes): rojo también en el cuadro del icono */
+  #pageCampaigns .camp-actions > .camp-btn-danger{color:#c0392b}
+  #pageCampaigns .camp-actions > .camp-btn-danger > i:first-child{background:rgba(192,57,43,.12);color:#c0392b}
+  [data-theme="dark"] #pageCampaigns .camp-actions > .camp-btn-danger{color:#f2938c}
+  [data-theme="dark"] #pageCampaigns .camp-actions > .camp-btn-danger > i:first-child{background:rgba(242,147,140,.14);color:#f2938c}
+
+  /* Gestión: las fichas (design 2b) se muestran DIRECTO — fuera el botón "Ver tabla" */
+  #pageCampaigns .camp-matrix-toggle{display:none}
+  #pageCampaigns #campMatrix:not(.show){display:block}
+
+  /* filtros Todos/Ordenar como píldoras (design), no tarjetas a lo ancho */
+  #pageCampaigns .camp-filterbar{gap:8px}
+  #pageCampaigns .camp-filter-cdd,#pageCampaigns .camp-sort-cdd{flex:0 1 auto}
+  #pageCampaigns .camp-filterbar > .cdd > .cdd-btn{
+    width:auto;height:auto;min-height:38px;padding:0 14px;border-radius:999px;
+    background:var(--mob-sf);border:1px solid var(--mob-line);box-shadow:none;
+    font-family:var(--mob-font);font-weight:600;font-size:12.5px;color:var(--mob-tx2);justify-content:center;
+  }
+  #pageCampaigns .camp-filterbar .cdd.open > .cdd-btn,
+  #pageCampaigns .camp-filterbar .cdd.active > .cdd-btn{background:var(--mob-grad);border-color:transparent;color:#fff}
+  #pageCampaigns .camp-filterbar .cdd.open .cdd-ico,#pageCampaigns .camp-filterbar .cdd.open .cdd-chev,
+  #pageCampaigns .camp-filterbar .cdd.active .cdd-ico{color:#fff}
+  #pageCampaigns .camp-filterbar .cdd-panel{background:var(--mob-sf);border:1px solid var(--mob-line);border-radius:16px;box-shadow:var(--mob-sh2)}
+  #pageCampaigns .camp-filterbar .cdd-opt{display:flex;align-items:center;gap:8px;min-height:40px;color:var(--mob-tx);font-size:13px}
+  #pageCampaigns .camp-legend{color:var(--mob-tx2)}
+  #pageCampaigns .db-count{color:var(--mob-tx2)}
+
+  /* formularios de las hojas de Gestión: inputs 46px redondeados + pie de marca */
+  :is(#campContactModal,#campImportModal,#campTplModal,#ccModal) .camp-f-lbl{color:var(--mob-tx2);font-size:12px;font-weight:600}
+  :is(#campContactModal,#campImportModal,#campTplModal,#ccModal) .camp-f-inp{
+    min-height:46px;border-radius:16px;border:1px solid var(--mob-line);
+    background:var(--mob-sf);color:var(--mob-tx);font-family:var(--mob-font);font-size:15px;padding:0 14px;
+  }
+  :is(#campContactModal,#campTplModal) textarea.camp-f-inp{min-height:72px;padding:12px 14px}
+  :is(#campContactModal,#campPickModal,#campImportModal,#campTplModal,#ccModal) .camp-modal-foot{
+    border:0;flex:none;display:flex;gap:8px;
+    padding:10px 16px calc(14px + env(safe-area-inset-bottom));
+  }
+  :is(#campContactModal,#campPickModal,#campImportModal,#campTplModal,#ccModal) .camp-modal-foot .btn-primary{
+    flex:1;min-height:46px;border-radius:16px;border:0;background:var(--mob-grad);color:#fff;font-weight:600;font-size:14px;
+  }
+  :is(#campContactModal,#campPickModal,#campImportModal,#campTplModal,#ccModal) .camp-prev-cancel{
+    min-height:46px;border-radius:16px;border:1px solid var(--mob-line);background:var(--mob-sf);color:var(--mob-tx);font-weight:600;
+  }
+  #campPickModal .db-search-inp{min-height:46px;border-radius:16px;background:var(--mob-sf);border-color:var(--mob-line);color:var(--mob-tx)}
+  #campImportModal .camp-drop{border-radius:20px;border-color:var(--mob-line);background:var(--mob-sf);color:var(--mob-tx2)}
+
+  /* ══════════ Apertura Cretum: mismo lenguaje del design ══════════ */
+  /* pestañas de Apertura (usan .seg-btn) = píldoras scrolleables como las de GVV */
+  #pageCampaigns .camp-tabs .seg-btn{
+    flex:none;white-space:nowrap;min-height:40px;padding:0 16px;
+    border:1px solid var(--mob-line);border-radius:999px;background:var(--mob-sf);
+    color:var(--mob-tx2);font-family:var(--mob-font);font-weight:600;font-size:13px;box-shadow:var(--mob-sh1);
+  }
+  #pageCampaigns .camp-tabs .seg-btn.on{background:var(--mob-grad);color:#fff;border-color:transparent}
+  #pageCampaigns .camp-tabs .seg-btn i{font-size:12px}
+
+  /* Gestión de Apertura: buscador a lo ancho + Importar/Exportar como tarjetas */
+  #aptPaneGest .ctbl-bar{flex-wrap:wrap;gap:8px}
+  #aptPaneGest .ctbl-search{flex:1 1 100%;max-width:none}
+  #aptPaneGest .ctbl-bar > .cdd{flex:1 1 calc(50% - 4px);min-width:0}
+  #aptPaneGest .ctbl-bar .cdd-btn{
+    flex:1 1 calc(50% - 4px);width:100%;max-width:none;height:auto;min-height:48px;justify-content:center;gap:10px;
+    border:1px solid var(--mob-line);border-radius:16px;background:var(--mob-sf);box-shadow:var(--mob-sh1);
+    font-family:var(--mob-font);font-weight:600;font-size:13px;color:var(--mob-tx);
+  }
+  #aptPaneGest .ctbl-bar .cdd-btn i:first-child{
+    width:26px;height:26px;display:grid;place-items:center;border-radius:9px;
+    background:var(--mob-tint);color:var(--mob-tintfg);font-size:12px;
+  }
+  #aptPaneGest .ctbl-bar .cdd-label{flex:none}
+  #aptPaneGest .ctbl-bar .cdd-chev{color:var(--mob-tx2)}
+  #aptPaneGest .cdd-panel{background:var(--mob-sf);border:1px solid var(--mob-line);border-radius:16px;box-shadow:var(--mob-sh2);left:auto;right:0}
+  #aptPaneGest .cdd-opt{display:flex;align-items:center;gap:8px;min-height:42px;color:var(--mob-tx);font-size:13px}
+  #aptPaneGest .cdd-opt i{width:16px;text-align:center;color:var(--mob-tx2)}
+  #aptPaneGest .cdd-tag{color:var(--mob-tx2)}
+  /* añadir contacto: inputs 46px apilados + botón con gradiente de marca */
+  #aptPaneGest .apt-addrow{gap:8px}
+  #aptPaneGest .apt-addrow .lst-add-inp{
+    flex:1 1 100%;min-width:0;min-height:46px;border-radius:16px;border:1px solid var(--mob-line);
+    background:var(--mob-sf);color:var(--mob-tx);font-family:var(--mob-font);font-size:15px;padding:0 14px;
+  }
+  #aptPaneGest .lst-add-btn{
+    flex:1;min-height:46px;border:0;border-radius:16px;background:var(--mob-grad);color:#fff;
+    font-family:var(--mob-font);font-weight:600;font-size:14px;box-shadow:var(--mob-sh2);
+  }
+  #aptPaneGest .camp-prev-cancel{min-height:46px;border-radius:16px;border:1px solid var(--mob-line);background:var(--mob-sf);color:var(--mob-tx);font-weight:600}
+  /* la tabla ya se vuelve tarjetas (regla genérica de arriba); aquí la 3a columna
+     son ACCIONES, no un número: ocupan la columna derecha centradas, sin negritas */
+  #aptPaneGest .ctbl-table td:nth-child(3){
+    grid-column:2;grid-row:1 / span 2;display:flex;align-items:center;justify-content:flex-end;gap:6px;
+    font-weight:400;font-size:inherit;
+  }
+  #aptPaneGest .ctbl-act{width:34px;height:34px;border-radius:999px;border:0;background:var(--mob-tint);color:var(--mob-tintfg)}
+  #aptPaneGest .ctbl-act.del{background:rgba(192,57,43,.12);color:#c0392b}
+  [data-theme="dark"] #aptPaneGest .ctbl-act.del{background:rgba(242,147,140,.14);color:#f2938c}
+
+  /* Seguimiento: tarjeta de contactos como hero de marca + subida como tarjeta */
+  #aptPaneSeg .apt-card{border:0;border-radius:24px;background:var(--mob-grad);box-shadow:var(--mob-sh2);padding:16px;min-width:0}
+  #aptPaneSeg .apt-card-ic{background:rgba(255,255,255,.18);color:#fff;border-radius:12px}
+  #aptPaneSeg .apt-card-t{color:#fff;font-size:15px}
+  #aptPaneSeg .apt-card-d{color:rgba(255,255,255,.85)}
+  #aptPaneSeg .apt-card .cdd-btn{
+    height:auto;min-height:40px;padding:0 16px;border:0;border-radius:999px;
+    background:rgba(255,255,255,.18);color:#fff;font-family:var(--mob-font);font-weight:600;font-size:13px;
+  }
+  #aptPaneSeg .camp-upload{border:1px solid var(--mob-line);border-radius:20px;background:var(--mob-sf);box-shadow:var(--mob-sh1);padding:14px}
+  #aptPaneSeg .camp-upload-title{color:var(--mob-tx);font-weight:600}
+  #aptPaneSeg .camp-upload-row{display:flex;flex-direction:column;align-items:stretch;gap:10px}
+  #aptPaneSeg .camp-month-lbl{color:var(--mob-tx2);font-size:12px;font-weight:600}
+  #aptPaneSeg .camp-month{
+    min-height:46px;width:100%;border-radius:16px;border:1px solid var(--mob-line);
+    background:var(--mob-sf);color:var(--mob-tx);font-family:var(--mob-font);padding:0 12px;box-sizing:border-box;
+  }
+  #aptPaneSeg .camp-drop{border-radius:20px;border:1.5px dashed var(--mob-line);background:var(--mob-sf);color:var(--mob-tx2);min-width:0}
+
+  /* vacíos y notas de Apertura con tokens del tema */
+  #pageCampaigns .apt-empty{border-radius:20px;border-color:var(--mob-line);color:var(--mob-tx2)}
+  #pageCampaigns .apt-note{color:var(--mob-tx2)}
+  #pageCampaigns .camp-empty-mini{color:var(--mob-tx2)}
+
+  /* ══════════ Plantilla del correo (Gestión → Editar mail): hoja por secciones ══════════ */
+  #campTplModal .camp-tpl-grid{display:flex;flex-direction:column}
+  /* publicar la carta: filas tipo "lista de ajustes" (icono en chip + etiqueta) */
+  #campTplModal .camp-carta-pub{
+    display:flex;align-items:center;justify-content:flex-start;gap:12px;
+    width:100%;max-width:none;height:auto;min-height:52px;margin-top:8px;padding:8px 14px;
+    border:1px solid var(--mob-line);border-radius:16px;background:var(--mob-sf);box-shadow:var(--mob-sh1);
+    font-family:var(--mob-font);font-weight:600;font-size:13.5px;color:var(--mob-tx);
+    text-align:left;line-height:1.3;white-space:normal;cursor:pointer;
+  }
+  #campTplModal .camp-carta-pub i{
+    flex:none;width:30px;height:30px;display:grid;place-items:center;border-radius:10px;
+    background:var(--mob-tint);color:var(--mob-tintfg);font-size:13px;
+  }
+  /* acciones: Guardar protagonista a lo ancho + 3 secundarias como mini-tarjetas */
+  #campTplModal .camp-tpl-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+  #campTplModal .camp-tpl-actions .btn-primary{
+    grid-column:1 / -1;min-height:48px;border:0;border-radius:16px;background:var(--mob-grad);color:#fff;
+    font-family:var(--mob-font);font-weight:600;font-size:15px;box-shadow:var(--mob-sh2);
+  }
+  #campTplModal .camp-tpl-actions .cdd-btn{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+    width:100%;max-width:none;height:auto;min-height:66px;padding:10px 6px;
+    border:1px solid var(--mob-line);border-radius:16px;background:var(--mob-sf);box-shadow:var(--mob-sh1);
+    font-family:var(--mob-font);font-weight:600;font-size:11.5px;color:var(--mob-tx);
+    text-align:center;line-height:1.25;white-space:normal;
+  }
+  #campTplModal .camp-tpl-actions .cdd-btn i{
+    width:30px;height:30px;display:grid;place-items:center;border-radius:10px;
+    background:var(--mob-tint);color:var(--mob-tintfg);font-size:13px;
+  }
+  /* nota de ayuda como tarjeta de tinta, legible en los 3 temas */
+  #campTplModal .camp-tpl-hint{
+    margin-top:14px;padding:12px 14px;border-radius:16px;background:var(--mob-tint);
+    color:var(--mob-tx2);font-size:12px;line-height:1.55;
+  }
+  #campTplModal .camp-tpl-hint b,#campTplModal .camp-tpl-hint u{color:var(--mob-tx)}
+  #campTplModal .camp-tpl-hint code{background:var(--mob-sf);border-radius:6px;padding:1px 5px;color:var(--mob-tintfg)}
+  /* vista previa como tarjeta */
+  #campTplModal .camp-tpl-preview{margin-top:16px}
+  #campTplModal .camp-tpl-prev-lbl{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mob-tx2);margin-bottom:8px}
+  #campTplModal #campTplFrame{width:100%;min-height:380px;border:1px solid var(--mob-line);border-radius:16px;background:#fff}
+
+  /* ══════════ Base de Datos Cretum (Contactos): pantalla del design ══════════ */
+  #pageContactos .cc-toolbar{display:block;margin-bottom:10px}
+  #pageContactos .cc-search .db-search-inp{height:46px;border-radius:16px;background:var(--mob-sf);border:1px solid var(--mob-line);color:var(--mob-tx);font-size:15px}
+  /* filtros como riel de píldoras (activa = gradiente de marca) */
+  #pageContactos .cc-chips{display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto;scrollbar-width:none;margin:10px 0}
+  #pageContactos .cc-chips::-webkit-scrollbar{height:0;width:0}
+  #pageContactos .camp-fchip{
+    flex:none;white-space:nowrap;min-height:36px;padding:0 14px;border-radius:999px;
+    border:1px solid var(--mob-line);background:var(--mob-sf);color:var(--mob-tx2);
+    font-family:var(--mob-font);font-weight:600;font-size:12px;
+  }
+  #pageContactos .camp-fchip.on{background:var(--mob-grad);border-color:transparent;color:#fff}
+  /* Añadir contacto protagonista + Exportar secundario */
+  #pageContactos .cc-actions{margin-left:0;display:flex;gap:8px}
+  #pageContactos .cc-actions .cdd-btn{height:auto;min-height:46px;max-width:none;border-radius:16px;justify-content:center;font-family:var(--mob-font);font-weight:600;font-size:14px}
+  #pageContactos .cc-actions .cdd-btn:first-child{flex:1;border:0;background:var(--mob-grad);color:#fff;box-shadow:var(--mob-sh2)}
+  #pageContactos .cc-actions .cdd-btn:first-child i{color:#fff}
+  #pageContactos .cc-actions .cdd-btn:last-child{flex:none;border:1px solid var(--mob-line);background:var(--mob-sf);color:var(--mob-tx)}
+  /* mosaicos de stats (los pinta renderContactos en móvil) */
+  #pageContactos .cc-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+  #pageContactos .ccm-tile{padding:12px;border-radius:18px;background:var(--mob-sf);box-shadow:var(--mob-sh1);display:flex;flex-direction:column;gap:2px}
+  #pageContactos .ccm-tile b{font-family:var(--mob-font);font-size:19px;font-weight:700;color:var(--mob-tx);letter-spacing:-.01em}
+  #pageContactos .ccm-tile span{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mob-tx2)}
+  #pageContactos .ccm-tile.rev{background:rgba(230,126,34,.13)}
+  #pageContactos .ccm-tile.rev b{color:#c9660f}
+  [data-theme="dark"] #pageContactos .ccm-tile.rev{background:rgba(237,120,36,.14)}
+  [data-theme="dark"] #pageContactos .ccm-tile.rev b{color:#f4a86c}
+  /* tarjeta por contacto */
+  #pageContactos .ccc-list{display:grid;gap:8px}
+  #pageContactos .ccc-card{padding:14px;border-radius:20px;background:var(--mob-sf);border:1px solid var(--mob-line);box-shadow:var(--mob-sh1);cursor:pointer}
+  #pageContactos .ccc-top{display:flex;align-items:center;gap:12px}
+  #pageContactos .ccc-av{flex:none;width:38px;height:38px;display:grid;place-items:center;border-radius:999px;background:var(--mob-tint);color:var(--mob-tintfg);font-weight:700;font-size:12px}
+  #pageContactos .ccc-av.noname{background:var(--mob-line);color:var(--mob-tx2)}
+  #pageContactos .ccc-id{flex:1;min-width:0}
+  #pageContactos .ccc-nm{font-weight:600;font-size:14px;color:var(--mob-tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #pageContactos .ccc-nm.noname{color:var(--mob-tx2);font-weight:500}
+  #pageContactos .ccc-em{font-size:12px;color:var(--mob-tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px}
+  #pageContactos .ccc-state{flex:none;padding:4px 10px;border-radius:999px;font-weight:600;font-size:10px;letter-spacing:.06em;text-transform:uppercase}
+  #pageContactos .ccc-state.rev{background:#fdf1e6;color:#c9660f}
+  #pageContactos .ccc-state.reb{background:#fbe6e5;color:#d0342c}
+  [data-theme="dark"] #pageContactos .ccc-state.rev{background:rgba(237,120,36,.18);color:#f4a86c}
+  [data-theme="dark"] #pageContactos .ccc-state.reb{background:rgba(208,52,44,.18);color:#f2938c}
+  #pageContactos .ccc-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  #pageContactos .ccc-chip{padding:4px 10px;border-radius:999px;background:var(--mob-tint);color:var(--mob-tintfg);font-weight:600;font-size:11px}
+  /* acciones parejas bajo separador (Marcar · Rebote · Editar · Borrar) */
+  #pageContactos .ccc-acts{display:flex;gap:6px;margin-top:12px;padding-top:12px;border-top:1px solid var(--mob-line)}
+  #pageContactos .ccc-act{
+    flex:1;min-height:38px;display:flex;align-items:center;justify-content:center;gap:6px;
+    border:0;border-radius:12px;background:#f2f5fa;color:var(--mob-tx2);cursor:pointer;
+    font-family:var(--mob-font);font-weight:600;font-size:11px;
+  }
+  [data-theme="dark"] #pageContactos .ccc-act{background:rgba(255,255,255,.05)}
+  #pageContactos .ccc-act.on-rev{background:#fdf1e6;color:#c9660f}
+  #pageContactos .ccc-act.on-reb{background:#fbe6e5;color:#d0342c}
+  #pageContactos .ccc-act.del{background:#fbe6e5;color:#d0342c}
+  [data-theme="dark"] #pageContactos .ccc-act.on-rev{background:rgba(237,120,36,.16);color:#f4a86c}
+  [data-theme="dark"] #pageContactos .ccc-act.on-reb,
+  [data-theme="dark"] #pageContactos .ccc-act.del{background:rgba(208,52,44,.14);color:#f2938c}
+  /* mostrar más + vacío */
+  #pageContactos .cc-more{width:100%;min-height:46px;border-radius:16px;border:1px solid var(--mob-line);background:var(--mob-sf);color:var(--mob-tintfg)}
+  #pageContactos .cc-empty{color:var(--mob-tx2)}
+  /* detalle del contacto = hoja inferior (usa chrome et-vmodal, no camp-modal) */
+  #ccDetailModal.modal-backdrop{align-items:flex-end;padding:0}
+  #ccDetailModal .et-vmodal{
+    width:100%;max-width:100%;max-height:84vh;margin:0;border-radius:26px 26px 0 0;
+    background:var(--mob-sf2);border:0;box-shadow:0 -8px 30px rgba(18,41,76,.22);
+    display:flex;flex-direction:column;animation:campSheetUp .24s cubic-bezier(.22,1,.36,1);
+  }
+  #ccDetailModal .et-vmodal::before{content:"";width:44px;height:4px;border-radius:999px;background:var(--mob-line);margin:10px auto 2px;flex:none}
+  #ccDetailModal .et-vmodal-head{border:0;padding:6px 18px 10px;flex:none}
+  #ccDetailModal .fm-title{font-size:18px;font-weight:600;color:var(--mob-tx)}
+  #ccDetailModal .fm-x{width:38px;height:38px;border-radius:999px;background:var(--mob-tint);color:var(--mob-tintfg);border:0;display:grid;place-items:center}
+  #ccDetailModal .ccd-body{padding:0 16px calc(20px + env(safe-area-inset-bottom));overflow-y:auto;-webkit-overflow-scrolling:touch}
+  #ccDetailModal .ccd-row{border-color:var(--mob-line)}
+  #ccDetailModal .ccd-k{color:var(--mob-tx2)}
+  #ccDetailModal .ccd-v{color:var(--mob-tx)}
+  #ccDetailModal a.ccd-v{color:var(--mob-tintfg)}
+  #ccDetailModal .ccd-notes-h{color:var(--mob-tintfg)}
+  #ccDetailModal .ccd-nota{background:var(--mob-sf);border:1px solid var(--mob-line);border-radius:14px;color:var(--mob-tx)}
+  #ccDetailModal .et-ebtn.primary{min-height:42px;border-radius:14px;border:0;background:var(--mob-grad);color:#fff;font-family:var(--mob-font);font-weight:600;padding:0 18px}
+
+  /* ══════════ Motion (emil): feedback al presionar + rieles con momentum ══════════ */
+  /* Todo pressable nuevo confirma el toque con scale — solo transform, curva de la casa */
+  #pageContactos .ccc-act,#pageContactos .camp-fchip,#pageContactos .cc-actions .cdd-btn,#pageContactos .cc-more,
+  #pageCampaigns .camp-actions > .cdd-btn,#pageCampaigns .camp-actions > .cdd > .cdd-btn,#pageCampaigns .camp-actions .cdd-opt,
+  #pageCampaigns .camp-filterbar > .cdd > .cdd-btn,#pageCampaigns .camp-tabs .seg-btn,
+  #aptPaneGest .ctbl-bar .cdd-btn,#aptPaneGest .lst-add-btn,#aptPaneGest .ctbl-act,#aptPaneGest .cdd-opt,
+  #aptPaneSeg .apt-card .cdd-btn,
+  #campTplModal .camp-carta-pub,#campTplModal .camp-tpl-actions .btn-primary,#campTplModal .camp-tpl-actions .cdd-btn{
+    transition:transform 160ms cubic-bezier(.23,1,.32,1);
+  }
+  #pageContactos .ccc-act:active,#pageContactos .camp-fchip:active,#pageContactos .cc-actions .cdd-btn:active,#pageContactos .cc-more:active,
+  #pageCampaigns .camp-actions > .cdd-btn:active,#pageCampaigns .camp-actions > .cdd > .cdd-btn:active,#pageCampaigns .camp-actions .cdd-opt:active,
+  #pageCampaigns .camp-filterbar > .cdd > .cdd-btn:active,#pageCampaigns .camp-tabs .seg-btn:active,
+  #aptPaneGest .ctbl-bar .cdd-btn:active,#aptPaneGest .lst-add-btn:active,#aptPaneGest .ctbl-act:active,#aptPaneGest .cdd-opt:active,
+  #aptPaneSeg .apt-card .cdd-btn:active,
+  #campTplModal .camp-carta-pub:active,#campTplModal .camp-tpl-actions .btn-primary:active,#campTplModal .camp-tpl-actions .cdd-btn:active{
+    transform:scale(.97);
+  }
+  /* la tarjeta de contacto es grande: press más sutil */
+  #pageContactos .ccc-card{transition:transform 160ms cubic-bezier(.23,1,.32,1)}
+  #pageContactos .ccc-card:active{transform:scale(.985)}
+  /* acordeón de acciones (Gestión): entrada ease-out corta, nada al cerrar (salida instantánea) */
+  @keyframes mobPanelIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+  #pageCampaigns .camp-actions .cdd.open .cdd-panel{animation:mobPanelIn 180ms cubic-bezier(.23,1,.32,1)}
+  /* rieles deslizables: momentum táctil y sin arrastrar la página al llegar al borde */
+  #pageContactos .cc-chips,#pageCampaigns .camp-tabs,#pageCampaigns .camp-frente,
+  #pageCampaigns .camp-filterbar,#pageCampaigns .cg-list ~ .rail{
+    -webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    .mob-tab,.mob-fab,.home-module,.mob-news-card,.mob-calbtn,.mob-sheet-opt,
+    .mob-sheet-panel,.mob-seg button,.mob-prow,.mob-arow,.mob-logout,.mob-prow .sw,
+    .mob-pill,.mob-dd-menu,.mob-dd-chev{transition:none;animation:none}
+    /* sin movimiento: las hojas y paneles solo aparecen; presses sin scale */
+    :is(#campLpModal,#campContactModal,#campPickModal,#campImportModal,#campTplModal,#campAperturaModal,#ccModal) .camp-modal,
+    #ccDetailModal .et-vmodal,
+    #pageCampaigns .camp-actions .cdd.open .cdd-panel{animation:none}
+    #pageContactos .ccc-card,#pageContactos .ccc-act,#pageContactos .camp-fchip,
+    #pageContactos .cc-actions .cdd-btn,#pageContactos .cc-more,
+    #pageCampaigns .camp-actions > .cdd-btn,#pageCampaigns .camp-actions > .cdd > .cdd-btn,
+    #pageCampaigns .camp-tabs .seg-btn,#aptPaneGest .ctbl-bar .cdd-btn,#aptPaneGest .lst-add-btn,
+    #campTplModal .camp-carta-pub,#campTplModal .camp-tpl-actions .btn-primary,#campTplModal .camp-tpl-actions .cdd-btn{transition:none}
+  }
+}

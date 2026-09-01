@@ -23,7 +23,7 @@ Cómo lograrlo:
 
 - **Botón "atrás" del teléfono**: TODO modal/overlay/drawer/sub-pantalla nuevo se registra en `dismissTopLayer()` (app.js) para que "atrás" lo cierre en vez de salir de la app. Los que usan `.modal-backdrop` o `.cdd` ya están cubiertos por los selectores genéricos.
 - **i18n**: strings de UI en español como clave, envueltos en `t('…')` (o `data-i18n` en markup estático), y su traducción EN agregada al diccionario de `public/i18n.js`.
-- **vercel.json es allowlist**: todo archivo estático nuevo que deba servirse necesita su entrada en `builds`/`routes`, si no devuelve el index. Tope de **12 funciones serverless** (plan Hobby) — evita crear `api/*.js` nuevos si el frontend puede hablar con Supabase directo (RLS).
+- **vercel.json es allowlist**: todo archivo estático nuevo que deba servirse necesita su entrada en `builds`/`routes`, si no devuelve el index. Plan Vercel Pro (el tope de 12 funciones del Hobby ya no aplica) — aun así, prefiere hablar con Supabase directo (RLS) antes de crear `api/*.js` nuevos.
 - **Sistema visual**: DM Sans (400/500, máx 600), UI densa 11–13px, radios 5/8/12px, acento puntual (navy Cretum / naranja MVP), sin gradientes ni sombras pesadas. Animaciones solo `transform`/`opacity` (o `grid-template-rows` para plegar), 150–300ms, curva `cubic-bezier(.23,1,.32,1)`, `:active{scale(.97)}` en botones, y respeta `prefers-reduced-motion`.
 - **Verifica sintaxis** antes de commitear: `node --check public/app.js public/i18n.js`.
 - **Nunca borres el trabajo sin commitear de otras sesiones** (suele haber más de un Claude trabajando en este repo): commitea solo tus archivos, y usa `git stash -u` + `pull --rebase` + `stash pop` si el push choca.

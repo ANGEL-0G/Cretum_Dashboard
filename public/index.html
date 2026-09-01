@@ -1217,7 +1217,7 @@ body:has(.modal-backdrop.show,.camp-modal-backdrop.show,.home-picker-backdrop.sh
   .nt-back{display:inline-flex}
   .nt-doc-head{flex-wrap:wrap;align-items:center;padding:12px 14px 6px;gap:8px}
   .nt-back{order:0;margin-right:auto}
-  .nt-doc-head .nt-color-inp,.nt-doc-head .nt-todo-btn,.nt-doc-head .nt-ico{order:1}
+  .nt-doc-head .nt-color-inp,.nt-doc-head .nt-color-btn,.nt-doc-head .nt-todo-btn,.nt-doc-head .nt-ico{order:1}
   .nt-title{order:2;flex:1 1 100%;font-size:21px;padding-top:2px}
   /* Barra de formato en una sola línea deslizable (no wrap apretado) */
   .nt-toolbar{padding:8px 14px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
@@ -1254,11 +1254,30 @@ body:has(.modal-backdrop.show,.camp-modal-backdrop.show,.home-picker-backdrop.sh
 .note-color:hover{color:var(--navy);background:var(--navy-ghost)}
 .note-colors{display:flex;gap:10px;align-items:center;padding:4px 12px 12px;flex-wrap:wrap}
 /* Swatch con halo/glow — compartido por carpetas (modal) y notas */
-.cm-sw{width:26px;height:26px;border-radius:50%;border:0;cursor:pointer;padding:0;background:var(--sw,#94a3b8);display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:11px;transition:transform .12s cubic-bezier(.23,1,.32,1),box-shadow .18s}
-.cm-sw:hover{transform:scale(1.14)}
-.cm-sw.on{box-shadow:0 0 0 2px var(--white),0 0 0 4px var(--sw,#94a3b8),0 0 12px 1px var(--sw,#94a3b8)}
+.cm-sw{width:28px;height:28px;border-radius:50%;border:0;cursor:pointer;padding:0;background:var(--sw,#94a3b8);display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:11px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06);transition:transform .12s cubic-bezier(.23,1,.32,1),box-shadow .18s}
+.cm-sw:hover{transform:scale(1.12)}
+.cm-sw.on{box-shadow:0 0 0 2px var(--white),0 0 0 4px var(--sw,#94a3b8)}
 .cm-none{background:var(--gray-100);color:var(--gray-500);border:1px dashed var(--gray-300)}
 .cm-none.on{box-shadow:0 0 0 2px var(--white),0 0 0 4px var(--gray-400)}
+
+/* Selector de color de la nota: botón con punto + popover propio de swatches */
+.nt-color-btn{flex:0 0 auto;width:32px;height:32px;padding:0;display:grid;place-items:center;
+  border:1px solid var(--gray-200);border-radius:9px;background:var(--white);cursor:pointer;
+  transition:border-color .15s,transform .1s cubic-bezier(.23,1,.32,1)}
+.nt-color-btn:hover{border-color:var(--navy-light)}
+.nt-color-btn:active{transform:scale(.94)}
+.nt-color-dot{width:18px;height:18px;border-radius:50%;background:#8b5cf6;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+.nt-color-dot.none{background:
+  linear-gradient(135deg,transparent 43%,var(--red,#dc2626) 43% 57%,transparent 57%),var(--gray-100)}
+.nt-colorpop{position:fixed;z-index:1350;background:var(--white);border:1px solid var(--gray-200);
+  border-radius:16px;padding:14px;box-shadow:0 16px 44px rgba(15,23,42,.22);
+  animation:fadeIn .14s ease-out}
+.nt-colorpop[hidden]{display:none}
+.nt-colorpop-t{font-size:11px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:var(--gray-400);margin:0 0 10px}
+.nt-colorpop-sw{display:grid;grid-template-columns:repeat(6,28px);gap:12px 12px}
+[data-theme="dark"] .nt-colorpop{background:#181818;border-color:#2a2a2a}
+[data-theme="dark"] .nt-color-btn{background:#1c1c1c;border-color:#333}
+[data-theme="dark"] .nt-color-dot{box-shadow:inset 0 0 0 1px rgba(255,255,255,.14)}
 /* Modal de carpeta (crear / editar) — por encima del drawer de notas */
 .notes-modal{z-index:1300}
 .fm-box{background:var(--white);border-radius:var(--r-lg);padding:22px 22px 20px;width:430px;max-width:92vw;box-shadow:0 18px 52px rgba(0,0,0,.28);text-align:left;transform:scale(.94) translateY(14px);transition:transform .3s cubic-bezier(.23,1,.32,1)}
@@ -1270,7 +1289,7 @@ body:has(.modal-backdrop.show,.camp-modal-backdrop.show,.home-picker-backdrop.sh
 .fm-label{display:block;font-size:11px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:var(--gray-400);margin:0 0 8px}
 .fm-input{width:100%;box-sizing:border-box;border:1px solid var(--gray-200);border-radius:var(--r-md);padding:10px 12px;font-family:var(--font);font-size:14px;color:var(--gray-900);background:var(--gray-50);outline:none;transition:border-color .15s,box-shadow .15s;margin-bottom:18px}
 .fm-input:focus{border-color:var(--navy);box-shadow:0 0 0 3px var(--navy-ghost)}
-.fm-colors{display:grid;grid-template-columns:repeat(9,1fr);gap:12px 10px;margin-bottom:22px;justify-items:center}
+.fm-colors{display:grid;grid-template-columns:repeat(6,1fr);gap:14px 12px;margin-bottom:22px;justify-items:center}
 .fm-foot{display:flex;align-items:center;gap:8px}
 .fm-foot-r{display:flex;gap:8px;margin-left:auto}
 .fm-del{display:inline-flex;align-items:center;gap:6px;background:none;border:1px solid var(--gray-200);color:var(--gray-500);font-size:12.5px;padding:8px 12px;border-radius:var(--r-md);cursor:pointer;font-family:var(--font);transition:color .15s,border-color .15s,background .15s}
@@ -1280,9 +1299,29 @@ body:has(.modal-backdrop.show,.camp-modal-backdrop.show,.home-picker-backdrop.sh
 .fm-cancel:hover{background:var(--gray-200)}
 .fm-save{background:var(--navy);color:#fff}
 .fm-save:hover{filter:brightness(1.1)}
+/* Selector de lista en "Añadir contacto" (botón +) */
+.qc-lists{display:grid;gap:8px;margin-bottom:18px}
+.qc-list{display:flex;align-items:center;gap:10px;padding:11px 14px;border:1px solid var(--gray-200);
+  border-radius:var(--r-md);background:var(--gray-50);color:var(--gray-700);font-family:var(--font);
+  font-size:13.5px;font-weight:500;cursor:pointer;text-align:left;
+  transition:border-color .15s,background .15s,color .15s,transform .1s cubic-bezier(.23,1,.32,1)}
+.qc-list i{width:18px;text-align:center;color:var(--gray-400)}
+.qc-list:hover{border-color:var(--navy-light)}
+.qc-list:active{transform:scale(.99)}
+.qc-list span{flex:1}
+.qc-list .qc-ck{width:auto;margin-left:auto;opacity:0;color:var(--navy);transition:opacity .15s}
+.qc-list.on{border-color:var(--navy);background:var(--navy-pale);color:var(--navy)}
+.qc-list.on i{color:var(--navy)}
+.qc-list.on .qc-ck{opacity:1}
+.qc-note{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--gray-500);margin:0 0 18px;
+  padding:9px 12px;border-radius:var(--r-md);background:var(--navy-ghost)}
+.qc-note i{color:var(--navy);width:auto}
+[data-theme="dark"] .qc-note{background:rgba(255,255,255,.04);color:var(--gray-400)}
+[data-theme="dark"] .qc-list{background:#0f0f0f;border-color:#2a2a2a;color:#ccc}
+[data-theme="dark"] .qc-list.on{background:var(--navy-pale);border-color:var(--navy);color:var(--navy-light)}
 [data-theme="dark"] .fm-box{background:#181818}
 [data-theme="dark"] .fm-input{background:#0f0f0f;border-color:#2a2a2a;color:#fff}
-[data-theme="dark"] .cm-sw.on{box-shadow:0 0 0 2px #181818,0 0 0 4px var(--sw,#94a3b8),0 0 12px 1px var(--sw,#94a3b8)}
+[data-theme="dark"] .cm-sw.on{box-shadow:0 0 0 2px #181818,0 0 0 4px var(--sw,#94a3b8)}
 .notes-add{display:inline-flex;align-items:center;justify-content:center;gap:8px;align-self:flex-start;
   background:var(--navy-ghost,#f0f4fa);color:var(--navy);border:1px solid var(--navy-pale,#e2ebf8);border-radius:10px;
   padding:10px 14px;font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;transition:background .15s,transform .12s;margin-bottom:2px}
@@ -1535,12 +1574,30 @@ body:has(.modal-backdrop.show,.camp-modal-backdrop.show,.home-picker-backdrop.sh
 
 /* ── TOAST ── */
 .toast{
-  position:fixed;bottom:22px;right:22px;background:var(--navy);color:white;
-  border-radius:var(--r-md);padding:11px 18px;font-size:13px;z-index:200;
-  transform:translateY(60px);opacity:0;transition:transform .3s,opacity .3s;
-  display:flex;align-items:center;gap:8px;box-shadow:var(--shadow-md);
+  position:fixed;bottom:22px;right:22px;background:#22314f;color:#fff;
+  border-radius:999px;padding:10px 16px;font-size:13px;font-weight:500;z-index:200;
+  width:max-content;max-width:min(90vw,480px);
+  transform:translateY(60px);opacity:0;transition:transform .3s cubic-bezier(.23,1,.32,1),opacity .25s;
+  display:inline-flex;align-items:center;gap:9px;box-shadow:var(--shadow-md);
 }
 .toast.show{transform:translateY(0);opacity:1}
+.toast .toast-ico{flex:none;font-size:15px}
+.toast-code{font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:7px;
+  background:rgba(255,255,255,.20);letter-spacing:.02em;white-space:nowrap}
+.toast-report{
+  flex:none;display:inline-flex;align-items:center;gap:5px;cursor:pointer;
+  border:0;border-radius:999px;padding:5px 12px;font-family:var(--font);font-size:12px;font-weight:600;
+  background:rgba(255,255,255,.22);color:inherit;transition:background .15s,transform .12s;
+}
+.toast-report:hover{background:rgba(255,255,255,.34)}
+.toast-report:active{transform:scale(.96)}
+/* Tipos (bloques autocontenidos: fondo y texto explícitos → legibles en claro y oscuro) */
+.toast.t-success{background:#16a34a;color:#fff}
+.toast.t-info{background:#22314f;color:#fff}
+.toast.t-warn{background:#e8a90a;color:#241c00}
+.toast.t-error{background:#dc2626;color:#fff}
+.toast.t-warn .toast-code,.toast.t-warn .toast-report{background:rgba(0,0,0,.15)}
+.toast.t-warn .toast-report:hover{background:rgba(0,0,0,.24)}
 
 /* Snackbar "Deshacer" (borrado por swipe) */
 #undoBar{
@@ -1677,6 +1734,10 @@ body:has(.modal-backdrop.show,.camp-modal-backdrop.show,.home-picker-backdrop.sh
 .td-desc-body{font-size:14.5px;line-height:1.65;color:var(--gray-800);word-break:break-word}
 .td-empty{font-size:13px;color:var(--gray-400);font-style:italic}
 .td-actions{display:flex;gap:8px;padding:14px 22px 20px;flex-wrap:wrap;justify-content:flex-end}
+/* Guardar: acción primaria (texto var(--white) → oscuro en dark, contrasta sobre el acento) */
+.td-btn-save{background:var(--navy);border-color:var(--navy);color:var(--white)}
+.td-btn-save:hover{filter:brightness(1.06)}
+.td-btn-save:active{transform:scale(.97)}
 .td-btn-edit{background:var(--navy-pale);color:var(--navy)}
 .td-btn-edit:hover{background:var(--navy);color:#fff}
 .td-btn-del{background:var(--red-bg,rgba(224,49,49,.12));color:var(--red)}
@@ -4119,6 +4180,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   .header-brand{padding:3px}
 }
 </style>
+<link rel="stylesheet" href="/mobile.css?v=20260901-mob58">
 </head>
 <body>
 
@@ -5168,6 +5230,36 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
     .camp-lp-desc{flex:1;color:var(--ink,#334)}
     .camp-lp-desc.n0{color:#aab3c0}
     .camp-lp-desc.n3{color:#16a34a;font-weight:500}
+    /* detalle "mes con mes" (rediseño) — barras por mes + encabezado con avatar */
+    .camp-lp-stat-n.sm{font-size:14px;line-height:1.15}
+    .camp-lp-mtitle{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--gray-500);margin:18px 0 10px}
+    .camp-lp-months{display:grid;gap:6px}
+    .camp-lp-mrow{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:14px;background:var(--gray-50)}
+    .camp-lp-mm{flex:none;min-width:64px;font-weight:600;font-size:13px;color:var(--gray-800)}
+    .camp-lp-mbar{flex:1;height:6px;border-radius:999px;background:var(--navy-pale);overflow:hidden}
+    .camp-lp-mfill{display:block;height:6px;border-radius:999px;background:var(--navy)}
+    .camp-lp-mn{flex:none;width:26px;text-align:right;font-weight:700;font-size:14px;color:var(--gray-900)}
+    .camp-modal-title{display:flex;align-items:center;gap:10px;min-width:0}
+    .pd-av{flex:none;width:44px;height:44px;border-radius:999px;background:var(--navy);color:var(--white);display:grid;place-items:center;font-weight:700;font-size:14px}
+    .pd-hid{display:flex;flex-direction:column;min-width:0}
+    .pd-hnm{font-weight:600;font-size:16px;color:var(--gray-900);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .pd-hem{font-size:12px;color:var(--gray-500);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    /* lista de personas (contactos) + chips de filtro (rediseño) */
+    .cc-chips{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}
+    .cc-chip{min-height:34px;padding:0 14px;border:1px solid var(--gray-200);border-radius:999px;background:var(--white);color:var(--gray-600);font-weight:600;font-size:12px;font-family:inherit;cursor:pointer}
+    .cc-chip.on{background:var(--navy);border-color:var(--navy);color:var(--white)}
+    .cc-people{display:grid;gap:8px}
+    .cc-person{display:flex;gap:12px;align-items:center;padding:11px 14px;border:1px solid var(--gray-200);border-radius:16px;background:var(--white)}
+    .cc-av{flex:none;width:38px;height:38px;border-radius:999px;background:var(--navy-pale);color:var(--navy);display:grid;place-items:center;font-weight:700;font-size:13px}
+    .cc-id{flex:1;min-width:0}
+    .cc-nm{font-weight:600;font-size:14px;color:var(--gray-900);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .cc-em{font-size:12px;color:var(--gray-500);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px}
+    .cc-meta{flex:none;text-align:right}
+    .cc-op{font-weight:700;font-size:16px;color:var(--gray-900)}
+    .cc-dt{font-size:11px;color:var(--gray-500)}
+    .cc-acts{flex:none;display:flex;gap:4px}
+    .cc-person.cc-cancel{opacity:.5}
+    .cc-person.cc-cancel .cc-nm{text-decoration:line-through}
     /* export por lotes */
     .camp-export-grp{display:inline-flex;align-items:stretch}
     .camp-export-grp .cdd-btn{border-top-right-radius:0;border-bottom-right-radius:0}
@@ -5188,6 +5280,16 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
     .camp-carta-btn i{color:#c0392b}
     .camp-actual-note{font-size:13px;color:var(--ink-soft,#667);margin-bottom:12px;display:flex;align-items:center;gap:8px}
     .camp-actual-note .badge{background:var(--navy);color:#fff;padding:2px 10px;border-radius:20px;font-size:12px}
+    /* tarjeta hero de Campaña Actual (rediseño) — banda autocontenida, real */
+    .camp-hero{max-width:640px;margin:0 auto 14px;padding:18px;border-radius:20px;background:linear-gradient(135deg,#12305c,#1f4e8c);color:#fff;box-shadow:0 8px 22px rgba(18,41,76,.18)}
+    [data-org="mvp"] .camp-hero{background:linear-gradient(135deg,#b8541a,#ed7824)}
+    .camp-hero-kicker{font-size:11px;letter-spacing:.14em;text-transform:uppercase;opacity:.75}
+    .camp-hero-title{font-weight:600;font-size:20px;line-height:1.2;margin-top:6px}
+    .camp-hero-sub{font-size:13px;opacity:.82;margin-top:4px}
+    .camp-hero-stats{display:flex;gap:8px;margin-top:14px}
+    .camp-hero-stat{flex:1;padding:12px;border-radius:14px;background:rgba(255,255,255,.14)}
+    .camp-hero-sv{font-weight:700;font-size:20px}
+    .camp-hero-sk{font-size:11px;opacity:.82;margin-top:2px}
     .camp-actual-frame-wrap{max-width:640px;margin:0 auto;border:1px solid var(--line,#e3e8f0);border-radius:8px;overflow:hidden}
     #campActualFrame{width:100%;height:calc(100vh - 240px);min-height:480px;border:0;background:#f0f1f5;display:block}
     .camp-empty-mini{padding:40px 20px;text-align:center;color:var(--ink-soft,#889)}
@@ -5265,6 +5367,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 
     <!-- TAB: Campaña Actual (todos) -->
     <div class="camp-pane" id="campPaneActual" style="display:none">
+      <div id="campActualCard"></div>
       <div class="camp-actual-head">
         <div class="camp-actual-note" id="campActualNote"></div>
         <button class="cdd-btn camp-carta-btn" id="campCartaBtn" style="display:none" onclick="campCartaOpen()" title="Carta mensual autorizada (Dropbox)"></button>
@@ -5454,6 +5557,10 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
           </div>
           <span class="db-count" id="aptTblCount" style="margin-left:auto"></span>
         </div>
+        <div class="cc-chips" id="aptTblChips">
+          <button class="cc-chip" id="aptTbl10Chip" onclick="aptTblChip('d10')">10+ aperturas</button>
+          <button class="cc-chip" id="aptTblActiveChip" onclick="aptTblChip('active')">Solo activos</button>
+        </div>
         <div id="aptTblList"></div>
       </div>
 
@@ -5465,7 +5572,14 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
             <input id="aptGestSearch" class="db-search-inp" placeholder="Buscar nombre o correo…" oninput="renderAptGest()" autocomplete="off">
           </div>
           <button class="cdd-btn" type="button" onclick="contactsImportPick('apertura')" title="Carga masiva de contactos desde un archivo CSV o Excel"><i class="fa-solid fa-file-import"></i> Importar</button>
-          <button class="cdd-btn" type="button" onclick="aptGestExport()"><i class="fa-solid fa-file-csv"></i> Exportar CSV</button>
+          <!-- Exportar: desplegable CSV / TXT (Yesware en el teléfono no acepta CSV) -->
+          <div class="cdd" id="aptGestExportCdd">
+            <button class="cdd-btn" type="button" onclick="cddToggle('aptGestExportCdd')"><i class="fa-solid fa-file-export cdd-ico"></i><span class="cdd-label">Exportar</span><i class="fa-solid fa-chevron-down cdd-chev"></i></button>
+            <div class="cdd-panel camp-cdd-panel">
+              <div class="cdd-opt" onclick="aptGestExport('csv');this.closest('.cdd').classList.remove('open');event.stopPropagation()"><i class="fa-solid fa-file-csv"></i> CSV <span class="cdd-tag">nombre + correo</span></div>
+              <div class="cdd-opt" onclick="aptGestExport('txt');this.closest('.cdd').classList.remove('open');event.stopPropagation()" title="Solo los correos, uno por línea — para pegar en Yesware desde el teléfono"><i class="fa-solid fa-file-lines"></i> TXT <span class="cdd-tag">solo correos</span></div>
+            </div>
+          </div>
         </div>
         <div class="apt-addrow">
           <input id="aptGestEmail" class="lst-add-inp" type="email" placeholder="correo@dominio.com" autocomplete="off" onkeydown="if(event.key==='Enter')aptGestAdd()">
@@ -5749,7 +5863,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
           <label class="camp-f-lbl">Link al informe <span class="camp-opt">fijo: cretumdesk.com/gvv</span></label>
           <input id="campTplLink" class="camp-f-inp" placeholder="https://cretumdesk.com/gvv" oninput="campTemplateRender()">
           <button class="cdd-btn camp-carta-pub" type="button" onclick="campPublishCartaToDesk()" title="Toma la última carta autorizada de tu carpeta de Dropbox y la publica en cretumdesk.com/gvv"><i class="fa-solid fa-cloud-arrow-up"></i> Publicar la última de Dropbox</button>
-          <label class="cdd-btn camp-carta-pub" title="Sube un PDF desde tu computadora y publícalo en cretumdesk.com/gvv"><i class="fa-solid fa-file-arrow-up"></i> Subir un PDF de mi PC<input type="file" accept="application/pdf,.pdf" hidden onchange="campUploadCartaFile(this)"></label>
+          <label class="cdd-btn camp-carta-pub" title="Sube un PDF desde tu dispositivo y publícalo en cretumdesk.com/gvv"><i class="fa-solid fa-file-arrow-up"></i> Subir un PDF de mi dispositivo<input type="file" accept="application/pdf,.pdf" hidden onchange="campUploadCartaFile(this)"></label>
           <div class="camp-tpl-actions">
             <button class="btn-primary" type="button" onclick="campSaveCurrentSave()"><i class="fa-solid fa-check"></i> Guardar</button>
             <button class="cdd-btn" type="button" onclick="campTemplateCopy()"><i class="fa-solid fa-copy"></i> Copiar HTML</button>
@@ -6359,7 +6473,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
         <div class="nt-doc-head">
           <button class="nt-back" onclick="ntMobileBack()" aria-label="Volver a la lista" title="Volver"><i class="fa-solid fa-chevron-left"></i></button>
           <input id="ntTitle" class="nt-title" placeholder="Título de la nota" maxlength="140" oninput="ntOnTitle(this.value)">
-          <input type="color" id="ntColor" class="nt-color-inp" title="Color de la nota" onchange="ntSetColor(this.value)">
+          <button type="button" id="ntColorBtn" class="nt-color-btn" data-color="" title="Color de la nota" aria-label="Color de la nota" onclick="ntColorOpen(event)"><span class="nt-color-dot" id="ntColorDot"></span></button>
           <button class="nt-todo-btn nt-todo-new" id="ntTodoBtn" title="Convertir la nota en tarea" aria-label="Añadir al To Do List" onclick="noteToTask()"><i class="fa-solid fa-list-check"></i> <span>Añadir al To Do List</span></button>
           <button class="nt-ico" id="ntMoveBtn" title="Mover a carpeta" aria-label="Mover a carpeta" onclick="ntMoveMenu(event)"><i class="fa-solid fa-folder-tree"></i></button>
           <button class="nt-ico" title="Compartir con el equipo" aria-label="Compartir" onclick="if(ntCurrentId)shareNote(ntCurrentId)"><i class="fa-solid fa-share-nodes"></i></button>
@@ -6407,9 +6521,14 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
           <div id="ntBody" class="nt-body" contenteditable="true" spellcheck="true" oninput="ntOnBody()"></div>
         </div>
         <div class="nt-doc-foot">
-          <button class="nt-save-btn" id="ntSaveBtn" onclick="ntSaveNow()" title="Guardar la nota"><i class="fa-solid fa-floppy-disk"></i> <span data-i18n>Guardar</span></button>
+          <button class="nt-save-btn" id="ntSaveBtn" onclick="ntSaveNow()" title="Guardar la nota"><i class="fa-solid fa-floppy-disk"></i> <span data-i18n>Guardar nota</span></button>
           <span id="ntSaved" class="nt-saved"></span>
         </div>
+      </div>
+      <!-- Popover propio de color de nota (reemplaza el <input type=color> nativo) -->
+      <div class="nt-colorpop" id="ntColorPop" hidden>
+        <div class="nt-colorpop-t">Color de la nota</div>
+        <div class="nt-colorpop-sw" id="ntColorSwatches"></div>
       </div>
     </section>
   </div>
@@ -6811,6 +6930,32 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   </div>
 </div>
 
+<!-- Añadir contacto rápido con lista de distribución (botón "+" móvil) -->
+<div class="modal-backdrop notes-modal" id="qcModal" onclick="if(event.target===this)qcClose()">
+  <div class="fm-box">
+    <div class="fm-head">
+      <div class="fm-title" data-i18n>Añadir contacto</div>
+      <button class="fm-x" onclick="qcClose()" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <label class="fm-label">Nombre</label>
+    <input class="fm-input" id="qcName" placeholder="Nombre y apellido" autocomplete="off">
+    <label class="fm-label">Correo</label>
+    <input class="fm-input" id="qcEmail" type="email" placeholder="correo@ejemplo.com" autocomplete="off">
+    <label class="fm-label">Listas de distribución (opcional, puedes elegir varias)</label>
+    <div class="qc-lists" id="qcLists">
+      <button type="button" class="qc-list" data-l="apertura" onclick="qcToggle(this)"><i class="fa-solid fa-sun"></i> <span>Apertura diaria</span><i class="fa-solid fa-check qc-ck"></i></button>
+      <button type="button" class="qc-list" data-l="gvv" onclick="qcToggle(this)"><i class="fa-solid fa-envelope-open-text"></i> <span>Cartas GVV</span><i class="fa-solid fa-check qc-ck"></i></button>
+    </div>
+    <p class="qc-note"><i class="fa-solid fa-address-book"></i> Siempre se agrega a la <b>Agenda Cretum</b>.</p>
+    <div class="fm-foot">
+      <div class="fm-foot-r">
+        <button class="fm-btn fm-cancel" onclick="qcClose()">Cancelar</button>
+        <button class="fm-btn fm-save" id="qcSaveBtn" onclick="qcSave()">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Editor de plantilla a pantalla completa (edición WYSIWYG directa) -->
 <div class="et-upload-ovl" id="etUploadOverlay" hidden>
   <div class="et-upload-card">
@@ -6977,7 +7122,12 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   <div class="tk-pop-list" id="tkAssignList"></div>
 </div>
 
-<div class="toast" id="toast"><i class="fa-solid fa-circle-check"></i><span id="toastMsg"></span></div>
+<div class="toast" id="toast">
+  <i class="toast-ico fa-solid fa-circle-check" id="toastIco"></i>
+  <span id="toastMsg"></span>
+  <span class="toast-code" id="toastCode" style="display:none"></span>
+  <button class="toast-report" id="toastReport" onclick="toastReportNow()" style="display:none"><i class="fa-solid fa-bug"></i> <span data-i18n>Reportar</span></button>
+</div>
 
 <!-- Overlay de transición entre empresas -->
 <div class="org-transition" id="orgTransition">
@@ -7509,11 +7659,13 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
       <button class="modal-btn td-btn-edit" onclick="tdEditNow()"><i class="fa-solid fa-pen"></i> <span data-i18n>Editar</span></button>
       <button class="modal-btn td-btn-del" onclick="tdDeleteNow()"><i class="fa-solid fa-trash"></i> <span data-i18n>Eliminar</span></button>
       <button class="modal-btn modal-cancel" onclick="closeTaskDetail()" data-i18n>Cerrar</button>
+      <button class="modal-btn td-btn-save" onclick="tdSaveNow()"><i class="fa-solid fa-check"></i> <span data-i18n>Guardar</span></button>
     </div>
   </div>
 </div>
 
-<script src="/i18n.js?v=20260901-lpsearch"></script>
-<script src="/app.js?v=20260901-lpsearch"></script>
+<script src="/i18n.js?v=20260901-mob58"></script>
+<script src="/app.js?v=20260901-mob58"></script>
+<script src="/mobile.js?v=20260901-mob58"></script>
 </body>
 </html>

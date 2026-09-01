@@ -443,7 +443,7 @@ async function mfaCancelEnroll() {
   await mfaRefresh();
 }
 async function mfaDisable(factorId) {
-  if (!confirm('¿Desactivar la verificación en dos pasos?\nTu cuenta quedará protegida solo con contraseña.')) return;
+  if (!(await showConfirm('Desactivar 2FA', 'Tu cuenta quedará protegida solo con contraseña.'))) return;
   try {
     const { error } = await sb.auth.mfa.unenroll({ factorId });
     if (error) throw error;
@@ -718,9 +718,29 @@ function fmtCreated(iso) {
   if (days < 7) return `hace ${days} d`;
   return d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
 }
+// Creación en formato del rediseño móvil: SOLO la hora si es de hoy, la fecha si es más vieja.
+function fmtCreatedAt(iso) {
+  if (!iso) return '';
+  const d = new Date(iso); if (isNaN(d)) return '';
+  const n = new Date();
+  const sameDay = d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate();
+  return sameDay
+    ? d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+    : d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
+}
 // Tooltip con la fecha/hora exacta de creación
 const createdTitle = (iso) => iso ? `Creada el ${new Date(iso).toLocaleString('es-MX')}` : '';
 function isOD(d) { return d && new Date(d + 'T12:00:00') < new Date(); }
+// Bandera de vencimiento para el indicador móvil de la fila:
+//  'od'   → ya venció (reloj rojo)
+//  'soon' → vence dentro de 48 h (reloj amarillo)
+//  'far'  → sin fecha o vence en más de 48 h (reloj azul claro)
+function dueFlag(t) {
+  if (!t || !t.due) return 'far';
+  const due = new Date(t.due + 'T12:00:00'), now = new Date();
+  if (due < now) return 'od';
+  return ((due - now) / 3600000 <= 48) ? 'soon' : 'far';
+}
 function prioC(p) { return p === 'Alta' ? 'lp-a' : p === 'Media' ? 'lp-m' : 'lp-b'; }
 function pct(t) { return Math.min(100, Math.round((t.done / t.total) * 100)); }
 function isDone(t) { return t.kind === 'simple' ? t.done : t.done >= t.total; }
@@ -835,7 +855,10 @@ function tkRow(t, i) {
     <div class="list-item ${done ? 'done-item' : ''}${enter}" data-tid="${t.id}" data-kind="simple" ${delay}>
       ${simpleStatusControl(t.id)}
       <div class="li-name tk-open" onclick="openTaskDetail('${t.id}','simple')" title="Ver detalle">${escapeHtml(t.name)}</div>
+      <span class="li-dueflag lf-${dueFlag(t)}" aria-hidden="true"><i class="fa-regular fa-clock"></i></span>
       <div class="li-meta">
+        ${t.project ? `<span class="li-project">${escapeHtml(t.project)}</span>` : ''}
+        ${t.createdAt ? `<span class="li-createdat">${fmtCreatedAt(t.createdAt)}</span>` : ''}
         ${t.createdAt ? `<span class="li-created" title="${createdTitle(t.createdAt)}"><i class="fa-regular fa-clock"></i> ${fmtCreated(t.createdAt)}</span>` : ''}
         ${t.due ? `<span class="li-due ${od ? 'od' : ''}">${fmtD(t.due)}</span>` : ''}
         <span class="li-prio ${prioC(t.prio)}">${t.prio}</span>
@@ -858,7 +881,10 @@ function tkRow(t, i) {
           <span>${t.done}/${t.total} ${escapeHtml(t.unit)} · ${p}%</span>
         </div>
       </div>
+      <span class="li-dueflag lf-${dueFlag(t)}" aria-hidden="true"><i class="fa-regular fa-clock"></i></span>
       <div class="li-meta">
+        ${t.project ? `<span class="li-project">${escapeHtml(t.project)}</span>` : ''}
+        ${t.createdAt ? `<span class="li-createdat">${fmtCreatedAt(t.createdAt)}</span>` : ''}
         ${t.createdAt ? `<span class="li-created" title="${createdTitle(t.createdAt)}"><i class="fa-regular fa-clock"></i> ${fmtCreated(t.createdAt)}</span>` : ''}
         ${t.due ? `<span class="li-due ${od ? 'od' : ''}">${fmtD(t.due)}</span>` : ''}
         <span class="li-prio ${prioC(t.prio)}">${t.prio}</span>
@@ -889,7 +915,9 @@ function tkCompletedSection(done) {
         <i class="fa-solid fa-chevron-right tk-done-chev"></i> Completadas <span class="tk-group-n">${done.length}</span>
       </button>
     </div>
-    <div class="tk-done-body" style="display:${tkDoneOpen ? '' : 'none'}"><div class="tk-rows">${done.map(tkRow).join('')}</div></div>
+    <div class="tk-done-body" style="display:${tkDoneOpen ? '' : 'none'}"><div class="tk-rows">${done.map(tkRow).join('')}</div>
+      <button class="tk-done-clear" onclick="clearCompletedVisible()"><i class="fa-solid fa-broom"></i> Vaciar completadas</button>
+    </div>
   </div>`;
 }
 
@@ -1017,10 +1045,10 @@ function countMyDone() {
   return state.simple.filter(t => _mine(t) && t.done).length
        + state.progress.filter(t => _mine(t) && t.done >= t.total).length;
 }
-function clearCompleted() {
+async function clearCompleted() {
   const n = countMyDone();
   if (!n) { toast('No hay tareas completadas para vaciar'); maybeOfferClearCompleted(); return; }
-  if (!confirm(`¿Vaciar ${n} tarea${n === 1 ? '' : 's'} completada${n === 1 ? '' : 's'}? Esto las elimina y no se puede deshacer.`)) return;
+  if (!(await showConfirm('Vaciar completadas', `¿Vaciar ${n} tarea${n === 1 ? '' : 's'} completada${n === 1 ? '' : 's'}? Esto las elimina y no se puede deshacer.`))) return;
   state.simple = state.simple.filter(t => !(_mine(t) && t.done));
   state.progress = state.progress.filter(t => !(_mine(t) && t.done >= t.total));
   try { localStorage.setItem('tkClearPromptAt', String(Date.now())); } catch {}
@@ -1030,13 +1058,13 @@ function clearCompleted() {
 }
 // Vacía SOLO las completadas visibles (respeta la carpeta y el ámbito activos), para
 // que coincida con lo que se ve en pantalla. Es la acción del botón del toolbar.
-function clearCompletedVisible() {
+async function clearCompletedVisible() {
   const vis = tkVisibleTasks().filter(isDone);
   const n = vis.length;
   if (!n) { toast('No hay tareas completadas para vaciar'); return; }
   const scope = (tkProjectFilter && tkProjectFilter !== '__none__') ? ` de "${tkProjectFilter}"`
               : tkProjectFilter === '__none__' ? ' sin proyecto' : '';
-  if (!confirm(`¿Vaciar ${n} tarea${n === 1 ? '' : 's'} completada${n === 1 ? '' : 's'}${scope}? Esto las elimina y no se puede deshacer.`)) return;
+  if (!(await showConfirm('Vaciar completadas', `¿Vaciar ${n} tarea${n === 1 ? '' : 's'} completada${n === 1 ? '' : 's'}${scope}? Esto las elimina y no se puede deshacer.`))) return;
   const ids = new Set(vis.map(t => t.id));
   state.simple = state.simple.filter(t => !ids.has(t.id));
   state.progress = state.progress.filter(t => !ids.has(t.id));
@@ -1739,7 +1767,7 @@ async function ntSaveNow() {
     setTimeout(() => {
       btn.classList.remove('ok');
       if (ic) ic.className = 'fa-solid fa-floppy-disk';
-      if (sp) sp.textContent = t('Guardar');
+      if (sp) sp.textContent = t('Guardar nota');
     }, 1600);
   } else if (!ok) {
     toast(t('No se pudo guardar'));
@@ -1860,8 +1888,13 @@ function ntNoteCardHTML(n) {
   const active = String(n.id) === String(ntCurrentId);
   const prev = ntPlainPreview(n.content).slice(0, 90);
   const when = n.updated_at ? fmtCreated(n.updated_at) : '';
+  // Carpeta a la que pertenece la nota (nombre + color) — se muestra arriba en móvil
+  const fld = foldersData.find(x => String(x.id) === String(n.folder_id));
+  const fName = fld ? fld.name : 'General';
+  const fColor = fld ? (fld.color || '#94a3b8') : '';
   return `
       <button class="nt-note${active ? ' on' : ''}" data-id="${n.id}" onclick="ntSelectNote('${n.id}')">
+        <span class="nt-note-folder"${fColor ? ` style="color:${fColor}"` : ''}>${escapeHtml(fName)}</span>
         ${n.color ? `<span class="nt-note-bar" style="background:${n.color}"></span>` : ''}
         <div class="nt-note-t">${escapeHtml(n.title || t('Sin título'))}</div>
         <div class="nt-note-x">${prev ? escapeHtml(prev) : `<span style="opacity:.6">${t('Vacía')}</span>`}</div>
@@ -1906,7 +1939,7 @@ function ntSelectNote(id) {
   document.getElementById('ntDoc').style.display = 'flex';
   ntShellEditing(true);
   document.getElementById('ntTitle').value = n.title || '';
-  document.getElementById('ntColor').value = n.color || '#8b5cf6';
+  ntColorSetDot(n.color || '');
   document.getElementById('ntBody').innerHTML = notesToHtml(n.content);
   const saved = document.getElementById('ntSaved'); if (saved) saved.textContent = '';
   ntHighlightActive();   // solo cambia el resaltado (sin reconstruir la lista → sin parpadeo)
@@ -1988,6 +2021,38 @@ function ntOnBody() {
   const card = document.querySelector(`.nt-note[data-id="${ntCurrentId}"] .nt-note-x`);
   if (card) card.textContent = (body.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 90) || 'Vacía';
 }
+/* Selector de color de la nota — popover propio de swatches (no el <input type=color> nativo) */
+function ntColorSetDot(c) {
+  const dot = document.getElementById('ntColorDot'), btn = document.getElementById('ntColorBtn');
+  if (dot) { dot.style.background = c || 'transparent'; dot.classList.toggle('none', !c); }
+  if (btn) btn.dataset.color = c || '';
+}
+function ntColorSwHTML(cur) {
+  return NOTE_COLORS.map(c => `<button type="button" class="cm-sw${cur === c ? ' on' : ''}" style="--sw:${c}" aria-label="Color" onclick="ntColorPick('${c}')"></button>`).join('')
+    + `<button type="button" class="cm-sw cm-none${!cur ? ' on' : ''}" title="Sin color" aria-label="Sin color" onclick="ntColorPick('')"><i class="fa-solid fa-xmark"></i></button>`;
+}
+function ntColorOutside(e) {
+  const pop = document.getElementById('ntColorPop');
+  if (pop && !pop.contains(e.target) && !e.target.closest?.('#ntColorBtn')) ntColorClose();
+}
+function ntColorOpen(ev) {
+  ev?.stopPropagation();
+  const pop = document.getElementById('ntColorPop'), sw = document.getElementById('ntColorSwatches'), btn = document.getElementById('ntColorBtn');
+  if (!pop || !sw || !btn) return;
+  if (!pop.hidden) { ntColorClose(); return; }
+  sw.innerHTML = ntColorSwHTML(btn.dataset.color || '');
+  pop.hidden = false;
+  const r = btn.getBoundingClientRect();
+  pop.style.top = Math.min(r.bottom + 8, window.innerHeight - pop.offsetHeight - 12) + 'px';
+  pop.style.left = Math.max(12, Math.min(r.left, window.innerWidth - pop.offsetWidth - 12)) + 'px';
+  setTimeout(() => document.addEventListener('click', ntColorOutside), 0);
+}
+function ntColorClose() {
+  const pop = document.getElementById('ntColorPop'); if (pop) pop.hidden = true;
+  document.removeEventListener('click', ntColorOutside);
+}
+function ntColorPick(c) { ntColorClose(); ntColorSetDot(c); ntSetColor(c); }
+
 async function ntSetColor(v) {
   if (!ntCurrentId) return;
   await setNoteColor(ntCurrentId, v);
@@ -2279,6 +2344,13 @@ function renderTaskDetail() {
   document.getElementById('tdDesc').innerHTML = html;
   // Posiciona el indicador de la píldora de estatus (instantáneo al abrir)
   requestAnimationFrame(() => { const s = document.getElementById('tdSeg'); if (s) segMove(s, false); });
+}
+// Guardar desde el detalle: persiste ya (el estatus se auto-guarda, pero da la
+// retroalimentación explícita que el usuario espera) y cierra con confirmación.
+function tdSaveNow() {
+  try { if (typeof saveData === 'function') saveData(); else if (typeof scheduleSave === 'function') scheduleSave(); } catch (e) {}
+  toast('Cambios guardados');
+  closeTaskDetail();
 }
 function tdEditNow() { const id = tdId, kind = tdKind; closeTaskDetail(); openEditTask(id, kind); }
 async function tdDeleteNow() { const id = tdId, kind = tdKind; closeTaskDetail(); await del(id, kind); }
@@ -3169,12 +3241,124 @@ function declineInvite(id) {
    TOAST
 ═══════════════════════════════════════════ */
 let _tt;
-function toast(msg) {
+/* ═══════════════════════════════════════════
+   NOTIFICACIONES (píldora fit-to-text por tipo) + MANEJO DE ERRORES
+   - toast(msg, type?)   type: 'success'|'info'|'warn'|'error' (auto por texto si se omite)
+   - toastError(msg, code, detail?)  → píldora ROJA con código + botón "Reportar"
+   El código identifica el error para que cualquiera (admin/dev) lo ubique y arregle.
+═══════════════════════════════════════════ */
+const TOAST_ICO = {
+  success: 'fa-circle-check', info: 'fa-circle-info',
+  warn: 'fa-triangle-exclamation', error: 'fa-circle-exclamation',
+};
+let _lastErr = null;
+// Código estable a partir del mensaje: mismo error → mismo código (grep-eable).
+function toastCode(s) {
+  let h = 0; const str = String(s || '');
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+  return 'ERR-' + h.toString(36).toUpperCase().slice(0, 6);
+}
+function toast(msg, type) {
   clearTimeout(_tt);
-  const el = document.getElementById('toast');
+  if (!type) type = /error|fall|no se pudo|no se pudieron|inv[aá]lid|denegad|sin sesi|falta/i.test(String(msg)) ? 'error' : 'success';
+  const el = document.getElementById('toast'); if (!el) return;
+  el.className = 'toast t-' + type;
+  const ico = document.getElementById('toastIco'); if (ico) ico.className = 'toast-ico fa-solid ' + (TOAST_ICO[type] || TOAST_ICO.success);
   document.getElementById('toastMsg').textContent = msg;
+  const codeEl = document.getElementById('toastCode'), rep = document.getElementById('toastReport');
+  if (type === 'error') {
+    _lastErr = { msg: String(msg), code: toastCode(msg), detail: '' };
+    if (codeEl) { codeEl.textContent = _lastErr.code; codeEl.style.display = ''; }
+    if (rep) rep.style.display = '';
+    try { console.error('[' + _lastErr.code + '] ' + msg); } catch (e) {}
+  } else {
+    if (codeEl) codeEl.style.display = 'none';
+    if (rep) rep.style.display = 'none';
+  }
   el.classList.add('show');
-  _tt = setTimeout(() => el.classList.remove('show'), 3000);
+  _tt = setTimeout(() => el.classList.remove('show'), type === 'error' ? 6000 : 3000);
+}
+// Error con CÓDIGO semántico explícito (p. ej. 'ERR-TASK-SAVE') + detalle técnico opcional.
+function toastError(msg, code, detail) {
+  _lastErr = { msg: String(msg), code: code || 'ERR', detail: detail || '' };
+  clearTimeout(_tt);
+  const el = document.getElementById('toast'); if (!el) return;
+  el.className = 'toast t-error';
+  const ico = document.getElementById('toastIco'); if (ico) ico.className = 'toast-ico fa-solid ' + TOAST_ICO.error;
+  document.getElementById('toastMsg').textContent = msg;
+  const codeEl = document.getElementById('toastCode'), rep = document.getElementById('toastReport');
+  if (codeEl) { codeEl.textContent = _lastErr.code; codeEl.style.display = ''; }
+  if (rep) rep.style.display = '';
+  el.classList.add('show');
+  try { console.error('[' + _lastErr.code + '] ' + msg + (detail ? '\n' + detail : '')); } catch (e) {}
+  _tt = setTimeout(() => el.classList.remove('show'), 7000);
+}
+// Botón "Reportar" de la píldora de error → abre el reporte prellenado con el código,
+// para que llegue a los administradores como tarea (submitReport) y se pueda arreglar.
+function toastReportNow() {
+  const e = _lastErr || {};
+  if (typeof openReportModal === 'function') openReportModal();
+  const view = (document.getElementById('headerBrandText')?.textContent || '').trim() || '—';
+  const ta = document.getElementById('reportText');
+  if (ta) ta.value = `[${e.code || 'ERR'}] ${e.msg || 'Error'}\nVista: ${view}\nHora: ${new Date().toLocaleString('es-MX')}` + (e.detail ? `\n${e.detail}` : '');
+  const fallo = document.querySelector('#reportTypes .report-type[data-type="Fallo"]');
+  if (fallo && typeof reportPickType === 'function') reportPickType(fallo);
+}
+// Red de seguridad: errores JS y promesas sin capturar → píldora roja (con dedupe corto).
+let _errSeen = {};
+function _globalErr(msg, code, detail) {
+  const now = Date.now();
+  if (_errSeen[code] && now - _errSeen[code] < 8000) return;   // no spamear el mismo
+  _errSeen[code] = now;
+  toastError(msg, code, detail);
+}
+window.addEventListener('error', function (ev) {
+  if (!ev || !ev.message) return;
+  const src = String(ev.filename || '').split('/').pop();
+  _globalErr('Ocurrió un error inesperado', 'ERR-JS-' + (ev.lineno || 0), `${ev.message} @ ${src}:${ev.lineno || 0}:${ev.colno || 0}`);
+});
+window.addEventListener('unhandledrejection', function (ev) {
+  const r = ev && ev.reason;
+  const m = (r && (r.message || r.error || r.msg)) || (typeof r === 'string' ? r : 'Operación fallida');
+  _globalErr('Falló una operación en segundo plano', toastCode('async:' + m), String(m).slice(0, 300));
+});
+
+/* ═══════════════════════════════════════════
+   AÑADIR CONTACTO RÁPIDO (con lista de distribución) — desde el botón "+" móvil
+   Listas: Agenda Cretum (cretum_contactos) · Apertura diaria (apertura_contacts) · Cartas GVV (lp_contacts)
+═══════════════════════════════════════════ */
+function qcOpen() {
+  const n = document.getElementById('qcName'); if (n) n.value = '';
+  const em = document.getElementById('qcEmail'); if (em) em.value = '';
+  document.querySelectorAll('#qcLists .qc-list').forEach(b => b.classList.remove('on'));  // listas extra: ninguna por default
+  document.getElementById('qcModal')?.classList.add('show');
+  setTimeout(() => document.getElementById('qcName')?.focus(), 60);
+}
+function qcClose() { document.getElementById('qcModal')?.classList.remove('show'); }
+function qcToggle(btn) { btn.classList.toggle('on'); }   // multi-selección de listas de distribución
+async function qcSave() {
+  const name = (document.getElementById('qcName')?.value || '').trim();
+  const email = (document.getElementById('qcEmail')?.value || '').trim().toLowerCase();
+  if (!name && !email) { toast('Pon al menos un nombre o correo', 'warn'); return; }
+  const lists = [...document.querySelectorAll('#qcLists .qc-list.on')].map(b => b.dataset.l);
+  if (lists.length && !email) { toast('Las listas de distribución necesitan un correo', 'warn'); return; }
+  const btn = document.getElementById('qcSaveBtn'); if (btn) btn.disabled = true;
+  try {
+    // La AGENDA (cretum_contactos) es la base maestra: todo contacto va aquí SIEMPRE.
+    let r = email
+      ? await sb.from('cretum_contactos').upsert({ email, nombre: name || '' }, { onConflict: 'email' })
+      : await sb.from('cretum_contactos').insert({ nombre: name || '' });
+    if (r.error) throw r.error;
+    // Listas de distribución adicionales (multi).
+    if (lists.includes('apertura')) { r = await sb.from('apertura_contacts').upsert({ email, nombre: name || null }, { onConflict: 'email' }); if (r.error) throw r.error; }
+    if (lists.includes('gvv'))      { r = await sb.from('lp_contacts').upsert({ email, nombre: name || null }, { onConflict: 'email' }); if (r.error) throw r.error; }
+    const extra = lists.length ? (' + ' + lists.map(l => l === 'apertura' ? 'Apertura' : 'Cartas GVV').join(' + ')) : '';
+    toast('Contacto agregado a la Agenda' + extra, 'success');
+    qcClose();
+    if (typeof loadContactos === 'function' && currentView === 'contactos') loadContactos();
+  } catch (e) {
+    toastError('No se pudo agregar el contacto', 'ERR-CONTACT-ADD', (e && e.message) || '');
+  } finally { if (btn) btn.disabled = false; }
 }
 
 /* ═══════════════════════════════════════════
@@ -6581,8 +6765,16 @@ window.addEventListener('hashchange', () => {
 // window.matchMedia('(max-width:860px)').matches (ver el editor de Notas).
 function dismissTopLayer() {
   const q = id => document.getElementById(id);
+  // 0-) Capas del rediseño móvil (mobile.js): desplegable de proyecto, hoja crear,
+  //     pantalla de perfil y feed de noticias. Cierran con "atrás" antes que nada.
+  if (q('mobProjDD')?.classList.contains('open'))   { window.mobProjClose?.(true); return true; }
+  if (q('mobFolderDD')?.classList.contains('open')) { window.mobFolderClose?.(true); return true; }
+  if (q('mobSheet')?.classList.contains('open'))  { window.mobCloseSheet?.(true); return true; }
+  if (q('mobProf')?.classList.contains('open'))   { window.mobCloseProfile?.(true); return true; }
+  if (q('mobFeed')?.classList.contains('open'))   { window.mobCloseFeed?.(true); return true; }
   // 0) Popovers ligeros del editor de notas (mover a carpeta / enlace)
   if (q('ntMovePop') && !q('ntMovePop').hidden) { ntMoveClose(); return true; }
+  if (q('ntColorPop') && !q('ntColorPop').hidden) { ntColorClose(); return true; }
   if (q('ntLinkPop') && !q('ntLinkPop').hidden) { ntLinkClose(); return true; }
   // 0b) Menú de perfil (dropdown de la cuenta)
   if (q('settingsPop')?.classList.contains('show')) { q('settingsPop').classList.remove('show'); q('headerUserBtn')?.classList.remove('open'); return true; }
@@ -10109,7 +10301,7 @@ async function contactAdd(investorId) {
   openInvestor(investorId);   // re-render para mostrar la fila editable nueva
 }
 async function contactDelete(id) {
-  if (!confirm('¿Borrar este contacto?')) return;
+  if (!(await showConfirm('Borrar contacto', '¿Seguro que quieres borrar este contacto?'))) return;
   const invId = lastInvestorDetail?.inv?.id;
   const { error } = await sb.from('contacts').delete().eq('id', id);
   if (error) { toast('Error al borrar: ' + error.message); return; }
@@ -13797,23 +13989,35 @@ async function loadAperturaTabla() {
   }
 }
 
+let aptTbl10 = false, aptTblActive = false;
+function aptTblChip(which) {
+  if (which === 'd10') aptTbl10 = !aptTbl10;
+  if (which === 'active') aptTblActive = !aptTblActive;
+  renderAperturaTabla();
+}
 function renderAperturaTabla() {
   if (!aptTblRows) return;
   const q = ccStrip(document.getElementById('aptTblSearch')?.value);
   let rows = aptTblRows;
   if (q) rows = rows.filter(c => ccStrip(c.nombre).includes(q) || ccNorm(c.email).includes(q));
+  if (aptTbl10) rows = rows.filter(c => (c.dias || 0) >= 10);
+  if (aptTblActive) rows = rows.filter(c => (c.dias || 0) >= 1);
   const cnt = document.getElementById('aptTblCount');
-  if (cnt) cnt.textContent = `${rows.length} de ${aptTblRows.length}`;
+  if (cnt) cnt.textContent = `${rows.length} de ${aptTblRows.length} ${t('contactos')}`;
+  document.getElementById('aptTbl10Chip')?.classList.toggle('on', aptTbl10);
+  document.getElementById('aptTblActiveChip')?.classList.toggle('on', aptTblActive);
   const list = document.getElementById('aptTblList');
-  if (!rows.length) { list.innerHTML = `<div class="camp-empty-mini"><i class="fa-solid fa-address-book"></i><p>Sin contactos que coincidan.</p></div>`; return; }
+  if (!rows.length) { list.innerHTML = `<div class="camp-empty-mini"><i class="fa-solid fa-address-book"></i><p>${t('Sin contactos que coincidan.')}</p></div>`; return; }
   rows = rows.slice().sort((a, b) => b.dias - a.dias || (a.nombre || a.email).localeCompare(b.nombre || b.email, 'es'));
-  const body = rows.map(c => `<tr>
-    <td class="ctbl-nm">${escapeHtml(c.nombre || '—')}</td>
-    <td class="ctbl-em">${escapeHtml(c.email)}</td>
-    <td style="text-align:center">${c.dias ? `<span class="ctbl-streak">${c.dias}</span>` : '<span class="ctbl-vistos">0</span>'}</td>
-    <td class="ctbl-vistos">${c.ultimo ? escapeHtml(c.ultimo) : '—'}</td>
-  </tr>`).join('');
-  list.innerHTML = `<div class="cc-tablewrap"><table class="ctbl-table"><thead><tr><th>Nombre</th><th>Correo</th><th>Aperturas</th><th>Último día</th></tr></thead><tbody>${body}</tbody></table></div>`;
+  list.innerHTML = `<div class="cc-people">` + rows.map(c => {
+    const nm = c.nombre || c.email;
+    const inits = (nm || '?').trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
+    return `<div class="cc-person">
+      <span class="cc-av">${escapeHtml(inits)}</span>
+      <div class="cc-id"><div class="cc-nm">${escapeHtml(nm)}</div><div class="cc-em">${escapeHtml(c.email)}</div></div>
+      <div class="cc-meta"><div class="cc-op">${c.dias || 0}</div><div class="cc-dt">${c.ultimo ? escapeHtml(c.ultimo) : '—'}</div></div>
+    </div>`;
+  }).join('') + `</div>`;
 }
 
 /* ── Gestión de contactos de Apertura (solo admin): añadir/editar/quitar/exportar ── */
@@ -13916,10 +14120,20 @@ async function aptGestDelete(email) {
 }
 
 // Exporta TODOS los contactos de Apertura a CSV (no solo lo filtrado).
-async function aptGestExport() {
+async function aptGestExport(fmt = 'csv') {
   if (!aptGest || !aptGest.length) { toast('No hay contactos para exportar'); return; }
-  const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
   const rows = aptGest.slice().sort((a, b) => (a.nombre || a.email).localeCompare(b.nombre || b.email, 'es'));
+  if (fmt === 'txt') {
+    // Yesware desde el teléfono no acepta CSV: solo correos, uno por línea, sin encabezado
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([rows.map(c => c.email).join('\r\n')], { type: 'text/plain;charset=utf-8' }));
+    a.download = `apertura_correos_${new Date().toISOString().slice(0, 10)}.txt`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    toast(`Exportados ${rows.length} correos a TXT`);
+    return;
+  }
+  const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
   const lines = ['﻿nombre,correo', ...rows.map(c => `${q(c.nombre || '')},${q(c.email)}`)];
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([lines.join('\r\n')], { type: 'text/csv;charset=utf-8' }));
@@ -14242,6 +14456,27 @@ function renderCampRanking(rows) {
   }).join('');
 }
 
+/* ── Tarjeta hero de Campaña Actual: solo datos reales (mes + rendimientos de params).
+   No hay enviados/aperturas/rebotes/tasa en la fuente, así que no se muestran. ── */
+function campActualCardHTML(data) {
+  const p = data.params || {};
+  const mesLbl = data.mes || (p.anio ? String(p.anio) : '');
+  let upd = '';
+  try { if (data.updated_at) upd = new Date(data.updated_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }); } catch (e) {}
+  const stats = [];
+  if (p.mensual != null && p.mensual !== '') stats.push({ v: `${p.mensual}%`, k: t('Rendimiento del mes') });
+  if (p.acum != null && p.acum !== '') stats.push({ v: `${p.acum}%`, k: t('Acumulado') });
+  const tiles = stats.length
+    ? `<div class="camp-hero-stats">${stats.map(s => `<div class="camp-hero-stat"><div class="camp-hero-sv">${escapeHtml(String(s.v))}</div><div class="camp-hero-sk">${escapeHtml(s.k)}</div></div>`).join('')}</div>`
+    : '';
+  return `<div class="camp-hero">
+    <div class="camp-hero-kicker">${t('CAMPAÑA DEL MES')}</div>
+    <div class="camp-hero-title">${t('Carta Mensual GVV')}${mesLbl ? ` · ${escapeHtml(mesLbl)}` : ''}</div>
+    ${upd ? `<div class="camp-hero-sub">${t('Actualizada el')} ${escapeHtml(upd)}</div>` : ''}
+    ${tiles}
+  </div>`;
+}
+
 /* ── Campaña Actual (todos) — última plantilla generada por el admin ── */
 async function loadCampActual() {
   const frameWrap = document.querySelector('#campPaneActual .camp-actual-frame-wrap');
@@ -14251,8 +14486,10 @@ async function loadCampActual() {
     const { data, error } = await sb.from('campaign_current').select('html, mes, updated_at, params').eq('id', 1).maybeSingle();
     if (error) throw error;
     campCurrentParams = data?.params || null;
+    const card = document.getElementById('campActualCard');
     if (!data || !data.html) {
       if (frameWrap) frameWrap.style.display = 'none';
+      if (card) card.innerHTML = '';
       if (note) note.innerHTML = `<i class="fa-solid fa-circle-info"></i> Aún no hay una campaña publicada.`;
       return;
     }
@@ -14260,6 +14497,7 @@ async function loadCampActual() {
     frame.srcdoc = `<!doctype html><html><head><meta charset="utf-8"></head><body style="margin:0">${data.html}</body></html>`;
     const visto = campLatestPeriodo ? periodoLabel(campLatestPeriodo) : (data.mes || '—');
     note.innerHTML = `<span class="badge">${escapeHtml(data.mes || 'Campaña')}</span> Último visto: ${escapeHtml(visto)}`;
+    if (card) card.innerHTML = campActualCardHTML(data);
   } catch (err) {
     console.error('[campActual]', err);
     if (note) note.innerHTML = `<i class="fa-solid fa-circle-info"></i> No se pudo cargar la campaña actual.`;
@@ -14464,52 +14702,40 @@ function campLpClose() { document.getElementById('campLpModal').classList.remove
    aparece cuando el ranking entregó email (can_cretum_db) → trae datos + notas. ── */
 let pdContactId = null;
 function personHistHTML(hist, kind) {
+  // Detalle "mes con mes" al estilo del rediseño móvil: 3 mosaicos + barras por mes.
+  // Campañas ya viene mensual (número = nivel 0-3). Apertura viene por día → se agrega
+  // a meses (número = días que abrió ese mes). Nada inventado: todo sale del historial.
+  const isApt = kind === 'apertura';
   const vistos = hist.filter(h => h.nivel >= 1);
   if (!vistos.length) {
-    return `<div class="camp-empty-mini"><i class="fa-solid fa-envelope"></i><p>Aún no registra interacciones.</p></div>`;
+    return `<div class="camp-empty-mini"><i class="fa-solid fa-envelope"></i><p>${t('Aún no registra interacciones.')}</p></div>`;
   }
-  if (kind === 'apertura') {
-    const dias = vistos.length;
-    const clicks = hist.filter(h => h.clicked).length;
-    const desde = vistos[0].fecha;
-    const frase = `Ha abierto el correo de Apertura <strong>${dias}</strong> ${dias === 1 ? 'día' : 'días'}` +
-      (clicks ? `, con <strong>${clicks}</strong> ${clicks === 1 ? 'clic' : 'clics'}` : '') +
-      ` desde <strong>${desde}</strong>.`;
-    const DESC = ['Sin interacción', 'Abrió el correo', 'Abrió y dio clic'];
-    const tl = hist.slice().reverse().map(h => `<div class="camp-lp-tl-row">
-        <span class="camp-lp-dot n${h.nivel}"></span>
-        <span class="camp-lp-mes">${h.fecha}</span>
-        <span class="camp-lp-desc n${h.nivel}">${DESC[h.nivel] || DESC[0]}</span>
-      </div>`).join('');
-    return `<div class="camp-lp-summary">${frase}</div>
-      <div class="camp-lp-stats">
-        <div class="camp-lp-stat"><div class="camp-lp-stat-n">${dias}</div><div class="camp-lp-stat-l">días vistos</div></div>
-        <div class="camp-lp-stat"><div class="camp-lp-stat-n">${clicks}</div><div class="camp-lp-stat-l">clics</div></div>
-      </div>
-      <div class="camp-lp-tl">${tl}</div>`;
+  const MES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+  const ymLabel = k => { const p = String(k).split('-'); return `${MES[(+p[1] || 1) - 1]} ${(p[0] || '').slice(2)}`; };
+  const score = hist.reduce((s, h) => s + (h.nivel || 0), 0);
+  let rows, ultimo;
+  if (isApt) {
+    const by = {};
+    hist.forEach(h => { const k = String(h.fecha).slice(0, 7); (by[k] = by[k] || { n: 0 }); if (h.nivel >= 1) by[k].n++; });
+    const keys = Object.keys(by).sort();
+    const mx = Math.max(1, ...keys.map(k => by[k].n));
+    rows = keys.map(k => ({ label: ymLabel(k), n: by[k].n, pct: Math.round(by[k].n / mx * 100) }));
+    ultimo = String(vistos[vistos.length - 1].fecha);
+  } else {
+    rows = hist.map(h => ({ label: ymLabel(String(h.periodo).slice(0, 7)), n: h.nivel, pct: Math.round((h.nivel / 3) * 100) }));
+    ultimo = ymLabel(String(vistos[vistos.length - 1].periodo).slice(0, 7));
   }
-  // campaña
-  const abiertos = hist.filter(h => h.opened).length;
-  const cartas = hist.filter(h => h.clicked).length;
-  const resp = hist.filter(h => h.replied).length;
-  const desde = periodoLabel(vistos[0].periodo);
-  const frase = `Ha visto la carta <strong>${cartas}</strong> ${cartas === 1 ? 'vez' : 'veces'}, ` +
-    `con <strong>${resp}</strong> ${resp === 1 ? 'respuesta' : 'respuestas'}, ` +
-    `y ha abierto nuestros correos <strong>${abiertos}</strong> ${abiertos === 1 ? 'vez' : 'veces'} ` +
-    `desde <strong>${desde}</strong>.`;
-  const DESC = ['Sin interacción', 'Abrió el correo', 'Abrió el correo y vio la carta', 'Abrió, vio la carta y respondió'];
-  const tl = hist.map(h => `<div class="camp-lp-tl-row">
-      <span class="camp-lp-dot n${h.nivel}"></span>
-      <span class="camp-lp-mes">${periodoLabel(h.periodo)}</span>
-      <span class="camp-lp-desc n${h.nivel}">${DESC[h.nivel] || DESC[0]}</span>
+  const tiles = `<div class="camp-lp-stats">
+      <div class="camp-lp-stat"><div class="camp-lp-stat-n">${score}</div><div class="camp-lp-stat-l">${t('aperturas')}</div></div>
+      <div class="camp-lp-stat"><div class="camp-lp-stat-n sm">${escapeHtml(ultimo)}</div><div class="camp-lp-stat-l">${isApt ? t('último día') : t('último mes')}</div></div>
+      <div class="camp-lp-stat"><div class="camp-lp-stat-n sm">${isApt ? 'Apertura' : 'GVV'}</div><div class="camp-lp-stat-l">${t('lista')}</div></div>
+    </div>`;
+  const bars = rows.map(r => `<div class="camp-lp-mrow">
+      <span class="camp-lp-mm">${escapeHtml(r.label)}</span>
+      <span class="camp-lp-mbar"><span class="camp-lp-mfill" style="width:${r.pct}%"></span></span>
+      <span class="camp-lp-mn">${r.n}</span>
     </div>`).join('');
-  return `<div class="camp-lp-summary">${frase}</div>
-    <div class="camp-lp-stats">
-      <div class="camp-lp-stat"><div class="camp-lp-stat-n">${abiertos}</div><div class="camp-lp-stat-l">correos abiertos</div></div>
-      <div class="camp-lp-stat"><div class="camp-lp-stat-n">${cartas}</div><div class="camp-lp-stat-l">cartas vistas</div></div>
-      <div class="camp-lp-stat"><div class="camp-lp-stat-n">${resp}</div><div class="camp-lp-stat-l">respuestas</div></div>
-    </div>
-    <div class="camp-lp-tl">${tl}</div>`;
+  return `${tiles}<div class="camp-lp-mtitle">${t('Detalle mes con mes')}</div><div class="camp-lp-months">${bars}</div>`;
 }
 function personInfoHTML(c, email) {
   if (!c) return `<div class="ccd-empty">${t('Ese contacto no está en la base todavía')}${email ? ' — ' + escapeHtml(email) : ''}</div>`;
@@ -14539,7 +14765,11 @@ function pdTab(which) {
 }
 async function personDetailOpen(nombre, email, hist, kind) {
   pdContactId = null;
-  document.getElementById('campLpName').innerHTML = `<i class="fa-solid fa-user"></i> ${escapeHtml(nombre)}`;
+  const inits = (nombre || email || '?').trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
+  document.getElementById('campLpName').innerHTML =
+    `<span class="pd-av">${escapeHtml(inits)}</span>` +
+    `<span class="pd-hid"><span class="pd-hnm">${escapeHtml(nombre || email || '—')}</span>` +
+    (email ? `<span class="pd-hem">${escapeHtml(email)}</span>` : '') + `</span>`;
   const body = document.getElementById('campLpBody');
   const hasInfo = !!email;   // el ranking solo entrega email a quien puede ver la BD Cretum
   body.innerHTML = (hasInfo ? `
@@ -14670,6 +14900,13 @@ function renderCampaigns() {
     return;
   }
 
+  // En móvil: tarjetas por LP con fila-heatmap (misma data), en vez de la matriz ancha.
+  if (window.matchMedia('(max-width:768px)').matches) {
+    matrix.innerHTML = `<div class="cg-list">` +
+      contacts.map(c => campMatrixCardHTML(c, visPeriods, lvl, vistosMap.get(c.email) || 0)).join('') + `</div>`;
+    return;
+  }
+
   // Header fila 1: cada mes agrupa 3 sub-columnas; bandas alternadas + botón borrar mes
   const grpCells = visPeriods.map((p, i) =>
     `<th class="camp-mth-grp camp-g${i % 2}" colspan="3" title="${periodoLabel(p)}">` +
@@ -14719,6 +14956,52 @@ function renderCampaigns() {
       </thead>
       <tbody>${bodyRows}</tbody>
     </table>
+  </div>`;
+}
+
+/* ── Gestión en móvil: tarjeta por LP con fila-heatmap por mes + momentum ──
+   Reusa la misma data de la matriz (niveles 0-3 por periodo). El "momentum" es
+   un resumen derivado de la secuencia de niveles, no un dato inventado. ── */
+function campMomentumLabel(lv) {
+  const active = lv.filter(v => v >= 1).length;
+  if (!active) return { t: 'Sin actividad', c: 'mut' };
+  let streak = 0; for (let i = lv.length - 1; i >= 0; i--) { if (lv[i] >= 1) streak++; else break; }
+  const last = lv[lv.length - 1], prev = lv.length > 1 ? lv[lv.length - 2] : 0;
+  if (streak >= 3) return { t: 'Constante', c: 'up' };
+  if (last > prev) return { t: 'Subiendo', c: 'up' };
+  if (last === 0 && prev >= 1) return { t: 'Se enfrió', c: 'down' };
+  if (last < prev) return { t: 'Bajando', c: 'down' };
+  return { t: 'Estable', c: 'flat' };
+}
+function campMatrixCardHTML(c, visPeriods, lvl, vistos) {
+  const nombre = escapeHtml(c.nombre_completo || c.nombre || '—');
+  const nm = c.nombre_completo || c.nombre || c.email || '?';
+  const inits = nm.trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
+  const lv = visPeriods.map(p => lvl.get(`${c.email}|${p}`) || 0);
+  const cells = visPeriods.map((p, i) =>
+    `<span class="cg-cell cg-l${lv[i]}" title="${periodoLabel(p)}: nivel ${lv[i]}"></span>`).join('');
+  const first = visPeriods[0], last = visPeriods[visPeriods.length - 1];
+  const range = first ? `${MESES_ES[(+first.slice(5, 7)) - 1].slice(0, 3)} '${first.slice(2, 4)} → ${MESES_ES[(+last.slice(5, 7)) - 1].slice(0, 3)} '${last.slice(2, 4)}` : '';
+  const mom = campMomentumLabel(lv);
+  return `<div class="cg-card${c.cancelado ? ' cg-cancel' : ''}">
+    <div class="cg-top">
+      <span class="cc-av">${escapeHtml(inits)}</span>
+      <div class="cc-id" onclick="campLpOpenEmail('${jsArg(c.email)}')" style="cursor:pointer" title="${t('Ver detalle de interacción')}">
+        <div class="cc-nm">${nombre}${c.cancelado ? ' <span class="camp-cancel-badge">CANCELÓ</span>' : ''}</div>
+        <div class="cc-em">${escapeHtml(c.email)}${c.responsable ? ' · ' + escapeHtml(c.responsable) : ''}</div>
+      </div>
+      <div class="cg-acts">
+        <button class="ctbl-act" title="${t('Editar contacto')}" onclick="event.stopPropagation();campEditContactOpen('${jsArg(c.email)}')"><i class="fa-solid fa-pen"></i></button>
+        <button class="ctbl-act" title="${c.cancelado ? t('Reactivar') : t('Marcar como cancelado')}" onclick="event.stopPropagation();campToggleCancel('${jsArg(c.email)}')"><i class="fa-solid ${c.cancelado ? 'fa-rotate-left' : 'fa-ban'}"></i></button>
+        <button class="ctbl-act del" title="${t('Borrar contacto')}" onclick="event.stopPropagation();campDeleteContact('${jsArg(c.email)}')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+    </div>
+    <div class="cg-hm">${cells}</div>
+    <div class="cg-foot">
+      <span class="cg-range">${range}</span>
+      <span class="cg-mom cg-${mom.c}">${t(mom.t)}</span>
+      <span class="cg-vistos"><b>${vistos}</b> ${t('vistos')}</span>
+    </div>
   </div>`;
 }
 
@@ -15853,6 +16136,46 @@ function renderContactos() {
   if (!rows.length) { list.innerHTML = `<div class="cc-empty"><i class="fa-solid fa-address-book"></i>Sin contactos que coincidan.</div>`; return; }
   const shown = rows.slice(0, ccCap);
   const canW = ccCanWrite();
+
+  // En móvil: mosaicos de stats + tarjeta por contacto (avatar, badge de estado,
+  // chips org/puesto, acciones abajo) — misma data y mismos handlers que la tabla.
+  if (window.matchMedia('(max-width:768px)').matches) {
+    if (meta) meta.innerHTML =
+      `<div class="ccm-tile"><b>${cretumContactos.length.toLocaleString('es')}</b><span>${t('contactos')}</span></div>` +
+      `<div class="ccm-tile"><b>${rows.length.toLocaleString('es')}</b><span>${t('en la vista')}</span></div>` +
+      `<div class="ccm-tile rev"><b>${nRev.toLocaleString('es')}</b><span>${t('por revisar')}</span></div>`;
+    const cards = shown.map(c => {
+      const nombre = (c.nombre || '').trim();
+      const inits = nombre ? nombre.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() : '—';
+      const badge = c.rebote ? `<span class="ccc-state reb">${t('rebotó')}</span>`
+        : (c.revisar ? `<span class="ccc-state rev">${t('revisar')}</span>` : '');
+      const chips = (c.organizacion ? `<span class="ccc-chip">${escapeHtml(c.organizacion)}</span>` : '') +
+                    (c.puesto ? `<span class="ccc-chip">${escapeHtml(c.puesto)}</span>` : '');
+      const acts = canW ? `<div class="ccc-acts" onclick="event.stopPropagation()">
+        <button class="ccc-act${c.revisar ? ' on-rev' : ''}" title="${c.revisar ? 'Quitar marca por revisar' : 'Marcar por revisar (posible personal)'}" onclick="ccToggle('${c.id}','revisar')"><i class="fa-solid fa-flag"></i>${t('Marcar')}</button>
+        <button class="ccc-act${c.rebote ? ' on-reb' : ''}" title="${c.rebote ? 'Quitar rebote' : 'Marcar: el correo rebotó'}" onclick="ccToggle('${c.id}','rebote')"><i class="fa-solid fa-triangle-exclamation"></i>${t('Rebote')}</button>
+        <button class="ccc-act" onclick="ccEditOpen('${c.id}')"><i class="fa-solid fa-pen"></i>${t('Editar')}</button>
+        <button class="ccc-act del" onclick="ccDelete('${c.id}')"><i class="fa-solid fa-trash"></i>${t('Borrar')}</button>
+      </div>` : '';
+      return `<div class="ccc-card" onclick="ccDetailOpen('${c.id}')">
+        <div class="ccc-top">
+          <span class="ccc-av${nombre ? '' : ' noname'}">${escapeHtml(inits)}</span>
+          <div class="ccc-id">
+            <div class="ccc-nm${nombre ? '' : ' noname'}">${escapeHtml(nombre || t('(sin nombre)'))}</div>
+            <div class="ccc-em">${escapeHtml(c.email || '')}</div>
+          </div>
+          ${badge}
+        </div>
+        ${chips ? `<div class="ccc-chips">${chips}</div>` : ''}
+        ${acts}
+      </div>`;
+    }).join('');
+    list.innerHTML = `<div class="ccc-list">${cards}</div>`;
+    if (rows.length > ccCap) list.insertAdjacentHTML('beforeend',
+      `<button class="cc-more" onclick="ccShowMore()">${t('Mostrar más')} (${(rows.length - ccCap).toLocaleString('es')} ${t('restantes')})</button>`);
+    return;
+  }
+
   const body = shown.map(c => {
     const nombre = (c.nombre || '').trim() || '(sin nombre)';
     const tags = (c.revisar ? '<span class="cc-tag rev" title="Posible personal, por revisar">revisar</span>' : '') +
@@ -16416,9 +16739,10 @@ function renderContactsTabla() {
   // Calendario global de campañas (meses con datos) para medir rachas continuas
   const allPeriods = [...new Set(ctblContacts.flatMap(c => (c.hist || []).map(h => periodoKey(h.periodo))))].sort();
 
-  const body = rows.map(c => {
+  list.innerHTML = `<div class="cc-people">` + rows.map(c => {
     const mine = ctblIsMine(c);
-    const resp = c.responsable ? escapeHtml(c.responsable) : '<span style="color:var(--ink-soft,#aab)">—</span>';
+    const nm = c.nombre_completo || c.nombre || c.email;
+    const inits = (nm || '?').trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
     const em = encodeURIComponent(c.email);
     // Interacción: racha de meses seguidos abriendo (desde el mes más reciente hacia atrás) + total
     const nivelBy = {};
@@ -16426,24 +16750,23 @@ function renderContactsTabla() {
     const vistos = (c.hist || []).filter(h => h.nivel >= 1).length;
     let streak = 0;
     for (let i = allPeriods.length - 1; i >= 0; i--) { if ((nivelBy[allPeriods[i]] || 0) >= 1) streak++; else break; }
-    const inter = streak > 0
-      ? `<span class="ctbl-streak" title="${streak} mes${streak === 1 ? '' : 'es'} seguidos abriendo">⚡ ${streak}</span>` +
-        (vistos > streak ? ` <span class="ctbl-vistos">· ${vistos} en total</span>` : '')
-      : (vistos > 0 ? `<span class="ctbl-vistos">${vistos} mes${vistos === 1 ? '' : 'es'}</span>` : '<span class="ctbl-vistos">—</span>');
-    return `<tr class="${c.cancelado ? 'ctbl-row-cancel' : ''}">
-      <td><div class="ctbl-nm ctbl-clickable" onclick="ctblOpenDetail('${em}')" title="Ver qué meses vio y qué pasó">${escapeHtml(c.nombre_completo || c.nombre || '—')}</div></td>
-      <td class="ctbl-em">${escapeHtml(c.email)}</td>
-      <td class="ctbl-inter">${inter}</td>
-      <td class="ctbl-resp">${mine ? `<span class="ctbl-resp-mine">${resp}</span>` : resp}</td>
-      <td class="ctbl-acts">${mine ? `
-        <button class="ctbl-act" title="Editar nombre" onclick="ctblEditOpen('${em}')"><i class="fa-solid fa-pen"></i></button>
-        <button class="ctbl-act del" title="Borrar contacto" onclick="ctblDelete('${em}')"><i class="fa-solid fa-xmark"></i></button>` : ''}</td>
-    </tr>`;
-  }).join('');
-
-  list.innerHTML = `<div class="db-list-wrap"><table class="ctbl-table">
-    <thead><tr><th>Nombre</th><th>Email</th><th>Interacción</th><th>Responsable</th><th></th></tr></thead>
-    <tbody>${body}</tbody></table></div>`;
+    const per = (c.hist || []).filter(h => h.nivel >= 1).map(h => h.periodo).sort();
+    const opTxt = streak > 0 ? `⚡ ${streak}` : (vistos > 0 ? String(vistos) : '—');
+    const dt = per.length ? escapeHtml(periodoLabel(per[per.length - 1]))
+      : (c.responsable ? escapeHtml(c.responsable) : '');
+    return `<div class="cc-person${c.cancelado ? ' cc-cancel' : ''}">
+      <span class="cc-av">${escapeHtml(inits)}</span>
+      <div class="cc-id" onclick="ctblOpenDetail('${em}')" style="cursor:pointer" title="${t('Ver qué meses vio y qué pasó')}">
+        <div class="cc-nm">${escapeHtml(nm)}</div>
+        <div class="cc-em">${escapeHtml(c.email)}</div>
+      </div>
+      <div class="cc-meta"><div class="cc-op">${opTxt}</div><div class="cc-dt">${dt}</div></div>
+      ${mine ? `<div class="cc-acts">
+        <button class="ctbl-act" title="${t('Editar nombre')}" onclick="event.stopPropagation();ctblEditOpen('${em}')"><i class="fa-solid fa-pen"></i></button>
+        <button class="ctbl-act del" title="${t('Borrar contacto')}" onclick="event.stopPropagation();ctblDelete('${em}')"><i class="fa-solid fa-xmark"></i></button>
+      </div>` : ''}
+    </div>`;
+  }).join('') + `</div>`;
 }
 
 // Detalle de interacción de un contacto (reusa el modal/render del admin)
@@ -16454,7 +16777,7 @@ function ctblOpenDetail(emailEnc) {
   const hist = (c.hist || [])
     .map(h => ({ periodo: h.periodo, opened: h.opened, clicked: h.clicked, replied: h.replied, nivel: h.nivel }))
     .sort((a, b) => String(a.periodo).localeCompare(String(b.periodo)));
-  campLpRender(c.nombre_completo || c.nombre || email, hist);
+  personDetailOpen(c.nombre_completo || c.nombre || email, c.email, hist, 'campaign');
 }
 
 function ctblToggleMine() { ctblMineOnly = !ctblMineOnly; renderContactsTabla(); }

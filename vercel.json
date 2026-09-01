@@ -30,6 +30,14 @@
       "use": "@vercel/static"
     },
     {
+      "src": "public/mobile.css",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "public/mobile.js",
+      "use": "@vercel/static"
+    },
+    {
       "src": "public/system-map.html",
       "use": "@vercel/static"
     },
@@ -290,6 +298,14 @@
     {
       "src": "/i18n.js",
       "dest": "/public/i18n.js"
+    },
+    {
+      "src": "/mobile.css",
+      "dest": "/public/mobile.css"
+    },
+    {
+      "src": "/mobile.js",
+      "dest": "/public/mobile.js"
     },
     {
       "src": "/system-map",
