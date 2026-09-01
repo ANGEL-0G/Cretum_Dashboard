@@ -9,6 +9,7 @@
  *   GET /api/gvv-live?privados=1   → gvv-privados.json
  *   GET /api/gvv-live?riesgo=1     → gvv-riesgo.json
  *   GET /api/gvv-live?track=1      → gvv-track.json (curva histórica por rangos)
+ *   GET /api/gvv-live?intra=1      → gvv-intra-YYYYMMDD.json (SPX/NDX intradía de hoy)
  *   GET /api/gvv-live?analytics=1  → gvv-analytics.json
  *
  * (Antes vivía dentro de /api/prices por el tope de 12 funciones de Vercel
@@ -30,10 +31,11 @@ export default async function handler(req, res) {
   else if (req.query.riesgo) key = 'cretum/_internal/gvv-riesgo.json';
   else if (req.query.m13f) key = 'cretum/_internal/gvv-13f.json';
   else if (req.query.privados) key = 'cretum/_internal/gvv-privados.json';
-  else if (req.query.hist) {
+  else if (req.query.hist || req.query.intra) {
     const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City' })
       .format(new Date()).replace(/-/g, '');
-    key = `cretum/_internal/gvv-hist-${day}.json`;
+    key = req.query.intra ? `cretum/_internal/gvv-intra-${day}.json`
+                          : `cretum/_internal/gvv-hist-${day}.json`;
   }
   const { data, error } = await sb.storage.from('portal-files').download(key);
   if (error || !data) return res.status(404).json({ error: 'Sin snapshot todavia' });
