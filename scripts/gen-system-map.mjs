@@ -121,16 +121,50 @@ for (const p of shFiles) {
 const html = readFileSync(HTML, 'utf8');
 const oldNodes = JSON.parse(html.match(/const CODE_NODES = (\[.*?\]);/s)[1]);
 const oldG = Object.fromEntries(oldNodes.map(n => [n.id, n.gname]));
+
+// ── Colores por PERTENENCIA (pedido Eugenio 2026-09-02): MVP = naranjas,
+//    Cretum = azules, compartido = blancos/grises claros. Tono por hash del
+//    nombre del grupo → determinista en cualquier máquina (sin ping-pong).
+const DOMAIN = {
+  'Investor Detail & Apertura': 'mvp', 'Investor Selection': 'mvp',
+  'Report Building & Exports': 'mvp', 'Report Document Formatting': 'mvp',
+  'Report Fuzzy Matching': 'mvp', 'Companies PDF Export': 'mvp',
+  'Excel Native Charts': 'mvp', 'SpaceX Report Export': 'mvp',
+  'Portal Admin Management': 'mvp', 'Portal Dashboard Preview': 'mvp',
+  'Portal File Upload': 'mvp', 'Dropbox Files & Forms': 'mvp',
+  'Reportes PDF · Generator': 'mvp', 'Tools · Reportes': 'mvp',
+  'Pipeline de cartas (Mini)': 'mvp', 'DB Guard & Verificador': 'mvp',
+  'Crons de marks & MOIC (Mini)': 'mvp', 'Scraper Altareturn': 'mvp',
+  'Campaign UI & Modals': 'cretum', 'Campaign Contact Management': 'cretum',
+  'Campaign Email Templates': 'cretum', 'Campaign CSV Import': 'cretum',
+  'Campaign LP Detail': 'cretum', 'Monthly Letter Campaign': 'cretum',
+  'Fundraising Prospects': 'cretum', 'Prospect Detail UI': 'cretum',
+  'Task Views & Boards': 'cretum',
+  'API Auth & Integrations': 'both', 'Core UI Utilities': 'both',
+  'Navigation & Routing': 'both', 'Filters & UI Toggles': 'both',
+  'Internationalization': 'both', 'Login & MFA': 'both',
+  'Logo Proxy Endpoint': 'both', 'Reminder Preferences': 'both',
+  'Crons Mini · Ops': 'both',
+};
+const domainOf = g => DOMAIN[g] ||
+  (/campaign|prospect|task/i.test(g) ? 'cretum'
+   : /report|portal|investor|carta|guard|marks|altareturn|spacex|dropbox/i.test(g) ? 'mvp' : 'both');
+const ghash = g => [...g].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
 const colorOf = {};
-oldNodes.forEach(n => { if (!colorOf[n.gname]) colorOf[n.gname] = n.color; });
+const domainColor = (g) => {
+  const h = ghash(g);
+  const d = domainOf(g);
+  if (d === 'mvp')    return `hsl(${14 + h % 36},${74 + h % 12}%,${50 + (h >> 3) % 14}%)`;   // naranjas 14-50°
+  if (d === 'cretum') return `hsl(${202 + h % 34},${62 + h % 18}%,${52 + (h >> 3) % 16}%)`;  // azules 202-236°
+  return `hsl(${210 + h % 20},${6 + h % 8}%,${66 + (h >> 3) % 20}%)`;                        // grises claros
+};
 // posiciones conocidas por archivo para "vecino más cercano"
 const known = {};
 for (const n of nodes) {
   const g = oldG[n.id];
   if (g) { n.gname = g; (known[n.rel] ||= []).push([n.line, g]); }
 }
-let hue = 5;
-const groupColor = g => colorOf[g] || (colorOf[g] = `hsl(${(hue += 47) % 360},70%,58%)`);
+const groupColor = g => colorOf[g] || (colorOf[g] = domainColor(g));
 for (const n of nodes) {
   if (n.gname) continue;
   const ks = (known[n.rel] || []).sort((a, b) => Math.abs(a[0] - n.line) - Math.abs(b[0] - n.line));
