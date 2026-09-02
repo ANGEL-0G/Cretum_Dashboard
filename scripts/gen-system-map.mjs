@@ -32,6 +32,36 @@ for (const f of ['app.js', 'i18n.js', 'desk.js']) {
   try { statSync(join(ROOT, 'public', f)); files.push(join(ROOT, 'public', f)); } catch {}
 }
 
+// ── ecosistema fuera del dashboard (solo lectura; si una ruta no existe, se omite) ──
+// cretum_reports (Python): generador de PDFs, pipeline de cartas, db_guard, crons de marks.
+const HOME = process.env.HOME || '';
+const REPORTS_ROOT = [join(HOME, 'srv/cretum-reports'), '/Users/air/cretum_reports']
+  .find(p => { try { return statSync(p).isDirectory(); } catch { return false; } });
+const OPS_ROOT = [join(HOME, 'srv/ops')]
+  .find(p => { try { return statSync(p).isDirectory(); } catch { return false; } });
+const pyFiles = [], shFiles = [];
+if (REPORTS_ROOT) {
+  const walkPy = (dir) => readdirSync(dir).forEach(f => {
+    const p = join(dir, f);
+    try {
+      if (statSync(p).isDirectory()) { if (!/venv|__pycache__|\.git|_state|node_modules/.test(f)) walkPy(p); return; }
+      if (f.endsWith('.py') && !f.endsWith('.bak')) pyFiles.push(p);
+    } catch {}
+  });
+  for (const d of ['generator', 'tools', 'scrapers']) { try { walkPy(join(REPORTS_ROOT, d)); } catch {} }
+}
+if (OPS_ROOT) readdirSync(OPS_ROOT).forEach(f => {
+  if ((f.endsWith('.sh') || f.endsWith('.py')) && !/\.bak/.test(f)) shFiles.push(join(OPS_ROOT, f));
+});
+const PY_GROUP = (rel) => {
+  if (rel.startsWith('generator/')) return 'Reportes PDF · Generator';
+  if (rel.startsWith('scrapers/')) return 'Scraper Altareturn';
+  if (/letters|apply_distributions|parse_letters/.test(rel)) return 'Pipeline de cartas (Mini)';
+  if (/db_guard|daily_verifier|audit_db/.test(rel)) return 'DB Guard & Verificador';
+  if (/sync_|fund_moic|tracker_news|caplight|cas_marks|live_marks/.test(rel)) return 'Crons de marks & MOIC (Mini)';
+  return 'Tools · Reportes';
+};
+
 const slug = s => s.toLowerCase().replace(/\.js$/, '').replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
 
 // ── 2. extraer símbolos ─────────────────────────────────────────────────
@@ -58,6 +88,33 @@ for (const p of files) {
     nodes.push({ id: `${fileId}_${f.name.toLowerCase()}`, name: `${f.name}()`, rel, line: f.line,
                  val: Math.min(40, f.loc), parent: fileId, fname: f.name });
   }
+}
+
+// ── 2b. símbolos Python (cretum_reports) y crons .sh de la Mini ─────────
+const PY_RE = /^(?:def|class)\s+([A-Za-z_][\w]*)/;
+for (const p of pyFiles) {
+  const rel = relative(REPORTS_ROOT, p);
+  const fileId = 'rep_' + slug(rel.replace(/\.py$/, ''));
+  const lines = readFileSync(p, 'utf8').split('\n');
+  const fns = [];
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(PY_RE);
+    if (m) fns.push({ name: m[1], line: i + 1 });
+  }
+  for (let k = 0; k < fns.length; k++) fns[k].loc = Math.max(1, (k + 1 < fns.length ? fns[k + 1].line : lines.length) - fns[k].line);
+  const g = PY_GROUP(rel);
+  const fileNode = { id: fileId, name: rel.split('/').pop(), rel: 'cretum_reports/' + rel, line: 1, gname: g,
+                     val: Math.min(40, fns.length ? Math.max(...fns.map(f => Math.min(40, f.loc))) : 6), fns };
+  perFile[fileId] = fileNode;
+  nodes.push(fileNode);
+  for (const f of fns) nodes.push({ id: `${fileId}_${f.name.toLowerCase()}`, name: `${f.name}()`,
+    rel: 'cretum_reports/' + rel, line: f.line, val: Math.min(40, f.loc), parent: fileId, fname: f.name, gname: g });
+}
+for (const p of shFiles) {
+  const nm = p.split('/').pop();
+  const loc = readFileSync(p, 'utf8').split('\n').length;
+  nodes.push({ id: 'ops_' + slug(nm), name: nm, rel: 'mini/srv/ops/' + nm, line: 1,
+               val: Math.min(40, Math.max(4, Math.round(loc / 8))), gname: 'Crons Mini · Ops' });
 }
 
 // ── 3. taxonomía: heredar gname del HTML vigente ────────────────────────
@@ -95,6 +152,7 @@ for (const p of files.filter(f => relative(ROOT, f).startsWith('api/'))) {
 }
 // función→función: nombre( de otro símbolo del mismo archivo (>4 chars, único)
 for (const [fid, f] of Object.entries(perFile)) {
+  if (fid.startsWith('rep_')) continue;   // los Python tienen su propio loop abajo
   const src = readFileSync(join(ROOT, f.rel), 'utf8').split('\n');
   const names = new Map(f.fns.filter(x => x.name.length > 4).map(x => [x.name, x]));
   for (let k = 0; k < f.fns.length; k++) {
@@ -107,6 +165,27 @@ for (const [fid, f] of Object.entries(perFile)) {
     }
   }
   for (const fn of f.fns) addLink(fid, `${fid}_${fn.name.toLowerCase()}`);
+}
+
+// aristas python: archivo→funciones, llamadas internas e imports del repo
+for (const [fid, f] of Object.entries(perFile)) {
+  if (!fid.startsWith('rep_')) continue;
+  const abs = join(REPORTS_ROOT, f.rel.replace(/^cretum_reports\//, ''));
+  const srcLines = readFileSync(abs, 'utf8').split('\n');
+  const names = new Map((f.fns || []).filter(x => x.name.length > 4).map(x => [x.name, x]));
+  for (const fn of f.fns || []) {
+    addLink(fid, `${fid}_${fn.name.toLowerCase()}`);
+    const body = srcLines.slice(fn.line, fn.line + fn.loc - 1).join('\n');
+    for (const [nm] of names) {
+      if (nm !== fn.name && new RegExp(`\\b${nm}\\s*\\(`).test(body)) addLink(`${fid}_${fn.name.toLowerCase()}`, `${fid}_${nm.toLowerCase()}`);
+    }
+  }
+  const whole = srcLines.join('\n');
+  for (const m of whole.matchAll(/from\s+((?:generator|tools|scrapers)[.\w]*)\s+import|import\s+((?:generator|tools|scrapers)[.\w]*)/g)) {
+    const mod = (m[1] || m[2]).replace(/\./g, '/');
+    const t = 'rep_' + slug(mod);
+    if (perFile[t]) addLink(fid, t);
+  }
 }
 
 // ── 5. escribir ─────────────────────────────────────────────────────────
