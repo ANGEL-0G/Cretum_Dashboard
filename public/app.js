@@ -12311,6 +12311,13 @@ const LIVE_TRACKER_COMPANIES = [
   { ticker: 'HAWK', rowRe: /hawkeye/i, name: 'HawkEye 360', label: 'HAWK', displayMult: 1 },
   { ticker: 'KDK', rowRe: /kodiak/i, name: 'Kodiak', label: 'KDK', displayMult: 1 },
   { ticker: 'IONQ', rowRe: /ionq/i, name: 'IONQ (Capella)', label: 'IONQ', displayMult: 1 },
+  // Caplight → tracker (orden Eugenio 2026-09-02): mismas 5 empresas que en directo; en los
+  // trackers viven estas 4 (Rappi no tiene fila). El precio es el secundario diario de Caplight
+  // que el cron caplight-marks escribe en investments — puede diferir del mark oficial de MVP.
+  { dbId: 12, rowRe: /epic games/i, name: 'Epic Games', label: 'Caplight', src: 'Caplight', displayMult: 1 },
+  { dbId: 17, rowRe: /payward|kraken/i, name: 'Kraken', label: 'Caplight', src: 'Caplight', displayMult: 1 },
+  { dbId: 5,  rowRe: /automattic/i, name: 'Automattic', label: 'Caplight', src: 'Caplight', displayMult: 1 },
+  { dbId: 8,  rowRe: /cohesity/i, name: 'Cohesity', label: 'Caplight', src: 'Caplight', displayMult: 1 },
 ];
 const _liveMarks = {};        // dbId -> { pps, evB } (en la base de la DB/tracker)
 let _spcxFetchStarted = false;
@@ -12392,7 +12399,7 @@ function applySpacexLiveToTrackers() {
         if (row.invested) row.moic = row.mtm / row.invested;
         hit = true;
       }
-      if (hit) notes.push(cfg.name + ' @ mercado (' + cfg.label + ' $' +
+      if (hit) notes.push(cfg.name + (cfg.src ? ' @ ' + cfg.src + ' ($' : ' @ mercado (' + cfg.label + ' $') +
         (mk.pps * cfg.displayMult).toLocaleString('en-US', { maximumFractionDigits: 2 }) + ')');
     }
     if (!notes.length) continue;
