@@ -5509,8 +5509,8 @@ function _mvpSnapshotInnerHtml(d, topN, full) {
     html += `<div class="snap-mix"><div class="snap-mix-bar">` +
       `<div class="snap-mix-seg snap-mix-nav" style="width:${pNav.toFixed(1)}%"></div>` +
       `<div class="snap-mix-seg snap-mix-dist" style="width:${pDist.toFixed(1)}%"></div></div>` +
-      `<div class="snap-mix-leg"><span><i class="snap-dot snap-mix-nav"></i>En cartera (NAV) ${fmtUsdShort(d.nav)} · ${pNav.toFixed(0)}%</span>` +
-      `<span><i class="snap-dot snap-mix-dist"></i>Ya distribuido ${fmtUsdShort(d.distrib)} · ${pDist.toFixed(0)}%</span></div></div>`;
+      `<div class="snap-mix-leg"><span><i class="snap-dot snap-mix-nav"></i>${t('En cartera (NAV)')} ${fmtUsdShort(d.nav)} · ${pNav.toFixed(0)}%</span>` +
+      `<span><i class="snap-dot snap-mix-dist"></i>${t('Ya distribuido')} ${fmtUsdShort(d.distrib)} · ${pDist.toFixed(0)}%</span></div></div>`;
   }
 
   if (full) {
@@ -5551,7 +5551,7 @@ function _mvpSnapshotInnerHtml(d, topN, full) {
   html += secH('Top posiciones por valor (NAV activo)', 'Suma del valor actual de las posiciones activas por empresa. "Diversified Fund" agrupa las posiciones en fondos (Fund IV, V, etc.).') +
     `<div class="snap-donut-row">${donut ? `<div class="snap-donut">${donut}</div>` : ''}<div class="home-top" style="flex:1">` +
     items.map(([cid, v], i) => `<div class="home-top-row"><span class="snap-sw" style="background:${full ? pal[i % pal.length] : 'var(--accent, #ED7824)'}"></span><span class="home-top-name">${escapeHtml(d.cname[cid] || '—')}</span><div class="home-top-bar"><div class="home-top-fill" style="width:${(v / maxv * 100).toFixed(1)}%"></div></div><span class="home-top-val">${fmtUsdShort(v)}<span class="snap-pct">${(v / d.nav * 100).toFixed(0)}%</span></span></div>`).join('') +
-    (full && others > 1 ? `<div class="home-top-row"><span class="snap-sw" style="background:#d9d2c9"></span><span class="home-top-name">Otras (${d.top.length - listN})</span><div class="home-top-bar"><div class="home-top-fill" style="width:${(others / maxv * 100).toFixed(1)}%;background:#d9d2c9"></div></div><span class="home-top-val">${fmtUsdShort(others)}<span class="snap-pct">${(others / d.nav * 100).toFixed(0)}%</span></span></div>` : '') +
+    (full && others > 1 ? `<div class="home-top-row"><span class="snap-sw" style="background:#d9d2c9"></span><span class="home-top-name">${t('Otras')} (${d.top.length - listN})</span><div class="home-top-bar"><div class="home-top-fill" style="width:${(others / maxv * 100).toFixed(1)}%;background:#d9d2c9"></div></div><span class="home-top-val">${fmtUsdShort(others)}<span class="snap-pct">${(others / d.nav * 100).toFixed(0)}%</span></span></div>` : '') +
     `</div></div>`;
 
   if (full) {
@@ -5560,13 +5560,13 @@ function _mvpSnapshotInnerHtml(d, topN, full) {
     html += `<div class="snap-grid2">` +
       `<div class="snap-panel"><div class="snap-panel-h">Fondos vs. Directos${infoIc('Fondos = posiciones en vehículos diversificados (Fund IV, V…). Directos = exposición a una sola empresa.')}</div>` +
         `<div class="snap-mix-bar snap-mix-slim"><div class="snap-mix-seg snap-mix-nav" style="width:${(d.navFondos / (d.nav || 1) * 100).toFixed(1)}%"></div><div class="snap-mix-seg snap-mix-dir" style="width:${(navDir / (d.nav || 1) * 100).toFixed(1)}%"></div></div>` +
-        `<div class="snap-mix-leg"><span><i class="snap-dot snap-mix-nav"></i>Fondos ${fmtUsdShort(d.navFondos)} · ${(d.navFondos / (d.nav || 1) * 100).toFixed(0)}%</span><span><i class="snap-dot snap-mix-dir"></i>Directos ${fmtUsdShort(navDir)} · ${(navDir / (d.nav || 1) * 100).toFixed(0)}%</span></div>` +
-        `<div class="snap-row" style="margin-top:10px"><span>Concentración top 5</span><b>${(d.top5pct * 100).toFixed(0)}% del NAV</b></div>` +
+        `<div class="snap-mix-leg"><span><i class="snap-dot snap-mix-nav"></i>${t('Fondos')} ${fmtUsdShort(d.navFondos)} · ${(d.navFondos / (d.nav || 1) * 100).toFixed(0)}%</span><span><i class="snap-dot snap-mix-dir"></i>${t('Directos')} ${fmtUsdShort(navDir)} · ${(navDir / (d.nav || 1) * 100).toFixed(0)}%</span></div>` +
+        `<div class="snap-row" style="margin-top:10px"><span>Concentración top 5</span><b>${t('{n}% del NAV', { n: (d.top5pct * 100).toFixed(0) })}</b></div>` +
       `</div>` +
       `<div class="snap-panel"><div class="snap-panel-h">Calidad de la cartera${infoIc('NAV activo agrupado por el múltiplo actual de cada posición (valor ÷ comprometido). Las posiciones a 1x incluyen las aún marcadas a costo.')}</div>` +
         d.buckets.map(b => {
           const maxB = Math.max(...d.buckets.map(x => x.v), 1);
-          return `<div class="snap-bucket"><span class="snap-bucket-l">${b.l}</span><div class="snap-bucket-bar"><div class="snap-bucket-fill ${b.min >= 1.0001 ? 'pos' : (b.max <= 1 ? 'neg' : '')}" style="width:${(b.v / maxB * 100).toFixed(1)}%"></div></div><span class="snap-bucket-v">${fmtUsdShort(b.v)}<span class="snap-pct">${b.c} pos</span></span></div>`;
+          return `<div class="snap-bucket"><span class="snap-bucket-l">${b.l}</span><div class="snap-bucket-bar"><div class="snap-bucket-fill ${b.min >= 1.0001 ? 'pos' : (b.max <= 1 ? 'neg' : '')}" style="width:${(b.v / maxB * 100).toFixed(1)}%"></div></div><span class="snap-bucket-v">${fmtUsdShort(b.v)}<span class="snap-pct">${t('{n} pos', { n: b.c })}</span></span></div>`;
         }).join('') +
       `</div></div>`;
 
@@ -5579,7 +5579,7 @@ function _mvpSnapshotInnerHtml(d, topN, full) {
         years.map(([y, v]) => `<div class="snap-year"><div class="snap-year-col"><div class="snap-year-fill" style="height:${(v / maxY * 100).toFixed(1)}%"></div></div><div class="snap-year-v">${fmtUsdShort(v)}</div><div class="snap-year-l">${y}</div></div>`).join('') +
         `</div>`;
     }
-    html += `<div class="snap-foot">Neteo aplicado: ${fmtUsdShort(d.netted)} de reinversiones SpaceX (22F→26A QP) excluidos de aportado y distribuido. NAV a marks del último precio sincronizado. TVPI = DPI + RVPI.</div>`;
+    html += `<div class="snap-foot">${t('Neteo aplicado:')} ${fmtUsdShort(d.netted)} ${t('de reinversiones SpaceX (22F→26A QP) excluidos de aportado y distribuido. NAV a marks del último precio sincronizado. TVPI = DPI + RVPI.')}</div>`;
   }
   return html;
 }
@@ -5593,7 +5593,7 @@ async function renderMvpKpis() {
     host.innerHTML = `<div class="home-kpis-title">Resumen MVP - LATAM</div>` + _mvpSnapshotInnerHtml(d, 5);
     _mvpKpisLoaded = true;
   } catch (e) {
-    host.innerHTML = `<div class="home-kpis-err">No se pudo cargar el resumen: ${escapeHtml(e.message || 'error')}</div>`;
+    host.innerHTML = `<div class="home-kpis-err">${t('No se pudo cargar el resumen')}: ${escapeHtml(e.message || 'error')}</div>`;
   }
 }
 
@@ -5608,7 +5608,7 @@ async function openMvpSnapshot() {
     const d = await _computeMvpSnapshot();
     body.innerHTML = _mvpSnapshotInnerHtml(d, 8, true);
   } catch (e) {
-    body.innerHTML = `<div class="home-kpis-err">No se pudo cargar el snapshot: ${escapeHtml(e.message || 'error')}</div>`;
+    body.innerHTML = `<div class="home-kpis-err">${t('No se pudo cargar el snapshot')}: ${escapeHtml(e.message || 'error')}</div>`;
   }
 }
 function closeMvpSnapshot() {
@@ -5651,13 +5651,13 @@ function pcTimeAgo(iso) {
   const d = new Date(iso);
   if (isNaN(d)) return '—';
   const mins = Math.round((Date.now() - d.getTime()) / 60000);
-  if (mins < 1) return 'hace un momento';
-  if (mins < 60) return `hace ${mins} min`;
+  if (mins < 1) return t('hace un momento');
+  if (mins < 60) return t('hace {n} min', { n: mins });
   const hrs = Math.round(mins / 60);
-  if (hrs < 24) return `hace ${hrs} h`;
+  if (hrs < 24) return t('hace {n} h', { n: hrs });
   const days = Math.round(hrs / 24);
-  if (days < 7) return `hace ${days} d`;
-  return d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
+  if (days < 7) return t('hace {n} d', { n: days });
+  return d.toLocaleDateString(currentLang() === 'en' ? 'en-US' : 'es-MX', { day: 'numeric', month: 'short' });
 }
 
 async function _renderPriceCtl() {
@@ -5689,7 +5689,7 @@ async function _renderPriceCtl() {
   const cards = Object.keys(byCo).map(cid => {
     const g = byCo[cid];
     const rule = ruleById[cid] || {};
-    const name = rule.name || compById[cid] || `Empresa ${cid}`;
+    const name = rule.name || compById[cid] || t('Empresa {n}', { n: cid });
     const mech = rule.mechanism || 'pending_rule';
     return { cid, name, mech, sourceLabel: rule.source_label || 'Sin regla', detail: rule.detail, ...g };
   }).filter(c => c.mech !== 'closed');
@@ -5707,7 +5707,7 @@ async function _renderPriceCtl() {
         <div class="price-ctl-valbox"><span class="price-ctl-vl">PPS actual</span><span class="price-ctl-vv">${c.pps != null ? '$' + Number(c.pps).toLocaleString('en-US', { maximumFractionDigits: 2 }) : '—'}</span></div>
         <div class="price-ctl-valbox"><span class="price-ctl-vl">Valuación</span><span class="price-ctl-vv price-ctl-vv-now">${c.val != null ? fmtBil(c.val) : '—'}</span></div>
       </div>
-      <div class="price-ctl-meta"><span>Actualizado: ${pcTimeAgo(c.updated)}</span><span>${c.n} posición${c.n === 1 ? '' : 'es'}</span></div>
+      <div class="price-ctl-meta"><span>${t('Actualizado')}: ${pcTimeAgo(c.updated)}</span><span>${c.n === 1 ? t('{n} posición', { n: c.n }) : t('{n} posiciones', { n: c.n })}</span></div>
     </div>`;
 
   const groups = PC_MECH_ORDER.map(mech => ({
@@ -5722,7 +5722,7 @@ async function _renderPriceCtl() {
   return `
     <div class="price-ctl-note">Empresas directas activas · fuente del pps/valuación por empresa (gobernado por valuation_rules.yaml).</div>
     ${groups.map(g => `
-      <div class="snap-sec-h">${escapeHtml(g.label || PC_MECH_SECTION[g.mech] || g.mech)} · ${g.items.length}</div>
+      <div class="snap-sec-h">${escapeHtml(t(g.label || PC_MECH_SECTION[g.mech] || g.mech))} · ${g.items.length}</div>
       <div class="price-ctl-grid">${g.items.map(card).join('')}</div>
     `).join('')}`;
 }
@@ -12661,7 +12661,7 @@ async function openDirectOpps(force) {
     await loadDirectOppsData(force);
     renderDoHome();
   } catch (e) {
-    host.innerHTML = `<div class="home-kpis-err">Error: ${escapeHtml(e.message || 'no se pudo cargar')}</div>`;
+    host.innerHTML = `<div class="home-kpis-err">${t('Error')}: ${escapeHtml(e.message || t('no se pudo cargar'))}</div>`;
   }
 }
 
@@ -12713,7 +12713,7 @@ function renderDoHome() {
             <span><strong>${fmtUsdShort(c.nav)}</strong> NAV</span>
             <span class="${moicClass(c.moicU)}"><strong>${c.moicU.toFixed(2)}x</strong></span>
             <span><strong>${c.nLps}</strong> LPs</span>
-            <span><strong>${c.nAct}</strong> activas${c.nTerm ? ` · ${c.nTerm} term.` : ''}</span>
+            <span><strong>${c.nAct}</strong> ${t('activas')}${c.nTerm ? ` · ${c.nTerm} ${t('term.')}` : ''}</span>
             ${c.dist > 1 ? `<span><strong>${fmtUsdShort(c.dist)}</strong> distribuido</span>` : ''}
           </div>
         </div>
@@ -12787,7 +12787,7 @@ function openDirectOpp(cid) {
       <div class="ft-header-top">
         <div>
           <div class="ft-name do-name-row">${_doLogo(c, false)}${escapeHtml(c.name)} ${_doLiveBadge(c)}</div>
-          <div class="ft-sub">Oportunidad en directo · ${c.nLps} inversionistas · ${c.nAct} posiciones activas${c.nTerm ? ` · ${c.nTerm} terminadas` : ''}${c.pps ? ` · PPS actual $${c.pps.toLocaleString('en-US', { maximumFractionDigits: 2 })}` : ''}</div>
+          <div class="ft-sub">${t('Oportunidad en directo')} · ${c.nLps} ${t('inversionistas')} · ${c.nAct} ${t('posiciones activas')}${c.nTerm ? ` · ${c.nTerm} ${t('terminadas')}` : ''}${c.pps ? ` · ${t('PPS actual')} $${c.pps.toLocaleString('en-US', { maximumFractionDigits: 2 })}` : ''}</div>
         </div>
         <div class="ft-export-grp">
           <button class="ft-export-btn" onclick="doExportExcel(${c.id})"><i class="fa-solid fa-file-excel"></i> Excel</button>
@@ -12802,7 +12802,7 @@ function openDirectOpp(cid) {
         <div><div class="ft-stat-l">MOIC no realizado</div><div class="ft-stat-v ${moicClass(c.moicU)}">${c.moicU.toFixed(2)}x</div></div>` : ''}
         <div><div class="ft-stat-l">Distribuido</div><div class="ft-stat-v">${fmtUsdShort(c.dist)}</div></div>
         <div><div class="ft-stat-l">DPI</div><div class="ft-stat-v ${moicClass(c.dpi)}">${c.dpi.toFixed(2)}x</div></div>
-        <div><div class="ft-stat-l">MOIC total${c.netted ? ' (neto)' : ''}</div><div class="ft-stat-v ${moicClass(c.moicT)}">${c.moicT.toFixed(2)}x</div></div>
+        <div><div class="ft-stat-l">${t('MOIC total')}${c.netted ? ' ' + t('(neto)') : ''}</div><div class="ft-stat-v ${moicClass(c.moicT)}">${c.moicT.toFixed(2)}x</div></div>
       </div>
     </div>
     <div class="ft-section">
@@ -12812,7 +12812,7 @@ function openDirectOpp(cid) {
         <tbody>${serRows}</tbody></table></div>
     </div>
     <div class="ft-section">
-      <div class="ft-section-title">Inversionistas (${c.rows.length} posiciones)</div>
+      <div class="ft-section-title">${t('Inversionistas')} (${c.rows.length} ${t('posiciones')})</div>
       <div class="ft-table-wrap"><table class="ft-table">
         <thead><tr><th>Inversionista</th><th>Serie</th><th>Estado</th><th class="ft-num">Carry</th><th class="ft-num">Comprometido</th><th class="ft-num">Valor hoy</th><th class="ft-num">Distribuido</th><th class="ft-num">MOIC / DPI</th></tr></thead>
         <tbody>${invRows}</tbody></table></div>
@@ -13097,7 +13097,7 @@ function renderFundTrackerDetail(fundId) {
       <div class="ft-empty">
         <div class="ft-empty-ico"><i class="fa-solid fa-clock"></i></div>
         <div class="ft-empty-h">Tracker en desarrollo</div>
-        <div>El Valuation Overview de ${escapeHtml(f.name)} se publicará en cuanto esté disponible el archivo oficial.</div>
+        <div>${t('El Valuation Overview de {name} se publicará en cuanto esté disponible el archivo oficial.', { name: escapeHtml(f.name) })}</div>
       </div>`;
     return;
   }
@@ -13185,7 +13185,7 @@ function renderFundTrackerDetail(fundId) {
       <div class="ft-header-top">
         <div>
           <div class="ft-name">${escapeHtml(f.name)} — ${escapeHtml(f.subtitle)}</div>
-          <div class="ft-sub">${escapeHtml(f.status)} · ${escapeHtml(f.confidentiality)} · Cutoff ${escapeHtml(cutoffPretty)}${f._spcxLiveNote ? ' · ' + escapeHtml(f._spcxLiveNote) : ''}</div>
+          <div class="ft-sub">${escapeHtml(t(f.status))} · ${escapeHtml(t(f.confidentiality))} · ${t('Cutoff')} ${escapeHtml(cutoffPretty)}${f._spcxLiveNote ? ' · ' + escapeHtml(f._spcxLiveNote) : ''}</div>
         </div>
         <div class="ft-export-grp">
           <button class="ft-export-btn" data-ftexp="overview" onclick="exportFundTrackerExcel('${f.id}', this)"><i class="fa-solid fa-file-excel"></i> Descargar Excel</button>
@@ -13299,7 +13299,7 @@ function ftCompanyCards(f, opts) {
     const cur = r.corpVal;
     const moic = (r.moic && r.moic > 0) ? r.moic : 1;
     const entry = cur / moic;
-    const EN = opts.lang === 'en';
+    const EN = ((opts && opts.lang) || currentLang()) === 'en';
     let info = (f.companyInfo || {})[r.company] || {};
     if (EN) {
       const en = FT_CO_EN[r.company];
