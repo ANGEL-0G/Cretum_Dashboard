@@ -19915,18 +19915,42 @@ function gm13fCard() {
     return `<span style="display:inline-block;width:7px;height:${h}px;margin-right:2px;border-radius:1.5px;background:${v > 0 ? 'var(--green)' : (v < 0 ? 'var(--red)' : 'var(--gray-200)')};vertical-align:baseline" title="${fm(v)}"></span>`;
   }).join('');
 
+  // ── secciones nuevas: el bloque contesta PREGUNTAS, no vuelca tablas ──
+  const tituloSec = (num, ic, col, titulo, lectura) => `<summary style="${sumStyle}">
+      <span style="display:inline-flex;align-items:center;justify-content:center;width:19px;height:19px;border-radius:50%;background:${col};color:var(--white);font-size:10.5px;font-weight:800;flex:none">${num}</span>
+      <i class="fa-solid ${ic}" style="color:${col}"></i> ${titulo}
+      <span style="font-weight:400;font-size:10.5px;color:var(--gray-400)">· ${lectura}</span>
+      <i class="fa-solid fa-chevron-down" style="margin-left:auto;font-size:9px;color:var(--gray-300)"></i></summary>`;
+  // convicción = cuánto pesa la emisora en el libro de quien la compró (suma entre fondos).
+  // Sin esto manda el tamaño: $1B de Citadel es ruido, $1B de Baupost es una apuesta.
+  const convicChip = (c) => {
+    const w = c.convic_max;
+    if (w == null) return '';
+    const ancho = Math.min(46, Math.max(3, w * 4.5));   // 10% del libro llena la barra
+    return `<span style="display:inline-flex;align-items:center;gap:5px" title="${escapeHtml(c.convic_fund || '')} es quien más la pesa: ${w}% de su libro">
+      <span style="display:inline-block;width:46px;height:6px;border-radius:3px;background:var(--gray-100)">
+        <span style="display:block;width:${ancho}px;height:6px;border-radius:3px;background:var(--navy)"></span></span>
+      <span style="font-size:10.5px;color:var(--gray-500)">${w.toFixed(1)}% <span style="color:var(--gray-400)">${escapeHtml(String(c.convic_fund || '').split(' ')[0])}</span></span></span>`;
+  };
+  const chipsFondos = (fs, max) => (fs || []).slice(0, max || 5).map(f2 =>
+    `<span style="display:inline-block;font-size:9.5px;padding:1px 7px;border-radius:99px;margin:1px 2px;background:var(--gray-100);color:var(--gray-500)" title="${escapeHtml(f2.fund)}${f2.w != null ? ' · ' + f2.w + '% de su libro' : ''}">${escapeHtml(f2.fund.split(' ')[0])}${f2.nueva ? '<span style="color:var(--navy);font-weight:800"> N</span>' : ''}${f2.cerrada ? '<span style="color:var(--red);font-weight:800"> C</span>' : ''}</span>`).join('');
+  const desdeCorte = (v) => v == null ? '<span style="color:var(--gray-300)">—</span>'
+    : `<span style="color:${gmColor(v)};font-size:11px" title="Movimiento del papel desde el cierre del trimestre (30-jun). NO es el costo de entrada de ellos: el 13F no lo dice.">${gmPct(v, 1)}</span>`;
+
   // ── 1) cartera × smart money (abierto) ──
   const filas = D.cruce.slice(0, 16).map(c => `<tr>
     <td style="font-weight:600;white-space:nowrap">${escapeHtml(c.ticker)} <span style="font-size:10px;color:var(--gray-400)">${c.peso}%</span></td>
     <td style="white-space:nowrap">${trendMini(c.trend)}${c.racha >= 2 ? `<span style="font-size:9px;font-weight:700;color:${c.neto >= 0 ? 'var(--green)' : 'var(--red)'};margin-left:4px">${c.racha}T ${c.neto >= 0 ? 'comprando' : 'vendiendo'}</span>` : ''}</td>
+    <td>${convicChip(c)}</td>
     <td>${c.flujos.slice(0, 4).map(chipF).join('')}</td>
     <td class="num" style="font-weight:700;color:${gmColor(c.neto)}">${fm(c.neto)}</td>
+    <td class="num">${desdeCorte(c.desde_corte)}</td>
     <td class="num" style="color:${gmColor(c.plpct || 0)};font-size:11px">${c.plpct != null ? gmPct(c.plpct, 1) : '—'}</td></tr>`).join('');
-  const sec1 = `<details open style="${secStyle}"><summary style="${sumStyle}">
-      <i class="fa-solid fa-briefcase" style="color:var(--navy)"></i> Nuestra cartera × smart money
-      <span style="font-weight:400;font-size:10.5px;color:var(--gray-400)">· tendencia = flujo institucional de los últimos 4 trimestres · P&L = nuestra posición</span></summary>
+  const sec1 = `<details open style="${secStyle}">
+    ${tituloSec(1, 'fa-briefcase', 'var(--navy)', 'Qué hicieron con lo nuestro',
+                'tendencia = 4 trimestres de flujo · convicción = % de SU libro · desde el corte = movimiento del papel tras el 30-jun')}
     <div style="overflow-x:auto;padding-bottom:10px"><table class="camp-table" style="width:100%;font-size:12px">
-      <tr><th>Posición</th><th>Tendencia 4T</th><th>Movimientos del trimestre</th><th>Neto Q</th><th>Nuestro P&L</th></tr>${filas}</table></div></details>`;
+      <tr><th>Posición</th><th>Tendencia 4T</th><th>Convicción máx.</th><th>Movimientos del trimestre</th><th class="num">Neto Q</th><th class="num">Desde el corte</th><th class="num">Nuestro P&L</th></tr>${filas}</table></div></details>`;
 
   // ── 2) por manager (desplegable con sub-desplegables) ──
   const fondosHtml = (D.fondos || []).map(f => {
@@ -19946,33 +19970,72 @@ function gm13fCard() {
           <div><div style="font-size:10.5px;font-weight:700;color:var(--red);margin-bottom:3px">TOP VENTAS DEL TRIMESTRE</div>${ts2 || '<span style="font-size:11px;color:var(--gray-400)">—</span>'}</div>
         </div></div></details>`;
   }).join('');
-  const sec2 = `<details style="${secStyle}"><summary style="${sumStyle}">
-      <i class="fa-solid fa-user-tie" style="color:var(--navy)"></i> Por manager
-      <span style="font-weight:400;font-size:10.5px;color:var(--gray-400)">· portafolio 13F, evolución 5 trimestres y sus top movimientos — click en cada uno</span></summary>
+  const sec2 = `<details style="${secStyle}">
+    ${tituloSec(4, 'fa-user-tie', 'var(--gray-400)', 'Detalle por manager',
+                'portafolio, evolución de 5 trimestres y sus top movimientos — click en cada uno')}
     <div style="padding-bottom:8px">${fondosHtml}</div></details>`;
 
-  // ── 3) consenso en cartera / 4) ideas fuera de cartera ──
+  // ── 2) IDEAS: compraron con convicción algo que no tenemos ──
+  const ideas = D.ideas || [];
+  const sec2b = ideas.length ? `<details open style="${secStyle}">
+    ${tituloSec(2, 'fa-lightbulb', 'var(--amber)', 'Ideas — compraron algo que no tenemos en acciones',
+                'ordenadas por convicción agregada · la barra es el fondo que más la pesa · N = posición nueva · el cruce mira la cartera de ACCIONES, no el libro de opciones')}
+    <div style="overflow-x:auto;padding-bottom:10px"><table class="camp-table" style="width:100%;font-size:12px">
+      <tr><th>Emisora</th><th>Quién compra</th><th>Convicción máx.</th><th>Nuevas</th><th class="num">Neto Q</th><th class="num">Precio al corte</th></tr>
+      ${ideas.map(c => `<tr>
+        <td style="font-weight:600">${escapeHtml(c.issuer)}</td>
+        <td>${chipsFondos(c.fondos, 6)}</td>
+        <td>${convicChip(c)}</td>
+        <td style="text-align:center">${c.nuevas ? `<span style="font-weight:700;color:var(--navy)">${c.nuevas}</span> <span style="font-size:10px;color:var(--gray-400)">de ${c.n}</span>` : `<span style="color:var(--gray-300)">—</span>`}</td>
+        <td class="num" style="font-weight:700;color:var(--green)">${fm(c.neto)}</td>
+        <td class="num" style="font-size:11px;color:var(--gray-500)">${c.px != null ? '$' + c.px.toLocaleString('en-US', { maximumFractionDigits: 2 }) : '—'}</td></tr>`).join('')}
+    </table></div></details>` : '';
+
+  // ── 3) REVISAR: sueltan algo que sí tenemos ──
+  const rev = D.revisar || [];
+  const sec3b = rev.length ? `<details open style="${secStyle}">
+    ${tituloSec(3, 'fa-triangle-exclamation', 'var(--red)', 'Revisar — están soltando algo que sí tenemos',
+                'ordenado por NUESTRA exposición · C = posición cerrada')}
+    <div style="overflow-x:auto;padding-bottom:10px"><table class="camp-table" style="width:100%;font-size:12px">
+      <tr><th>Posición</th><th>Nuestro peso</th><th>Quién vende</th><th class="num">Neto Q</th><th class="num">Desde el corte</th><th class="num">Nuestro P&L</th></tr>
+      ${rev.map(c => `<tr>
+        <td style="font-weight:600">${escapeHtml(c.ticker)} <span style="font-size:10px;color:var(--gray-400)">${escapeHtml(c.issuer)}</span></td>
+        <td style="font-weight:700">${(c.peso ?? 0).toFixed(2)}%</td>
+        <td>${chipsFondos(c.fondos, 6)}</td>
+        <td class="num" style="font-weight:700;color:var(--red)">${fm(c.neto)}</td>
+        <td class="num">${desdeCorte(c.desde_corte)}</td>
+        <td class="num" style="color:${gmColor(c.plpct || 0)}">${c.plpct != null ? gmPct(c.plpct, 1) : '—'}</td></tr>`).join('')}
+    </table></div></details>` : `<div style="${secStyle};padding:12px 14px;font-size:12px;color:var(--gray-500)">
+      <i class="fa-solid fa-circle-check" style="color:var(--green)"></i> <strong>Nada de lo nuestro está bajo consenso vendedor</strong> este trimestre.</div>`;
+
+  // ── 5) consenso completo, como referencia (plegado) ──
   const consRow = c => `
     <div style="display:flex;gap:8px;align-items:baseline;padding:4px 10px;border-radius:8px;margin:3px 0;font-size:12px;background:${c.en_cartera ? 'var(--navy-pale)' : 'var(--gray-50)'}">
       <span style="font-weight:600">${escapeHtml(c.issuer)}</span>
       <span style="font-weight:700;color:${c.dir === 'compra' ? 'var(--green)' : 'var(--red)'}">${c.dir.toUpperCase()} ×${c.n}</span>
-      <span style="font-size:10px;color:var(--gray-400)">${c.fondos.map(f2 => escapeHtml(f2.fund.split(' ')[0])).join(' · ')}</span>
+      ${c.en_cartera ? '<span style="font-size:9px;font-weight:800;color:var(--navy)">EN CARTERA</span>' : ''}
+      <span style="font-size:10px;color:var(--gray-400)">${(c.fondos || []).map(f2 => escapeHtml(f2.fund.split(' ')[0])).join(' · ')}</span>
       <span style="margin-left:auto;font-weight:700;color:${gmColor(c.neto)}">${fm(c.neto)}</span></div>`;
-  const enCart = (D.consenso || []).filter(c => c.en_cartera);
-  const fueraCart = (D.consenso || []).filter(c => !c.en_cartera);
-  const sec3 = enCart.length ? `<details open style="${secStyle}"><summary style="${sumStyle}">
-      <i class="fa-solid fa-handshake" style="color:var(--green)"></i> Consenso institucional EN nuestra cartera
-      <span style="font-weight:400;font-size:10.5px;color:var(--gray-400)">· 2+ managers en la misma dirección</span></summary>
-    <div style="padding-bottom:10px">${enCart.slice(0, 8).map(consRow).join('')}</div></details>` : '';
-  const sec4 = fueraCart.length ? `<details style="${secStyle}"><summary style="${sumStyle}">
-      <i class="fa-solid fa-lightbulb" style="color:var(--amber)"></i> Radar — consenso FUERA de nuestra cartera
-      <span style="font-weight:400;font-size:10.5px;color:var(--gray-400)">· lo que el smart money mueve y nosotros no tenemos</span></summary>
-    <div style="padding-bottom:10px">${fueraCart.slice(0, 10).map(consRow).join('')}</div></details>` : '';
+  const sec5 = (D.consenso || []).length ? `<details style="${secStyle}">
+    ${tituloSec(5, 'fa-list-ul', 'var(--gray-400)', 'Consenso completo',
+                'todas las emisoras con 2+ managers en la misma dirección')}
+    <div style="padding-bottom:10px">${(D.consenso || []).slice(0, 20).map(consRow).join('')}</div></details>` : '';
+
+  // lectura de una línea: qué pasó, en español, antes de cualquier tabla
+  const mayorTk = H.mayor ? H.mayor.ticker : null;
+  const lectura = [
+    `Los ${D.n_managers || (D.fondos || []).length} managers movieron <strong style="color:${gmColor(H.neto_cartera || 0)}">${fm(H.neto_cartera || 0)}</strong> netos en emisoras que tenemos`,
+    mayorTk ? `el mayor flujo fue <strong>${escapeHtml(mayorTk)}</strong> (${fm(H.mayor.neto)})` : null,
+    ideas.length ? `hay <strong>${ideas.length}</strong> emisora(s) con consenso comprador que no tenemos` : null,
+    rev.length ? `y <strong style="color:var(--red)">${rev.length}</strong> de las nuestras bajo consenso vendedor`
+               : 'y ninguna de las nuestras bajo consenso vendedor',
+  ].filter(Boolean).join(' · ') + '.';
 
   return `<div style="${GM_CARD};margin-bottom:14px">
-    <div style="font-weight:700;margin-bottom:2px"><i class="fa-solid fa-landmark"></i> Smart money — 13F institucional
-      <span style="font-weight:400;font-size:11px;color:var(--gray-400)">· Q al ${escapeHtml(q)} vs previo · SEC EDGAR, rezago ~45 días, solo largos US${pendientes.length ? ' · con Q anterior: ' + pendientes.join(', ') : ''}</span></div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:10px 0">
+    <div style="font-weight:700"><i class="fa-solid fa-landmark"></i> Smart money — 13F institucional</div>
+    <div style="font-size:11px;color:var(--gray-400);margin-bottom:8px">${D.n_managers || (D.fondos || []).length} managers · posiciones al cierre de ${escapeHtml(q)} · SEC EDGAR, rezago ~45 días, solo largos en acciones US${pendientes.length ? ' · <span style="color:var(--amber)">con Q anterior: ' + escapeHtml(pendientes.join(', ')) + '</span>' : ''}</div>
+    <div style="background:var(--gray-50);border-left:3px solid var(--navy);border-radius:8px;padding:9px 13px;font-size:12.5px;line-height:1.55;margin-bottom:12px">${lectura}</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:6px">
       <div style="background:${(H.neto_cartera || 0) >= 0 ? 'var(--green-bg)' : 'var(--red-bg)'};border-radius:10px;padding:10px 14px">
         <div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--gray-500)">Flujo neto hacia nuestra cartera</div>
         <div style="font-size:22px;font-weight:800;color:${gmColor(H.neto_cartera || 0)}">${fm(H.neto_cartera || 0)}</div></div>
@@ -19983,7 +20046,7 @@ function gm13fCard() {
         <div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--gray-500)">Mayor flujo del trimestre</div>
         <div style="font-size:22px;font-weight:800;color:${gmColor(H.mayor?.neto || 0)}">${H.mayor ? escapeHtml(H.mayor.ticker) + ' ' + fm(H.mayor.neto) : '—'}</div></div>
     </div>
-    ${sec1}${sec2}${sec3}${sec4}
+    ${sec1}${sec2b}${sec3b}${sec2}${sec5}
     <div style="font-size:10px;color:var(--gray-400);margin-top:6px">${escapeHtml(D.nota || '')}</div></div>`;
 }
 
