@@ -31,10 +31,12 @@ let saveTimer = null;
 /* ═══════════════════════════════════════════
    AUTH — Supabase
 ═══════════════════════════════════════════ */
+let APP_BUILD = '';   // build del deploy que cargó esta pestaña (para detectar versiones nuevas)
 async function initSupabase() {
   const r = await fetch('/api/config');
   if (!r.ok) throw new Error('No se pudo cargar configuración');
   const cfg = await r.json();
+  APP_BUILD = cfg.build || '';
   if (!cfg.supabaseUrl || !cfg.supabaseAnonKey) {
     throw new Error('Configuración de Supabase incompleta');
   }
@@ -452,10 +454,73 @@ async function mfaDisable(factorId) {
   } catch (e) { toast('Error: ' + e.message); }
 }
 
+/* ═══════════════════════════════════════════
+   ACTUALIZAR LA APP (botón del hero + aviso de versión nueva)
+   La sesión NO se guarda entre recargas (persistSession:false, decisión del equipo):
+   una recarga normal saca a la persona. Para que "Actualizar" no lo haga, los tokens
+   viajan por sessionStorage SOLO durante la recarga (mueren con la pestaña) y se borran
+   al restaurarlos. Abrir el desk de cero sigue pidiendo login, como hasta ahora.
+═══════════════════════════════════════════ */
+const APP_RELOAD_KEY = 'cretum_reload_session';
+async function appRefresh() {
+  try {
+    const { data } = await sb.auth.getSession();
+    const ses = data?.session;
+    if (ses?.access_token && ses?.refresh_token) {
+      sessionStorage.setItem(APP_RELOAD_KEY, JSON.stringify({ a: ses.access_token, r: ses.refresh_token, ts: Date.now() }));
+    }
+  } catch (e) {}
+  document.getElementById('homeHeroRefresh')?.classList.add('spinning');
+  document.getElementById('updPill')?.remove();
+  try { await fetch(location.pathname, { cache: 'reload' }); } catch (e) {}   // HTML fresco (y con él los ?v= nuevos)
+  location.reload();
+}
+async function appRestoreSession() {
+  let st = null;
+  try { st = JSON.parse(sessionStorage.getItem(APP_RELOAD_KEY) || 'null'); } catch (e) {}
+  try { sessionStorage.removeItem(APP_RELOAD_KEY); } catch (e) {}
+  if (!st || !st.a || !st.r || (Date.now() - st.ts) > 120000) return;   // solo sirve para la recarga inmediata
+  try { await sb.auth.setSession({ access_token: st.a, refresh_token: st.r }); }
+  catch (e) { console.warn('[actualizar] no se pudo restaurar la sesión', e?.message); }
+}
+// ¿Se puede recargar sin perder nada a medias? (sin modal, sin campo con foco, sin edición del home)
+function appUpdateSafeToReload() {
+  if (document.querySelector('[class*="modal"].show, .modal-backdrop.show, .settings-pop.show')) return false;
+  const ae = document.activeElement;
+  if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.isContentEditable)) return false;
+  if (typeof hwCfg === 'function' && currentOrg && typeof hmActive === 'function' && hmActive() && !hwCfg().locked) return false;
+  return true;
+}
+let appUpdateLast = 0;
+async function appCheckUpdate(fromHidden) {
+  if (!APP_BUILD || !currentUser) return;
+  if (!fromHidden && Date.now() - appUpdateLast < 60000) return;
+  appUpdateLast = Date.now();
+  let build = '';
+  try { const r = await fetch('/api/config?_=' + Date.now(), { cache: 'no-store' }); build = (await r.json()).build || ''; }
+  catch (e) { return; }
+  if (!build || build === APP_BUILD) return;
+  // Volviste a la pestaña y no hay nada a medias → se actualiza sola; si no, aviso con botón
+  if (fromHidden && appUpdateSafeToReload()) { appRefresh(); return; }
+  appShowUpdatePill();
+}
+function appShowUpdatePill() {
+  if (document.getElementById('updPill')) return;
+  const d = document.createElement('div');
+  d.id = 'updPill'; d.className = 'upd-pill'; d.setAttribute('role', 'status');
+  d.innerHTML = `<i class="fa-solid fa-rotate"></i><span>${t('Hay una versión nueva del desk')}</span>
+    <button type="button" class="upd-pill-go" onclick="appRefresh()">${t('Actualizar')}</button>
+    <button type="button" class="upd-pill-x" onclick="document.getElementById('updPill')?.remove()" aria-label="${t('Cerrar')}"><i class="fa-solid fa-xmark"></i></button>`;
+  document.body.appendChild(d);
+}
+setInterval(() => { if (document.visibilityState === 'visible') appCheckUpdate(false); }, 5 * 60 * 1000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') appCheckUpdate(true); });
+
 // Boot: init Supabase y revisa si hay sesión activa
 window.addEventListener('DOMContentLoaded', async () => {
   try {
     await initSupabase();
+    await appRestoreSession();   // solo tras "Actualizar": recupera la sesión que viajó por sessionStorage
     const { data } = await sb.auth.getSession();
     if (data?.session?.user) {
       // 2FA: exige el código solo si la confianza por inactividad expiró

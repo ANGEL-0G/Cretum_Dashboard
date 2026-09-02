@@ -1106,6 +1106,8 @@ const EN = {
   'Arrastra una ventana para moverla · esquina inferior derecha para redimensionar · ojo para ocultarla': 'Drag a window to move it · bottom-right corner to resize · eye to hide it',
   'Arrastra una ventana y suéltala donde quieras · jala sus bordes para redimensionar · ojo para ocultarla': 'Drag a window and drop it wherever you want · pull its edges to resize · eye to hide it',
   'Cerrar': 'Close',
+  'Hay una versión nueva del desk': 'A new version of the desk is available',
+  'Actualizar la app (trae la última versión sin cerrar sesión)': 'Refresh the app (loads the latest version without signing out)',
   'Cambiar modo oscuro': 'Toggle dark mode',
   'Acceso protegido': 'Protected access',
   'Apertura diaria': 'Daily market brief',

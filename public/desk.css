@@ -284,6 +284,21 @@
   .home-greeting{font-size:42px;font-weight:700;line-height:1.05;letter-spacing:-.035em;color:#1a3a6b;margin:10px 0 6px}
   .home-question{font-size:16px;color:#6b7890}
   .home-hero-actions{display:flex;align-items:center;gap:10px;flex-shrink:0}
+  .home-hero-refresh{
+    width:44px;height:44px;border-radius:999px;border:1px solid #c8d6ea;background:#fff;color:#1a3a6b;
+    display:grid;place-items:center;cursor:pointer;font-size:15px;
+    transition:background .16s ease,transform .16s cubic-bezier(.23,1,.32,1);
+  }
+  .home-hero-refresh:hover{background:#e8eef7}
+  .home-hero-refresh:active{transform:scale(.94)}
+  @keyframes appSpin{to{transform:rotate(360deg)}}
+  .home-hero-refresh.spinning i{animation:appSpin .7s linear infinite}
+  [data-org="mvp"] .home-hero-refresh{border-color:#f3d3b4;color:#c9651f}
+  [data-org="mvp"] .home-hero-refresh:hover{background:#fcead9}
+  [data-theme="dark"] .home-hero-refresh{background:transparent;border-color:#2f3744;color:#9fc0ee}
+  [data-theme="dark"] .home-hero-refresh:hover{background:rgba(93,143,245,.16)}
+  [data-theme="dark"][data-org="mvp"] .home-hero-refresh{border-color:#2f271e;color:#f4a86c}
+  [data-theme="dark"][data-org="mvp"] .home-hero-refresh:hover{background:rgba(248,149,64,.16)}
   .home-hero-edit{
     display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 22px;border:0;border-radius:999px;
     background:#1a3a6b;color:#fff;font:600 14px var(--font);cursor:pointer;

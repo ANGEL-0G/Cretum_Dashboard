@@ -12,5 +12,7 @@ export default function handler(req, res) {
   res.status(200).json({
     supabaseUrl: supabaseUrl(),
     supabaseAnonKey: process.env.SUPABASE_ANON_KEY || '',
+    // Identificador del deploy: el frontend lo compara para avisar "hay versión nueva"
+    build: process.env.VERCEL_GIT_COMMIT_SHA || process.env.VERCEL_DEPLOYMENT_ID || '',
   });
 }
