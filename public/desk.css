@@ -539,6 +539,18 @@
   [data-theme="dark"] .hw-ghost{border-color:#5d8ff5;background:rgba(93,143,245,.08)}
   [data-theme="dark"][data-org="mvp"] .hw-ghost{border-color:#F89540;background:rgba(248,149,64,.08)}
 
+  /* ══ To Do · segmentado de alcance (Mis tareas / Equipo / Otros miembros) ══
+     El anillo de foco del navegador se salía de la píldora; foco propio con la misma forma. */
+  .tk-toggle{border-radius:999px;padding:4px;gap:2px}
+  .tk-toggle .mob-pill{display:none}   /* red de seguridad: la pastilla móvil nunca se pinta en escritorio */
+  .tk-tog-slider{top:4px;bottom:4px;border-radius:999px}
+  .tk-tog-btn{border-radius:999px;padding:7px 16px;font-weight:500}
+  .tk-tog-btn:focus{outline:none}
+  .tk-tog-btn:focus-visible{outline:2px solid var(--navy);outline-offset:-2px}
+  [data-theme="dark"] .tk-tog-slider{background:#2f3744;box-shadow:none}
+  [data-theme="dark"][data-org="mvp"] .tk-tog-slider{background:#3a2d20}
+  [data-theme="dark"] .tk-tog-btn.on{color:#eceff4}
+
   /* el panel de marca cede en pantallas angostas de escritorio */
   @media (max-width:899px){
     #loginWrap{grid-template-columns:1fr}

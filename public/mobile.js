@@ -430,7 +430,17 @@
       requestAnimationFrame(function () { placePill(pill, active); });
     } else placePill(pill, active);
   }
-  function slideScope() { slidePill(document.querySelector('#pageTasks .tk-toggle')); }
+  function slideScope() {
+    var cont = document.querySelector('#pageTasks .tk-toggle'); if (!cont) return;
+    // Solo móvil: en escritorio la pastilla (sin CSS) quedaba como caja vacía dentro del flex,
+    // empujaba los botones y descolocaba el slider propio del app. Se limpia y se recoloca el original.
+    if (!isMob()) {
+      var p = cont.querySelector('.mob-pill'); if (p) p.remove();
+      if (window.tkMoveSlider) try { window.tkMoveSlider(); } catch (e) {}
+      return;
+    }
+    slidePill(cont);
+  }
 
   /* ── Carpetas de Notas: desplegable PROPIO "Carpetas" (reemplaza el riel de pastillas).
      Lee las carpetas del riel oculto #ntFolders (que la app sigue renderizando) y, al
