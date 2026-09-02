@@ -3947,6 +3947,25 @@ function toggleHomeEdit() {
   renderHomeModules();
 }
 
+// ── Fecha y hora del hero (escritorio): "Martes 1 de septiembre · 14:11" ──
+// Hora local del navegador (el equipo está en CDMX y NYC); refresca cada 30 s.
+let _heroClockTimer = null;
+function renderHeroClock() {
+  const el = document.getElementById('homeHeroDate');
+  if (!el) return;
+  const en = (typeof currentLang === 'function' && currentLang() === 'en');
+  const loc = en ? 'en-US' : 'es-MX';
+  const now = new Date();
+  const wd = now.toLocaleDateString(loc, { weekday: 'long' });
+  const month = now.toLocaleDateString(loc, { month: 'long' });
+  const day = now.getDate();
+  const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+  const date = en ? `${cap(wd)}, ${cap(month)} ${day}` : `${cap(wd)} ${day} de ${month}`;
+  const time = now.toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+  el.textContent = `${date} · ${time}`;
+  if (!_heroClockTimer) _heroClockTimer = setInterval(renderHeroClock, 30000);
+}
+
 function homeDragStart(e, view) {
   homeDragView = view;
   try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', view); } catch (er) {}
@@ -4039,6 +4058,15 @@ function renderHomeModules() {
       : `<i class="fa-solid fa-sliders"></i> <span>${t('Personalizar')}</span>`;
     btn.classList.toggle('shine-new', isNew && !editing);
   }
+  // Escritorio: el mismo botón vive en el hero (design v2); mismo estado, misma acción
+  const heroBtn = document.getElementById('homeHeroEdit');
+  if (heroBtn) {
+    heroBtn.innerHTML = editing
+      ? `<i class="fa-solid fa-check"></i> <span>${t('Listo')}</span>`
+      : `<i class="fa-solid fa-pen"></i> <span>${t('Editar módulos')}</span>`;
+    heroBtn.classList.toggle('shine-new', isNew && !editing);
+  }
+  renderHeroClock();
   const tip = document.getElementById('homeCustTip');
   if (tip) tip.classList.toggle('on', isNew && !editing);
   const hint = document.getElementById('homeCustHint');

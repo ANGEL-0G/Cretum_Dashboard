@@ -13,7 +13,7 @@
 
 /* Los elementos nuevos del rediseño no existen en la capa móvil */
 @media (max-width:768px){
-  .login-brand,.selector-card-tags,.selector-kicker,.hdr-lang,.hdr-theme{display:none}
+  .login-brand,.selector-card-tags,.selector-kicker,.hdr-lang,.hdr-theme,.home-hero-kicker,.home-hero-actions{display:none}
 }
 
 @media (min-width:769px){
@@ -268,6 +268,57 @@
   [data-theme="dark"] .sel-mvp .selector-card-tags span{border-color:#2f271e;color:#b3a696}
   [data-theme="dark"] .sel-mvp .selector-card-sub{color:#b3a696}
   [data-theme="dark"][data-org="mvp"] .selector-card{background:#181410;border-color:#2f271e}
+
+  /* ══ 2c/2d · Hero del home: tarjeta tintada con fecha-hora + "Editar módulos" ══
+     Angel pidió un toque de transparencia: tinta con alpha + blur del fondo + borde blanco. */
+  .home-hero{
+    display:flex;align-items:center;justify-content:space-between;gap:28px;
+    text-align:left;padding:34px 36px;margin-bottom:30px;border-radius:22px;
+    background:linear-gradient(120deg,rgba(240,244,250,.74),rgba(232,238,247,.74));
+    border:1px solid rgba(255,255,255,.75);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 1px 2px rgba(22,35,60,.04);
+    -webkit-backdrop-filter:blur(14px) saturate(140%);backdrop-filter:blur(14px) saturate(140%);
+  }
+  .home-hero-main{min-width:0}
+  .home-hero-kicker{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#5b7099;min-height:15px}
+  .home-greeting{font-size:42px;font-weight:700;line-height:1.05;letter-spacing:-.035em;color:#1a3a6b;margin:10px 0 6px}
+  .home-question{font-size:16px;color:#6b7890}
+  .home-hero-actions{display:flex;align-items:center;gap:10px;flex-shrink:0}
+  .home-hero-edit{
+    display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 22px;border:0;border-radius:999px;
+    background:#1a3a6b;color:#fff;font:600 14px var(--font);cursor:pointer;
+    box-shadow:0 8px 20px -8px rgba(26,58,107,.7);
+    transition:transform .16s cubic-bezier(.23,1,.32,1),box-shadow .16s ease,filter .16s ease;
+  }
+  .home-hero-edit i{font-size:13px}
+  .home-hero-edit:hover{filter:brightness(1.08);box-shadow:0 10px 22px -8px rgba(26,58,107,.8)}
+  .home-hero-edit:active{transform:scale(.97)}
+  .home-hero-edit.shine-new{box-shadow:0 0 0 3px rgba(26,58,107,.18),0 8px 20px -8px rgba(26,58,107,.7)}
+  /* MVP */
+  [data-org="mvp"] .home-hero{background:linear-gradient(120deg,rgba(254,245,238,.76),rgba(252,234,217,.76))}
+  [data-org="mvp"] .home-hero-kicker{color:#a3673a}
+  [data-org="mvp"] .home-greeting{color:#c9651f}
+  [data-org="mvp"] .home-question{color:#8a7362}
+  [data-org="mvp"] .home-hero-edit{background:#ED7824;box-shadow:0 8px 20px -8px rgba(237,120,36,.7)}
+  [data-org="mvp"] .home-hero-edit:hover{box-shadow:0 10px 22px -8px rgba(237,120,36,.8)}
+  [data-org="mvp"] .home-hero-edit.shine-new{box-shadow:0 0 0 3px rgba(237,120,36,.2),0 8px 20px -8px rgba(237,120,36,.7)}
+  /* La barra "Personalizar" de abajo se reduce al hint (el botón ya vive en el hero) */
+  .home-cust-bar .home-cust-btn,.home-cust-bar .home-cust-tip{display:none!important}
+  .home-cust-hint{text-align:center}
+  /* oscuro (design 2e): tinta oscura translúcida + divisor */
+  [data-theme="dark"] .home-hero{
+    background:linear-gradient(120deg,rgba(19,26,41,.78),rgba(22,27,36,.78));
+    border-color:#2f3744;box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
+  }
+  [data-theme="dark"] .home-hero-kicker,[data-theme="dark"] .home-question{color:#98a2b3}
+  [data-theme="dark"] .home-greeting{color:#9fc0ee}
+  [data-theme="dark"] .home-hero-edit{background:#5d8ff5;color:#0c0f16;box-shadow:0 8px 20px -8px rgba(93,143,245,.55)}
+  [data-theme="dark"] .home-hero-edit.shine-new{box-shadow:0 0 0 3px rgba(93,143,245,.25),0 8px 20px -8px rgba(93,143,245,.55)}
+  [data-theme="dark"][data-org="mvp"] .home-hero{background:linear-gradient(120deg,rgba(34,26,20,.8),rgba(24,20,16,.8));border-color:#2f271e}
+  [data-theme="dark"][data-org="mvp"] .home-hero-kicker,[data-theme="dark"][data-org="mvp"] .home-question{color:#b3a696}
+  [data-theme="dark"][data-org="mvp"] .home-greeting{color:#f4a86c}
+  [data-theme="dark"][data-org="mvp"] .home-hero-edit{background:#F89540;color:#0d0a07;box-shadow:0 8px 20px -8px rgba(248,149,64,.55)}
+  [data-theme="dark"][data-org="mvp"] .home-hero-edit.shine-new{box-shadow:0 0 0 3px rgba(248,149,64,.25),0 8px 20px -8px rgba(248,149,64,.55)}
 
   /* el panel de marca cede en pantallas angostas de escritorio */
   @media (max-width:899px){

@@ -4180,8 +4180,8 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   .header-brand{padding:3px}
 }
 </style>
-<link rel="stylesheet" href="/mobile.css?v=20260901-desk8">
-<link rel="stylesheet" href="/desk.css?v=20260901-desk8">
+<link rel="stylesheet" href="/mobile.css?v=20260901-desk9">
+<link rel="stylesheet" href="/desk.css?v=20260901-desk9">
 </head>
 <body>
 
@@ -4484,8 +4484,15 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   <!-- VISTA: INICIO -->
   <div class="page page-home" id="pageHome">
     <div class="home-hero" id="homeHero">
-      <div class="home-greeting"><span id="homeGreet">Hola</span>, <span id="homeUserName">—</span></div>
-      <div class="home-question" id="homeQuestion" data-i18n>¿Con qué quieres empezar hoy?</div>
+      <div class="home-hero-main">
+        <div class="home-hero-kicker" id="homeHeroDate"></div>
+        <div class="home-greeting"><span id="homeGreet">Hola</span>, <span id="homeUserName">—</span></div>
+        <div class="home-question" id="homeQuestion" data-i18n>¿Con qué quieres empezar hoy?</div>
+      </div>
+      <!-- Escritorio (design v2): el botón de personalizar vive en el hero; en móvil sigue la barra de abajo -->
+      <div class="home-hero-actions">
+        <button type="button" class="home-hero-edit" id="homeHeroEdit" onclick="toggleHomeEdit()"><i class="fa-solid fa-pen"></i> <span data-i18n>Editar módulos</span></button>
+      </div>
     </div>
 
     <!-- Vista modular: ventanas redimensionables (Módulos / Calendario / Noticias).
@@ -7688,8 +7695,8 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   </div>
 </div>
 
-<script src="/i18n.js?v=20260901-desk8"></script>
-<script src="/app.js?v=20260901-desk8"></script>
-<script src="/mobile.js?v=20260901-desk8"></script>
+<script src="/i18n.js?v=20260901-desk9"></script>
+<script src="/app.js?v=20260901-desk9"></script>
+<script src="/mobile.js?v=20260901-desk9"></script>
 </body>
 </html>
