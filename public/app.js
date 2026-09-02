@@ -470,7 +470,7 @@ async function appRefresh() {
       sessionStorage.setItem(APP_RELOAD_KEY, JSON.stringify({ a: ses.access_token, r: ses.refresh_token, ts: Date.now() }));
     }
   } catch (e) {}
-  document.getElementById('homeHeroRefresh')?.classList.add('spinning');
+  document.getElementById('hdrRefreshBtn')?.classList.add('spinning');
   document.getElementById('updPill')?.remove();
   try { await fetch(location.pathname, { cache: 'reload' }); } catch (e) {}   // HTML fresco (y con él los ?v= nuevos)
   location.reload();
@@ -516,6 +516,15 @@ function appShowUpdatePill() {
 setInterval(() => { if (document.visibilityState === 'visible') appCheckUpdate(false); }, 5 * 60 * 1000);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') appCheckUpdate(true); });
 
+// Quita la pantalla de carga de "Actualizar" con un fundido corto (si no estaba, no hace nada)
+function appBootDone() {
+  const h = document.documentElement;
+  if (!h.classList.contains('booting')) return;
+  const b = document.getElementById('appBoot');
+  if (b) b.classList.add('out');
+  setTimeout(() => { h.classList.remove('booting'); if (b) b.classList.remove('out'); }, 260);
+}
+
 // Boot: init Supabase y revisa si hay sesión activa
 window.addEventListener('DOMContentLoaded', async () => {
   try {
@@ -525,6 +534,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (data?.session?.user) {
       // 2FA: exige el código solo si la confianza por inactividad expiró
       if (await mfaGateNeeded(data.session.user.id)) {
+        appBootDone();   // el modal del código debe verse
         const ok = await mfaPromptLogin();
         if (!ok) { await sb.auth.signOut(); return; }  // queda en la pantalla de login
       }
@@ -534,6 +544,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   } catch (e) {
     console.error('Boot error', e);
     setTimeout(() => toast('Error de configuración: ' + e.message), 100);
+  } finally {
+    appBootDone();   // con sesión restaurada ya está el app; sin ella, aparece el login
   }
 });
 

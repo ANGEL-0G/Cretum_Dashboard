@@ -1108,6 +1108,7 @@ const EN = {
   'Cerrar': 'Close',
   'Hay una versión nueva del desk': 'A new version of the desk is available',
   'Actualizar la app (trae la última versión sin cerrar sesión)': 'Refresh the app (loads the latest version without signing out)',
+  'Actualizando el desk…': 'Updating the desk…',
   'Cambiar modo oscuro': 'Toggle dark mode',
   'Acceso protegido': 'Protected access',
   'Apertura diaria': 'Daily market brief',

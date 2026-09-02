@@ -273,6 +273,28 @@ select.camp-f-inp::-ms-expand,select.form-input::-ms-expand{display:none}
 .upd-pill-x{border:0;background:rgba(255,255,255,.16);color:inherit;width:26px;height:26px;border-radius:50%;cursor:pointer;display:grid;place-items:center;font-size:12px}
 @media (max-width:768px){.upd-pill{bottom:calc(112px + env(safe-area-inset-bottom,0px))}}
 
+/* Pantalla de carga tras Actualizar (html.booting la muestra y esconde el login) */
+.app-boot{display:none;position:fixed;inset:0;z-index:5000;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:#f4f6fa;color:#6b7890;font-size:14px;transition:opacity .25s ease}
+html.booting .app-boot{display:flex}
+html.booting #loginWrap{visibility:hidden}
+.app-boot.out{opacity:0;pointer-events:none}
+/* Loader de cubos isométricos (tetrominos): azul, naranja, negro y verde con la cara superior blanca.
+   Piezas 96×112 → paso horizontal 48px, vertical 27px, ciclo 1.5s (armar logo → L → caja → logo). */
+.app-boot-anim{position:relative;width:260px;height:200px}
+.tetrominos{position:absolute;top:50%;left:50%;transform:translate(-112px,-96px)}
+.tetromino{width:96px;height:112px;position:absolute}
+.box1{background:url('data:image/svg+xml;utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 612 684%22%3E%3Cpath fill=%22%231a3a6b%22 d=%22M305.7 0L0 170.9v342.3L305.7 684 612 513.2V170.9L305.7 0z%22/%3E%3Cpath fill=%22%23ffffff%22 d=%22M305.7 80.1l-233.6 131 233.6 131 234.2-131-234.2-131%22/%3E%3C/svg%3E') no-repeat top center/contain;animation:tetromino1 1.5s ease-out infinite}
+.box2{background:url('data:image/svg+xml;utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 612 684%22%3E%3Cpath fill=%22%23ED7824%22 d=%22M305.7 0L0 170.9v342.3L305.7 684 612 513.2V170.9L305.7 0z%22/%3E%3Cpath fill=%22%23ffffff%22 d=%22M305.7 80.1l-233.6 131 233.6 131 234.2-131-234.2-131%22/%3E%3C/svg%3E') no-repeat top center/contain;animation:tetromino2 1.5s ease-out infinite}
+.box3{background:url('data:image/svg+xml;utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 612 684%22%3E%3Cpath fill=%22%230f1115%22 d=%22M305.7 0L0 170.9v342.3L305.7 684 612 513.2V170.9L305.7 0z%22/%3E%3Cpath fill=%22%23ffffff%22 d=%22M305.7 80.1l-233.6 131 233.6 131 234.2-131-234.2-131%22/%3E%3C/svg%3E') no-repeat top center/contain;animation:tetromino3 1.5s ease-out infinite;z-index:2}
+.box4{background:url('data:image/svg+xml;utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 612 684%22%3E%3Cpath fill=%22%231a8c5b%22 d=%22M305.7 0L0 170.9v342.3L305.7 684 612 513.2V170.9L305.7 0z%22/%3E%3Cpath fill=%22%23ffffff%22 d=%22M305.7 80.1l-233.6 131 233.6 131 234.2-131-234.2-131%22/%3E%3C/svg%3E') no-repeat top center/contain;animation:tetromino4 1.5s ease-out infinite}
+@keyframes tetromino1{0%,40%{transform:translate(0,0)}50%{transform:translate(48px,-27px)}60%,100%{transform:translate(96px,0)}}
+@keyframes tetromino2{0%,20%{transform:translate(96px,0)}40%,100%{transform:translate(144px,27px)}}
+@keyframes tetromino3{0%{transform:translate(144px,27px)}20%,60%{transform:translate(96px,54px)}90%,100%{transform:translate(48px,27px)}}
+@keyframes tetromino4{0%,60%{transform:translate(48px,27px)}90%,100%{transform:translate(0,0)}}
+@media (prefers-reduced-motion:reduce){.tetromino{animation-duration:6s}}
+[data-theme="dark"] .app-boot{background:#0c0f16;color:#98a2b3}
+[data-theme="dark"] .box3{background:url('data:image/svg+xml;utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 612 684%22%3E%3Cpath fill=%22%232b3442%22 d=%22M305.7 0L0 170.9v342.3L305.7 684 612 513.2V170.9L305.7 0z%22/%3E%3Cpath fill=%22%23ffffff%22 d=%22M305.7 80.1l-233.6 131 233.6 131 234.2-131-234.2-131%22/%3E%3C/svg%3E') no-repeat top center/contain}
+
 /* ── LAYOUT ── */
 .page{max-width:900px;margin:0 auto;padding:24px}
 /* La BD tiene tablas anchas (lista + detalle del inversionista) — más espacio */
@@ -4190,10 +4212,17 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   .header-brand{padding:3px}
 }
 </style>
-<link rel="stylesheet" href="/mobile.css?v=20260902-desk19">
-<link rel="stylesheet" href="/desk.css?v=20260902-desk19">
+<link rel="stylesheet" href="/mobile.css?v=20260902-desk23">
+<link rel="stylesheet" href="/desk.css?v=20260902-desk23">
 </head>
 <body>
+<!-- Pantalla de carga tras "Actualizar": la pestaña sabe desde el primer byte que viene de una recarga
+     con sesión (stash en sessionStorage) y muestra esto en lugar del login mientras la restaura. -->
+<script>try{if(sessionStorage.getItem("cretum_reload_session")){document.documentElement.classList.add("booting");setTimeout(function(){document.documentElement.classList.remove("booting")},10000)}}catch(e){}</script>
+<div class="app-boot" id="appBoot" aria-live="polite">
+  <div class="app-boot-anim" aria-hidden="true"><div class="tetrominos"><div class="tetromino box1"></div><div class="tetromino box2"></div><div class="tetromino box3"></div><div class="tetromino box4"></div></div></div>
+  <div class="app-boot-txt" data-i18n>Actualizando el desk…</div>
+</div>
 
 <!-- LOGIN -->
 <div id="loginWrap">
@@ -4297,6 +4326,8 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
       <div class="header-mark"><img src="/logo-icon.png" alt="" class="header-logo"></div>
       <div class="header-title" id="headerBrandText">Cretum · To Do</div>
     </button>
+    <!-- Solo escritorio (desk.css): trae la última versión sin cerrar sesión -->
+    <button type="button" class="hdr-refresh" id="hdrRefreshBtn" onclick="appRefresh()" title="Actualizar la app (trae la última versión sin cerrar sesión)" data-i18n-title aria-label="Actualizar la app"><i class="fa-solid fa-rotate"></i></button>
     <div class="header-sync" id="syncStatus" title="Click para sincronizar ahora" data-i18n-title>
       <div class="sync-dot" id="syncDot"></div>
       <span id="syncLabel">Sincronizado</span>
@@ -4501,7 +4532,6 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
       </div>
       <!-- Escritorio (design v2): el botón de personalizar vive en el hero; en móvil sigue la barra de abajo -->
       <div class="home-hero-actions">
-        <button type="button" class="home-hero-refresh" id="homeHeroRefresh" onclick="appRefresh()" title="Actualizar la app (trae la última versión sin cerrar sesión)" data-i18n-title aria-label="Actualizar la app"><i class="fa-solid fa-rotate"></i></button>
         <button type="button" class="home-hero-edit" id="homeHeroEdit" onclick="toggleHomeEdit()"><i class="fa-solid fa-pen"></i> <span data-i18n>Editar módulos</span></button>
       </div>
     </div>
@@ -7706,8 +7736,8 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   </div>
 </div>
 
-<script src="/i18n.js?v=20260902-desk19"></script>
-<script src="/app.js?v=20260902-desk19"></script>
-<script src="/mobile.js?v=20260902-desk19"></script>
+<script src="/i18n.js?v=20260902-desk23"></script>
+<script src="/app.js?v=20260902-desk23"></script>
+<script src="/mobile.js?v=20260902-desk23"></script>
 </body>
 </html>
