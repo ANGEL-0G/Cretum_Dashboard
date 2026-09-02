@@ -102,7 +102,7 @@
   .selector-kicker{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#7b879c;margin-bottom:12px}
   .selector-greeting{font-size:48px;font-weight:700;letter-spacing:-.035em;line-height:1.05;color:var(--gray-900,#16233c)}
   .selector-question{font-size:17px;color:#6b7890;margin-top:8px}
-  .selector-cards{gap:36px;justify-content:center}
+  .selector-cards{gap:36px;justify-content:center;max-width:none;flex-wrap:nowrap;align-items:stretch}
   .selector-card{
     width:360px;min-height:268px;
     display:flex;flex-direction:column;align-items:flex-start;gap:20px;text-align:left;
@@ -114,10 +114,10 @@
   .selector-card:hover{transform:translateY(-3px);box-shadow:0 4px 16px rgba(22,35,60,.08);border-color:#e4e9f1}
   .selector-card:active{transform:translateY(-1px)}
   .selector-card-logo{
-    width:62px;height:62px;padding:13px;border-radius:18px;
+    width:62px;height:62px;padding:11px;border-radius:18px;
     object-fit:contain;box-sizing:border-box;margin:0;
   }
-  .sel-cretum .selector-card-logo{background:#e8eef7}
+  .sel-cretum .selector-card-logo{background:#e8eef7;padding:11px 9px}
   .sel-mvp .selector-card-logo{background:#fcead9}
   .selector-card:hover .selector-card-logo,
   .selector-card:active .selector-card-logo{transform:none;filter:none}
