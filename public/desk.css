@@ -551,6 +551,13 @@
   [data-theme="dark"][data-org="mvp"] .tk-tog-slider{background:#3a2d20}
   [data-theme="dark"] .tk-tog-btn.on{color:#eceff4}
 
+  /* ══ Fund Trackers · cabecera: el bloque de título cede y los botones de exportar se anclan a la derecha
+     (el subtítulo largo hacía crecer el título a lo ancho y mandaba los botones a otra línea, a la izquierda) ══ */
+  .ft-header-top>div:first-child{flex:1 1 360px;min-width:0}
+  .ft-header-top .ft-export-grp{flex:0 0 auto;margin-left:auto;align-self:flex-start}
+  .ft-header-top .ft-sub{margin-bottom:0}
+  .ft-header-top{margin-bottom:16px}
+
   /* el panel de marca cede en pantallas angostas de escritorio */
   @media (max-width:899px){
     #loginWrap{grid-template-columns:1fr}
