@@ -9542,7 +9542,7 @@ const XLATE_EXACT = {
   'Por empresa / fondo · NAV activo': 'By company / fund · active NAV', 'Por tema': 'By theme',
   'MOIC': 'MOIC', 'Distribuido a la fecha': 'Distributed to Date', 'DPI': 'DPI',
   'Posiciones activas': 'Active Positions', 'Posiciones': 'Positions', 'Posiciones terminadas': 'Closed Positions',
-  'Commitment total': 'Total Commitment', 'Commitment actual': 'Current Commitment',
+  'Commitment total': 'Total Commitment', 'Activo Mark to Market': 'Active Mark to Market',
   'INVERSIONISTA': 'INVESTOR', 'Inversionista': 'Investor', 'TITULAR': 'HOLDER', 'Titular': 'Holder',
   'Empresa': 'Company', 'Series': 'Series', 'Serie': 'Series', 'Estado': 'Status', 'Compromiso': 'Commitment',
   'Account Balance': 'Account Balance', 'Distribuido': 'Distributed', 'Acciones': 'Shares',
@@ -10830,7 +10830,7 @@ document.addEventListener('click', (e) => {
 const LP_KPI_INFO = {
   posiciones: 'Número total de posiciones del inversionista: activas (sin distribuir) + terminadas (ya distribuidas o liquidadas).',
   commitTotal: 'Capital comprometido real (paid-in): suma del compromiso de todas las posiciones, neto de reinversiones SpaceX. La mitad de la Serie 22F que se vendió y se reinvirtió en la 26A QP se cuenta una sola vez (no se dobla el capital reciclado).',
-  commitActual: 'Valor actual estimado (NAV) de las posiciones activas, a precio de mercado (mark-to-market, sincronizado con el último precio). No incluye posiciones ya distribuidas.',
+  commitActual: 'Activo Mark to Market: valor actual estimado (NAV) de las posiciones activas, a precio de mercado (sincronizado con el último precio). No incluye posiciones ya distribuidas.',
   moic: 'Múltiplo total sobre el capital (TVPI): (valor actual de las posiciones activas + distribuido real) ÷ comprometido real. Sí incluye lo ya distribuido. Neto de reinversiones SpaceX.',
   distribuido: 'Efectivo y acciones devueltos al inversionista a la fecha, incluyendo distribuciones de fondos aplicadas a llamadas de capital. Excluye recompras/reinversiones.',
   dpi: 'Distribuciones sobre capital (DPI): distribuido real ÷ comprometido real. Cuánto se ha devuelto en efectivo/acciones por cada dólar comprometido.',
@@ -10937,7 +10937,7 @@ function renderInvestorDetail(inv, contacts, positions) {
       <div class="db-detail-stats">
         <div class="db-stat"><div class="db-stat-l">Posiciones${infoIc(LP_KPI_INFO.posiciones)}</div><div class="db-stat-v">${inv.positions}</div></div>
         <div class="db-stat"><div class="db-stat-l">Commitment total${infoIc(LP_KPI_INFO.commitTotal)}</div><div class="db-stat-v">${fmtMoney(_lp.committedNet)}</div></div>
-        <div class="db-stat"><div class="db-stat-l">Commitment actual${infoIc(LP_KPI_INFO.commitActual, true)}</div><div class="db-stat-v">${fmtMoney(_lp.navActive)}</div></div>
+        <div class="db-stat"><div class="db-stat-l">Activo Mark to Market${infoIc(LP_KPI_INFO.commitActual, true)}</div><div class="db-stat-v">${fmtMoney(_lp.navActive)}</div></div>
       </div>
     </div>
 

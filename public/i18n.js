@@ -609,7 +609,7 @@ const EN = {
   "Cuentas combinadas": "Combined accounts",
   "A quién pertenece la cuenta": "Who the account belongs to",
   "Commitment total": "Total commitment",
-  "Commitment actual": "Current commitment",
+  "Activo Mark to Market": "Active Mark to Market",
   "correo@dominio.com": "email@domain.com",
   "Borrar contacto": "Delete contact",
   "Añadir contacto": "Add contact",
