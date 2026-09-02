@@ -1100,6 +1100,12 @@ const EN = {
   'Mostrar más': 'Show more',
   'restantes': 'remaining',
   // Rediseño v2 escritorio (login + selector)
+  'Sin tareas pendientes.': 'No pending tasks.',
+  'Ver todas las tareas': 'See all tasks',
+  'Sin fecha': 'No date',
+  'Arrastra una ventana para moverla · esquina inferior derecha para redimensionar · ojo para ocultarla': 'Drag a window to move it · bottom-right corner to resize · eye to hide it',
+  'Arrastra una ventana y suéltala donde quieras · jala sus bordes para redimensionar · ojo para ocultarla': 'Drag a window and drop it wherever you want · pull its edges to resize · eye to hide it',
+  'Cerrar': 'Close',
   'Cambiar modo oscuro': 'Toggle dark mode',
   'Acceso protegido': 'Protected access',
   'Apertura diaria': 'Daily market brief',

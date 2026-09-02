@@ -3942,6 +3942,15 @@ function markHomeCustSeen() {
 }
 
 function toggleHomeEdit() {
+  if (hmActive()) {
+    const cfg = hwCfg();
+    cfg.locked = cfg.locked ? 0 : 1;
+    hwEdit = !cfg.locked;   // en edición, los módulos muestran ✕ / + de una vez
+    hwHintPending = !cfg.locked; hwHintFresh = !cfg.locked;
+    hwSave(cfg);
+    renderHomeModular();
+    return;
+  }
   homeEditMode = !homeEditMode;
   if (!homeEditMode) markHomeCustSeen();   // al terminar de personalizar, ya no es "nuevo"
   renderHomeModules();
@@ -4554,20 +4563,30 @@ const HW_DEF = {
   // layout: 'grid' (cuadrícula) | 'list' (filas a lo ancho)
   modules:  { on: 1, mode: 'both', layout: 'grid', size: 1, w: 12, h: 300 },
   calendar: { on: 1, w: 6, h: 340 },
-  news:     { on: 1, w: 6, h: 340 },
-  board:    { on: 1, w: 12, h: 380 },
+  news:     { on: 1, w: 12, h: 320 },
+  board:    { on: 1, w: 7, h: 400 },
+  tasks:    { on: 1, w: 5, h: 400 },
+};
+// Tamaños iniciales distintos por org (design v2: Cretum = calendario ancho + tareas; MVP = Slack ancho + calendario)
+const HW_DEF_ORG = {
+  cretum: { modules: { h: 440 }, calendar: { w: 7, h: 620 }, tasks: { w: 5, h: 620 } },
+  mvp:    { modules: { h: 440 }, board: { w: 7, h: 620 }, calendar: { w: 5, h: 620 }, tasks: { w: 12, h: 320 } },
 };
 const HW_META = {
   modules:  { title: 'Módulos',           ico: 'fa-table-cells-large' },
   calendar: { title: 'Calendario',        ico: 'fa-calendar-days' },
   news:     { title: 'Noticias',          ico: 'fa-newspaper' },
   board:    { title: 'Tablero Slack MVP', ico: 'fa-slack', brand: 1 },
+  tasks:    { title: 'Tareas pendientes', ico: 'fa-list-check' },
 };
 // Ventanas disponibles por organización
-const HW_ORG = { cretum: ['modules', 'news', 'calendar'], mvp: ['modules', 'news', 'board', 'calendar'] };
+const HW_ORG = { cretum: ['modules', 'calendar', 'tasks', 'news'], mvp: ['modules', 'board', 'calendar', 'tasks', 'news'] };
 function homeViewKey() { return `cretum_home_view_${currentUser || 'anon'}_${currentOrg}`; }
 function homeViewMode() { try { return localStorage.getItem(homeViewKey()) === 'modular' ? 'modular' : 'classic'; } catch (e) { return 'classic'; } }
-function hmActive() { return !!currentOrg && !!HW_ORG[currentOrg] && homeViewMode() === 'modular'; }
+function isDeskHome() { try { return window.matchMedia('(min-width:769px)').matches; } catch (e) { return false; } }
+function hmActive() { return !!currentOrg && !!HW_ORG[currentOrg] && (isDeskHome() || homeViewMode() === 'modular'); }
+// Al cruzar el umbral móvil/escritorio el home cambia de vista: re-render
+try { window.matchMedia('(min-width:769px)').addEventListener('change', () => { if (currentView === 'home' && currentOrg) renderHomeModules(); }); } catch (e) {}
 function setHomeView(mode) {
   try { localStorage.setItem(homeViewKey(), mode); } catch (e) {}
   renderHomeModules();
@@ -4577,12 +4596,13 @@ function hwCfg() {
   let c = {};
   try { c = JSON.parse(localStorage.getItem(hwCfgKey()) || '{}'); } catch (e) {}
   const out = {};
-  for (const k of Object.keys(HW_DEF)) out[k] = { ...HW_DEF[k], ...(c[k] || {}) };
+  const orgDef = HW_DEF_ORG[currentOrg] || {};
+  for (const k of Object.keys(HW_DEF)) out[k] = { ...HW_DEF[k], ...(orgDef[k] || {}), ...(c[k] || {}) };
   // Migración del viejo flag icons (0 = solo nombres) al campo mode
   if (c.modules && c.modules.icons === 0 && !c.modules.mode) out.modules.mode = 'names';
   if (!['both', 'icons', 'names'].includes(out.modules.mode)) out.modules.mode = 'both';
   if (!['grid', 'list'].includes(out.modules.layout)) out.modules.layout = 'grid';
-  out.locked = c.locked ? 1 : 0;   // candado: diseño fijado (sin edición)
+  out.locked = (c.locked === undefined) ? 1 : (c.locked ? 1 : 0);   // candado: fijado por default; "Editar módulos" lo abre
   // Orden de las ventanas (drag para mover): claves válidas del org guardadas + las que falten
   const orgKeys = HW_ORG[currentOrg] || HW_ORG.cretum;
   const saved = Array.isArray(c.order) ? c.order.filter(k => orgKeys.includes(k)) : [];
@@ -4595,7 +4615,7 @@ function hwSave(cfg) { try { localStorage.setItem(hwCfgKey(), JSON.stringify(cfg
 function syncHomeViewPref() {
   const row = document.getElementById('homeViewRow');
   if (!row) return;
-  const ok = !!currentOrg && !!HW_ORG[currentOrg];
+  const ok = !!currentOrg && !!HW_ORG[currentOrg] && !isDeskHome();
   row.style.display = ok ? '' : 'none';
   if (!ok) return;
   const mode = homeViewMode();
@@ -4625,7 +4645,8 @@ function hwModulesBody(cfg) {
       return `<button class="hw-mod hw-mod-io${extra}" onclick="${click}" title="${t(m.title)}" aria-label="${t(m.title)}">
         ${ico}<span class="hw-mod-io-t">${t(m.title)}</span>${pulse}${badge}</button>`;
     }
-    return `<button class="hw-mod${extra}" onclick="${click}">${ico}<span class="hw-mod-t">${t(m.title)}</span>${pulse}${badge}</button>`;
+    const kicker = vert ? `<span class="hw-mod-k">${t(m.desc || '')}</span>` : '';
+    return `<button class="hw-mod${extra}" onclick="${click}">${ico}<span class="hw-mod-t">${t(m.title)}</span>${kicker}${pulse}${badge}</button>`;
   };
 
   if (!visible.length && !editing) return `<div class="hb-empty">${t('Todos los módulos están ocultos. Actívalos con el lápiz de esta ventana.')}</div>`;
@@ -4644,6 +4665,8 @@ function hwModToggle(view) {
   renderHomeModular();
 }
 let hwEdit = false;
+let hwHintPending = false, hwHintFresh = false;   // aviso de edición: una vez por sesión de edición
+function hwHintClose() { hwHintPending = false; const h = document.querySelector('#homeModular .hw-hint'); if (h) h.remove(); }
 function hwToggleEdit() { hwEdit = !hwEdit; renderHomeModular(); }
 function hwToggleLock() {
   const cfg = hwCfg();
@@ -4668,19 +4691,46 @@ async function hnEnsureNews() {
   catch (e) { homeNewsCache[org] = { items: [] }; }
   renderHomeModular();
 }
+function hwTasksBody() {
+  let mine = [];
+  try { mine = (typeof myTasks === 'function') ? (myTasks() || []) : []; } catch (e) { mine = []; }
+  const pend = mine.filter(tk => !isDone(tk));
+  const rank = tk => (tk.due && isOD(tk.due)) ? 0 : tk.prio === 'Alta' ? 1 : tk.due ? 2 : 3;
+  pend.sort((x, y) => (rank(x) - rank(y)) || String(x.due || '9999').localeCompare(String(y.due || '9999')));
+  const top = pend.slice(0, 7);
+  if (!top.length) return `<div class="hb-empty">${t('Sin tareas pendientes.')}</div>`;
+  const row = tk => {
+    const od = tk.due && isOD(tk.due);
+    const when = tk.due ? (od ? t('Vencida') + ' · ' : '') + fmtD(tk.due) : t('Sin fecha');
+    const prog = tk.kind === 'progress' ? ` · ${pct(tk)}%` : '';
+    return `<button type="button" class="hw-task${od ? ' od' : ''}" onclick="openTaskDetail('${tk.id}','${tk.kind}')">
+      <span class="hw-task-dot ${prioC(tk.prio)}"></span>
+      <span class="hw-task-main"><span class="hw-task-t">${escapeHtml(tk.name || '')}</span><span class="hw-task-m">${escapeHtml(when)}${prog}</span></span>
+      <i class="fa-solid fa-chevron-right hw-task-chev"></i></button>`;
+  };
+  return `<div class="hw-tasks">${top.map(row).join('')}</div>
+    <div class="hn-more"><button type="button" class="hn-viewall" onclick="switchView('tasks')">${t('Ver todas las tareas')} <i class="fa-solid fa-arrow-right"></i></button></div>`;
+}
+// Próximos eventos (esta semana) sin pie ni botón: acompaña a la cuadrícula mensual en la ventana alta
+function calUpcomingHTML() {
+  const end = calEndOfWeek().getTime();
+  const evs = (calEvents || []).filter(ev => { const d = calEvDate(ev); return d && d.getTime() <= end; }).slice(0, 3);
+  return evs.length ? evs.map(calEventHTML).join('') : `<div class="hb-empty">${t('Sin eventos esta semana.')}</div>`;
+}
 // Calendario adaptativo: reducido = lista de la semana; expandido (≥7 cols y
 // ≥380px de alto) = cuadrícula mensual completa (la misma de la página Calendario).
 function hwCalBody(c) {
   calGate();
-  const wide = c.w >= 7 && c.h >= 380;
-  if (!wide) return calWidgetBody();
-  return `<div class="hw-cal-mes">${calMonthGridHTML()}</div>`;
+  if (c.h < 500) return calWidgetBody();
+  const nr = calNonReadyHTML(); if (nr !== null) return nr;   // conectar / cargando / error: un solo aviso
+  return `<div class="hw-cal-up">${calUpcomingHTML()}</div><div class="hw-cal-mes">${calMonthGridHTML()}</div>${calFootHTML()}`;
 }
 
 /* La retícula usa filas finas (8px) + flow dense: cada ventana ocupa
    round((alto+gap)/(8+gap)) filas y los huecos se rellenan solos. */
 const HW_ROW = 8, HW_GAP = 14;
-function hwRows(h) { return Math.max(9, Math.round((h + HW_GAP) / (HW_ROW + HW_GAP))); }
+function hwGap() { return isDeskHome() ? 24 : HW_GAP; }
+function hwRows(h) { const g = hwGap(); return Math.max(9, Math.round((h + g) / (HW_ROW + g))); }
 
 function hwWindowHTML(key, cfg) {
   const c = cfg[key], meta = HW_META[key];
@@ -4698,10 +4748,17 @@ function hwWindowHTML(key, cfg) {
   const body = key === 'modules' ? hwModulesBody(cfg)
     : key === 'news' ? hwNewsBody()
     : key === 'board' ? hwBoardBody()
+    : key === 'tasks' ? hwTasksBody()
     : hwCalBody(c);
   const dragAttrs = locked ? '' : ` title="${t('Arrastra para mover')}" onpointerdown="hwDragStart(event)"`;
-  const grip = locked ? '' : `<div class="hw-grip" title="${t('Redimensionar')}" onpointerdown="hwResizeStart(event,'${key}')"></div>`;
-  return `<section class="hw" data-hw="${key}" style="grid-column:span ${c.w};grid-row:span ${hwRows(c.h)}">
+  const grip = locked ? '' : `<div class="hw-grip" title="${t('Redimensionar')}" onpointerdown="hwResizeStart(event,'${key}','both')"></div>
+    <div class="hw-rz hw-rz-r" onpointerdown="hwResizeStart(event,'${key}','w')"></div>
+    <div class="hw-rz hw-rz-b" onpointerdown="hwResizeStart(event,'${key}','h')"></div>`;
+  // Escritorio: retícula de posición libre (columna/fila guardadas); móvil: flujo apilado
+  const place = isDeskHome()
+    ? `grid-column:${(c.x || 0) + 1} / span ${c.w};grid-row:${(c.y || 0) + 1} / span ${hwRows(c.h)}`
+    : `grid-column:span ${c.w};grid-row:span ${hwRows(c.h)}`;
+  return `<section class="hw" data-hw="${key}" style="${place}">
     <div class="hw-head"${dragAttrs}><i class="${meta.brand ? 'fa-brands' : 'fa-solid'} ${meta.ico} hw-hico"></i><span class="hw-title">${t(meta.title)}</span><div class="hw-acts">${acts.join('')}</div></div>
     <div class="hw-body">${body}</div>
     ${grip}
@@ -4716,18 +4773,95 @@ function renderHomeModular() {
   const keys = cfg.order;
   const on = keys.filter(k => cfg[k].on);
   const off = keys.filter(k => !cfg[k].on);
+  // Escritorio: toda ventana visible necesita columna/fila; las que no la tienen (primera vez,
+  // ventana nueva o recién mostrada) se acomodan en el primer hueco libre y se guarda.
+  if (isDeskHome() && hwPack(cfg, on)) hwSave(cfg);
+  const endRow = isDeskHome() ? on.reduce((m, k) => Math.max(m, (cfg[k].y || 0) + hwRows(cfg[k].h)), 0) : 0;
   const offRow = (!cfg.locked && off.length)
-    ? `<div class="hw-off-row">${off.map(k => `<button class="hw-off" onclick="hwToggle('${k}')"><i class="fa-solid fa-plus"></i> ${t(HW_META[k].title)}</button>`).join('')}</div>`
+    ? `<div class="hw-off-row"${isDeskHome() ? ` style="grid-row:${endRow + 1} / span 3"` : ''}>${off.map(k => `<button class="hw-off" onclick="hwToggle('${k}')"><i class="fa-solid fa-plus"></i> ${t(HW_META[k].title)}</button>`).join('')}</div>`
     : '';
-  // La etiqueta dice la ACCIÓN: fijado → "Editar módulos"; editable → "Fijar módulos"
+  // El candado se controla desde el botón del hero ("Editar módulos" ↔ "Listo")
+  const heroBtn = document.getElementById('homeHeroEdit');
+  if (heroBtn) {
+    heroBtn.innerHTML = cfg.locked
+      ? `<i class="fa-solid fa-pen"></i> <span>${t('Editar módulos')}</span>`
+      : `<i class="fa-solid fa-check"></i> <span>${t('Listo')}</span>`;
+    heroBtn.classList.remove('shine-new');
+  }
+  // El aviso sale UNA vez por cada 'Editar módulos' (hasta que lo cierres con la X); no se re-anima con cada movimiento
+  const hint = (cfg.locked || !hwHintPending) ? '' : `<div class="hw-hint${hwHintFresh ? ' fresh' : ''}" role="status"><i class="fa-solid fa-up-down-left-right"></i><span>${t('Arrastra una ventana y suéltala donde quieras · jala sus bordes para redimensionar · ojo para ocultarla')}</span><button type="button" class="hw-hint-x" onclick="hwHintClose()" aria-label="${t('Cerrar')}"><i class="fa-solid fa-xmark"></i></button></div>`;
+  hwHintFresh = false;
   const lockLbl = cfg.locked ? t('Editar módulos') : t('Fijar módulos');
   const lockBar = `<div class="hw-lockbar"><button class="hw-lock${cfg.locked ? ' locked' : ''}" onclick="hwToggleLock()" aria-label="${lockLbl}"><i class="fa-solid ${cfg.locked ? 'fa-lock' : 'fa-lock-open'}"></i> <span>${lockLbl}</span></button></div>`;
   host.classList.toggle('locked', !!cfg.locked);
   host.style.display = '';
-  host.innerHTML = lockBar + on.map(k => hwWindowHTML(k, cfg)).join('') + offRow;
+  host.innerHTML = (isDeskHome() ? hint : lockBar) + on.map(k => hwWindowHTML(k, cfg)).join('') + offRow;
+  renderHeroClock();
 }
 
-function hwToggle(key) { const cfg = hwCfg(); cfg[key].on = cfg[key].on ? 0 : 1; hwSave(cfg); renderHomeModular(); }
+function hwToggle(key) {
+  const cfg = hwCfg();
+  cfg[key].on = cfg[key].on ? 0 : 1;
+  if (cfg[key].on) { delete cfg[key].x; delete cfg[key].y; }
+  hwSave(cfg); renderHomeModular();
+}
+
+/* ── Retícula libre (escritorio): geometría en celdas (12 columnas × filas de 8px) ── */
+function hwRect(c) { return { x: c.x || 0, y: c.y || 0, w: c.w, r: hwRows(c.h) }; }
+function hwOverlap(p, q) { return p.x < q.x + q.w && q.x < p.x + p.w && p.y < q.y + q.r && q.y < p.y + p.r; }
+// Primer hueco libre (de arriba a abajo, izquierda a derecha) para una ventana de w×r
+function hwFirstFit(w, r, taken) {
+  for (let y = 0; y < 4000; y++) {
+    for (let x = 0; x + w <= 12; x++) {
+      const cand = { x, y, w, r };
+      if (!taken.some(q => hwOverlap(cand, q))) return { x, y };
+    }
+  }
+  return { x: 0, y: 0 };
+}
+// Da posición a las ventanas visibles que no la tienen. Devuelve true si cambió algo.
+function hwPack(cfg, on) {
+  let changed = false;
+  const placed = on.filter(k => Number.isInteger(cfg[k].x) && Number.isInteger(cfg[k].y)).map(k => hwRect(cfg[k]));
+  for (const k of on) {
+    const c = cfg[k];
+    if (Number.isInteger(c.x) && Number.isInteger(c.y) && c.x + c.w <= 12) continue;
+    const r = hwRows(c.h);
+    const w = Math.min(12, c.w);
+    const p = hwFirstFit(w, r, placed);
+    c.x = p.x; c.y = p.y; c.w = w;
+    placed.push({ x: p.x, y: p.y, w, r });
+    changed = true;
+  }
+  return changed;
+}
+// Tras mover/redimensionar una ventana, las que queden encimadas bajan (en cascada)
+function hwResolve(cfg, movedKey) {
+  const on = cfg.order.filter(k => cfg[k].on && Number.isInteger(cfg[k].x));
+  const fixed = new Set([movedKey]);
+  const queue = [movedKey];
+  let guard = 0;
+  while (queue.length && guard++ < 500) {
+    const m = queue.shift();
+    const mr = hwRect(cfg[m]);
+    for (const k of on.sort((p, q) => (cfg[p].y || 0) - (cfg[q].y || 0))) {
+      if (fixed.has(k)) continue;
+      if (hwOverlap(mr, hwRect(cfg[k]))) {
+        cfg[k].y = mr.y + mr.r;
+        fixed.add(k); queue.push(k);
+      }
+    }
+  }
+}
+// Celda de la retícula bajo un punto del viewport (col 0-11, fila ≥0)
+function hwCellAt(grid, clientX, clientY) {
+  const rect = grid.getBoundingClientRect();
+  const g = hwGap();
+  const colW = (rect.width - 11 * g) / 12;
+  const col = Math.round((clientX - rect.left) / (colW + g));
+  const row = Math.round((clientY - rect.top) / (HW_ROW + g));
+  return { col, row };
+}
 /* ── Desplegable de opciones de la ventana Módulos (patrón cdd de la app) ── */
 function hwModMenuHTML(c) {
   const mi = (field, val, label, ico) => {
@@ -4782,7 +4916,9 @@ let hwDrag = null;
 function hwDragStart(e) {
   if (e.target.closest('.hw-act') || e.target.closest('.hw-menu')) return;   // botones y menú no inician drag
   const el = e.target.closest('.hw'); if (!el) return;
-  hwDrag = { el, x0: e.clientX, y0: e.clientY, moved: false };
+  const r = el.getBoundingClientRect();
+  hwDrag = { el, key: el.dataset.hw, x0: e.clientX, y0: e.clientY, moved: false, free: isDeskHome(),
+    offX: e.clientX - r.left, offY: e.clientY - r.top, ghost: null, target: null };
   document.addEventListener('pointermove', hwDragMove);
   document.addEventListener('pointerup', hwDragEnd, { once: true });
 }
@@ -4796,6 +4932,24 @@ function hwDragMove(e) {
     document.body.classList.add('hw-noselect');
   }
   e.preventDefault();
+  if (hwDrag.free) {
+    // La ventana viaja con el puntero; la sombra se imanta a la celda donde caería su esquina
+    const grid = document.getElementById('homeModular');
+    const cfg = hwCfg(); const c = cfg[hwDrag.key]; const rows = hwRows(c.h);
+    hwDrag.el.style.transform = `translate(${e.clientX - hwDrag.x0}px,${e.clientY - hwDrag.y0}px)`;
+    const cell = hwCellAt(grid, e.clientX - hwDrag.offX, e.clientY - hwDrag.offY);
+    const x = Math.max(0, Math.min(12 - c.w, cell.col));
+    const y = Math.max(0, cell.row);
+    if (!hwDrag.ghost) {
+      hwDrag.ghost = document.createElement('div');
+      hwDrag.ghost.className = 'hw-ghost';
+      grid.appendChild(hwDrag.ghost);
+    }
+    hwDrag.ghost.style.gridColumn = `${x + 1} / span ${c.w}`;
+    hwDrag.ghost.style.gridRow = `${y + 1} / span ${rows}`;
+    hwDrag.target = { x, y };
+    return;
+  }
   // La ventana arrastrada tiene pointer-events:none → elementFromPoint ve lo de abajo
   const under = document.elementFromPoint(e.clientX, e.clientY);
   const over = under && under.closest ? under.closest('.hw') : null;
@@ -4809,6 +4963,21 @@ function hwDragEnd() {
   document.removeEventListener('pointermove', hwDragMove);
   document.body.classList.remove('hw-noselect');
   if (!hwDrag) return;
+  if (hwDrag.moved && hwDrag.free) {
+    hwDrag.el.classList.remove('hw-dragging');
+    hwDrag.el.style.transform = '';
+    if (hwDrag.ghost) hwDrag.ghost.remove();
+    if (hwDrag.target) {
+      const cfg = hwCfg();
+      cfg[hwDrag.key].x = hwDrag.target.x;
+      cfg[hwDrag.key].y = hwDrag.target.y;
+      hwResolve(cfg, hwDrag.key);
+      hwSave(cfg);
+    }
+    hwDrag = null;
+    renderHomeModular();
+    return;
+  }
   if (hwDrag.moved) {
     hwDrag.el.classList.remove('hw-dragging');
     const cfg = hwCfg();
@@ -4822,13 +4991,15 @@ function hwDragEnd() {
 
 /* Resize con Pointer Events: snap a la retícula de 12 columnas, alto libre 200–720px */
 let hwRz = null;
-function hwResizeStart(e, key) {
+function hwResizeStart(e, key, mode) {
   e.preventDefault();
   const el = e.target.closest('.hw');
   const grid = document.getElementById('homeModular');
   if (!el || !grid) return;
   const cfg = hwCfg();
-  hwRz = { key, el, cfg, colW: grid.getBoundingClientRect().width / 12, x0: e.clientX, y0: e.clientY, w0: cfg[key].w, h0: cfg[key].h, w: cfg[key].w, h: cfg[key].h };
+  const g = isDeskHome() ? hwGap() : 0;
+  hwRz = { key, el, cfg, mode: mode || 'both', colW: (grid.getBoundingClientRect().width - 11 * g) / 12 + g, x0: e.clientX, y0: e.clientY, w0: cfg[key].w, h0: cfg[key].h, w: cfg[key].w, h: cfg[key].h,
+    maxW: isDeskHome() ? 12 - (cfg[key].x || 0) : 12 };
   el.classList.add('resizing');
   document.body.classList.add('hw-noselect');
   document.addEventListener('pointermove', hwResizeMove);
@@ -4836,10 +5007,11 @@ function hwResizeStart(e, key) {
 }
 function hwResizeMove(e) {
   if (!hwRz) return;
-  hwRz.w = Math.min(12, Math.max(3, hwRz.w0 + Math.round((e.clientX - hwRz.x0) / hwRz.colW)));
-  hwRz.h = Math.round(Math.min(720, Math.max(200, hwRz.h0 + (e.clientY - hwRz.y0))));
-  hwRz.el.style.gridColumn = 'span ' + hwRz.w;
-  hwRz.el.style.gridRow = 'span ' + hwRows(hwRz.h);
+  if (hwRz.mode !== 'h') hwRz.w = Math.min(hwRz.maxW, Math.max(3, hwRz.w0 + Math.round((e.clientX - hwRz.x0) / hwRz.colW)));
+  if (hwRz.mode !== 'w') hwRz.h = Math.round(Math.min(900, Math.max(200, hwRz.h0 + (e.clientY - hwRz.y0))));
+  const c = hwRz.cfg[hwRz.key];
+  hwRz.el.style.gridColumn = isDeskHome() ? `${(c.x || 0) + 1} / span ${hwRz.w}` : 'span ' + hwRz.w;
+  hwRz.el.style.gridRow = isDeskHome() ? `${(c.y || 0) + 1} / span ${hwRows(hwRz.h)}` : 'span ' + hwRows(hwRz.h);
 }
 function hwResizeEnd() {
   document.removeEventListener('pointermove', hwResizeMove);
@@ -4849,6 +5021,7 @@ function hwResizeEnd() {
   const cfg = hwRz.cfg;
   cfg[hwRz.key].w = hwRz.w;
   cfg[hwRz.key].h = hwRz.h;
+  if (isDeskHome()) hwResolve(cfg, hwRz.key);   // si creció sobre una vecina, la vecina baja
   hwSave(cfg);
   hwRz = null;
   renderHomeModular();   // reempaca la retícula y deja que el calendario cambie de modo
