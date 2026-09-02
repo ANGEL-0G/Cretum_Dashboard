@@ -4180,7 +4180,8 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   .header-brand{padding:3px}
 }
 </style>
-<link rel="stylesheet" href="/mobile.css?v=20260901-mob58">
+<link rel="stylesheet" href="/mobile.css?v=20260901-desk3">
+<link rel="stylesheet" href="/desk.css?v=20260901-desk3">
 </head>
 <body>
 
@@ -4189,8 +4190,20 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   <div class="login-bg-shape login-bg-1"></div>
   <div class="login-bg-shape login-bg-2"></div>
   <div class="login-bg-shape login-bg-3"></div>
+  <!-- Panel de marca (rediseño v2, solo escritorio — lo estiliza desk.css) -->
+  <div class="login-brand">
+    <img src="/logo-cretum-dark.png" alt="Cretum Partners" class="lb-logo">
+    <div class="lb-mid">
+      <div class="lb-kicker">Cretum Partners · Manhattan Venture Partners</div>
+      <div class="lb-name">Cretum Desk</div>
+    </div>
+    <div class="lb-pills">
+      <span data-i18n>Acceso protegido</span><span>CDMX · NYC</span>
+    </div>
+  </div>
   <div class="login-box">
-    <img src="/logo.png" alt="CRETUM Partners" class="login-logo">
+    <img src="/logo.png" alt="CRETUM Partners" class="login-logo login-logo-light">
+    <img src="/logo-cretum-dark.png" alt="CRETUM Partners" class="login-logo login-logo-dark">
     <div class="login-title" data-i18n>Dashboard</div>
     <div class="login-sub" data-i18n>Accede con tu cuenta del equipo</div>
     <div class="login-err" id="loginErr">
@@ -4438,6 +4451,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   <!-- VISTA: SELECTOR DE EMPRESA -->
   <div class="page page-selector" id="pageSelector">
     <div class="selector-hero">
+      <div class="selector-kicker">Cretum Desk</div>
       <div class="selector-greeting"><span id="selGreet">Hola</span>, <span id="selUserName">—</span></div>
       <div class="selector-question" data-i18n>Elige con cuál quieres trabajar</div>
     </div>
@@ -4447,12 +4461,14 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
         <img src="/logo-cretum-dark.png?v=2" alt="Cretum" class="selector-card-logo sel-logo-dark sel-cretum-word">
         <div class="selector-card-name">CRETUM</div>
         <div class="selector-card-sub">Cretum Advisory Partners</div>
+        <div class="selector-card-tags"><span data-i18n>Apertura diaria</span><span>Cartas GVV</span><span>Portal LP</span></div>
       </button>
       <button class="selector-card sel-mvp" onclick="selectOrg('mvp')">
         <img src="/logo-mvp.png" alt="MVP" class="selector-card-logo sel-logo-light">
         <img src="/logo-mvp-cream.png" alt="MVP" class="selector-card-logo sel-logo-dark">
         <div class="selector-card-name">MVP</div>
         <div class="selector-card-sub">Manhattan Venture Partners</div>
+        <div class="selector-card-tags"><span>Fund Trackers</span><span data-i18n>Base de Datos</span><span data-i18n>Reportes</span></div>
       </button>
     </div>
   </div>
@@ -7664,8 +7680,8 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   </div>
 </div>
 
-<script src="/i18n.js?v=20260901-mob58"></script>
-<script src="/app.js?v=20260901-mob58"></script>
-<script src="/mobile.js?v=20260901-mob58"></script>
+<script src="/i18n.js?v=20260901-desk3"></script>
+<script src="/app.js?v=20260901-desk3"></script>
+<script src="/mobile.js?v=20260901-desk3"></script>
 </body>
 </html>

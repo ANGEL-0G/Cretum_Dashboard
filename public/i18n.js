@@ -1099,6 +1099,11 @@ const EN = {
   'por revisar': 'to review',
   'Mostrar más': 'Show more',
   'restantes': 'remaining',
+  // Rediseño v2 escritorio (login + selector)
+  'Acceso protegido': 'Protected access',
+  'Apertura diaria': 'Daily market brief',
+  'Base de Datos': 'Database',
+  'Reportes': 'Reports',
   'Ponle un nombre a la carpeta': 'Give the folder a name',
   'Carpeta actualizada': 'Folder updated',
   'Carpeta creada': 'Folder created',

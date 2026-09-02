@@ -38,6 +38,10 @@
       "use": "@vercel/static"
     },
     {
+      "src": "public/desk.css",
+      "use": "@vercel/static"
+    },
+    {
       "src": "public/system-map.html",
       "use": "@vercel/static"
     },
@@ -302,6 +306,10 @@
     {
       "src": "/mobile.css",
       "dest": "/public/mobile.css"
+    },
+    {
+      "src": "/desk.css",
+      "dest": "/public/desk.css"
     },
     {
       "src": "/mobile.js",
