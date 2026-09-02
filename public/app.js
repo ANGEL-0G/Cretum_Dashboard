@@ -12071,7 +12071,7 @@ const FUND_TRACKERS = {
     id: 'fundV',
     name: 'MVP All-Star Fund V',
     subtitle: 'Valuation Overview',
-    cutoff: '2026-06-30',
+    cutoff: '2026-08-27',
     status: 'Preliminary, Unaudited',
     confidentiality: 'CONFIDENTIAL',
     committedParFill: true,
@@ -12089,25 +12089,26 @@ const FUND_TRACKERS = {
     ],
     active: [
       { company: 'Decart.AI, Inc.', invested: 25749946, pct: 0.160, mtm: 25749946, moic: 1.0000, corpVal: 3.914, pps: 197.78, entry: 197.78, shares: 130197, fdso: 19.8 },
-      { company: 'Saronic Technologies', invested: 20000000, pct: 0.124, mtm: 20000000, moic: 1.0000, corpVal: 9.25, pps: 27.45, entry: 27.45, shares: 728730, fdso: 337 },
-      { company: 'Anthropic PBC', invested: 18587304, pct: 0.115, mtm: 62330216, moic: 3.3534, corpVal: 965, pps: 589.01, entry: 175.65, shares: 105822, fdso: 1638.34 },
-      { company: 'X.AI Corp. (SpaceX)',    invested: 15000870, pct: 0.099, mtm: 53228475,   moic: 3.5484,  corpVal: 1770,   pps: 135,    entry: 38.05,  shares: 394285,    fdso: 11869  },
-      { company: 'Mach Industries', invested: 9999998, pct: 0.062, mtm: 10790052, moic: 1.0790, corpVal: 1.8, pps: 3.906, entry: 3.62, shares: 2762430, fdso: 497.2 },
+      { company: 'Saronic Technologies', invested: 20000000, pct: 0.124, mtm: 20000005, moic: 1.0000, corpVal: 9.25, pps: 27.45, entry: 27.45, shares: 728730, fdso: 337 },
+      { company: 'Anthropic PBC', invested: 18983049, pct: 0.110, mtm: 63212659, moic: 3.3300, corpVal: 965, pps: 589.01, entry: 176.88, shares: 107320.27, fdso: 1638.34 },
+      { company: 'X.AI Corp. (SpaceX)',    invested: 15000870, pct: 0.087, mtm: 53229820,   moic: 3.5484,  corpVal: 1770,   pps: 135,    entry: 38.05,  shares: 394294.9655, fdso: 11869  },
+      { company: 'Mach Industries', invested: 9999998, pct: 0.058, mtm: 10800555, moic: 1.0801, corpVal: 1.8, pps: 3.906, entry: 3.6165, shares: 2765119, fdso: 497.2 },
       { company: 'CHAOS Industries', invested: 9999962, pct: 0.062, mtm: 9999962, moic: 1.0000, corpVal: 4.441, pps: 138.94, entry: 138.94, shares: 71975, fdso: 32 },
       { company: 'Base Power, Inc.', invested: 9280871, pct: 0.058, mtm: 26433044, moic: 2.8481, corpVal: 13, pps: 34.44, entry: 12.09, shares: 767510, fdso: 369.6 },
       { company: 'Second Front Systems', invested: 7500000, pct: 0.047, mtm: 7500000, moic: 1.0000, corpVal: 1.1, pps: 1, entry: 1, shares: 7500000, fdso: 1100 },
-      { company: 'Payward (Kraken)', invested: 6375000, pct: 0.040, mtm: 8557300, moic: 1.3423, corpVal: 20.55, pps: 61.47, entry: 45.79, shares: 139211, fdso: 334.3 },
-      { company: 'Agility Robotics', invested: 5211514, pct: 0.032, mtm: 11453569, moic: 2.1977, corpVal: 4.187, pps: 145.37, entry: 66.15, shares: 78789, fdso: 28.8 },
+      { company: 'Payward (Kraken)', invested: 6375000, pct: 0.037, mtm: 8557300, moic: 1.3423, corpVal: 20.0, pps: 61.47, entry: 45.79, shares: 139211, fdso: 325.4 },
+      { company: 'Agility Robotics', invested: 5167667, pct: 0.030, mtm: 9378629, moic: 1.8149, corpVal: 3.457, pps: 120.0449, entry: 66.14, shares: 78126, fdso: 28.8 },
       { company: 'Kodiak Robotics', invested: 5000000, pct: 0.031, mtm: 11089848, moic: 2.2180, corpVal: 1.109, pps: 5.08, entry: 2.29, shares: 2183041, fdso: 218.3 },
       { company: 'Epirus, Inc.', invested: 4999998, pct: 0.031, mtm: 4999998, moic: 1.0000, corpVal: 1.011, pps: 2.77, entry: 2.77, shares: 1801996, fdso: 365.0 },
       { company: 'Radiant Industries', invested: 4999989, pct: 0.031, mtm: 4999989, moic: 1.0000, corpVal: 1.88, pps: 42.32, entry: 42.32, shares: 118155, fdso: 44.4 },
       { company: 'Cohere Inc.', invested: 4999771, pct: 0.031, mtm: 12097760, moic: 2.4197, corpVal: 20.5, pps: 558.25, entry: 230.71, shares: 21671, fdso: 36.7 },
       { company: 'Mythic Inc.', invested: 2000000, pct: 0.012, mtm: 2000000, moic: 1.0000, corpVal: 0.159, pps: 0.0024, entry: 0.0024, shares: 827061450, fdso: 66250 },
       { company: 'Epic Games, Inc.', invested: 1833323, pct: 0.011, mtm: 2269200, moic: 1.2378, corpVal: 26.16, pps: 600.0, entry: 484.75, shares: 3782, fdso: 43.6 },
-      { company: 'Figure AI Inc.', invested: 1300007, pct: 0.008, mtm: 18592184, moic: 14.3016, corpVal: 39.0, pps: 194.93, entry: 13.63, shares: 95378, fdso: 200.1 },
-      { company: 'Groq, Inc.', invested: 462047, pct: 0.003, mtm: 1475476, moic: 3.1933, corpVal: 15.087, pps: 73.0, entry: 22.86, shares: 20212, fdso: 206.7 }
+      { company: 'Figure AI Inc.', invested: 1300000, pct: 0.008, mtm: 18592184, moic: 14.3016, corpVal: 39.0, pps: 194.93, entry: 13.63, shares: 95378, fdso: 200.1 },
+      { company: 'Groq, Inc.', invested: 462047, pct: 0.003, mtm: 1475476, moic: 3.1933, corpVal: 15.087, pps: 73.0, entry: 22.86, shares: 20212, fdso: 206.7 },
+      { company: 'Groq LLC (2.0)', invested: 11322759, pct: 0.066, mtm: 21657364, moic: 1.9127, corpVal: 3.5, pps: 3.3907, entry: 1.7727, shares: 6387204, fdso: 1032.2 }
     ],
-    activeTotal:      { invested: 153300600, mtm: 293567019, moic: 1.9150 },
+    activeTotal:      { invested: 164975250, mtm: 314043739, moic: 1.9036 },
     pendingTitle: 'Pending Positions (Q2 2026)',
     pending: [],
     pendingTotal:     { invested: 0, mtm: 0, moic: 0 },
@@ -12116,11 +12117,12 @@ const FUND_TRACKERS = {
       { company: 'Klarna Holding AB', invested: 436638, pct: 0.003, mtm: 274076, moic: 0.6277, corpVal: 5.595, pps: 13.38, entry: 21.32, shares: 20484, fdso: 418.2 }
     ],
     overallLabel:     'Total — Overall (Invested)',
-    overallTotal:     { invested: 161119217, mtm: 317414328, moic: 1.9701 },   // semilla; computeFundTotals la recalcula desde las filas
-    overallTotal2:    { label: 'Total — Overall (Commitment)', invested: 293000000, mtm: 449295111, moic: 1.5334 },
+    overallTotal:     { invested: 172793867, mtm: 337891048, moic: 1.9555 },   // semilla; computeFundTotals la recalcula desde las filas,   // semilla; computeFundTotals la recalcula desde las filas
+    overallTotal2:    { label: 'Total — Overall (Commitment)', invested: 293000000, mtm: 458097181, moic: 1.5635 },
     // Dominio para el logo (Clearbit). Fallback a monograma si no carga.
     logos: {
       'Decart.AI, Inc.':          'decart.ai',
+      'Groq LLC (2.0)':           'groq.com',
       'Mach Industries':          'machindustries.com',
       'Saronic Technologies':     'saronic.com',
       'Anthropic PBC':            'anthropic.com',
@@ -12244,6 +12246,13 @@ const FUND_TRACKERS = {
         product:{name:'LPU / GroqCloud', desc:'Inferencia de IA de altísima velocidad; acuerdos de gran escala (incl. la transacción con Nvidia).'},
         markets:['Semiconductores','Inferencia','Cloud','IA'],
         thesis:'Ataca el cuello de botella de la inferencia —el costo dominante de la IA en producción— no el entrenamiento.'
+      },
+      'Groq LLC (2.0)': {
+        category:'Infraestructura de IA · nube', stage:'Crecimiento',
+        tagline:'El GroqCloud recapitalizado tras la transacción con Nvidia: neocloud de inferencia de IA con 13 data centers y más de 6 millones de desarrolladores. Serie A de $350M (ago-2026) a $3.5B liderada por Disruptive, con participación de Nvidia.',
+        product:{name:'GroqCloud', desc:'Plataforma de inferencia como servicio; opera sistemas Nvidia tras licenciar la tecnología LPU. Plan de crecer de 54 MW a más de 200 MW en 2027.'},
+        markets:['Inferencia de IA','Cloud','Data centers'],
+        thesis:'Exposición al negocio de inferencia que quedó fuera de la transacción con Nvidia, a una valuación reiniciada. La participación de MVP son unidades de la LLC; el precio por unidad y el conteo son provisionales (placeholder de MVP).'
       },
       'Mythic Inc.': {
         category:'Semiconductores · edge', stage:'Temprana',
