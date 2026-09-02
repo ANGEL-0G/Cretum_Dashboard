@@ -212,7 +212,8 @@ async function generate(companies) {
     }));
     await new Promise(r => setTimeout(r, 80));
   }
-  await enrichImages(items);
+  const logos = await companyLogos(companies);
+  await enrichImages(items, logos);
   return items;
 }
 const UA = 'Mozilla/5.0 (compatible; CretumDesk/1.0; +https://cretumdesk.com)';
@@ -300,9 +301,66 @@ async function fetchOgImage(url) {
     return /^https?:\/\//.test(img) ? img : '';
   } catch (e) { return ''; }
 }
+// ── Respaldo de imagen por EMPRESA: el LOGO de la marca vía Wikidata (propiedad P154).
+//    Cuando el artículo no trae og:image, mostramos el logo de la empresa (p. ej.
+//    Anthropic → su logo) en lugar de dejar la tarjeta sin foto. Se resuelve por la
+//    PÁGINA EXACTA de Wikipedia (nada de búsqueda difusa, que caía en homónimos), de
+//    ahí su entidad Wikidata y de ahí el logo oficial. Si no hay logo, devuelve ''
+//    (la tarjeta queda como hoy) — nunca una imagen equivocada. ──
+const WIKI = {   // override de título cuando el nombre no es el de la página de Wikipedia
+  'NVIDIA': 'Nvidia', 'Palantir': 'Palantir Technologies', 'Bolt': 'Bolt Financial',
+  'Bloomberg': 'Bloomberg L.P.', "Campbell's": 'Campbell Soup Company', 'Amazegroup': 'Unikrn',
+  'Second Front': 'Second Front Systems', 'Base Power': 'Base Power Company', 'Valmer': 'Grupo Valmer',
+  'Lime': 'Lime (transportation company)', 'Turo': 'Turo (company)', 'Kraken': 'Kraken (company)',
+  'Asana': 'Asana (software)', 'Mythic': 'Mythic (company)', 'Loft': 'Loft (company)',
+};
+async function wikiImage(title) {
+  try {
+    const t = String(title || '').trim();
+    if (!t) return '';
+    // 1) página exacta → id de entidad Wikidata (Q…)
+    const u1 = 'https://en.wikipedia.org/w/api.php?action=query&format=json&redirects=1'
+      + '&prop=pageprops&ppprop=wikibase_item&titles=' + encodeURIComponent(t);
+    const c1 = new AbortController(); const k1 = setTimeout(() => c1.abort(), 3500);
+    const r1 = await fetch(u1, { signal: c1.signal, headers: { 'User-Agent': UA } });
+    clearTimeout(k1);
+    if (!r1.ok) return '';
+    const j1 = await r1.json();
+    const page = Object.values((j1 && j1.query && j1.query.pages) || {})[0];
+    const qid = page && page.pageprops && page.pageprops.wikibase_item;
+    if (!qid) return '';
+    // 2) logo de la marca (P154) → archivo en Wikimedia Commons
+    const u2 = 'https://www.wikidata.org/w/api.php?action=wbgetclaims&format=json&property=P154&entity=' + encodeURIComponent(qid);
+    const c2 = new AbortController(); const k2 = setTimeout(() => c2.abort(), 3500);
+    const r2 = await fetch(u2, { signal: c2.signal, headers: { 'User-Agent': UA } });
+    clearTimeout(k2);
+    if (!r2.ok) return '';
+    const j2 = await r2.json();
+    const claim = j2 && j2.claims && j2.claims.P154 && j2.claims.P154[0];
+    const file = claim && claim.mainsnak && claim.mainsnak.datavalue && claim.mainsnak.datavalue.value;
+    if (!file) return '';
+    return 'https://commons.wikimedia.org/wiki/Special:FilePath/' + encodeURIComponent(file) + '?width=640';
+  } catch (e) { return ''; }
+}
+// Mapa empresa → logo de respaldo, cacheado en Redis (rara vez cambia): solo se
+// consulta Wikidata para las empresas que aún no estén en el mapa. Para forzar un
+// refresco (p. ej. una empresa que ya tenga logo), borra la clave news:logos.
+async function companyLogos(companies) {
+  const r = getRedis();
+  let map = {};
+  try { const raw = r ? await r.get('news:logos') : null; if (raw) map = JSON.parse(raw) || {}; } catch (e) {}
+  const missing = companies.filter(c => !(c.name in map));
+  for (let i = 0; i < missing.length; i += 6) {
+    const chunk = missing.slice(i, i + 6);
+    await Promise.all(chunk.map(async c => { map[c.name] = await wikiImage(WIKI[c.name] || c.name); }));
+    await new Promise(res => setTimeout(res, 120));
+  }
+  try { if (r && missing.length) await r.set('news:logos', JSON.stringify(map)); } catch (e) {}
+  return map;
+}
 // Enriquece las notas con imagen. Solo baja el HTML de las que se muestran (top),
-// para no rebasar maxDuration; el resto usa el logo del medio (sin fetch).
-async function enrichImages(items) {
+// para no rebasar maxDuration; el resto usa directo la imagen de la empresa (sin fetch).
+async function enrichImages(items, logos = {}) {
   const TOP = 24;
   const top = items.slice(0, TOP);
   for (let i = 0; i < top.length; i += 8) {
@@ -311,11 +369,13 @@ async function enrichImages(items) {
       const real = await resolveGoogleNews(it.url);   // enlace del medio (no el de Google)
       if (real && real !== it.url) it.url = real;      // "Leer" abre directo al editor
       const og = await fetchOgImage(it.url);
-      it.image = og || '';   // sin foto → tarjeta con degradado limpio (no logo roto)
+      if (og) { it.image = og; it.logo = false; }                        // foto real del artículo
+      else { it.image = logos[it.company] || ''; it.logo = !!it.image; } // respaldo: imagen de la empresa
     }));
     await new Promise(r => setTimeout(r, 60));
   }
-  for (const it of items.slice(TOP)) it.image = '';
+  // Las de más abajo no bajan HTML (tiempo), pero igual llevan la imagen de la empresa.
+  for (const it of items.slice(TOP)) { it.image = logos[it.company] || ''; it.logo = !!it.image; }
 }
 function blob(items, companies) {
   return { generated: new Date().toISOString(), count: items.length, companies: companies.map(c => c.name), items };
