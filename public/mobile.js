@@ -324,7 +324,7 @@
       host.querySelector('.rail').innerHTML = items.slice(0, 12).map(function (it) {
         var img = it.image;
         return '<button class="mob-news-card' + (img ? ' hasimg' : '') + '" onclick="mobOpenFeed()">' +
-          (img ? '<div class="mob-news-img" style="background-image:url(\'' + esc(img) + '\')"></div>' : '') +
+          (img ? '<div class="mob-news-img' + (it.logo ? ' logo' : '') + '" style="background-image:url(\'' + esc(img) + '\')"></div>' : '') +
           '<div class="mob-news-body">' +
           '<div class="mob-news-top">' + favImg(it, 'mob-fav') + '<span class="chip">' + esc(it.company || it.source || '') + '</span>' +
           '<span class="t">' + ago(it.published) + '</span></div>' +
@@ -340,9 +340,13 @@
     if (!f) { f = document.createElement('div'); f.id = 'mobFeed'; f.className = 'mob-feed'; document.body.appendChild(f); }
     var cards = items.slice(0, 20).map(function (it, i) {
       var img = it.image;
-      var st = img ? ' style="background-image:linear-gradient(180deg,rgba(12,20,38,.10) 0%,rgba(12,20,38,.52) 52%,rgba(12,20,38,.88) 100%),url(\'' + esc(img) + '\')"' : '';
-      var logo = img ? '' : ('<div class="mob-feed-logo">' + favImg(it, 'mob-feed-logo-img') + '</div>');
-      return '<article class="mob-feed-card' + (i === 0 ? ' lead' : '') + (img ? ' hasimg' : ' logo') + '"' + st + '>' + logo +
+      var isPhoto = img && !it.logo;   // foto real → fondo completo con degradado
+      var isLogo = img && it.logo;     // logo de la empresa → placa clara, contain
+      var st = isPhoto ? ' style="background-image:linear-gradient(180deg,rgba(12,20,38,.10) 0%,rgba(12,20,38,.52) 52%,rgba(12,20,38,.88) 100%),url(\'' + esc(img) + '\')"' : '';
+      var logo = isLogo
+        ? '<div class="mob-feed-logo"><img class="mob-feed-logo-img wide" src="' + esc(img) + '" alt="" loading="lazy" onerror="this.style.display=\'none\'"></div>'
+        : (img ? '' : ('<div class="mob-feed-logo">' + favImg(it, 'mob-feed-logo-img') + '</div>'));
+      return '<article class="mob-feed-card' + (i === 0 ? ' lead' : '') + (isPhoto ? ' hasimg' : ' logo') + '"' + st + '>' + logo +
         '<div class="mob-feed-meta">' + favImg(it, 'mob-fav lg') + '<span class="chip">' + esc(it.company || '') + '</span>' +
         '<span class="t">' + esc(ago(it.published)) + '</span></div>' +
         '<h2 class="mob-feed-title">' + esc(nTitle(it)) + '</h2>' +

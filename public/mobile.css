@@ -274,6 +274,8 @@
     cursor:pointer;font-family:var(--mob-font);color:var(--mob-tx);display:block;
   }
   .mob-news-img{height:118px;background-size:cover;background-position:center;background-color:var(--mob-tint)}
+  /* logo de empresa (respaldo Wikidata): contain sobre placa clara, sin recortar */
+  .mob-news-img.logo{background-size:auto 58%;background-repeat:no-repeat;background-color:#fff}
   .mob-news-body{display:flex;flex-direction:column;gap:8px;padding:14px}
   .mob-news-card:active{transform:scale(.98)}
   .mob-news-top{display:flex;align-items:center;gap:8px}
@@ -338,6 +340,8 @@
   .mob-feed-card.logo{position:relative}
   .mob-feed-logo{position:absolute;top:0;left:0;right:0;height:52%;display:grid;place-items:center;pointer-events:none}
   .mob-feed-logo-img{width:78px;height:78px;border-radius:20px;background:#fff;padding:15px;object-fit:contain;box-shadow:0 6px 20px rgba(18,41,76,.16)}
+  /* logo real de la empresa (respaldo Wikidata): placa ancha para wordmarks, sin recorte */
+  .mob-feed-logo-img.wide{width:auto;height:auto;max-width:74%;max-height:96px;border-radius:18px;padding:20px 24px}
   .mob-feed-meta{display:flex;align-items:center;gap:8px;margin-bottom:16px}
   .mob-feed-meta .chip{
     font-size:11px;letter-spacing:.12em;text-transform:uppercase;
