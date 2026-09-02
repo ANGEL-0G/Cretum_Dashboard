@@ -4180,8 +4180,8 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   .header-brand{padding:3px}
 }
 </style>
-<link rel="stylesheet" href="/mobile.css?v=20260901-desk4">
-<link rel="stylesheet" href="/desk.css?v=20260901-desk4">
+<link rel="stylesheet" href="/mobile.css?v=20260901-desk8">
+<link rel="stylesheet" href="/desk.css?v=20260901-desk8">
 </head>
 <body>
 
@@ -4298,6 +4298,14 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
     <button class="header-sys" id="blogBtn" onclick="openNewsPage()" title="Noticias de las empresas en seguimiento" data-i18n-title aria-label="Noticias">
       <i class="fa-solid fa-newspaper"></i>
       <span class="hs-tx"><span>Noticias</span></span>
+    </button>
+    <!-- Solo escritorio (desk.css): idioma y tema a la mano, como en el design v2 -->
+    <div class="hdr-lang" id="hdrLang" role="group" aria-label="Idioma">
+      <button type="button" class="hdr-lang-btn" data-lang="es" onclick="setLang('es')">ES</button>
+      <button type="button" class="hdr-lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
+    </div>
+    <button type="button" class="hdr-theme" id="hdrThemeBtn" onclick="setDarkMode(document.documentElement.getAttribute('data-theme')!=='dark');applyThemeToggleState()" title="Cambiar modo oscuro" data-i18n-title aria-label="Modo oscuro">
+      <i class="fa-solid fa-moon hdr-theme-moon"></i><i class="fa-solid fa-sun hdr-theme-sun"></i>
     </button>
     <button class="header-user" id="headerUserBtn" onclick="toggleSettings(event)" title="Tu cuenta" data-i18n-title>
       <div class="header-av" id="headerAv">—</div>
@@ -7680,8 +7688,8 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   </div>
 </div>
 
-<script src="/i18n.js?v=20260901-desk4"></script>
-<script src="/app.js?v=20260901-desk4"></script>
-<script src="/mobile.js?v=20260901-desk4"></script>
+<script src="/i18n.js?v=20260901-desk8"></script>
+<script src="/app.js?v=20260901-desk8"></script>
+<script src="/mobile.js?v=20260901-desk8"></script>
 </body>
 </html>

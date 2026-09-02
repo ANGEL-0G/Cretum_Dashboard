@@ -13,10 +13,127 @@
 
 /* Los elementos nuevos del rediseño no existen en la capa móvil */
 @media (max-width:768px){
-  .login-brand,.selector-card-tags,.selector-kicker{display:none}
+  .login-brand,.selector-card-tags,.selector-kicker,.hdr-lang,.hdr-theme{display:none}
 }
 
 @media (min-width:769px){
+
+  /* ══ Header · banda de gradiente de marca (design 2c/2d) ══
+     La banda vive en ::after para poder fundir negro ↔ gradiente al elegir empresa
+     (un gradiente no se puede transicionar; su opacidad sí). */
+  #app{padding-top:64px}
+  .settings-pop{top:70px}
+  .header{
+    height:64px;padding:0 24px;gap:12px;box-sizing:border-box;
+    background:#0f1115;border-bottom:1px solid transparent;
+    --brand-text:#1a3a6b;
+  }
+  .header::after{
+    content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;
+    background:linear-gradient(90deg,#1a3a6b,#2a4f8f);
+    opacity:1;transition:opacity .28s ease;
+  }
+  [data-org="mvp"] .header{--brand-text:#ED7824}
+  [data-org="mvp"] .header::after{background:linear-gradient(90deg,#ED7824,#F89540)}
+  /* Sin empresa elegida (selector): header neutro, negro */
+  body:has(#pageSelector.active) .header{--brand-text:#0f1115;border-bottom-color:#1d2128}
+  body:has(#pageSelector.active) .header::after{opacity:0}
+
+  .hamburger,.header-back{font-size:17px;padding:8px;color:#fff}
+  .header-brand{
+    border-radius:999px;padding:7px 16px 7px 12px;gap:10px;
+    transition:box-shadow .15s ease,transform .12s ease;
+  }
+  .header-brand:active{transform:scale(.97)}
+  .header-mark{width:auto;height:18px;padding:0;border-radius:0}
+  .header-logo{height:100%;width:auto}
+  .header-title{font-size:14.5px;font-weight:600;letter-spacing:-.01em;color:var(--brand-text)}
+
+  /* Grupo derecho: círculos 34px translúcidos + píldora de usuario */
+  .header-sys{
+    min-height:34px;min-width:34px;padding:0 10px;border-radius:999px;justify-content:center;
+    background:rgba(255,255,255,.2);font-size:12.5px;
+    transition:background .16s ease,transform .12s ease;
+  }
+  .header-sys i{font-size:14px}
+  .header-sys:hover{background:rgba(255,255,255,.3)}
+  .header-sys:active{transform:scale(.95)}
+  .header-user{
+    background:rgba(255,255,255,.2);border-radius:999px;padding:4px 14px 4px 4px;gap:9px;font-size:14px;
+    transition:background .16s ease,transform .12s ease;
+  }
+  .header-user:hover{background:rgba(255,255,255,.3)}
+  .header-user:active{transform:scale(.97)}
+  .header-av{background:#fff;color:var(--brand-text);font-size:12px;font-weight:600}
+  body:has(#pageSelector.active) .header-av{color:#0f1115}
+  /* En el selector no hay marca que mostrar: fuera la píldora logo+nombre; el grupo derecho se ancla solo */
+  body:has(#pageSelector.active) .header-brand{display:none}
+  body:has(#pageSelector.active) .hdr-lang{margin-left:auto}
+
+  /* ES/EN + tema (solo escritorio) */
+  .hdr-lang{display:flex;align-items:center;gap:2px;border:1px solid rgba(255,255,255,.34);border-radius:999px;padding:3px}
+  .hdr-lang-btn{
+    border:0;background:transparent;border-radius:999px;padding:3px 10px;
+    font:600 11.5px/1.4 var(--font);color:rgba(255,255,255,.72);cursor:pointer;
+    transition:background .16s ease,color .16s ease,transform .12s ease;
+  }
+  .hdr-lang-btn:hover{color:#fff}
+  .hdr-lang-btn:active{transform:scale(.95)}
+  .hdr-lang-btn.active{background:#fff;color:var(--brand-text)}
+  .hdr-theme{
+    display:grid;place-items:center;width:34px;height:34px;border-radius:50%;border:0;
+    background:rgba(255,255,255,.2);color:#fff;cursor:pointer;font-size:14px;
+    transition:background .16s ease,transform .12s ease;
+  }
+  .hdr-theme:hover{background:rgba(255,255,255,.3)}
+  .hdr-theme:active{transform:scale(.92)}
+  .hdr-theme-sun{display:none}
+  [data-theme="dark"] .hdr-theme-moon{display:none}
+  [data-theme="dark"] .hdr-theme-sun{display:block}
+
+  /* header · oscuro: superficie plana con divisor (design 2e), sin gradiente */
+  [data-theme="dark"] .header{background:#161b24;border-bottom-color:#2f3744;color:#eceff4;--brand-text:#9fc0ee}
+  [data-theme="dark"] .header::after{opacity:0}
+  [data-theme="dark"] .header-brand{background:rgba(93,143,245,.16)}
+  [data-theme="dark"] .header-brand:hover{box-shadow:0 0 0 2px rgba(93,143,245,.35)}
+  [data-theme="dark"] .hamburger,[data-theme="dark"] .header-back{color:#eceff4}
+  [data-theme="dark"] .header-sys,[data-theme="dark"] .header-user,[data-theme="dark"] .hdr-theme{background:#242b37;color:#eceff4}
+  [data-theme="dark"] .header-sys:hover,[data-theme="dark"] .header-user:hover,[data-theme="dark"] .hdr-theme:hover{background:#2e3644}
+  [data-theme="dark"] .header-av{background:#5d8ff5;color:#0c0f16}
+  [data-theme="dark"] .hdr-lang{border-color:#2f3744}
+  [data-theme="dark"] .hdr-lang-btn{color:#98a2b3}
+  [data-theme="dark"] .hdr-lang-btn.active{background:#5d8ff5;color:#0c0f16}
+  [data-theme="dark"][data-org="mvp"] .header{background:#181410;border-bottom-color:#2f271e;--brand-text:#f4a86c}
+  [data-theme="dark"][data-org="mvp"] .header-brand{background:rgba(248,149,64,.16)}
+  [data-theme="dark"][data-org="mvp"] .header-sys,[data-theme="dark"][data-org="mvp"] .header-user,[data-theme="dark"][data-org="mvp"] .hdr-theme{background:#2a2118}
+  [data-theme="dark"][data-org="mvp"] .header-av,[data-theme="dark"][data-org="mvp"] .hdr-lang-btn.active{background:#F89540;color:#0d0a07}
+  [data-theme="dark"] body:has(#pageSelector.active) .header{background:#000;border-bottom-color:#151515;--brand-text:#9fc0ee}
+  /* Selector en oscuro: header negro con controles blancos translúcidos (igual que en claro) */
+  [data-theme="dark"] body:has(#pageSelector.active) .header-sys,
+  [data-theme="dark"] body:has(#pageSelector.active) .header-user,
+  [data-theme="dark"] body:has(#pageSelector.active) .hdr-theme{background:rgba(255,255,255,.16);color:#fff}
+  [data-theme="dark"] body:has(#pageSelector.active) .header-sys:hover,
+  [data-theme="dark"] body:has(#pageSelector.active) .header-user:hover,
+  [data-theme="dark"] body:has(#pageSelector.active) .hdr-theme:hover{background:rgba(255,255,255,.26)}
+  [data-theme="dark"] body:has(#pageSelector.active) .header-av{background:#fff;color:#0f1115}
+  [data-theme="dark"] body:has(#pageSelector.active) .hdr-lang{border-color:rgba(255,255,255,.34)}
+  [data-theme="dark"] body:has(#pageSelector.active) .hdr-lang-btn{color:rgba(255,255,255,.72)}
+  [data-theme="dark"] body:has(#pageSelector.active) .hdr-lang-btn.active{background:#fff;color:#0f1115}
+
+  /* ══ 2b · Selector: composición centrada a pantalla completa ══ */
+  body:has(#pageSelector.active){background:#f4f6fa}
+  #pageSelector.active{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:48px;
+    min-height:calc(100vh - 64px);max-width:none;padding:40px 60px;box-sizing:border-box;
+    animation:none;
+  }
+  .selector-hero{padding:0;margin:0}
+  /* Entrada escalonada (pantalla ocasional, post-login): saludo → tarjeta 1 → tarjeta 2 */
+  @keyframes deskRise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  #pageSelector.active .selector-hero,
+  #pageSelector.active .selector-card{animation:deskRise .32s cubic-bezier(.23,1,.32,1) both}
+  #pageSelector.active .selector-card:nth-child(1){animation-delay:60ms}
+  #pageSelector.active .selector-card:nth-child(2){animation-delay:120ms}
 
   /* ══ 2a · Acceso: panel de marca + tarjeta ══ */
   #loginWrap{
@@ -104,7 +221,7 @@
   .selector-question{font-size:17px;color:#6b7890;margin-top:8px}
   .selector-cards{gap:36px;justify-content:center;max-width:none;flex-wrap:nowrap;align-items:stretch}
   .selector-card{
-    width:360px;min-height:268px;
+    width:360px;height:auto;min-height:268px;
     display:flex;flex-direction:column;align-items:flex-start;gap:20px;text-align:left;
     background:#fff;border:1px solid #e4e9f1;border-radius:22px;
     box-shadow:0 1px 2px rgba(22,35,60,.06),0 1px 3px rgba(22,35,60,.05);
@@ -112,7 +229,7 @@
     transition:box-shadow .18s ease,transform .18s ease;
   }
   .selector-card:hover{transform:translateY(-3px);box-shadow:0 4px 16px rgba(22,35,60,.08);border-color:#e4e9f1}
-  .selector-card:active{transform:translateY(-1px)}
+  .selector-card:active{transform:translateY(-1px) scale(.985)}
   .selector-card-logo{
     width:62px;height:62px;padding:11px;border-radius:18px;
     object-fit:contain;box-sizing:border-box;margin:0;
@@ -126,7 +243,8 @@
   .sel-cretum .selector-card-name,.sel-mvp .selector-card-name{color:var(--gray-900,#16233c)}
   .selector-card-sub{font-size:15px;color:#6b7890;text-transform:none;letter-spacing:0;font-weight:400;margin-top:2px}
   .sel-cretum .selector-card-sub,.sel-mvp .selector-card-sub{color:#6b7890}
-  .selector-card-tags{margin-top:auto;display:flex;gap:8px;flex-wrap:wrap}
+  /* max-width acota a dos píldoras por fila: ambas tarjetas quedan con el mismo acomodo (2 + 1) */
+  .selector-card-tags{margin-top:auto;display:flex;gap:8px;flex-wrap:wrap;max-width:262px}
   .selector-card-tags span{border:1px solid #e4e9f1;border-radius:999px;padding:5px 12px;font-size:12.5px;color:#5b687f;font-weight:500}
 
   /* selector · oscuro */
@@ -144,6 +262,11 @@
   [data-theme="dark"] .sel-mvp .selector-card-logo{background:rgba(248,149,64,.16)}
   /* oscuro MVP cálido */
   [data-theme="dark"][data-org="mvp"] .login-box,
+  /* En el selector no hay org activa: la tarjeta MVP lleva su propio negro cálido (como Cretum lleva el navy) */
+  [data-theme="dark"] .sel-mvp{background:#181410;border-color:#2f271e}
+  [data-theme="dark"] .sel-mvp:hover{border-color:#3d3226}
+  [data-theme="dark"] .sel-mvp .selector-card-tags span{border-color:#2f271e;color:#b3a696}
+  [data-theme="dark"] .sel-mvp .selector-card-sub{color:#b3a696}
   [data-theme="dark"][data-org="mvp"] .selector-card{background:#181410;border-color:#2f271e}
 
   /* el panel de marca cede en pantallas angostas de escritorio */
@@ -154,5 +277,9 @@
 
   @media (prefers-reduced-motion:reduce){
     .selector-card,.selector-card-logo,.btn-login{transition:none}
+    .header::after{transition:none}
+    /* la entrada del selector se queda en un fundido, sin desplazamiento */
+    @keyframes deskRise{from{opacity:0;transform:none}to{opacity:1;transform:none}}
+    #pageSelector.active .selector-card{animation-delay:0ms}
   }
 }

@@ -1100,6 +1100,7 @@ const EN = {
   'Mostrar más': 'Show more',
   'restantes': 'remaining',
   // Rediseño v2 escritorio (login + selector)
+  'Cambiar modo oscuro': 'Toggle dark mode',
   'Acceso protegido': 'Protected access',
   'Apertura diaria': 'Daily market brief',
   'Base de Datos': 'Database',
