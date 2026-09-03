@@ -397,10 +397,18 @@ export default async function handler(req, res) {
     if (!isCron) return res.status(401).json({ error: 'No autorizado' });
     const r = getRedis();
     if (!r) return res.status(500).json({ error: 'Sin Redis' });
+    // Una corrida vacía (p. ej. Google News limitó la tanda) NO debe borrar el feed:
+    // si no hubo items pero ya había datos guardados, se conservan los buenos.
+    const saveNews = async (key, items, companies) => {
+      if (items.length) { await r.set(key, JSON.stringify(blob(items, companies))); return; }
+      const prev = await r.get(key);
+      if (!prev) await r.set(key, JSON.stringify(blob(items, companies)));
+    };
     const mvp = await generate(COMPANIES);
-    await r.set('news:mvp', JSON.stringify(blob(mvp, COMPANIES)));
+    await saveNews('news:mvp', mvp, COMPANIES);
+    await new Promise(res => setTimeout(res, 4000));   // respiro para no encadenar el rate-limit de Google News en Cretum
     const cretum = await generate(CRETUM_COMPANIES);
-    await r.set('news:cretum', JSON.stringify(blob(cretum, CRETUM_COMPANIES)));
+    await saveNews('news:cretum', cretum, CRETUM_COMPANIES);
     return res.status(200).json({ ok: true, mvp: mvp.length, cretum: cretum.length });
   }
 
