@@ -294,6 +294,12 @@ const EN = {
   'Directo · Abierta': 'Direct · Open',
   'Directo': 'Direct',
 
+  // ── Reportes (distribuciones por LP) ──
+  'Cargando inversionistas…': 'Loading investors…',
+  '{n} inversionistas disponibles. Escribe o elige un LP.': '{n} investors available. Type or pick an LP.',
+  'Error al cargar inversionistas': 'Error loading investors',
+  'No encontré nada parecido a "{q}".': 'Couldn’t find anything like "{q}".',
+
   'Cambiar empresa': 'Switch org',
   'Cambiar a MVP': 'Switch to MVP',
   'Cambiar a Cretum': 'Switch to Cretum',

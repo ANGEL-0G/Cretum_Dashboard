@@ -8094,7 +8094,7 @@ function repHighlight() {
 async function loadReports() {
   if (repLoaded) return;
   const hint = document.getElementById('repHint');
-  if (hint) hint.textContent = 'Cargando inversionistas…';
+  if (hint) hint.textContent = t('Cargando inversionistas…');
   try {
     const [investors, investments, companies, series] = await Promise.all([
       sbFetchAll('investors', 'id, name'),
@@ -8111,10 +8111,10 @@ async function loadReports() {
       .filter(i => repInvByInvestor[i.id]?.length)
       .sort((a, b) => a.name.localeCompare(b.name, 'es'));
     repLoaded = true;
-    if (hint) hint.textContent = `${repInvestorsAll.length} inversionistas disponibles. Escribe o elige un LP.`;
+    if (hint) hint.textContent = t('{n} inversionistas disponibles. Escribe o elige un LP.', { n: repInvestorsAll.length });
   } catch (err) {
     console.error('[reports]', err);
-    if (hint) hint.textContent = 'Error al cargar inversionistas: ' + err.message;
+    if (hint) hint.textContent = t('Error al cargar inversionistas') + ': ' + err.message;
   }
 }
 
@@ -8125,7 +8125,7 @@ async function repGenerate() {
   let inv = repInvestorsAll.find(i => i.name.toLowerCase() === name.toLowerCase())
     || repInvestorsAll.find(i => i.name.toLowerCase().includes(name.toLowerCase()))
     || repBestMatches(name, 1)[0];   // tolera errores de tecleo
-  if (!inv) { if (hint) hint.textContent = `No encontré nada parecido a "${name}".`; return; }
+  if (!inv) { if (hint) hint.textContent = t('No encontré nada parecido a "{q}".', { q: name }); return; }
   document.getElementById('repSearch').value = inv.name;   // refleja el LP resuelto
   repHideSugg();
 
