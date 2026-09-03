@@ -9895,7 +9895,7 @@ const XLATE_LONG = [
    'Structure from the SpaceX S-1 (IPO Jun 12, 2026); first earnings not yet official — 1st cliff estimated: Aug 17, 2026. The final prospectus governs.'],
   ['Calendario del S-1 de SpaceX; las fechas ligadas a earnings son estimadas y el prospecto definitivo es la autoridad.',
    'Schedule from the SpaceX S-1; earnings-linked dates are estimates and the definitive prospectus governs.'],
-  ['Posiciones que el fondo subyacente liquidó y cuyo importe se reinvirtió en un vehículo directo de SpaceX (Serie 26A QP). La parte reinvertida no es efectivo devuelto al inversionista; el resto (si lo hay) sí se entregó en efectivo.',
+  ['Importes que el vehículo liquidó y se reinvirtieron en otro vehículo en lugar de entregarse: SpaceX 22F → Serie 26A QP, y Groq → Serie VI-26I QC (Groq 2.0). La parte reinvertida no es efectivo devuelto al inversionista; el resto (si lo hay) sí se entregó en efectivo.',
    'Positions liquidated by the underlying fund whose proceeds were reinvested into a direct SpaceX vehicle (Series 26A QP). The reinvested portion is not cash returned to the investor; the remainder (if any) was paid in cash.'],
 ];
 function xlateText(t) {
@@ -10775,7 +10775,7 @@ function renderRepurchasesBlock(title, rows) {
   return `
     <div class="db-section">
       <div class="db-section-h">${escapeHtml(title)} (${rows.length})</div>
-      <div class="db-section-note">Posiciones que el fondo subyacente liquidó y cuyo importe se reinvirtió en un vehículo directo de SpaceX (Serie 26A QP). La parte reinvertida no es efectivo devuelto al inversionista; el resto (si lo hay) sí se entregó en efectivo.</div>
+      <div class="db-section-note">Importes que el vehículo liquidó y se reinvirtieron en otro vehículo en lugar de entregarse: SpaceX 22F → Serie 26A QP, y Groq → Serie VI-26I QC (Groq 2.0). La parte reinvertida no es efectivo devuelto al inversionista; el resto (si lo hay) sí se entregó en efectivo.</div>
       <table class="db-table">
         <thead>
           <tr>

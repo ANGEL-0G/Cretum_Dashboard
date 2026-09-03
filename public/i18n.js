@@ -670,7 +670,7 @@ const EN = {
   "Última carta (CA)": "Latest letter (CA)",
   "Pendiente de verificación manual": "Pending manual verification",
   "No disponible": "Not available",
-  "Posiciones que el fondo subyacente liquidó y cuyo importe se reinvirtió en un vehículo directo de SpaceX (Serie 26A QP). La parte reinvertida no es efectivo devuelto al inversionista; el resto (si lo hay) sí se entregó en efectivo.": "Positions the underlying fund liquidated and whose proceeds were reinvested into a direct SpaceX vehicle (Series 26A QP). The reinvested portion is not cash returned to the investor; the remainder, if any, was paid out in cash.",
+  "Importes que el vehículo liquidó y se reinvirtieron en otro vehículo en lugar de entregarse: SpaceX 22F → Serie 26A QP, y Groq → Serie VI-26I QC (Groq 2.0). La parte reinvertida no es efectivo devuelto al inversionista; el resto (si lo hay) sí se entregó en efectivo.": "Amounts the vehicle liquidated and reinvested into another vehicle instead of paying out: SpaceX 22F into Series 26A QP, and Groq into Series VI-26I QC (Groq 2.0). The reinvested portion is not cash returned to the investor; the remainder, if any, was paid out in cash.",
   "Fondos All-Star": "All-Star Funds",
   "Espacio & Satélites": "Space & Satellites",
   "Defensa": "Defense",
