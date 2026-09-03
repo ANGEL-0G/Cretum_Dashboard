@@ -1130,6 +1130,7 @@ const EN = {
   'Crear dashboard': 'Create dashboard',
   'Sube un HTML o PDF nuevo': 'Upload a new HTML or PDF',
   'Crear usuario': 'Create user',
+  'Usuario': 'User',
   'Da acceso a un cliente': 'Give a client access',
   'Consultar datos existentes': 'View existing data',
 
