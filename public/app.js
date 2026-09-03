@@ -20298,7 +20298,7 @@ function gmTabInsights(s) {
   };
   const sec2 = `<details open style="${secStyle}">
     ${tit(2, 'fa-award', 'var(--green)', 'A quién hacerle caso',
-          'acierto medido con nuestros propios datos: sus decisiones de un trimestre contra lo que pasó en el siguiente')}
+          'acierto = sus decisiones le GANARON AL UNIVERSO el trimestre siguiente (no solo "subió": en mercado alcista todo sube)')}
     <div style="overflow-x:auto;padding-bottom:12px"><table class="camp-table" style="width:100%;font-size:12px">
       <tr><th>Manager</th><th class="num">Libro en acciones</th><th class="num">Concentración</th>
           <th class="num">Decisiones</th><th>Acierto</th><th class="num">Sus compras</th><th class="num">Sus ventas</th></tr>
@@ -20309,14 +20309,15 @@ function gmTabInsights(s) {
         <td class="num" style="color:var(--gray-500)">${(p.decisiones || 0).toLocaleString('en-US')}</td>
         <td>${p.acierto == null
               ? '<span style="font-size:10.5px;color:var(--gray-400)">muestra corta</span>'
-              : `${barra(p.acierto - 35, 35, p.acierto >= 52 ? 'var(--green)' : (p.acierto < 46 ? 'var(--red)' : 'var(--amber)'))}
-                 <span style="font-size:11.5px;font-weight:700;margin-left:6px;color:${p.acierto >= 52 ? 'var(--green)' : (p.acierto < 46 ? 'var(--red)' : 'var(--gray-700)')}">${p.acierto.toFixed(0)}%</span>`}</td>
+              : `${barra(p.acierto - 40, 25, p.acierto >= 53 ? 'var(--green)' : (p.acierto < 48 ? 'var(--red)' : 'var(--amber)'))}
+                 <span style="font-size:11.5px;font-weight:700;margin-left:6px;color:${p.acierto >= 53 ? 'var(--green)' : (p.acierto < 48 ? 'var(--red)' : 'var(--gray-700)')}">${p.acierto.toFixed(0)}%</span>`}</td>
         <td class="num" style="color:${gmColor(p.ret_compras || 0)}">${p.ret_compras != null ? gmInsNum(p.ret_compras) : '—'}</td>
         <td class="num" style="color:${gmColor(-(p.ret_ventas || 0))}">${p.ret_ventas != null ? gmInsNum(p.ret_ventas) : '—'}</td></tr>`).join('')}
     </table></div>
     <div style="font-size:10px;color:var(--gray-400);padding-bottom:10px">
-      <strong>Acierto</strong> = de todas las veces que sumaron o redujeron acciones, en qué porcentaje el papel se movió a su favor el trimestre siguiente.
-      <strong>Sus compras</strong> = retorno medio de lo que compraron; <strong>sus ventas</strong>, de lo que vendieron (en verde si les convino vender).
+      <strong>Acierto</strong> = de sus decisiones (incluidas posiciones cerradas), qué porcentaje le ganó a la MEDIANA del universo el trimestre siguiente:
+      compra que rinde más que el mercado, venta que rinde menos. Un libro cuasi-índice converge a ~50% por construcción — y AQR y Citadel dan justo eso, que es la prueba de que la métrica funciona.
+      <strong>Sus compras / sus ventas</strong> = retorno medio BRUTO de lo que compraron y vendieron (sin restar el universo; en verde si les convino).
       El libro es solo acciones: el 13F de Citadel incluye el nocional de sus opciones, por eso ahí aparece más chico que en la pestaña Inteligencia.</div></details>`;
 
   /* ③ señales de convicción */
