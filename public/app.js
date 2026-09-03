@@ -20362,6 +20362,7 @@ function gmTabInsights(s) {
       n_fuertes: null, ret_q: a2.ret_q, fuerza: 0 });
     u.apuesta = a2;
     u.ret_q = u.ret_q ?? a2.ret_q;
+    if (u.dsh_agg == null && a2.dsh != null) u.dsh_agg = a2.dsh;   // el modal muestra el mov. de la apuesta
     u.fuerza = Math.max(u.fuerza, (a2.w || 0) * (1 + ((a2.acierto ?? 50) - 50) / 100));
     if (!u.fondos.some(f => f.fund === a2.fund)) {
       u.fondos = [{ fund: a2.fund, dsh: a2.dsh, w: a2.w, rank: a2.rank, nueva: a2.nueva }, ...u.fondos];
