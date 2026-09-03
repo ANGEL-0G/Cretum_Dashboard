@@ -300,6 +300,13 @@ const EN = {
   'Error al cargar inversionistas': 'Error loading investors',
   'No encontré nada parecido a "{q}".': 'Couldn’t find anything like "{q}".',
 
+  // ── Base de Datos: detalle de inversionista (bloques de posiciones) ──
+  'Posiciones activas': 'Active positions',
+  'Posiciones terminadas': 'Closed positions',
+  'Recompras y reinversiones': 'Repurchases and reinvestments',
+  'Distribuciones · Oportunidades en directo (SPVs)': 'Distributions · Direct opportunities (SPVs)',
+  'Distribuciones · Fondos MVP': 'Distributions · MVP Funds',
+
   'Cambiar empresa': 'Switch org',
   'Cambiar a MVP': 'Switch to MVP',
   'Cambiar a Cretum': 'Switch to Cretum',

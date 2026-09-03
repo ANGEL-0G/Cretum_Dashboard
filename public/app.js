@@ -10758,7 +10758,7 @@ function renderPositionsBlock(title, rows, showAcct) {
 
   return `
     <div class="db-section">
-      <div class="db-section-h">${escapeHtml(title)} (${rows.length})</div>
+      <div class="db-section-h">${escapeHtml(t(title))} (${rows.length})</div>
       <div class="db-list-wrap">
         <table class="db-list-table">
           <thead><tr>${headers}</tr></thead>
@@ -10774,7 +10774,7 @@ function renderRepurchasesBlock(title, rows) {
   const tot = rows.reduce((a, d) => ({ g: a.g + (d._gross || 0), r: a.r + (d._reinv || 0), c: a.c + (d._cash || 0) }), { g: 0, r: 0, c: 0 });
   return `
     <div class="db-section">
-      <div class="db-section-h">${escapeHtml(title)} (${rows.length})</div>
+      <div class="db-section-h">${escapeHtml(t(title))} (${rows.length})</div>
       <div class="db-section-note">Importes que el vehículo liquidó y se reinvirtieron en otro vehículo en lugar de entregarse: SpaceX 22F → Serie 26A QP, y Groq → Serie VI-26I QC (Groq 2.0). La parte reinvertida no es efectivo devuelto al inversionista; el resto (si lo hay) sí se entregó en efectivo.</div>
       <table class="db-table">
         <thead>
@@ -10817,7 +10817,7 @@ function renderDistrosBlock(title, rows) {
   if (!rows.length) return '';
   return `
     <div class="db-section">
-      <div class="db-section-h">${escapeHtml(title)} (${rows.length})</div>
+      <div class="db-section-h">${escapeHtml(t(title))} (${rows.length})</div>
       <table class="db-table">
         <thead>
           <tr>
