@@ -4212,8 +4212,8 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   .header-brand{padding:3px}
 }
 </style>
-<link rel="stylesheet" href="/mobile.css?v=20260903-desk35">
-<link rel="stylesheet" href="/desk.css?v=20260903-desk35">
+<link rel="stylesheet" href="/mobile.css?v=20260903-lpredux">
+<link rel="stylesheet" href="/desk.css?v=20260903-lpredux">
 </head>
 <body>
 <!-- Pantalla de carga tras "Actualizar": la pestaña sabe desde el primer byte que viene de una recarga
@@ -6092,6 +6092,75 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   [data-theme="dark"] .lp-badge.off{background:rgba(192,57,43,.2);color:#f0a0a0}
   .lp-badge.warn{background:#fdefd6;color:#a15c00}
   [data-theme="dark"] .lp-badge.warn{background:rgba(237,120,36,.2);color:#f0b27a}
+
+  /* ══ Portal de LP's (admin) — rediseño 1b: métricas + filas expandibles ══ */
+  #pageLp{max-width:1120px}
+  #pageLp .lp-head{display:flex;align-items:flex-end;gap:28px;flex-wrap:wrap;margin:2px 0 18px}
+  #pageLp .lp-head-txt{flex:1;min-width:260px;display:flex;flex-direction:column;gap:6px}
+  #pageLp .lp-eyebrow{display:inline-flex;align-items:center;gap:8px;font:600 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--navy)}
+  #pageLp .lp-h1{font-size:21px;font-weight:600;letter-spacing:-.02em;color:var(--gray-900);margin:0}
+  #pageLp .lp-sub{font-size:13px;color:var(--gray-500);line-height:1.5;max-width:64ch;margin:0}
+  #pageLp .lp-stats{display:flex;align-items:center;gap:26px;flex-wrap:wrap}
+  #pageLp .lp-stat{display:flex;flex-direction:column;gap:2px}
+  #pageLp .lp-stat-n{font:500 24px/1.1 var(--mono);color:var(--gray-900);font-variant-numeric:tabular-nums}
+  #pageLp .lp-stat-n.ok{color:var(--green)} #pageLp .lp-stat-n.warn{color:var(--amber)}
+  #pageLp .lp-stat-l{font-size:11.5px;color:var(--gray-400)}
+  #pageLp .lp-new{border-radius:999px;padding:10px 18px}
+
+  #pageLp .lp-bar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:11px 16px;margin-bottom:14px;background:var(--gray-50);border:1px solid var(--border);border-radius:12px}
+  #pageLp .lp-search{position:relative;flex:1;min-width:220px;display:flex;align-items:center}
+  #pageLp .lp-search>i{position:absolute;left:2px;color:var(--gray-400);font-size:12px;pointer-events:none}
+  #pageLp .lp-search input{flex:1;padding:6px 0 6px 22px;border:0;border-bottom:1px solid transparent;background:transparent;font:inherit;font-size:13.5px;color:var(--gray-900);outline:none}
+  #pageLp .lp-search input:focus{border-bottom-color:var(--navy)}
+  #pageLp .lp-search input::placeholder{color:var(--gray-400)}
+  #pageLp .lp-flts{display:flex;align-items:center;gap:16px}
+  #pageLp .lp-flt,#pageLp .lp-sort{border:0;background:none;padding:0 0 2px;cursor:pointer;font:400 12.5px/1.4 var(--font);color:var(--gray-400);border-bottom:1.5px solid transparent}
+  #pageLp .lp-flt.on,#pageLp .lp-sort.on{color:var(--navy);font-weight:600;border-bottom-color:var(--navy)}
+  #pageLp .lp-flt-c{font-family:var(--mono);opacity:.6;font-size:11px}
+  #pageLp .lp-bar-sep{width:1px;height:18px;background:var(--gray-200)}
+  #pageLp .lp-bar-lbl{font-size:11.5px;color:var(--gray-400)}
+
+  #pageLp .lp-list{display:block;max-width:none;margin:0;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--card)}
+  #pageLp .lp-row{border-bottom:1px solid var(--gray-100)}
+  #pageLp .lp-row:last-child{border-bottom:0}
+  #pageLp .lp-row-head{display:grid;grid-template-columns:1fr 200px 130px 116px;align-items:center;gap:20px;padding:15px 22px;cursor:pointer;border-left:3px solid transparent;transition:background .12s,border-color .12s}
+  #pageLp .lp-row-head:hover,#pageLp .lp-row.open .lp-row-head{background:var(--gray-50);border-left-color:var(--navy)}
+  #pageLp .lp-rc-id{display:flex;flex-direction:column;gap:3px;min-width:0}
+  #pageLp .lp-rc-top{display:flex;align-items:center;gap:9px;min-width:0}
+  #pageLp .lp-name{font-size:14.5px;font-weight:500;color:var(--gray-900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #pageLp .lp-dot{width:7px;height:7px;border-radius:50%;flex:none}
+  #pageLp .lp-dot.ok{background:var(--green)} #pageLp .lp-dot.off{background:var(--amber)}
+  #pageLp .lp-rc-state{font-size:11.5px;color:var(--gray-400)}
+  #pageLp .lp-rc-user{font-family:var(--mono);font-size:12.5px;color:var(--gray-500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #pageLp .lp-rc-last{font-size:12.5px;color:var(--gray-500)}
+  #pageLp .lp-rc-meta{display:flex;align-items:center;justify-content:flex-end;gap:6px}
+  #pageLp .lp-rc-docs{font-family:var(--mono);font-size:11.5px;color:var(--gray-400)}
+  #pageLp .lp-chev{display:grid;place-items:center;width:22px;height:22px;color:var(--gray-400);font-size:11px;transition:transform .18s ease}
+  #pageLp .lp-row.open .lp-chev{transform:rotate(180deg)}
+
+  #pageLp .lp-row-body{display:flex;align-items:center;gap:26px;flex-wrap:wrap;padding:16px 22px 20px 25px;background:var(--gray-50);border-left:3px solid var(--navy)}
+  #pageLp .lp-field{display:flex;flex-direction:column;gap:5px}
+  #pageLp .lp-field-l{font:600 10px/1 var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--gray-400)}
+  #pageLp .lp-field-v{font-size:13.5px;color:var(--gray-900);display:flex;align-items:center;gap:8px}
+  #pageLp .lp-pass{font-family:var(--mono);font-size:13.5px;color:var(--gray-900);letter-spacing:.02em}
+  #pageLp .lp-link{border:0;background:none;padding:0;cursor:pointer;font:500 11.5px/1 var(--font);color:var(--navy)}
+  #pageLp .lp-link:hover{color:var(--navy-mid)}
+  #pageLp .lp-mid{color:var(--gray-300)}
+  #pageLp .lp-acts{margin-left:auto;display:flex;align-items:center;gap:6px}
+  #pageLp .lp-act{display:inline-flex;align-items:center;justify-content:center;gap:7px;font:500 12.5px/1 var(--font);border-radius:8px;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--gray-500);transition:.13s}
+  #pageLp .lp-act.primary{color:var(--navy);background:var(--navy-ghost);border-color:var(--navy-pale);padding:8px 13px}
+  #pageLp .lp-act.primary:hover{background:var(--navy-pale)}
+  [data-theme="dark"] #pageLp .lp-act.primary{background:rgba(93,143,245,.12);border-color:rgba(93,143,245,.28)}
+  #pageLp .lp-act.ic{width:34px;height:34px;padding:0;font-size:13px}
+  #pageLp .lp-act.ic:hover{color:var(--navy);border-color:var(--navy)}
+  #pageLp .lp-act.ic.del:hover{color:var(--red);border-color:var(--red)}
+  #pageLp .lp-empty{padding:42px 24px;text-align:center;color:var(--gray-500);font-size:13.5px}
+  @media (max-width:720px){
+    #pageLp .lp-row-head{grid-template-columns:1fr auto;gap:10px}
+    #pageLp .lp-rc-user,#pageLp .lp-rc-last{display:none}
+    #pageLp .lp-row-body{gap:16px}
+    #pageLp .lp-acts{margin-left:0}
+  }
   .pt-btn{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;font-family:inherit;color:var(--ink-soft,#556);background:var(--white,#fff);border:1px solid var(--line,#dde3ec);border-radius:8px;padding:7px 11px;cursor:pointer;transition:border-color .15s,color .15s}
   .pt-btn:hover{border-color:var(--navy);color:var(--navy)}
   .pt-btn.danger:hover{border-color:#c0392b;color:#c0392b}
@@ -6799,15 +6868,33 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 
 <!-- ═══ Portal de LP's (sistema aparte, enlace mágico por LP) ═══ -->
 <div class="page page-db" id="pageLp">
-  <div class="db-toolbar">
-    <div class="db-title-block"><i class="fa-solid fa-user-tie"></i> Portal de LP's</div>
-    <div class="db-search">
-      <i class="fa-solid fa-magnifying-glass db-search-ico"></i>
-      <input id="lpSearch" class="db-search-inp" placeholder="Buscar por nombre o usuario…" oninput="renderLpList()" autocomplete="off">
+  <div class="lp-head">
+    <div class="lp-head-txt">
+      <span class="lp-eyebrow"><i class="fa-solid fa-user-tie"></i> Portal de LP's</span>
+      <h1 class="lp-h1">Accesos de inversionistas</h1>
+      <p class="lp-sub">Cada LP entra a <span class="lp-code">cretumdesk.com/lp</span> con su usuario y contraseña y ve solo su información. La contraseña se comparte por un canal aparte.</p>
     </div>
-    <button class="btn-primary" id="lpNewBtn" type="button" onclick="lpNew()" style="display:none"><i class="fa-solid fa-plus"></i> Nuevo LP</button>
+    <div class="lp-stats">
+      <div class="lp-stat"><span class="lp-stat-n" id="lpStatTotal">—</span><span class="lp-stat-l">LPs dados de alta</span></div>
+      <div class="lp-stat"><span class="lp-stat-n ok" id="lpStatActive">—</span><span class="lp-stat-l">con acceso activo</span></div>
+      <div class="lp-stat"><span class="lp-stat-n warn" id="lpStatInactive">—</span><span class="lp-stat-l">sin acceso</span></div>
+      <button class="btn-primary lp-new" id="lpNewBtn" type="button" onclick="lpNew()" style="display:none"><i class="fa-solid fa-plus"></i> Nuevo LP</button>
+    </div>
   </div>
-  <p class="lp-intro">Todos entran por <span class="lp-code">cretumdesk.com/lp</span> con su <b>usuario y contraseña</b>, y cada uno ve solo su información. Da de alta al LP con su usuario y contraseña, y súbele sus documentos. Comparte la contraseña por un canal aparte.</p>
+  <div class="lp-bar">
+    <div class="lp-search"><i class="fa-solid fa-magnifying-glass"></i><input id="lpSearch" placeholder="Buscar por nombre o usuario…" oninput="renderLpList()" autocomplete="off"></div>
+    <div class="lp-flts">
+      <button type="button" class="lp-flt on" data-lpf="todos" onclick="lpSetFilter('todos')">Todos <span class="lp-flt-c"></span></button>
+      <button type="button" class="lp-flt" data-lpf="activos" onclick="lpSetFilter('activos')">Con acceso <span class="lp-flt-c"></span></button>
+      <button type="button" class="lp-flt" data-lpf="inactivos" onclick="lpSetFilter('inactivos')">Sin acceso <span class="lp-flt-c"></span></button>
+    </div>
+    <span class="lp-bar-sep"></span>
+    <span class="lp-bar-lbl">Orden</span>
+    <div class="lp-flts">
+      <button type="button" class="lp-sort on" data-lps="nombre" onclick="lpSetSort('nombre')">Nombre</button>
+      <button type="button" class="lp-sort" data-lps="acceso" onclick="lpSetSort('acceso')">Último acceso</button>
+    </div>
+  </div>
   <div class="lp-list" id="lpList"></div>
 </div>
 
@@ -7750,8 +7837,8 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   </div>
 </div>
 
-<script src="/i18n.js?v=20260903-desk35"></script>
-<script src="/app.js?v=20260903-desk35"></script>
-<script src="/mobile.js?v=20260903-desk35"></script>
+<script src="/i18n.js?v=20260903-lpredux"></script>
+<script src="/app.js?v=20260903-lpredux"></script>
+<script src="/mobile.js?v=20260903-lpredux"></script>
 </body>
 </html>

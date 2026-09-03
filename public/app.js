@@ -7430,37 +7430,94 @@ async function loadLpAdmin() {
   }
 }
 
+/* ── Portal de LP's (admin): lista con métricas, filtros, orden y filas expandibles.
+   La contraseña va oculta por defecto (revelar/copiar) — antes se veía en texto plano. ── */
+let lpFilter = 'todos', lpSort = 'nombre', lpOpenId = null;
+const lpRevealed = new Set();
+const lpHasAccess = l => l.active !== false && !!l.has_password;
+function lpSetFilter(f) { lpFilter = f; lpOpenId = null; renderLpList(); }
+function lpSetSort(s) { lpSort = s; renderLpList(); }
+function lpToggleRow(id) { lpOpenId = (lpOpenId === id ? null : id); renderLpList(); }
+function lpRevealPass(id, ev) { if (ev) ev.stopPropagation(); if (lpRevealed.has(id)) lpRevealed.delete(id); else lpRevealed.add(id); renderLpList(); }
+function lpCopyPass(id, ev) {
+  if (ev) ev.stopPropagation();
+  const l = lpList.find(x => String(x.id) === String(id));
+  if (l && l.password && navigator.clipboard) { navigator.clipboard.writeText(l.password); toast(t('Contraseña copiada')); }
+}
+
 function renderLpList() {
   const list = document.getElementById('lpList');
   if (!list) return;
-  if (!lpList.length) {
-    list.innerHTML = `<div class="pt-empty">Aún no hay LP's.${lpCanManage() ? ' Crea el primero con “Nuevo LP”.' : ''}</div>`;
+  const total = lpList.length;
+  const act = lpList.filter(lpHasAccess).length;
+  const counts = { todos: total, activos: act, inactivos: total - act };
+  const setT = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+  setT('lpStatTotal', total); setT('lpStatActive', act); setT('lpStatInactive', total - act);
+  document.querySelectorAll('#pageLp .lp-flt').forEach(b => {
+    b.classList.toggle('on', b.dataset.lpf === lpFilter);
+    const c = b.querySelector('.lp-flt-c'); if (c) c.textContent = counts[b.dataset.lpf];
+  });
+  document.querySelectorAll('#pageLp .lp-sort').forEach(b => b.classList.toggle('on', b.dataset.lps === lpSort));
+
+  if (!total) {
+    list.innerHTML = `<div class="lp-empty">${t('Aún no hay LP\'s.')}${lpCanManage() ? ' ' + t('Crea el primero con "Nuevo LP".') : ''}</div>`;
     return;
   }
-  // Buscador (mismo patrón que Base de Datos / Contactos): filtra por nombre o usuario.
   const q = (document.getElementById('lpSearch')?.value || '').trim().toLowerCase();
-  const rows = q
-    ? lpList.filter(l => (l.name || '').toLowerCase().includes(q) || (l.username || '').toLowerCase().includes(q))
-    : lpList;
+  let rows = lpList.filter(l => lpFilter === 'todos' || (lpFilter === 'activos') === lpHasAccess(l));
+  if (q) rows = rows.filter(l => (l.name || '').toLowerCase().includes(q) || (l.username || '').toLowerCase().includes(q));
+  rows = rows.slice().sort((a, b) => lpSort === 'nombre'
+    ? (a.name || '').localeCompare(b.name || '', 'es')
+    : ((Date.parse(b.last_access_at || 0) || 0) - (Date.parse(a.last_access_at || 0) || 0)));
   if (!rows.length) {
-    list.innerHTML = `<div class="pt-empty">Sin resultados para “${escapeHtml(q)}”.</div>`;
+    list.innerHTML = `<div class="lp-empty">${q ? `${t('Sin resultados para')} “${escapeHtml(q)}”.` : t('No hay LPs en este filtro.')}</div>`;
     return;
   }
   const manage = lpCanManage();
-  list.innerHTML = rows.map(l => `
-    <div class="lp-item">
-      <div class="lp-item-main">
-        <div class="lp-item-name">${escapeHtml(l.name)} ${l.active ? '' : '<span class="lp-badge off">inactivo</span>'}${l.has_password ? '' : '<span class="lp-badge warn">sin contraseña</span>'}</div>
-        <div class="lp-item-meta">${l.username ? 'usuario: <b>' + escapeHtml(l.username) + '</b> · ' : '<span class="lp-badge warn">sin usuario</span> · '}${l.password ? 'contraseña: <b style="font-family:var(--mono,monospace)">' + escapeHtml(l.password) + '</b> · ' : ''}${l.docs} doc${l.docs === 1 ? '' : 's'} · último acceso: ${lpFmtDate(l.last_access_at)}</div>
+  list.innerHTML = rows.map(l => {
+    const access = lpHasAccess(l);
+    const open = lpOpenId === String(l.id);
+    const shown = lpRevealed.has(String(l.id));
+    const pass = l.password ? (shown ? escapeHtml(l.password) : '••••••••••••') : '—';
+    const state = access ? t('Acceso activo') : (l.has_password ? t('Acceso desactivado') : t('Sin contraseña'));
+    return `
+    <div class="lp-row${open ? ' open' : ''}">
+      <div class="lp-row-head" onclick="lpToggleRow('${l.id}')">
+        <div class="lp-rc-id">
+          <span class="lp-rc-top"><span class="lp-name">${escapeHtml(l.name)}</span><span class="lp-dot ${access ? 'ok' : 'off'}"></span></span>
+          <span class="lp-rc-state">${state}</span>
+        </div>
+        <span class="lp-rc-user">${l.username ? escapeHtml(l.username) : '—'}</span>
+        <span class="lp-rc-last">${l.last_access_at ? lpFmtDate(l.last_access_at) : t('Nunca')}</span>
+        <span class="lp-rc-meta"><span class="lp-rc-docs">${l.docs} ${l.docs === 1 ? t('doc') : t('docs')}</span><span class="lp-chev"><i class="fa-solid fa-chevron-down"></i></span></span>
       </div>
-      <div class="lp-item-acts">
-        <button class="pt-btn" onclick="lpPortalOpen('${l.id}')" title="Abrir su portal (sin contraseña)"><i class="fa-solid fa-arrow-up-right-from-square"></i> Portal</button>
-        ${l.username && l.password ? `<button class="pt-btn" onclick="lpMensaje('${l.id}')" title="Copiar mensaje con instrucciones de acceso"><i class="fa-solid fa-envelope"></i> Mensaje</button>` : ''}
-        <button class="pt-btn" onclick="lpDocsOpen('${l.id}')" title="Documentos"><i class="fa-solid fa-folder-open"></i> Docs</button>
-        ${manage ? `<button class="pt-btn" onclick="lpEdit('${l.id}')" title="Editar"><i class="fa-solid fa-pen"></i></button>
-        <button class="pt-btn danger" onclick="lpDelete('${l.id}')" title="Borrar"><i class="fa-solid fa-trash"></i></button>` : ''}
-      </div>
-    </div>`).join('');
+      ${open ? `
+      <div class="lp-row-body">
+        <div class="lp-field">
+          <span class="lp-field-l">${t('Contraseña')}</span>
+          <div class="lp-field-v">
+            <span class="lp-pass">${pass}</span>
+            ${l.password ? `<button type="button" class="lp-link" onclick="lpRevealPass('${l.id}',event)">${shown ? t('Ocultar') : t('Revelar')}</button><span class="lp-mid">·</span><button type="button" class="lp-link" onclick="lpCopyPass('${l.id}',event)">${t('Copiar')}</button>` : ''}
+          </div>
+        </div>
+        <div class="lp-field">
+          <span class="lp-field-l">${t('Correo')}</span>
+          <span class="lp-field-v">${l.email ? escapeHtml(l.email) : '—'}</span>
+        </div>
+        <div class="lp-field">
+          <span class="lp-field-l">${t('Documentos')}</span>
+          <span class="lp-field-v">${l.docs === 0 ? t('Sin documentos') : t('{n} documentos cargados', { n: l.docs })}</span>
+        </div>
+        <div class="lp-acts">
+          <button type="button" class="lp-act primary" onclick="lpPortalOpen('${l.id}')"><i class="fa-solid fa-arrow-up-right-from-square"></i> ${t('Portal')}</button>
+          <button type="button" class="lp-act ic" title="${t('Documentos')}" onclick="lpDocsOpen('${l.id}')"><i class="fa-solid fa-folder-open"></i></button>
+          ${l.username && l.password ? `<button type="button" class="lp-act ic" title="${t('Mensaje')}" onclick="lpMensaje('${l.id}')"><i class="fa-solid fa-envelope"></i></button>` : ''}
+          ${manage ? `<button type="button" class="lp-act ic" title="${t('Editar')}" onclick="lpEdit('${l.id}')"><i class="fa-solid fa-pencil"></i></button>
+          <button type="button" class="lp-act ic del" title="${t('Eliminar')}" onclick="lpDelete('${l.id}')"><i class="fa-solid fa-trash"></i></button>` : ''}
+        </div>
+      </div>` : ''}
+    </div>`;
+  }).join('');
 }
 
 function lpMensaje(id) {
