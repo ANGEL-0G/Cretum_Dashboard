@@ -20175,6 +20175,7 @@ let gmInsSel = null;
 function gmInsAbrir(tk) {
   const D = (gm13f && gm13f.insights) || {};
   gmInsSel = (D.cartera || []).find(f => f.ticker === tk)
+          || ((gm13f && gm13f._ideasUni) || []).find(f => f.issuer === tk)
           || (D.senales || []).find(f => f.issuer === tk) || null;
   const el = document.getElementById('gmInsModal');
   if (!el || !gmInsSel) return;
@@ -20340,42 +20341,109 @@ function gmTabInsights(s) {
       <strong>Retorno de sus compras / ventas</strong> = cuánto rindió en promedio lo que compraron y lo que vendieron (retorno simple, sin restar el mercado; la venta en verde si les convino vender).
       El libro es solo acciones: el 13F de Citadel incluye el nocional de sus opciones, por eso ahí aparece más chico que en la pestaña Inteligencia.</div></details>`;
 
-  /* ③ señales de convicción */
-  const chip = f => `<span style="display:inline-block;font-size:9.5px;padding:1px 7px;border-radius:99px;margin:1px 2px;background:var(--gray-100);color:var(--gray-500)"
-      title="${escapeHtml(f.fund)}${f.w != null ? ' · queda en ' + f.w + '% de su libro' : ''}${f.rank ? ' · su posición #' + f.rank : ''}">
-      ${escapeHtml(String(f.fund).split(' ')[0])}${f.nueva ? '<span style="color:var(--navy);font-weight:800"> N</span>' : (f.dsh != null ? ` <span style="color:var(--green)">${f.dsh > 0 ? '+' : ''}${Math.round(f.dsh)}%</span>` : '')}</span>`;
-  const timing = r => r == null ? '<span style="color:var(--gray-300)">—</span>'
-    : `<span style="color:${r > 0.35 ? 'var(--amber)' : 'var(--gray-500)'};font-size:11.5px"
-        title="${r > 0.35 ? 'La acción ya subió mucho desde que compraron: entrar hoy es entrar caro.' : 'La acción no se ha movido tanto: aún no vamos tarde.'}">${gmInsNum(r * 100, 0)}</span>`;
-  const sec3 = (senales.length || (I.apuestas || []).length) ? `<details open style="${secStyle}">
-    ${tit(3, 'fa-lightbulb', 'var(--amber)', 'Señales de convicción fuera de nuestra cartera',
-          'compras reales de acciones · la última columna avisa si la acción ya subió y vamos tarde')}
-    ${senales.length ? `<div style="font-size:11px;font-weight:700;color:var(--gray-500);margin:2px 0 4px">VARIOS MANAGERS EN LO MISMO</div>
-    <div style="overflow-x:auto"><table class="camp-table" style="width:100%;font-size:12px">
-      <tr><th>Emisora</th><th>Quién compró</th><th class="num">Compraron con peso<br><span style="font-weight:400;text-transform:none">(queda ≥0.4% de su libro)</span></th><th class="num">El más invertido<br><span style="font-weight:400;text-transform:none">(% de su libro)</span></th>
-          <th class="num">Posiciones<br><span style="font-weight:400;text-transform:none">nuevas</span></th><th class="num">La acción en el trimestre<br><span style="font-weight:400;text-transform:none">(si ya subió mucho, vamos tarde)</span></th></tr>
-      ${senales.map(x => `<tr onclick="gmInsAbrir('${escapeHtml(x.issuer).replace(/'/g, "\\'")}')" style="cursor:pointer">
-        <td style="font-weight:600">${escapeHtml(x.issuer)}</td>
-        <td>${(x.fondos || []).map(chip).join('')}</td>
-        <td class="num"><strong>${x.n_fuertes}</strong><span style="color:var(--gray-400)"> de ${x.n}</span></td>
-        <td class="num">${x.convic_max != null ? x.convic_max.toFixed(1) + '% <span style="font-size:10px;color:var(--gray-400)">' + escapeHtml(String(x.convic_fund).split(' ')[0]) + '</span>' : '—'}</td>
-        <td class="num">${x.nuevas || '—'}</td>
-        <td class="num">${timing(x.ret_q)}</td></tr>`).join('')}
-    </table></div>` : ''}
-    ${(I.apuestas || []).length ? `<div style="font-size:11px;font-weight:700;color:var(--gray-500);margin:14px 0 4px">APUESTA GRANDE DE UN SOLO MANAGER
-      <span style="font-weight:400;color:var(--gray-400)">· una posición que pesa ≥3% de su libro dice más que tres fondos añadiendo 0.2%</span></div>
-    <div style="overflow-x:auto;padding-bottom:12px"><table class="camp-table" style="width:100%;font-size:12px">
-      <tr><th>Emisora</th><th>Manager</th><th class="num">% de su libro</th><th class="num">Su posición #</th>
-          <th class="num">Compró<br><span style="font-weight:400;text-transform:none">(cambio en acciones)</span></th><th class="num">Le gana al mercado<br><span style="font-weight:400;text-transform:none">(historial)</span></th><th class="num">La acción en el trimestre<br><span style="font-weight:400;text-transform:none">(si ya subió mucho, vamos tarde)</span></th></tr>
-      ${I.apuestas.map(x => `<tr>
-        <td style="font-weight:600">${escapeHtml(x.issuer)}</td>
-        <td>${escapeHtml(x.fund)}${x.n_otros > 0 ? `<span style="font-size:10px;color:var(--gray-400)"> · otros ${x.n_otros} la tienen</span>` : '<span style="font-size:10px;color:var(--gray-400)"> · solo él</span>'}</td>
-        <td class="num" style="font-weight:700">${x.w.toFixed(1)}%</td>
-        <td class="num" style="color:var(--gray-500)">${x.rank ? '#' + x.rank : '—'}</td>
-        <td class="num" style="font-weight:700;color:${x.nueva ? 'var(--navy)' : 'var(--green)'}">${x.nueva ? 'NUEVA' : gmInsNum(x.dsh, 0)}</td>
-        <td class="num">${x.acierto != null ? x.acierto.toFixed(0) + '%' : '—'}</td>
-        <td class="num">${timing(x.ret_q)}</td></tr>`).join('')}
-    </table></div>` : ''}</details>` : '';
+  /* ③ ideas fuera de cartera — TARJETAS, no tablas: cada idea con su lectura en
+     español y el veredicto de timing como caja. Consenso y apuestas grandes se
+     FUSIONAN en una sola lista (antes eran dos tablas con columnas distintas y la
+     primera hasta se desbordaba — feedback de Eugenio: "desorganizada"). */
+  const skillDe = f => { const p = perf[f] || {}; return p.acierto; };
+  const bonito = s => String(s || '')
+    .replace(/\b(INC|CORP|CORPORATION|CO|COMPANY|LTD|PLC|LLC|N\.?V\.?|S\.?A\.?|HOLDINGS?|INCORPORATED)\.?\s*$/i, '')
+    .replace(/\b(INC|CORP|CO)\.?\s*$/i, '').trim().toLowerCase()
+    .replace(/(^|[\s(&-])([a-záéíóúñ0-9])/g, (a, b, c) => b + c.toUpperCase());
+  // unificar: una entrada por emisora, con lo del consenso Y la apuesta grande si la hay
+  const uni = {};
+  for (const s2 of senales) {
+    uni[s2.issuer] = { issuer: s2.issuer, sen: s2, fondos: s2.fondos || [], n: s2.n,
+      n_fuertes: s2.n_fuertes, ret_q: s2.ret_q, fuerza: (s2.score || 0),
+      peso_agg: s2.peso_agg, dsh_agg: s2.dsh_agg };
+  }
+  for (const a2 of (I.apuestas || [])) {
+    const u = uni[a2.issuer] || (uni[a2.issuer] = { issuer: a2.issuer, fondos: [], n: (a2.n_otros || 0) + 1,
+      n_fuertes: null, ret_q: a2.ret_q, fuerza: 0 });
+    u.apuesta = a2;
+    u.ret_q = u.ret_q ?? a2.ret_q;
+    u.fuerza = Math.max(u.fuerza, (a2.w || 0) * (1 + ((a2.acierto ?? 50) - 50) / 100));
+    if (!u.fondos.some(f => f.fund === a2.fund)) {
+      u.fondos = [{ fund: a2.fund, dsh: a2.dsh, w: a2.w, rank: a2.rank, nueva: a2.nueva }, ...u.fondos];
+    }
+  }
+  const ideasUni = Object.values(uni).sort((a, b) => b.fuerza - a.fuerza);
+  gm13f._ideasUni = ideasUni;   // para que el modal las encuentre por emisora
+
+  const cajaTiming = r => {
+    if (r == null) return `<div style="text-align:center;padding:10px 14px;border-radius:10px;background:var(--gray-50);min-width:150px">
+      <div style="font-size:18px;font-weight:800;color:var(--gray-400)">—</div>
+      <div style="font-size:10px;color:var(--gray-400)">sin precio del trimestre</div></div>`;
+    const pct = (r > 0 ? '+' : '') + Math.round(r * 100) + '%';
+    let bg, col, titulo, linea;
+    if (r >= 0.35)      { bg = 'var(--amber-bg)'; col = 'var(--amber)'; titulo = 'YA SUBIÓ ' + pct;
+                          linea = 'entrar hoy es pagar bastante más que ellos'; }
+    else if (r >= 0)    { bg = 'var(--green-bg)'; col = 'var(--green)'; titulo = 'A TIEMPO · ' + pct;
+                          linea = 'sigue cerca del precio al que compraron'; }
+    else if (r > -0.25) { bg = 'var(--gray-50)';  col = 'var(--gray-500)'; titulo = 'MÁS BARATA · ' + pct;
+                          linea = 'hoy cuesta menos que cuando compraron'; }
+    else                { bg = 'var(--red-bg)';   col = 'var(--red)'; titulo = 'SE LES CAYÓ ' + pct;
+                          linea = 'la señal está en duda'; }
+    return `<div style="text-align:center;padding:10px 14px;border-radius:10px;background:${bg};min-width:150px;align-self:center">
+      <div style="font-size:15px;font-weight:800;color:${col};white-space:nowrap">${titulo}</div>
+      <div style="font-size:10px;color:var(--gray-500);max-width:170px">${linea}</div></div>`;
+  };
+  const chipFondo = f => {
+    const ac = skillDe(f.fund);
+    return `<span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:2px 8px;border-radius:99px;margin:2px 3px 0 0;background:var(--gray-100);color:var(--gray-500)"
+      title="${escapeHtml(f.fund)} · la posición queda en ${f.w != null ? f.w + '% de su libro' : '?'}${f.rank ? ' · es su #' + f.rank : ''}${ac != null ? ' · le gana al mercado el ' + ac + '% de las veces' : ''}">
+      <strong style="color:var(--gray-700)">${escapeHtml(String(f.fund).split(' ')[0])}</strong>
+      ${f.nueva ? '<span style="color:var(--navy);font-weight:800">NUEVA</span>' : (f.dsh != null ? `<span style="color:var(--green)">+${Math.round(f.dsh)}%</span>` : '')}
+      ${f.w != null && f.w >= 0.4 ? `<span>· ${f.w.toFixed(1)}% de su libro</span>` : ''}</span>`;
+  };
+  const lecturaIdea = u => {
+    const partes = [];
+    if (u.apuesta) {
+      const a2 = u.apuesta, ac = a2.acierto;
+      partes.push(`<strong>${escapeHtml(a2.fund)}</strong> la ${a2.nueva
+        ? `abrió <strong style="color:var(--navy)">NUEVA</strong> directo a su posición #${a2.rank}`
+        : `subió <strong style="color:var(--green)">${gmInsNum(a2.dsh, 0)}</strong> hasta su posición #${a2.rank}`}
+        (${a2.w.toFixed(1)}% de su libro${ac != null ? `; le gana al mercado el ${ac.toFixed(0)}% de las veces` : ''}).`);
+    }
+    const otros = (u.fondos || []).filter(f => (f.w || 0) >= 0.4 && (!u.apuesta || f.fund !== u.apuesta.fund));
+    if (otros.length) {
+      const encabeza = u.apuesta ? 'También ' : '';
+      const verbo = otros.length === 1 ? (u.apuesta ? 'compró con peso' : 'Compró con peso') : (u.apuesta ? 'compraron con peso' : 'Compraron con peso');
+      partes.push(`${encabeza}${encabeza ? verbo.toLowerCase() : verbo}
+        ${otros.slice(0, 3).map(f => `<strong>${escapeHtml(f.fund.split(' ')[0])}</strong>`).join(', ')}${otros.length > 3 ? ` y ${otros.length - 3} más` : ''}${u.apuesta ? '' : ' (la posición les queda ≥0.4% del libro)'}.`);
+    }
+    if (u.n) partes.push(`<span style="color:var(--gray-500)">La tienen ${u.n} de los ${nMgr}.</span>`);
+    return partes.join(' ');
+  };
+  const tipoChip = u => {
+    const chips = [];
+    if ((u.n_fuertes || 0) >= 3) chips.push(`<span style="font-size:9.5px;font-weight:800;letter-spacing:.4px;padding:2px 9px;border-radius:99px;background:var(--navy-pale);color:var(--navy)">CONSENSO · ${u.n_fuertes} fondos con peso</span>`);
+    if (u.apuesta) chips.push(`<span style="font-size:9.5px;font-weight:800;letter-spacing:.4px;padding:2px 9px;border-radius:99px;background:var(--amber-bg);color:var(--amber)">APUESTA GRANDE · ${u.apuesta.w.toFixed(0)}% del libro de ${escapeHtml(u.apuesta.fund.split(' ')[0])}</span>`);
+    return chips.join(' ');
+  };
+  const tarjeta = u => `
+    <div onclick="gmInsAbrir('${escapeHtml(u.issuer).replace(/'/g, "\\'")}')"
+      style="border:1px solid var(--gray-200);border-radius:11px;padding:12px 16px;margin:8px 0;background:var(--white);cursor:pointer">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
+        <div style="font-size:14px;font-weight:800">${escapeHtml(bonito(u.issuer))}</div>
+        ${tipoChip(u)}
+      </div>
+      <div style="display:flex;gap:14px;align-items:stretch;flex-wrap:wrap">
+        <div style="flex:1;min-width:260px">
+          <div style="font-size:12.5px;line-height:1.6;color:var(--gray-700)">${lecturaIdea(u)}</div>
+          <div style="margin-top:6px">${(u.fondos || []).slice(0, 6).map(chipFondo).join('')}</div>
+        </div>
+        ${cajaTiming(u.ret_q)}
+      </div>
+    </div>`;
+  const sec3 = ideasUni.length ? `<details open style="${secStyle}">
+    ${tit(3, 'fa-lightbulb', 'var(--amber)', 'Ideas fuera de nuestra cartera',
+          'compras reales de acciones, ordenadas por fuerza de la señal · la caja de la derecha dice si seguimos a tiempo · click para el detalle')}
+    <div style="padding-bottom:12px">
+      ${ideasUni.slice(0, 6).map(tarjeta).join('')}
+      ${ideasUni.length > 6 ? `<details style="margin-top:4px"><summary style="cursor:pointer;list-style:none;font-size:11.5px;font-weight:700;color:var(--navy);padding:6px 2px">Ver las ${ideasUni.length - 6} restantes <i class="fa-solid fa-chevron-down" style="font-size:8px"></i></summary>
+        ${ideasUni.slice(6).map(tarjeta).join('')}</details>` : ''}
+    </div></details>` : '';
 
   return `<div style="${GM_CARD}">
       <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:baseline;margin-bottom:8px">
