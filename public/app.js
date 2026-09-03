@@ -20204,7 +20204,7 @@ function gmInsAbrir(tk) {
         <div style="font-size:17px;font-weight:800">${f.peso.toFixed(2)}%</div></div>` : ''}
       <div style="background:var(--gray-50);border-radius:8px;padding:8px 11px">
         <div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--gray-500)">Compraron o vendieron</div>
-        <div style="font-size:17px;font-weight:800;color:${gmColor(f.dsh_agg || 0)}">${gmInsNum(f.dsh_agg)}</div></div>
+        <div style="font-size:17px;font-weight:800;color:${f.dsh_agg == null && f.apuesta && f.apuesta.nueva ? 'var(--navy)' : gmColor(f.dsh_agg || 0)}">${f.dsh_agg == null && f.apuesta && f.apuesta.nueva ? 'NUEVA' : gmInsNum(f.dsh_agg)}</div></div>
       <div style="background:var(--gray-50);border-radius:8px;padding:8px 11px">
         <div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--gray-500)">Cuántos la tienen</div>
         <div style="font-size:17px;font-weight:800">${f.n || 0}<span style="font-size:11px;color:var(--gray-400)"> de ${Object.keys(perf).length}</span></div></div>
