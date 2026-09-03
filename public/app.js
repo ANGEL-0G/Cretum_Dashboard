@@ -18204,7 +18204,7 @@ let frEditingProspectId = null;
 let frEditingOppId = null;
 
 const frMoney = v => (v == null || v === '' ? '—' : '$' + Math.round(+v).toLocaleString('en-US'));
-const frDate = v => (v ? new Date(v + (v.length === 10 ? 'T12:00:00' : '')).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' }).replace(/\./g, '') : '—');
+const frDate = v => (v ? new Date(v + (v.length === 10 ? 'T12:00:00' : '')).toLocaleDateString(currentLang() === 'en' ? 'en-US' : 'es-MX', { day: 'numeric', month: 'short', year: 'numeric' }).replace(/\./g, '') : '—');
 const frUser = () => (currentProfile && currentProfile.full_name) || 'equipo';
 const frFees = (u, c) => (u == null && c == null ? '—' : `${u ?? '—'}/${c ?? '—'}`);
 
@@ -18282,11 +18282,11 @@ function renderFrHome() {
     const pct = target ? Math.min(100, s.confirmed / target * 100) : null;
     const dl = o.deadline ? Math.ceil((new Date(o.deadline + 'T12:00:00') - Date.now()) / 86400000) : null;
     const dlBadge = o.status === 'closed' ? '' : (dl == null ? '' :
-      `<span class="fr-deadline ${dl < 0 ? 'fr-dl-over' : (dl <= 15 ? 'fr-dl-soon' : '')}">${dl < 0 ? 'venció ' + frDate(o.deadline) : dl + ' días · cierra ' + frDate(o.deadline)}</span>`);
+      `<span class="fr-deadline ${dl < 0 ? 'fr-dl-over' : (dl <= 15 ? 'fr-dl-soon' : '')}">${dl < 0 ? t('venció {d}', { d: frDate(o.deadline) }) : t('{n} días · cierra {d}', { n: dl, d: frDate(o.deadline) })}</span>`);
     const chips = [1, 2, 3, 4, 5].filter(k => s.counts[k]).map(k =>
       `<span class="fr-chip ${FR_STAGES[k].cls}" title="${FR_STAGES[k].label}">${s.counts[k]}</span>`).join('');
     const closedSum = o.status === 'closed'
-      ? `<div class="fr-card-closed">Levantado: <b>${frMoney((o.closing_summary || {}).confirmed ?? s.confirmed)}</b> · ${(o.closing_summary || {}).n_confirmados ?? s.counts[1]} inversionistas · cerró ${frDate((o.closed_at || '').slice(0, 10))}</div>`
+      ? `<div class="fr-card-closed">${t('Levantado:')} <b>${frMoney((o.closing_summary || {}).confirmed ?? s.confirmed)}</b> · ${(o.closing_summary || {}).n_confirmados ?? s.counts[1]} ${t('inversionistas')} · ${t('cerró')} ${frDate((o.closed_at || '').slice(0, 10))}</div>`
       : '';
     return `
     <div class="ft-card fr-card" onclick="openFrOpp(${o.id})">
@@ -18298,7 +18298,7 @@ function renderFrHome() {
       ${o.company ? `<div class="ft-card-sub">${escapeHtml(o.company)}</div>` : ''}
       ${o.status === 'active' ? `
       <div class="fr-progress"><div class="fr-progress-bar" style="width:${pct == null ? 0 : pct.toFixed(0)}%"></div></div>
-      <div class="fr-card-nums"><b>${frMoney(s.confirmed)}</b>${target ? ` / ${frMoney(target)} (${pct.toFixed(0)}%)` : ' confirmado'}</div>` : closedSum}
+      <div class="fr-card-nums"><b>${frMoney(s.confirmed)}</b>${target ? ` / ${frMoney(target)} (${pct.toFixed(0)}%)` : ' ' + t('confirmado')}</div>` : closedSum}
       <div class="fr-card-chips">${chips || '<span class="fr-chip-empty">sin prospectos</span>'}</div>
     </div>`;
   };
