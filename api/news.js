@@ -421,9 +421,13 @@ export default async function handler(req, res) {
   const r = getRedis();
   let raw = null;
   try { raw = r ? await r.get('news:' + org) : null; } catch (e) {}
+  // ¿El guardado está vacío (nulo o sin items, p. ej. una corrida del cron que
+  // Google News limitó)? → caer a la semilla para no mostrar "No news yet".
+  let needSeed = !raw;
+  if (raw) { try { const j = JSON.parse(raw); if (!j || !(j.items || []).length) needSeed = true; } catch (e) { needSeed = true; } }
   // Semilla: mientras el cron no haya poblado Redis (p. ej. recién desplegado),
   // sirve el último JSON estático commiteado para no mostrar la sección vacía.
-  if (!raw) {
+  if (needSeed) {
     try {
       const host = req.headers['x-forwarded-host'] || req.headers.host;
       if (host) {
