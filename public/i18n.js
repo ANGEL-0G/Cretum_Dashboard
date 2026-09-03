@@ -83,6 +83,8 @@ const EN = {
   'Editar': 'Edit',
   'Eliminar': 'Delete',
   'Contraseña copiada': 'Password copied',
+  'Correo copiado': 'Email copied',
+  'Sin correo': 'No email',
   'Sin resultados para': 'No results for',
   'No hay LPs en este filtro.': 'No LPs in this filter.',
   'Aún no hay LP\'s.': 'No LPs yet.',

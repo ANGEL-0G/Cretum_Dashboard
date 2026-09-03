@@ -7444,6 +7444,11 @@ function lpCopyPass(id, ev) {
   const l = lpList.find(x => String(x.id) === String(id));
   if (l && l.password && navigator.clipboard) { navigator.clipboard.writeText(l.password); toast(t('Contraseña copiada')); }
 }
+function lpCopyEmail(id, ev) {
+  if (ev) ev.stopPropagation();
+  const l = lpList.find(x => String(x.id) === String(id));
+  if (l && l.email && navigator.clipboard) { navigator.clipboard.writeText(l.email); toast(t('Correo copiado')); }
+}
 
 function renderLpList() {
   const list = document.getElementById('lpList');
@@ -7502,7 +7507,7 @@ function renderLpList() {
         </div>
         <div class="lp-field">
           <span class="lp-field-l">${t('Correo')}</span>
-          <span class="lp-field-v">${l.email ? escapeHtml(l.email) : '—'}</span>
+          <span class="lp-field-v">${l.email ? `${escapeHtml(l.email)}<button type="button" class="lp-link" onclick="lpCopyEmail('${l.id}',event)">${t('Copiar')}</button>` : `<span class="lp-none">${t('Sin correo')}</span>`}</span>
         </div>
         <div class="lp-field">
           <span class="lp-field-l">${t('Documentos')}</span>

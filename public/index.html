@@ -4212,8 +4212,8 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   .header-brand{padding:3px}
 }
 </style>
-<link rel="stylesheet" href="/mobile.css?v=20260903-lpredux">
-<link rel="stylesheet" href="/desk.css?v=20260903-lpredux">
+<link rel="stylesheet" href="/mobile.css?v=20260903-lpfix">
+<link rel="stylesheet" href="/desk.css?v=20260903-lpfix">
 </head>
 <body>
 <!-- Pantalla de carga tras "Actualizar": la pestaña sabe desde el primer byte que viene de una recarga
@@ -6095,29 +6095,30 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
 
   /* ══ Portal de LP's (admin) — rediseño 1b: métricas + filas expandibles ══ */
   #pageLp{max-width:1120px}
-  #pageLp .lp-head{display:flex;align-items:flex-end;gap:28px;flex-wrap:wrap;margin:2px 0 18px}
-  #pageLp .lp-head-txt{flex:1;min-width:260px;display:flex;flex-direction:column;gap:6px}
+  #pageLp .lp-head{display:flex;justify-content:space-between;align-items:center;gap:20px 32px;flex-wrap:wrap;margin:2px 0 18px}
+  #pageLp .lp-head-txt{flex:1 1 320px;min-width:280px;display:flex;flex-direction:column;gap:6px}
   #pageLp .lp-eyebrow{display:inline-flex;align-items:center;gap:8px;font:600 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--navy)}
   #pageLp .lp-h1{font-size:21px;font-weight:600;letter-spacing:-.02em;color:var(--gray-900);margin:0}
   #pageLp .lp-sub{font-size:13px;color:var(--gray-500);line-height:1.5;max-width:64ch;margin:0}
-  #pageLp .lp-stats{display:flex;align-items:center;gap:26px;flex-wrap:wrap}
-  #pageLp .lp-stat{display:flex;flex-direction:column;gap:2px}
-  #pageLp .lp-stat-n{font:500 24px/1.1 var(--mono);color:var(--gray-900);font-variant-numeric:tabular-nums}
+  #pageLp .lp-code{font-family:var(--mono);font-size:12px;background:var(--navy-ghost);color:var(--navy);padding:1px 6px;border-radius:5px}
+  #pageLp .lp-stats{display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+  #pageLp .lp-stat{display:flex;flex-direction:column;gap:1px}
+  #pageLp .lp-stat-n{font:500 26px/1 var(--mono);color:var(--gray-900);font-variant-numeric:tabular-nums}
   #pageLp .lp-stat-n.ok{color:var(--green)} #pageLp .lp-stat-n.warn{color:var(--amber)}
   #pageLp .lp-stat-l{font-size:11.5px;color:var(--gray-400)}
-  #pageLp .lp-new{border-radius:999px;padding:10px 18px}
+  #pageLp .lp-new{flex:0 0 auto;width:auto;white-space:nowrap;border-radius:999px;padding:10px 18px}
 
-  #pageLp .lp-bar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:11px 16px;margin-bottom:14px;background:var(--gray-50);border:1px solid var(--border);border-radius:12px}
+  #pageLp .lp-bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:10px 12px;margin-bottom:14px;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-sm)}
   #pageLp .lp-search{position:relative;flex:1;min-width:220px;display:flex;align-items:center}
-  #pageLp .lp-search>i{position:absolute;left:2px;color:var(--gray-400);font-size:12px;pointer-events:none}
-  #pageLp .lp-search input{flex:1;padding:6px 0 6px 22px;border:0;border-bottom:1px solid transparent;background:transparent;font:inherit;font-size:13.5px;color:var(--gray-900);outline:none}
-  #pageLp .lp-search input:focus{border-bottom-color:var(--navy)}
+  #pageLp .lp-search>i{position:absolute;left:12px;color:var(--gray-400);font-size:12px;pointer-events:none}
+  #pageLp .lp-search input{flex:1;padding:9px 12px 9px 32px;border:1px solid var(--gray-200);background:var(--gray-50);border-radius:8px;font:inherit;font-size:13px;color:var(--gray-900);outline:none}
+  #pageLp .lp-search input:focus{border-color:var(--navy);background:var(--card)}
   #pageLp .lp-search input::placeholder{color:var(--gray-400)}
-  #pageLp .lp-flts{display:flex;align-items:center;gap:16px}
-  #pageLp .lp-flt,#pageLp .lp-sort{border:0;background:none;padding:0 0 2px;cursor:pointer;font:400 12.5px/1.4 var(--font);color:var(--gray-400);border-bottom:1.5px solid transparent}
-  #pageLp .lp-flt.on,#pageLp .lp-sort.on{color:var(--navy);font-weight:600;border-bottom-color:var(--navy)}
-  #pageLp .lp-flt-c{font-family:var(--mono);opacity:.6;font-size:11px}
-  #pageLp .lp-bar-sep{width:1px;height:18px;background:var(--gray-200)}
+  #pageLp .lp-flts{display:flex;align-items:center;gap:3px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:9px;padding:3px}
+  #pageLp .lp-flt,#pageLp .lp-sort{border:0;background:transparent;border-radius:7px;padding:6px 12px;cursor:pointer;font:500 12.5px/1 var(--font);color:var(--gray-500);white-space:nowrap}
+  #pageLp .lp-flt.on,#pageLp .lp-sort.on{background:var(--card);color:var(--navy);box-shadow:var(--shadow-sm)}
+  #pageLp .lp-flt-c{font-family:var(--mono);opacity:.65;font-size:11px;margin-left:3px}
+  #pageLp .lp-bar-sep{width:1px;height:22px;background:var(--gray-200)}
   #pageLp .lp-bar-lbl{font-size:11.5px;color:var(--gray-400)}
 
   #pageLp .lp-list{display:block;max-width:none;margin:0;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--card)}
@@ -6146,6 +6147,7 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   #pageLp .lp-link{border:0;background:none;padding:0;cursor:pointer;font:500 11.5px/1 var(--font);color:var(--navy)}
   #pageLp .lp-link:hover{color:var(--navy-mid)}
   #pageLp .lp-mid{color:var(--gray-300)}
+  #pageLp .lp-none{color:var(--gray-400)}
   #pageLp .lp-acts{margin-left:auto;display:flex;align-items:center;gap:6px}
   #pageLp .lp-act{display:inline-flex;align-items:center;justify-content:center;gap:7px;font:500 12.5px/1 var(--font);border-radius:8px;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--gray-500);transition:.13s}
   #pageLp .lp-act.primary{color:var(--navy);background:var(--navy-ghost);border-color:var(--navy-pale);padding:8px 13px}
@@ -7837,8 +7839,8 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   </div>
 </div>
 
-<script src="/i18n.js?v=20260903-lpredux"></script>
-<script src="/app.js?v=20260903-lpredux"></script>
-<script src="/mobile.js?v=20260903-lpredux"></script>
+<script src="/i18n.js?v=20260903-lpfix"></script>
+<script src="/app.js?v=20260903-lpfix"></script>
+<script src="/mobile.js?v=20260903-lpfix"></script>
 </body>
 </html>
