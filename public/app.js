@@ -19936,7 +19936,7 @@ function gm13fCard() {
   // conteo engaña: Citadel y AQR están en casi todo por construcción.
   const conteoConv = (c) => c.n_conv == null ? `${c.n}` :
     `<strong>${c.n_conv}</strong><span style="color:var(--gray-400)"> de ${c.n}</span>`;
-  const chipsFondos = (fs, max) => (fs || []).slice(0, max || 5).map(f2 =
+  const chipsFondos = (fs, max) => (fs || []).slice(0, max || 5).map(f2 =>
     `<span style="display:inline-block;font-size:9.5px;padding:1px 7px;border-radius:99px;margin:1px 2px;background:var(--gray-100);color:var(--gray-500)" title="${escapeHtml(f2.fund)}${f2.w != null ? ' · ' + f2.w + '% de su libro' : ''}">${escapeHtml(f2.fund.split(' ')[0])}${f2.nueva ? '<span style="color:var(--navy);font-weight:800"> N</span>' : ''}${f2.cerrada ? '<span style="color:var(--red);font-weight:800"> C</span>' : ''}</span>`).join('');
   const desdeCorte = (v) => v == null ? '<span style="color:var(--gray-300)">—</span>'
     : `<span style="color:${gmColor(v)};font-size:11px" title="Movimiento del papel desde el cierre del trimestre (30-jun). NO es el costo de entrada de ellos: el 13F no lo dice.">${gmPct(v, 1)}</span>`;
