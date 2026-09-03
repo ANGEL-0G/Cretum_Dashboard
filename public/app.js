@@ -19956,7 +19956,7 @@ function gm13fCard() {
   const chipsFondos = (fs, max) => (fs || []).slice(0, max || 5).map(f2 =>
     `<span style="display:inline-block;font-size:9.5px;padding:1px 7px;border-radius:99px;margin:1px 2px;background:var(--gray-100);color:var(--gray-500)" title="${escapeHtml(f2.fund)}${f2.w != null ? ' · ' + f2.w + '% de su libro' : ''}">${escapeHtml(f2.fund.split(' ')[0])}${f2.nueva ? '<span style="color:var(--navy);font-weight:800"> N</span>' : ''}${f2.cerrada ? '<span style="color:var(--red);font-weight:800"> C</span>' : ''}</span>`).join('');
   const desdeCorte = (v) => v == null ? '<span style="color:var(--gray-300)">—</span>'
-    : `<span style="color:${gmColor(v)};font-size:11px" title="Movimiento del papel desde el cierre del trimestre (30-jun). NO es el costo de entrada de ellos: el 13F no lo dice.">${gmPct(v, 1)}</span>`;
+    : `<span style="color:${gmColor(v)};font-size:11px" title="Cuánto se ha movido el precio de la acción desde el cierre del trimestre hasta hoy. NO es el costo de entrada de ellos: el 13F no lo dice.">${gmPct(v, 1)}</span>`;
 
   // ── 1) cartera × smart money (abierto) ──
   const filas = D.cruce.slice(0, 16).map(c => `<tr>
@@ -19969,9 +19969,9 @@ function gm13fCard() {
     <td class="num" style="color:${gmColor(c.plpct || 0)};font-size:11px">${c.plpct != null ? gmPct(c.plpct, 1) : '—'}</td></tr>`).join('');
   const sec1 = `<details open style="${secStyle}">
     ${tituloSec(1, 'fa-briefcase', 'var(--navy)', 'Qué hicieron con lo nuestro',
-                'tendencia = 4 trimestres de flujo · convicción = % de SU libro · desde el corte = movimiento del papel tras el 30-jun')}
+                'tendencia = 4 trimestres de flujo · convicción = % de SU libro · la acción desde el corte = cuánto se ha movido su precio desde el 30-jun')}
     <div style="overflow-x:auto;padding-bottom:10px"><table class="camp-table" style="width:100%;font-size:12px">
-      <tr><th>Posición</th><th>Tendencia 4T</th><th>El más invertido</th><th>Movimientos del trimestre</th><th class="num">$ neto del trimestre</th><th class="num">El papel desde el corte</th><th class="num">Nuestro P&L</th></tr>${filas}</table></div></details>`;
+      <tr><th>Posición</th><th>Tendencia 4T</th><th>El más invertido</th><th>Movimientos del trimestre</th><th class="num">$ neto del trimestre</th><th class="num">La acción desde el corte<br><span style="font-weight:400;text-transform:none">(su precio hoy vs el cierre del trimestre)</span></th><th class="num">Nuestro P&L</th></tr>${filas}</table></div></details>`;
 
   // ── 2) por manager (desplegable con sub-desplegables) ──
   const fondosHtml = (D.fondos || []).map(f => {
@@ -20019,7 +20019,7 @@ function gm13fCard() {
     ${tituloSec(3, 'fa-triangle-exclamation', 'var(--red)', 'Revisar — están soltando algo que sí tenemos',
                 'ordenado por NUESTRA exposición · solo ventas de ≥0.25% del libro del fondo · C = cerrada')}
     <div style="overflow-x:auto;padding-bottom:10px"><table class="camp-table" style="width:100%;font-size:12px">
-      <tr><th>Posición</th><th>Nuestro peso</th><th>Quién vende</th><th>Venden con peso</th><th class="num">$ neto del trimestre</th><th class="num">El papel desde el corte</th><th class="num">Nuestro P&L</th></tr>
+      <tr><th>Posición</th><th>Nuestro peso</th><th>Quién vende</th><th>Venden con peso</th><th class="num">$ neto del trimestre</th><th class="num">La acción desde el corte<br><span style="font-weight:400;text-transform:none">(su precio hoy vs el cierre del trimestre)</span></th><th class="num">Nuestro P&L</th></tr>
       ${rev.map(c => `<tr>
         <td style="font-weight:600">${escapeHtml(c.ticker)} <span style="font-size:10px;color:var(--gray-400)">${escapeHtml(c.issuer)}</span></td>
         <td style="font-weight:700">${(c.peso ?? 0).toFixed(2)}%</td>
@@ -20211,7 +20211,7 @@ function gmInsAbrir(tk) {
         <div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--gray-500)">Peso en el capital del grupo</div>
         <div style="font-size:17px;font-weight:800">${f.peso_agg != null ? f.peso_agg.toFixed(2) + '%' : '—'}</div></div>
       ${f.desde_corte != null ? `<div style="background:var(--gray-50);border-radius:8px;padding:8px 11px">
-        <div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--gray-500)">El papel desde el corte</div>
+        <div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--gray-500)">La acción desde el corte</div>
         <div style="font-size:17px;font-weight:800;color:${gmColor(f.desde_corte)}">${gmInsNum(f.desde_corte)}</div></div>` : ''}
     </div>
     <table class="camp-table" style="width:100%;font-size:12px">
@@ -20306,7 +20306,7 @@ function gmTabInsights(s) {
     </div>
     <div style="overflow-x:auto;padding-bottom:12px"><table class="camp-table" style="width:100%;font-size:12px">
       <tr><th>Posición</th><th class="num">Nuestro peso</th><th class="num">Cuántos la tienen</th><th class="num">Compraron o vendieron<br><span style="font-weight:400;text-transform:none">(cambio en acciones)</span></th>
-          <th class="num">Peso en el capital<br><span style="font-weight:400;text-transform:none">de los ${nMgr} juntos</span></th><th class="num">El más invertido<br><span style="font-weight:400;text-transform:none">(% de su libro)</span></th><th class="num">El papel desde<br><span style="font-weight:400;text-transform:none">el ${corteLbl}</span></th><th class="num">Nuestro P&L</th></tr>
+          <th class="num">Peso en el capital<br><span style="font-weight:400;text-transform:none">de los ${nMgr} juntos</span></th><th class="num">El más invertido<br><span style="font-weight:400;text-transform:none">(% de su libro)</span></th><th class="num">La acción desde el ${corteLbl}<br><span style="font-weight:400;text-transform:none">(su precio hoy vs ese día)</span></th><th class="num">Nuestro P&L</th></tr>
       ${cartera.slice(0, 18).map(filaCartera).join('')}</table></div></details>`;
 
   /* ② a quién hacerle caso */
@@ -20346,14 +20346,14 @@ function gmTabInsights(s) {
       ${escapeHtml(String(f.fund).split(' ')[0])}${f.nueva ? '<span style="color:var(--navy);font-weight:800"> N</span>' : (f.dsh != null ? ` <span style="color:var(--green)">${f.dsh > 0 ? '+' : ''}${Math.round(f.dsh)}%</span>` : '')}</span>`;
   const timing = r => r == null ? '<span style="color:var(--gray-300)">—</span>'
     : `<span style="color:${r > 0.35 ? 'var(--amber)' : 'var(--gray-500)'};font-size:11.5px"
-        title="${r > 0.35 ? 'El papel ya corrió: entramos tarde respecto a ellos.' : 'El papel no se ha movido tanto desde que compraron.'}">${gmInsNum(r * 100, 0)}</span>`;
+        title="${r > 0.35 ? 'La acción ya subió mucho desde que compraron: entrar hoy es entrar caro.' : 'La acción no se ha movido tanto: aún no vamos tarde.'}">${gmInsNum(r * 100, 0)}</span>`;
   const sec3 = (senales.length || (I.apuestas || []).length) ? `<details open style="${secStyle}">
     ${tit(3, 'fa-lightbulb', 'var(--amber)', 'Señales de convicción fuera de nuestra cartera',
-          'compras reales de acciones · si el papel ya subió mucho en el trimestre, vamos tarde')}
+          'compras reales de acciones · la última columna avisa si la acción ya subió y vamos tarde')}
     ${senales.length ? `<div style="font-size:11px;font-weight:700;color:var(--gray-500);margin:2px 0 4px">VARIOS MANAGERS EN LO MISMO</div>
     <div style="overflow-x:auto"><table class="camp-table" style="width:100%;font-size:12px">
       <tr><th>Emisora</th><th>Quién compró</th><th class="num">Compraron con peso<br><span style="font-weight:400;text-transform:none">(queda ≥0.4% de su libro)</span></th><th class="num">El más invertido<br><span style="font-weight:400;text-transform:none">(% de su libro)</span></th>
-          <th class="num">Posiciones<br><span style="font-weight:400;text-transform:none">nuevas</span></th><th class="num">El papel ya subió<br><span style="font-weight:400;text-transform:none">en el trimestre</span></th></tr>
+          <th class="num">Posiciones<br><span style="font-weight:400;text-transform:none">nuevas</span></th><th class="num">La acción en el trimestre<br><span style="font-weight:400;text-transform:none">(si ya subió mucho, vamos tarde)</span></th></tr>
       ${senales.map(x => `<tr onclick="gmInsAbrir('${escapeHtml(x.issuer).replace(/'/g, "\\'")}')" style="cursor:pointer">
         <td style="font-weight:600">${escapeHtml(x.issuer)}</td>
         <td>${(x.fondos || []).map(chip).join('')}</td>
@@ -20366,7 +20366,7 @@ function gmTabInsights(s) {
       <span style="font-weight:400;color:var(--gray-400)">· una posición que pesa ≥3% de su libro dice más que tres fondos añadiendo 0.2%</span></div>
     <div style="overflow-x:auto;padding-bottom:12px"><table class="camp-table" style="width:100%;font-size:12px">
       <tr><th>Emisora</th><th>Manager</th><th class="num">% de su libro</th><th class="num">Su posición #</th>
-          <th class="num">Compró<br><span style="font-weight:400;text-transform:none">(cambio en acciones)</span></th><th class="num">Le gana al mercado<br><span style="font-weight:400;text-transform:none">(historial)</span></th><th class="num">El papel ya subió<br><span style="font-weight:400;text-transform:none">en el trimestre</span></th></tr>
+          <th class="num">Compró<br><span style="font-weight:400;text-transform:none">(cambio en acciones)</span></th><th class="num">Le gana al mercado<br><span style="font-weight:400;text-transform:none">(historial)</span></th><th class="num">La acción en el trimestre<br><span style="font-weight:400;text-transform:none">(si ya subió mucho, vamos tarde)</span></th></tr>
       ${I.apuestas.map(x => `<tr>
         <td style="font-weight:600">${escapeHtml(x.issuer)}</td>
         <td>${escapeHtml(x.fund)}${x.n_otros > 0 ? `<span style="font-size:10px;color:var(--gray-400)"> · otros ${x.n_otros} la tienen</span>` : '<span style="font-size:10px;color:var(--gray-400)"> · solo él</span>'}</td>
