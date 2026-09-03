@@ -4212,8 +4212,8 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   .header-brand{padding:3px}
 }
 </style>
-<link rel="stylesheet" href="/mobile.css?v=20260903-desk26">
-<link rel="stylesheet" href="/desk.css?v=20260903-desk26">
+<link rel="stylesheet" href="/mobile.css?v=20260903-2fa">
+<link rel="stylesheet" href="/desk.css?v=20260903-2fa">
 </head>
 <body>
 <!-- Pantalla de carga tras "Actualizar": la pestaña sabe desde el primer byte que viene de una recarga
@@ -5875,23 +5875,23 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   </div>
 
   <!-- Aviso temporal: 2FA obligatorio el lunes 31 de agosto -->
-  <div class="camp-modal-backdrop" id="aviso2faModal" onclick="if(event.target===this)aviso2faClose(true)">
+  <div class="camp-modal-backdrop" id="aviso2faModal" onclick="if(event.target===this)aviso2faClose()">
     <div class="camp-modal">
       <div class="camp-modal-head">
-        <div class="camp-modal-title"><i class="fa-solid fa-shield-halved"></i> El 2FA será obligatorio el lunes 31 de agosto</div>
-        <button class="camp-modal-x" onclick="aviso2faClose(true)" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+        <div class="camp-modal-title"><i class="fa-solid fa-shield-halved"></i> Activa la verificación en dos pasos (2FA)</div>
+        <button class="camp-modal-x" onclick="aviso2faClose()" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="camp-modal-body">
-        <p style="margin:0 0 4px;font-size:14px;color:var(--gray-700);line-height:1.55">A partir del <b>lunes 31 de agosto</b>, la verificación en dos pasos (2FA) se activará para <b>todas las cuentas</b>. Te recomendamos <b>activarla desde hoy</b> con una app de autenticación para que la transición sea sin contratiempos.</p>
-        <div class="aviso2fa-h">Descarga una app de autenticación</div>
+        <p style="margin:0 0 4px;font-size:14px;color:var(--gray-700);line-height:1.55"><b>A partir de ahora</b>, todas las cuentas usan verificación en dos pasos (2FA). Configúrala en un momento con <b>Google Authenticator</b>: además de tu contraseña, se te pedirá un código de 6 dígitos <b>solo tras 24 h de inactividad</b> (no en cada inicio de sesión).</p>
+        <div class="aviso2fa-h">Descarga Google Authenticator (recomendada)</div>
         <div class="aviso2fa-apps">
-          <a class="aviso2fa-app" href="https://www.microsoft.com/en-us/security/mobile-authenticator-app" target="_blank" rel="noopener"><i class="fa-brands fa-microsoft"></i> Microsoft Authenticator</a>
           <a class="aviso2fa-app" href="https://support.google.com/accounts/answer/1066447" target="_blank" rel="noopener"><i class="fa-brands fa-google"></i> Google Authenticator</a>
+          <a class="aviso2fa-app" href="https://www.microsoft.com/en-us/security/mobile-authenticator-app" target="_blank" rel="noopener"><i class="fa-brands fa-microsoft"></i> También sirve Microsoft Authenticator</a>
         </div>
         <p style="margin:14px 0 0;font-size:12.5px;color:var(--gray-500)">También puedes activarlo cuando quieras desde tu <b>menú de perfil → Verificación en dos pasos</b>.</p>
       </div>
       <div class="camp-modal-foot">
-        <button class="camp-prev-cancel" onclick="aviso2faClose(true)">Recordar después</button>
+        <button class="camp-prev-cancel" onclick="aviso2faClose()">Ahora no</button>
         <button class="btn-primary" onclick="aviso2faActivar()"><i class="fa-solid fa-shield-halved"></i> Activar 2FA ahora</button>
       </div>
     </div>
@@ -7750,8 +7750,8 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   </div>
 </div>
 
-<script src="/i18n.js?v=20260903-desk26"></script>
-<script src="/app.js?v=20260903-desk26"></script>
-<script src="/mobile.js?v=20260903-desk26"></script>
+<script src="/i18n.js?v=20260903-2fa"></script>
+<script src="/app.js?v=20260903-2fa"></script>
+<script src="/mobile.js?v=20260903-2fa"></script>
 </body>
 </html>

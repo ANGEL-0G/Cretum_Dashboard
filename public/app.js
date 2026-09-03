@@ -200,6 +200,7 @@ async function doLogin() {
   err.classList.remove('show');
   document.getElementById('loginPass').value = '';
   await enterApp(data.user);
+  try { sessionStorage.removeItem('cretum_aviso2fa_seen'); } catch (_) {}   // login real → el aviso vuelve a aparecer si no tiene 2FA
   maybeShowAviso2fa();
 }
 
@@ -261,7 +262,7 @@ let mfaEnrollData = null;       // { factorId } durante el enrolamiento
 
 // Ventana de "confianza": tras verificar, no se vuelve a pedir el código
 // mientras haya actividad; se exige de nuevo tras este tiempo de INACTIVIDAD.
-const MFA_TRUST_MS = 2 * 60 * 60 * 1000;   // 2 horas
+const MFA_TRUST_MS = 24 * 60 * 60 * 1000;   // 24 horas de inactividad
 function mfaMarkActive(uid) {
   try { localStorage.setItem('cretum_mfa_active', JSON.stringify({ uid, ts: Date.now() })); } catch (_) {}
 }
@@ -339,22 +340,22 @@ function mfaLoginCancel() {
 // ── Aviso temporal: el 2FA será obligatorio el lunes 31 de agosto 2026 ──
 // Se muestra tras iniciar sesión a quien AÚN no tiene 2FA, hasta esa fecha.
 // "Recordar después" lo pospone 12 h; al activar 2FA deja de aparecer solo.
-const AVISO2FA_DEADLINE = Date.parse('2026-08-31T00:00:00-06:00');   // CDMX
+// Aviso insistente (sin bloquear) para quien AÚN no tiene 2FA: aparece una vez por
+// inicio de sesión. En login se limpia el flag para que reaparezca; en recargas del
+// mismo tab (restauración de sesión) el flag de sessionStorage evita que moleste.
 async function maybeShowAviso2fa() {
   try {
-    if (Date.now() >= AVISO2FA_DEADLINE) return;                       // ya pasó la fecha
-    const sn = +(localStorage.getItem('cretum_aviso2fa_snooze') || 0);
-    if (sn && Date.now() - sn < 12 * 3600 * 1000) return;             // pospuesto hace poco
+    if (sessionStorage.getItem('cretum_aviso2fa_seen')) return;        // ya se mostró en esta sesión
     const { data } = await sb.auth.mfa.listFactors();
     if ((data?.totp || []).some(f => f.status === 'verified')) return; // ya tiene 2FA → no molesta
   } catch (e) { /* si listFactors falla, mejor mostrarlo igual */ }
+  try { sessionStorage.setItem('cretum_aviso2fa_seen', '1'); } catch (_) {}
   const m = document.getElementById('aviso2faModal'); if (m) m.classList.add('show');
 }
-function aviso2faClose(snooze) {
+function aviso2faClose() {
   document.getElementById('aviso2faModal')?.classList.remove('show');
-  if (snooze) { try { localStorage.setItem('cretum_aviso2fa_snooze', String(Date.now())); } catch (_) {} }
 }
-function aviso2faActivar() { aviso2faClose(false); mfaOpen(); }
+function aviso2faActivar() { aviso2faClose(); mfaOpen(); }
 
 // ── Gestión desde el perfil: enrolar / desactivar ──
 function mfaRender(html) { document.getElementById('mfaBody').innerHTML = html; }
@@ -375,12 +376,12 @@ async function mfaRefresh() {
     if (verified) {
       mfaRender(`
         <div class="mfa-status on"><i class="fa-solid fa-circle-check"></i> 2FA activo</div>
-        <p class="mfa-p">Tu cuenta pide un código de tu app de autenticación cada vez que inicias sesión.</p>
+        <p class="mfa-p">Tu cuenta pide un código de tu app de autenticación (Google Authenticator) solo tras <strong>24 h de inactividad</strong>, no en cada inicio de sesión.</p>
         <button class="camp-prev-cancel mfa-danger" onclick="mfaDisable('${verified.id}')"><i class="fa-solid fa-shield-halved"></i> Desactivar 2FA</button>`);
     } else {
       mfaRender(`
         <div class="mfa-status off"><i class="fa-solid fa-shield-halved"></i> 2FA desactivado</div>
-        <p class="mfa-p">Suma una capa extra de seguridad: además de tu contraseña, un código de 6 dígitos desde tu celular (Google Authenticator, Authy o Microsoft Authenticator).</p>
+        <p class="mfa-p">Suma una capa extra de seguridad: además de tu contraseña, un código de 6 dígitos desde tu celular con <strong>Google Authenticator</strong> (la app recomendada; también funcionan Authy o Microsoft Authenticator). Solo se te pedirá tras <strong>24 h de inactividad</strong>.</p>
         <button class="btn-primary" onclick="mfaStartEnroll()"><i class="fa-solid fa-plus"></i> Activar 2FA</button>`);
     }
   } catch (e) {
