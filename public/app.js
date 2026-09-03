@@ -20225,6 +20225,44 @@ function gmInsAbrir(tk) {
 function gmInsCerrar() { document.getElementById('gmInsModal')?.classList.remove('show'); }
 
 /* ── la pestaña ── */
+/* ── kit visual vz* — estándar Mesa GVV (2026-09-03): denso, semáforo, tokens de tema.
+   Reusar estos helpers en cualquier pestaña; no reinventar mini-gráficas. ── */
+const vzEyebrow = (txt, col) => `<div style="display:flex;align-items:center;gap:10px;margin:2px 0 10px">
+  <span style="font-size:9.5px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:${col || 'var(--navy)'};font-family:ui-monospace,SFMono-Regular,monospace;white-space:nowrap">${txt}</span>
+  <span style="flex:1;height:1px;background:var(--gray-200)"></span></div>`;
+const vzDelta = (v, o) => {
+  o = o || {};
+  if (v == null || !isFinite(v)) return '';
+  const up = v >= 0, good = (o.goodUp === false) ? !up : up;
+  return `<span style="font-size:10.5px;font-weight:700;color:${good ? 'var(--green)' : 'var(--red)'};font-family:ui-monospace,SFMono-Regular,monospace">${up ? '▲' : '▼'} ${Math.abs(v).toFixed(o.dec != null ? o.dec : 1)}${o.suf || '%'}${o.vs ? ` <span style="color:var(--gray-400);font-weight:400">vs. ${o.vs}</span>` : ''}</span>`;
+};
+const vzSpark = (vals, col, w, h) => {
+  if (!vals || vals.length < 2) return '';
+  w = w || 104; h = h || 30;
+  const min = Math.min(...vals), max = Math.max(...vals), rng = (max - min) || 1;
+  const bw = w / vals.length - 2.5;
+  return `<svg width="${w}" height="${h}" style="display:block">${vals.map((v, i) => {
+    const bh = 3 + (v - min) / rng * (h - 4);
+    return `<rect x="${(i * (bw + 2.5)).toFixed(1)}" y="${(h - bh).toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" rx="1.5" fill="${i === vals.length - 1 ? (col || 'var(--navy)') : 'var(--gray-200)'}"></rect>`;
+  }).join('')}</svg>`;
+};
+const vzGauge = (pct, col, size, txt) => {
+  size = size || 54;
+  const stroke = Math.max(5, Math.round(size / 9)), r = (size - stroke) / 2, c = 2 * Math.PI * r;
+  const pp = Math.max(0, Math.min(100, pct || 0));
+  return `<svg width="${size}" height="${size}" style="flex:none">
+    <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="var(--gray-100)" stroke-width="${stroke}"></circle>
+    <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${col}" stroke-width="${stroke}" stroke-linecap="round"
+      stroke-dasharray="${(pp / 100 * c).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 ${size / 2} ${size / 2})"></circle>
+    <text x="50%" y="52%" dominant-baseline="central" text-anchor="middle" style="font-size:${Math.round(size * 0.29)}px;font-weight:800;fill:var(--gray-900);font-family:ui-monospace,SFMono-Regular,monospace">${txt != null ? txt : Math.round(pct || 0)}</text></svg>`;
+};
+const vzPill = (txt, col, bg) => `<span style="display:inline-block;font-size:9px;font-weight:800;letter-spacing:.6px;padding:2px 9px;border-radius:5px;border:1px solid ${col};color:${col};background:${bg || 'transparent'};font-family:ui-monospace,SFMono-Regular,monospace">${txt}</span>`;
+const vzBarIn = (v, max, col, w) => {
+  w = w || 60;
+  const ww = Math.max(2, Math.min(w, Math.abs(v || 0) / (max || 1) * w));
+  return `<span style="display:inline-block;width:${w}px;height:6px;border-radius:3px;background:var(--gray-100);vertical-align:middle;margin-left:7px"><span style="display:block;width:${ww.toFixed(0)}px;height:6px;border-radius:3px;background:${col}"></span></span>`;
+};
+
 function gmTabInsights(s) {
   if (!gm13f && !gm13fLoading) {
     gm13fLoading = true;
@@ -20257,11 +20295,6 @@ function gmTabInsights(s) {
       <i class="fa-solid ${ic}" style="color:${col}"></i> ${t2}
       <span style="font-weight:400;font-size:10.5px;color:var(--gray-400)">· ${sub}</span>
       <i class="fa-solid fa-chevron-down" style="margin-left:auto;font-size:9px;color:var(--gray-300)"></i></summary>`;
-  const kpi = (lbl, val, col, nota) => `<div style="background:var(--gray-50);border-radius:11px;padding:11px 14px">
-      <div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--gray-500)">${lbl}</div>
-      <div style="font-size:23px;font-weight:800;color:${col || 'var(--gray-900)'};line-height:1.15">${val}</div>
-      ${nota ? `<div style="font-size:10.5px;color:var(--gray-400)">${nota}</div>` : ''}</div>`;
-
   /* lectura del trimestre: frases, no números sueltos */
   const lect = [];
   lect.push(`Seguimos <strong>${Object.keys(perf).length} managers</strong> con <strong>${gmInsUsd(capital)}</strong> en acciones de EE.UU.`);
@@ -20276,13 +20309,14 @@ function gmTabInsights(s) {
   if (mejor) lect.push(`El que mejor le pega es <strong>${escapeHtml(mejor[0])}</strong>: le ganó al mercado en el ${mejor[1].acierto}% de sus ${mejor[1].decisiones} compras y ventas.`);
 
   /* ① nuestra cartera */
+  const maxPesoCart = Math.max(0.01, ...cartera.map(f => f.peso || 0));
   const filaCartera = f => {
     const z = gmZ(f.zona);
     return `<tr onclick="gmInsAbrir('${escapeHtml(f.ticker).replace(/'/g, "\\'")}')" style="cursor:pointer">
-      <td style="font-weight:600;white-space:nowrap"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${z.col};margin-right:6px"></span>${escapeHtml(f.ticker)}</td>
-      <td class="num" style="font-weight:700">${(f.peso || 0).toFixed(2)}%</td>
+      <td style="font-weight:600;white-space:nowrap;border-left:3px solid ${z.col}">${escapeHtml(f.ticker)}</td>
+      <td class="num" style="font-weight:700;white-space:nowrap">${(f.peso || 0).toFixed(2)}%${vzBarIn(f.peso, maxPesoCart, 'var(--navy)', 46)}</td>
       <td class="num">${f.n}<span style="color:var(--gray-400);font-size:10px"> de ${Object.keys(perf).length}</span></td>
-      <td class="num" style="font-weight:700;color:${gmColor(f.dsh_agg || 0)}">${gmInsNum(f.dsh_agg)}</td>
+      <td class="num" style="font-weight:700;color:${gmColor(f.dsh_agg || 0)};background:${(f.dsh_agg || 0) > 0 ? 'var(--green-bg)' : (f.dsh_agg || 0) < 0 ? 'var(--red-bg)' : 'transparent'}">${gmInsNum(f.dsh_agg)}</td>
       <td class="num" style="color:var(--gray-500)">${f.peso_agg == null ? '—' : (f.peso_agg < 0.005 ? '<0.01%' : f.peso_agg.toFixed(2) + '%')}</td>
       <td class="num">${f.convic_max == null ? '—' : (f.convic_max < 0.05
           ? `<span style="color:var(--gray-400)">&lt;0.1%</span>`
@@ -20312,6 +20346,7 @@ function gmTabInsights(s) {
 
   /* ② a quién hacerle caso */
   const mgr = Object.entries(perf).sort((a, b) => (b[1].acierto ?? -1) - (a[1].acierto ?? -1));
+  const maxLibro = Math.max(1, ...Object.values(perf).map(p => p.libro || 0));
   const barra = (v, max, col) => {
     const w = Math.max(2, Math.min(58, Math.abs(v || 0) / (max || 1) * 58));
     return `<span style="display:inline-block;width:58px;height:7px;border-radius:4px;background:var(--gray-100);vertical-align:middle">
@@ -20325,10 +20360,10 @@ function gmTabInsights(s) {
           <th class="num">Compras y ventas<br><span style="font-weight:400;text-transform:none">medidas</span></th><th>Le ganó al mercado</th><th class="num">Retorno de<br><span style="font-weight:400;text-transform:none">sus compras</span></th><th class="num">Retorno de<br><span style="font-weight:400;text-transform:none">sus ventas</span></th></tr>
       ${mgr.map(([k, p]) => `<tr>
         <td style="font-weight:600">${escapeHtml(k)}</td>
-        <td class="num">${gmInsUsd(p.libro)}</td>
+        <td class="num" style="white-space:nowrap">${gmInsUsd(p.libro)}${vzBarIn(p.libro, maxLibro, 'var(--navy)', 46)}</td>
         <td class="num" title="cuánto del libro está en sus 10 mayores posiciones">${p.concentracion != null ? p.concentracion.toFixed(0) + '%' : '—'}</td>
         <td class="num" style="color:var(--gray-500)">${(p.decisiones || 0).toLocaleString('en-US')}</td>
-        <td>${p.acierto == null
+        <td style="background:${p.acierto == null ? 'transparent' : p.acierto >= 53 ? 'var(--green-bg)' : p.acierto < 48 ? 'var(--red-bg)' : 'var(--amber-bg)'}">${p.acierto == null
               ? '<span style="font-size:10.5px;color:var(--gray-400)">muestra corta</span>'
               : `${barra(p.acierto - 40, 25, p.acierto >= 53 ? 'var(--green)' : (p.acierto < 48 ? 'var(--red)' : 'var(--amber)'))}
                  <span style="font-size:11.5px;font-weight:700;margin-left:6px;color:${p.acierto >= 53 ? 'var(--green)' : (p.acierto < 48 ? 'var(--red)' : 'var(--gray-700)')}">${p.acierto.toFixed(0)}%</span>`}</td>
@@ -20493,10 +20528,10 @@ function gmTabInsights(s) {
     <div onclick="gmInsAbrir('${escapeHtml(u.issuer).replace(/'/g, "\\'")}')"
       style="border:1px solid var(--gray-200);border-radius:11px;padding:12px 16px;margin:8px 0;background:var(--white);cursor:pointer">
       <div style="display:flex;gap:14px;align-items:stretch;flex-wrap:wrap">
-        <div style="text-align:center;min-width:54px;align-self:center"
+        <div style="text-align:center;min-width:58px;align-self:center"
           title="Calificación ${c.total}/100 = señal ${c.sig}/50 + manager ${c.mgr}/25 + timing ${c.tim}/25">
-          <div style="font-size:18px;font-weight:800;color:${v[2]};line-height:1">${i + 1}º</div>
-          <div style="font-size:12px;font-weight:800;color:${v[2]};margin-top:3px">${c.total}<span style="color:var(--gray-400);font-weight:400;font-size:9.5px">/100</span></div>
+          <div style="font-size:13px;font-weight:800;color:${v[2]};line-height:1;margin-bottom:4px">${i + 1}º</div>
+          ${vzGauge(c.total, v[2], 50)}
         </div>
         <div style="flex:1;min-width:260px">
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:5px">
@@ -20524,18 +20559,59 @@ function gmTabInsights(s) {
         ${ideasUni.slice(6).map((u, i) => tarjeta(u, i + 6)).join('')}</details>` : ''}
     </div></details>` : '';
 
+  /* hero visual: cifras con sparkline/delta reales + gauges por zona (% del peso del fondo) */
+  const ch = I.capital_hist || {};
+  const chTot = ch.total || [];
+  const dCap = chTot.length >= 2 ? (chTot[chTot.length - 1] / chTot[chTot.length - 2] - 1) * 100 : null;
+  const qLbl = d => d ? `${parseInt(d.slice(8, 10))}-${MESC[parseInt(d.slice(5, 7)) - 1]}` : '';
+  const decTot = Object.values(perf).reduce((a, p) => a + (p.decisiones || 0), 0);
+  const nBuenas = ideasUni.filter(u => u.calif.total >= 52).length;
+  const heroKpi = (lbl, val, unidad, linea2, spark) => `<div style="border:1px solid var(--gray-200);border-radius:11px;padding:12px 14px;background:var(--white);display:flex;flex-direction:column;gap:5px">
+      <div style="font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--gray-500);font-family:ui-monospace,SFMono-Regular,monospace">${lbl}</div>
+      <div style="display:flex;align-items:baseline;gap:6px"><span style="font-size:24px;font-weight:800;line-height:1">${val}</span>${unidad ? `<span style="font-size:10.5px;color:var(--gray-400);font-family:ui-monospace,SFMono-Regular,monospace">${unidad}</span>` : ''}</div>
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px;min-height:${spark ? 30 : 14}px">
+        <div style="font-size:10.5px;color:var(--gray-500);line-height:1.35">${linea2 || ''}</div>${spark || ''}</div></div>`;
+  const pesoZona = k => cartera.filter(f => f.zona === k).reduce((a, f) => a + (f.peso || 0), 0);
+  const gz = (k, lbl, col, pillFn, desc) => {
+    const n = cartera.filter(f => f.zona === k).length, w = pesoZona(k), pill = pillFn(w, n);
+    return `<div style="border:1px solid var(--gray-200);border-radius:11px;padding:12px 14px;background:var(--white);display:flex;gap:12px;align-items:center">
+      ${vzGauge(w, col, 54, w >= 10 ? Math.round(w) + '%' : w.toFixed(1) + '%')}
+      <div style="min-width:0"><div style="font-size:11px;font-weight:800;letter-spacing:.4px;text-transform:uppercase">${lbl}</div>
+        <div style="font-size:10.5px;color:var(--gray-500);line-height:1.4;margin:2px 0 5px">${n} posición${n === 1 ? '' : 'es'} · ${desc}</div>${pill}</div></div>`;
+  };
+  const heroGauges = `
+    ${gz('acompanados', 'Acompañados', 'var(--green)',
+        w => w >= 5 ? vzPill('RESPALDO FUERTE', 'var(--green)', 'var(--green-bg)') : vzPill('RESPALDO MODERADO', 'var(--gray-500)'),
+        'del peso del fondo con el grupo sumando')}
+    ${gz('nos_dejan', 'Nos están dejando', 'var(--red)',
+        w => w >= 8 ? vzPill('ALERTA', 'var(--red)', 'var(--red-bg)') : w >= 2 ? vzPill('VIGILAR', 'var(--amber)', 'var(--amber-bg)') : vzPill('CONTENIDO', 'var(--green)', 'var(--green-bg)'),
+        'del peso del fondo con el grupo reduciendo')}
+    ${gz('entran_y_pesamos_poco', 'Candidatas a subir peso', 'var(--amber)',
+        (w, n) => n ? vzPill('OPORTUNIDAD', 'var(--amber)', 'var(--amber-bg)') : vzPill('SIN CASOS', 'var(--gray-500)'),
+        'del peso · el grupo entra y pesamos poco')}
+    ${gz('poca_cobertura', 'Sin lectura 13F', 'var(--gray-400)',
+        () => vzPill('FUERA DEL RADAR', 'var(--gray-500)'),
+        'del peso en nombres que casi nadie de los 15 tiene')}`;
+
   return `<div style="${GM_CARD}">
-      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:baseline;margin-bottom:8px">
+      ${vzEyebrow('Resumen ejecutivo · posiciones al cierre de ' + corteLbl + ' · SEC EDGAR', 'var(--navy)')}
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:baseline;margin-bottom:10px">
         <div style="font-weight:800;font-size:15px"><i class="fa-solid fa-chess"></i> 13F Insights</div>
-        <div style="font-size:11px;color:var(--gray-400)">${Object.keys(perf).length} managers · posiciones al cierre de ${escapeHtml(q)} · SEC EDGAR</div>
+        <div style="font-size:11px;color:var(--gray-400)">${nMgr} managers · todo medido en cambio de acciones, sin efecto precio</div>
       </div>
-      <div style="background:var(--gray-50);border-left:3px solid var(--navy);border-radius:8px;padding:11px 15px;font-size:13px;line-height:1.65">${lect.join(' ')}</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:10px;margin-top:12px">
-        ${kpi('Capital que seguimos', gmInsUsd(capital), null, 'los ' + nMgr + ' managers, solo acciones de EE.UU.')}
-        ${kpi('Nos están dejando', String(nDejan.length), nDejan.length ? 'var(--red)' : 'var(--green)', 'posiciones nuestras de peso')}
-        ${kpi('Acompañados', String(nAcomp.length), 'var(--green)', 'suman donde ya estamos')}
-        ${kpi('Candidatas a subir peso', String(nSubir.length), 'var(--amber)', 'entran y pesamos poco')}
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px">
+        ${heroKpi('Capital que seguimos', gmInsUsd(capital), 'acciones EE.UU.',
+            dCap != null ? vzDelta(dCap, { vs: qLbl((ch.qs || [])[Math.max(0, (ch.qs || []).length - 2)]) }) : 'los ' + nMgr + ' managers',
+            vzSpark(chTot, 'var(--navy)'))}
+        ${heroKpi('Ideas fuera de cartera', String(ideasUni.length), 'con compra real',
+            `<strong style="color:var(--green)">${nBuenas}</strong> atractivas o razonables`, '')}
+        ${heroKpi('El que mejor le pega', mejor ? mejor[1].acierto.toFixed(0) + '%' : '—', 'de acierto',
+            mejor ? `${escapeHtml(mejor[0])} · ${mejor[1].decisiones} decisiones medidas` : '', '')}
+        ${heroKpi('Decisiones medidas', decTot.toLocaleString('en-US'), 'compras y ventas',
+            'cada una evaluada contra el mercado el trimestre siguiente', '')}
       </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin-top:10px">${heroGauges}</div>
+      <div style="background:var(--gray-50);border-left:3px solid var(--navy);border-radius:8px;padding:10px 15px;font-size:12.5px;line-height:1.6;margin-top:12px">${lect.join(' ')}</div>
     </div>
     ${sec1}${sec2}${sec3}
     <div id="gmInsModal" class="modal-backdrop" onclick="if(event.target===this)gmInsCerrar()" style="padding:20px">
