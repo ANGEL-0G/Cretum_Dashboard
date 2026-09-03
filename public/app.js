@@ -19908,13 +19908,26 @@ function gmTabOpciones(s) {
     </table></div></div>`;
 }
 
-let gm13f = null, gm13fLoading = false;
+let gm13f = null, gm13fLoading = false, gm13fReintentos = 0;
+/* un fetch fallido (token vencido, red, parpadeo del API) NO debe quedarse pegado:
+   reintenta solo hasta 2 veces y deja botón manual (bug visto por Eugenio 2026-09-03) */
+function gm13fFetch(tab) {
+  gm13fLoading = true;
+  authedFetch('/api/gvv-live?m13f=1').then(async r => { gm13f = r.ok ? await r.json() : { error: true }; })
+    .catch(() => { gm13f = { error: true }; })
+    .finally(() => {
+      gm13fLoading = false;
+      if (gm13f && gm13f.error && gm13fReintentos < 2) {
+        gm13fReintentos++;
+        setTimeout(() => { if (gm13f && gm13f.error) { gm13f = null; if (gmTab === tab) gmRender(); } }, 4000);
+      }
+      if (!gm13f || !gm13f.error) gm13fReintentos = 0;
+      if (gmTab === tab) gmRender();
+    });
+}
 function gm13fCard() {
   if (!gm13f && !gm13fLoading) {
-    gm13fLoading = true;
-    authedFetch('/api/gvv-live?m13f=1').then(async r => { gm13f = r.ok ? await r.json() : { error: true }; })
-      .catch(() => { gm13f = { error: true }; })
-      .finally(() => { gm13fLoading = false; if (gmTab === 'intel') gmRender(); });
+    gm13fFetch('intel');
     return `<div style="${GM_CARD};margin-bottom:14px;color:var(--gray-400)">Cargando 13F institucional…</div>`;
   }
   const D = gm13f;
@@ -20265,16 +20278,18 @@ const vzBarIn = (v, max, col, w) => {
 
 function gmTabInsights(s) {
   if (!gm13f && !gm13fLoading) {
-    gm13fLoading = true;
-    authedFetch('/api/gvv-live?m13f=1').then(async r => { gm13f = r.ok ? await r.json() : { error: true }; })
-      .catch(() => { gm13f = { error: true }; })
-      .finally(() => { gm13fLoading = false; if (gmTab === 'insights') gmRender(); });
+    gm13fFetch('insights');
     return `<div style="${GM_CARD};color:var(--gray-400)">Cargando 13F…</div>`;
   }
+  if (gm13fLoading) return `<div style="${GM_CARD};color:var(--gray-400)">Cargando 13F…</div>`;
   const D = gm13f || {};
   const I = D.insights || {};
   if (D.error || !(I.cartera || []).length) {
-    return `<div style="${GM_CARD};color:var(--gray-400)">Sin datos de 13F todavía. El robot corre a las 7:05.</div>`;
+    return `<div style="${GM_CARD};color:var(--gray-400)">${D.error
+        ? 'No se pudo cargar el 13F (sesión o red). '
+        : 'Sin datos de 13F todavía. El robot corre a las 7:05. '}
+      <button onclick="gm13f=null;gm13fReintentos=0;gmRender()"
+        style="margin-left:8px;border:1px solid var(--gray-300);background:var(--white);color:var(--gray-700);border-radius:8px;padding:4px 12px;font-size:11.5px;font-weight:700;cursor:pointer"><i class="fa-solid fa-rotate"></i> Reintentar</button></div>`;
   }
   const q = (D.quarters || [])[0] || '';
   const MESC = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
