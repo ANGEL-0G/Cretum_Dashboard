@@ -451,6 +451,7 @@ const EN = {
   "Ventas": "Sales",
   "Empresas": "Companies",
   "Dashboards y análisis de ventas del fondo": "Fund sales dashboards and analysis",
+  "Plantillas de correos de MVP: crea, edita y copia listas para enviar": "MVP email templates: create, edit and copy lists to send",
   "Seguimiento del levantamiento de capital": "Capital raise tracking",
   "Tienes tareas por aceptar": "You have tasks to accept",
   "Capital comprometido": "Committed capital",
