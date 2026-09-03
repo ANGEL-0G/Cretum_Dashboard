@@ -19393,10 +19393,10 @@ function gmRender() {
   }
   const tabs = [['resumen', 'fa-gauge-high', 'Resumen'], ['posiciones', 'fa-table-list', 'Posiciones'],
                 ['opciones', 'fa-layer-group', 'Opciones'], ['riesgo', 'fa-shield-halved', 'Riesgo'],
-                ['intel', 'fa-brain', 'Inteligencia']];
+                ['intel', 'fa-brain', 'Inteligencia'], ['insights', 'fa-chess', '13F Insights']];
   const tabBar = `<div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">${tabs.map(([k, ic, lbl]) =>
     `<button onclick="gmSetTab('${k}')" style="border:1.5px solid ${gmTab === k ? '#0f2849' : 'var(--gray-200)'};background:${gmTab === k ? '#0f2849' : 'var(--white)'};color:${gmTab === k ? '#fff' : 'var(--gray-600)'};border-radius:99px;padding:7px 16px;font-size:12.5px;font-weight:600;cursor:pointer"><i class="fa-solid ${ic}"></i> ${lbl}</button>`).join('')}</div>`;
-  const fn = { resumen: gmTabResumen, posiciones: gmTabPosiciones, opciones: gmTabOpciones, riesgo: gmTabRiesgo, intel: gmTabIntel }[gmTab] || gmTabResumen;
+  const fn = { resumen: gmTabResumen, posiciones: gmTabPosiciones, opciones: gmTabOpciones, riesgo: gmTabRiesgo, intel: gmTabIntel, insights: gmTabInsights }[gmTab] || gmTabResumen;
   root.innerHTML = tabBar + fn(s) +
     `<div style="margin-top:10px;font-size:10.5px;color:var(--gray-400)">Snapshot del robot cada 10 min en horario de mercado · posiciones del Excel oficial · quotes en vivo · privados y MX con precio del Excel. Señales v1 con umbrales fijos; pasarán a percentiles contra la propia historia del fondo conforme se acumule serie.</div>`;
 }
@@ -20054,6 +20054,330 @@ function gm13fCard() {
     </div>
     ${sec1}${sec2b}${sec3b}${sec2}${sec5}
     <div style="font-size:10px;color:var(--gray-400);margin-top:6px">${escapeHtml(D.nota || '')}</div></div>`;
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   13F INSIGHTS — pestaña propia.
+   Premisa: el 13F es una foto de 45 días de rezago, solo largos y solo EE.UU.
+   Su valor no es la noticia sino la ESTRUCTURA: quién está concentrado dónde,
+   quién acierta con el tiempo, dónde está la manada y si el movimiento ya pasó.
+   ⛔ Todo se mide en CAMBIO DE ACCIONES, no en dólares: el valor mezcla la
+   decisión con el precio (Berkshire "compró" $8.1B de Apple sin mover una acción).
+   ══════════════════════════════════════════════════════════════════════════ */
+
+const GM_ZONAS = {
+  nos_dejan:            { lbl: 'Nos están dejando', col: 'var(--red)',    bg: 'var(--red-bg)',
+                          desc: 'Pesa en nuestra cartera y ellos están reduciendo acciones. Es la señal que más obliga a revisar.' },
+  acompanados:          { lbl: 'Acompañados',       col: 'var(--green)',  bg: 'var(--green-bg)',
+                          desc: 'Pesa en nuestra cartera y ellos están sumando. La tesis tiene compañía institucional.' },
+  entran_y_pesamos_poco:{ lbl: 'Entran y pesamos poco', col: 'var(--amber)', bg: 'var(--amber-bg)',
+                          desc: 'Están acumulando algo donde nuestra exposición es marginal. Candidato a subir peso.' },
+  salen_sin_impacto:    { lbl: 'Salen, sin impacto', col: 'var(--gray-400)', bg: 'var(--gray-50)',
+                          desc: 'Reducen algo que casi no pesa en nuestra cartera.' },
+  estable:              { lbl: 'Sin cambio',        col: 'var(--gray-400)', bg: 'var(--gray-50)',
+                          desc: 'Ni sumaron ni redujeron acciones de forma relevante este trimestre.' },
+};
+const gmZ = k => GM_ZONAS[k] || GM_ZONAS.estable;
+
+function gmInsNum(v, dec) { return v == null ? '—' : (v >= 0 ? '+' : '') + v.toFixed(dec == null ? 1 : dec) + '%'; }
+function gmInsUsd(v) {
+  if (v == null) return '—';
+  const a = Math.abs(v);
+  return (v < 0 ? '-' : '') + '$' + (a >= 1e12 ? (a / 1e12).toFixed(2) + 'T'
+    : a >= 1e9 ? (a / 1e9).toFixed(1) + 'B' : (a / 1e6).toFixed(0) + 'M');
+}
+
+/* ── mapa de cuadrantes: nuestro peso (x) contra el flujo real de acciones (y) ── */
+function gmInsMapa(filas, w, h) {
+  // Fuera las de una sola contraparte: un fondo moviéndose no es un consenso que leer.
+  const pts = filas.filter(f => f.dsh_agg != null && (f.peso || 0) > 0 && f.zona !== 'poca_cobertura');
+  if (pts.length < 3) return '';
+  const m = { l: 60, r: 18, t: 18, b: 36 };
+  // x logarítmica: los pesos van de 0.02% a 1.4% y en lineal todo se apelmaza.
+  // y logarítmica CON SIGNO: hay movimientos de +330% junto a otros de +4%; en lineal
+  // los extremos se topaban en el borde y formaban filas ilegibles de puntos apilados.
+  const lx = v => Math.log10(Math.max(0.02, v));
+  const ly = v => Math.sign(v) * Math.log10(1 + Math.abs(v));
+  const xs = pts.map(p => lx(p.peso));
+  const x0 = Math.min(...xs), x1 = Math.max(...xs);
+  const yMax = Math.max(1.3, Math.max(...pts.map(p => Math.abs(ly(p.dsh_agg)))));
+  const X = v => m.l + (lx(v) - x0) / ((x1 - x0) || 1) * (w - m.l - m.r);
+  const Y = v => m.t + (yMax - ly(v)) / (2 * yMax) * (h - m.t - m.b);
+  const xCorte = X(0.5), yCero = Y(0);
+  const bandas = `
+    <rect x="${xCorte}" y="${m.t}" width="${w - m.r - xCorte}" height="${yCero - m.t}" fill="var(--green-bg)" opacity=".45"/>
+    <rect x="${xCorte}" y="${yCero}" width="${w - m.r - xCorte}" height="${h - m.b - yCero}" fill="var(--red-bg)" opacity=".45"/>`;
+  const marcas = [300, 100, 30, 10, 0, -10, -30, -100, -300]
+    .filter(v => Math.abs(ly(v)) <= yMax + 0.01)
+    .map(v => `<line x1="${m.l}" y1="${Y(v)}" x2="${w - m.r}" y2="${Y(v)}" stroke="var(--gray-100)"/>
+      <text x="${m.l - 7}" y="${Y(v) + 3.5}" text-anchor="end" font-size="9" fill="var(--gray-400)">${v > 0 ? '+' : ''}${v}%</text>`).join('');
+  const ejes = `
+    <line x1="${m.l}" y1="${yCero}" x2="${w - m.r}" y2="${yCero}" stroke="var(--gray-300)"/>
+    <line x1="${xCorte}" y1="${m.t}" x2="${xCorte}" y2="${h - m.b}" stroke="var(--gray-300)" stroke-dasharray="3,3"/>
+    <text x="${m.l + 4}" y="${m.t + 11}" font-size="9.5" font-weight="700" fill="var(--gray-400)">SUMAN ACCIONES</text>
+    <text x="${m.l + 4}" y="${h - m.b - 5}" font-size="9.5" font-weight="700" fill="var(--gray-400)">REDUCEN ACCIONES</text>
+    <text x="${w - m.r}" y="${h - 9}" font-size="9.5" text-anchor="end" fill="var(--gray-400)">nuestro peso en el fondo →</text>
+    <text x="${xCorte + 4}" y="${h - 9}" font-size="9" fill="var(--gray-400)">0.5%</text>`;
+  // Se etiqueta poco a propósito: solo lo que pesa o lo que cae en una zona accionable.
+  // El resto se lee pasando el cursor o en la tabla de abajo.
+  const conNombre = new Set(pts
+    .filter(p => p.peso >= 0.4 || p.zona === 'nos_dejan' || p.zona === 'acompanados')
+    .sort((a, b) => (b.peso || 0) - (a.peso || 0)).slice(0, 14).map(p => p.ticker));
+  // colocación de etiquetas: a la izquierda si el punto está pegado al borde derecho,
+  // y se omite la que chocaría con otra ya puesta (mejor sin etiqueta que ilegible).
+  const puestas = [];
+  const cabe = (x, y, ancho) => {
+    if (x < m.l - 2 || x + ancho > w - 2) return false;
+    for (const b of puestas) {
+      if (Math.abs(b.y - y) < 11 && x < b.x + b.w + 4 && b.x < x + ancho + 4) return false;
+    }
+    return true;
+  };
+  const burbujas = [...pts].sort((a, b) => (b.peso || 0) - (a.peso || 0)).map(p => {
+    const z = gmZ(p.zona);
+    const r = Math.max(3.5, Math.min(12, 3.5 + Math.sqrt(Math.max(0, p.peso)) * 5.5));
+    const cx = X(p.peso), cy = Y(p.dsh_agg);
+    const g = `<g><circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}"
+        fill="${z.col}" fill-opacity=".2" stroke="${z.col}" stroke-width="1.5"/>
+      <title>${escapeHtml(p.ticker)} · nuestro peso ${(p.peso || 0).toFixed(2)}% · acciones ${gmInsNum(p.dsh_agg)} · ${p.n} de 15 la tienen · ${escapeHtml(z.lbl)}</title></g>`;
+    if (!conNombre.has(p.ticker)) return g;
+    const anchoTxt = p.ticker.length * 5.6;
+    let lx2 = cx + r + 3;
+    if (!cabe(lx2, cy, anchoTxt)) lx2 = cx - r - 3 - anchoTxt;   // intenta a la izquierda
+    if (!cabe(lx2, cy, anchoTxt)) return g;                      // si tampoco cabe, sin etiqueta
+    puestas.push({ x: lx2, y: cy, w: anchoTxt });
+    return g + `<text x="${lx2.toFixed(1)}" y="${(cy + 3.5).toFixed(1)}" font-size="9.5" font-weight="600" fill="var(--gray-700)">${escapeHtml(p.ticker)}</text>`;
+  }).join('');
+  return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;display:block">${bandas}${marcas}${ejes}${burbujas}</svg>
+    <div style="font-size:10px;color:var(--gray-400);margin-top:2px">Escala logarítmica en los dos ejes · ${pts.length} posiciones con al menos 2 contrapartes · pasa el cursor sobre cualquier burbuja</div>`;
+}
+
+/* ── detalle de una posición: quién la tiene, cuánto movió y cuánto pesa para él ── */
+let gmInsSel = null;
+function gmInsAbrir(tk) {
+  const D = (gm13f && gm13f.insights) || {};
+  gmInsSel = (D.cartera || []).find(f => f.ticker === tk)
+          || (D.senales || []).find(f => f.issuer === tk) || null;
+  const el = document.getElementById('gmInsModal');
+  if (!el || !gmInsSel) return;
+  const f = gmInsSel, z = gmZ(f.zona);
+  const perf = D.perfiles || {};
+  const filas = (f.fondos || []).map(x => {
+    const p = perf[x.fund] || {};
+    return `<tr>
+      <td style="font-weight:600">${escapeHtml(x.fund)}
+        ${p.acierto != null ? `<span style="font-size:9.5px;color:var(--gray-400)" title="acierto medido de sus decisiones pasadas">· acierto ${p.acierto}%</span>` : ''}</td>
+      <td class="num" style="font-weight:700;color:${x.nueva ? 'var(--navy)' : (x.cerrada ? 'var(--red)' : gmColor(x.dsh || 0))}">
+        ${x.nueva ? 'NUEVA' : (x.cerrada ? 'CERRADA' : gmInsNum(x.dsh))}</td>
+      <td class="num">${x.w != null ? x.w.toFixed(2) + '%' : '—'}</td>
+      <td class="num" style="color:var(--gray-500)">${x.rank ? '#' + x.rank : '—'}</td></tr>`;
+  }).join('');
+  el.querySelector('.gmins-body').innerHTML = `
+    <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px">
+      <div style="font-size:19px;font-weight:800">${escapeHtml(f.ticker || f.issuer)}</div>
+      <div style="font-size:12px;color:var(--gray-500)">${escapeHtml(f.issuer || '')}</div>
+      ${f.zona ? `<span style="font-size:10px;font-weight:700;padding:2px 9px;border-radius:99px;background:${z.bg};color:${z.col}">${z.lbl}</span>` : ''}
+    </div>
+    <div style="font-size:11.5px;color:var(--gray-500);margin-bottom:12px">${f.zona ? escapeHtml(z.desc) : 'Compra de convicción fuera de nuestra cartera.'}</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:12px">
+      ${f.peso != null ? `<div style="background:var(--gray-50);border-radius:8px;padding:8px 11px">
+        <div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--gray-500)">Nuestro peso</div>
+        <div style="font-size:17px;font-weight:800">${f.peso.toFixed(2)}%</div></div>` : ''}
+      <div style="background:var(--gray-50);border-radius:8px;padding:8px 11px">
+        <div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--gray-500)">Acciones del grupo</div>
+        <div style="font-size:17px;font-weight:800;color:${gmColor(f.dsh_agg || 0)}">${gmInsNum(f.dsh_agg)}</div></div>
+      <div style="background:var(--gray-50);border-radius:8px;padding:8px 11px">
+        <div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--gray-500)">La tienen</div>
+        <div style="font-size:17px;font-weight:800">${f.n || 0}<span style="font-size:11px;color:var(--gray-400)"> de ${Object.keys(perf).length}</span></div></div>
+      <div style="background:var(--gray-50);border-radius:8px;padding:8px 11px">
+        <div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--gray-500)">Del capital de ellos</div>
+        <div style="font-size:17px;font-weight:800">${f.peso_agg != null ? f.peso_agg.toFixed(2) + '%' : '—'}</div></div>
+      ${f.desde_corte != null ? `<div style="background:var(--gray-50);border-radius:8px;padding:8px 11px">
+        <div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--gray-500)">Desde el corte</div>
+        <div style="font-size:17px;font-weight:800;color:${gmColor(f.desde_corte)}">${gmInsNum(f.desde_corte)}</div></div>` : ''}
+    </div>
+    <table class="camp-table" style="width:100%;font-size:12px">
+      <tr><th>Manager</th><th class="num">Δ acciones</th><th class="num">% de su libro</th><th class="num">Rank</th></tr>${filas}</table>
+    <div style="font-size:10px;color:var(--gray-400);margin-top:8px">
+      Δ acciones = cambio real de títulos entre cierres de trimestre, sin efecto precio.
+      Rank = lugar de la posición dentro del libro de ese manager.</div>`;
+  el.classList.add('show');
+}
+function gmInsCerrar() { document.getElementById('gmInsModal')?.classList.remove('show'); }
+
+/* ── la pestaña ── */
+function gmTabInsights(s) {
+  if (!gm13f && !gm13fLoading) {
+    gm13fLoading = true;
+    authedFetch('/api/gvv-live?m13f=1').then(async r => { gm13f = r.ok ? await r.json() : { error: true }; })
+      .catch(() => { gm13f = { error: true }; })
+      .finally(() => { gm13fLoading = false; if (gmTab === 'insights') gmRender(); });
+    return `<div style="${GM_CARD};color:var(--gray-400)">Cargando 13F…</div>`;
+  }
+  const D = gm13f || {};
+  const I = D.insights || {};
+  if (D.error || !(I.cartera || []).length) {
+    return `<div style="${GM_CARD};color:var(--gray-400)">Sin datos de 13F todavía. El robot corre a las 7:05.</div>`;
+  }
+  const q = (D.quarters || [])[0] || '';
+  const cartera = I.cartera || [], senales = I.senales || [], perf = I.perfiles || {};
+  const nDejan = cartera.filter(f => f.zona === 'nos_dejan');
+  const nAcomp = cartera.filter(f => f.zona === 'acompanados');
+  const nSubir = cartera.filter(f => f.zona === 'entran_y_pesamos_poco');
+  const capital = Object.values(perf).reduce((a, p) => a + (p.libro || 0), 0);
+  const conAcierto = Object.entries(perf).filter(([, p]) => p.acierto != null);
+  const mejor = conAcierto.sort((a, b) => b[1].acierto - a[1].acierto)[0];
+
+  const secStyle = 'border:1px solid var(--gray-200);border-radius:12px;margin:12px 0;padding:2px 16px;background:var(--white)';
+  const sumStyle = 'cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;font-weight:700;font-size:13.5px;padding:13px 0';
+  const tit = (num, ic, col, t2, sub) => `<summary style="${sumStyle}">
+      <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:${col};color:var(--white);font-size:11px;font-weight:800;flex:none">${num}</span>
+      <i class="fa-solid ${ic}" style="color:${col}"></i> ${t2}
+      <span style="font-weight:400;font-size:10.5px;color:var(--gray-400)">· ${sub}</span>
+      <i class="fa-solid fa-chevron-down" style="margin-left:auto;font-size:9px;color:var(--gray-300)"></i></summary>`;
+  const kpi = (lbl, val, col, nota) => `<div style="background:var(--gray-50);border-radius:11px;padding:11px 14px">
+      <div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--gray-500)">${lbl}</div>
+      <div style="font-size:23px;font-weight:800;color:${col || 'var(--gray-900)'};line-height:1.15">${val}</div>
+      ${nota ? `<div style="font-size:10.5px;color:var(--gray-400)">${nota}</div>` : ''}</div>`;
+
+  /* lectura del trimestre: frases, no números sueltos */
+  const lect = [];
+  lect.push(`Seguimos <strong>${Object.keys(perf).length} managers</strong> con <strong>${gmInsUsd(capital)}</strong> en acciones de EE.UU.`);
+  if (nDejan.length) {
+    const p = nDejan[0];
+    lect.push(`<strong style="color:var(--red)">${nDejan.length} posición(es) nuestra(s) de peso están siendo reducidas</strong> — la mayor, ${escapeHtml(p.ticker)} (${p.peso.toFixed(2)}% del fondo, ellos ${gmInsNum(p.dsh_agg)} en acciones).`);
+  } else {
+    lect.push(`<strong style="color:var(--green)">Ninguna de nuestras posiciones de peso está siendo reducida</strong> por el grupo.`);
+  }
+  if (nAcomp.length) lect.push(`${nAcomp.length} de nuestras posiciones tienen al grupo sumando.`);
+  if (senales.length) lect.push(`Hay <strong>${senales.length}</strong> compras de convicción fuera de nuestra cartera.`);
+  if (mejor) lect.push(`El manager con mejor acierto medido es <strong>${escapeHtml(mejor[0])}</strong> (${mejor[1].acierto}% en ${mejor[1].decisiones} decisiones).`);
+
+  /* ① nuestra cartera */
+  const filaCartera = f => {
+    const z = gmZ(f.zona);
+    return `<tr onclick="gmInsAbrir('${escapeHtml(f.ticker).replace(/'/g, "\\'")}')" style="cursor:pointer">
+      <td style="font-weight:600;white-space:nowrap"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${z.col};margin-right:6px"></span>${escapeHtml(f.ticker)}</td>
+      <td class="num" style="font-weight:700">${(f.peso || 0).toFixed(2)}%</td>
+      <td class="num">${f.n}<span style="color:var(--gray-400);font-size:10px"> de ${Object.keys(perf).length}</span></td>
+      <td class="num" style="font-weight:700;color:${gmColor(f.dsh_agg || 0)}">${gmInsNum(f.dsh_agg)}</td>
+      <td class="num" style="color:var(--gray-500)">${f.peso_agg == null ? '—' : (f.peso_agg < 0.005 ? '<0.01%' : f.peso_agg.toFixed(2) + '%')}</td>
+      <td class="num">${f.convic_max == null ? '—' : (f.convic_max < 0.05
+          ? `<span style="color:var(--gray-400)">&lt;0.1%</span>`
+          : `${f.convic_max.toFixed(1)}% <span style="font-size:10px;color:var(--gray-400)">${escapeHtml(String(f.convic_fund || '').split(' ')[0])}</span>`)}</td>
+      <td class="num" style="color:${gmColor(f.desde_corte || 0)}">${f.desde_corte != null ? gmInsNum(f.desde_corte) : '—'}</td>
+      <td class="num" style="color:${gmColor(f.plpct || 0)}">${f.plpct != null ? gmInsNum(f.plpct) : '—'}</td></tr>`;
+  };
+  const sec1 = `<details open style="${secStyle}">
+    ${tit(1, 'fa-crosshairs', 'var(--navy)', 'Nuestra cartera frente al consenso',
+          'eje vertical = cambio real de ACCIONES · click en cualquier fila para el detalle por manager')}
+    <div style="display:grid;grid-template-columns:minmax(0,2.1fr) minmax(190px,1fr);gap:16px;align-items:start;padding-bottom:8px">
+      <div>${gmInsMapa(cartera, 620, 300)}</div>
+      <div style="padding-top:6px">
+        ${['nos_dejan', 'acompanados', 'entran_y_pesamos_poco', 'estable'].map(k => {
+          const z = GM_ZONAS[k], n = cartera.filter(f => f.zona === k).length;
+          return `<div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:9px">
+            <span style="width:9px;height:9px;border-radius:50%;background:${z.col};margin-top:4px;flex:none"></span>
+            <div><div style="font-size:12px;font-weight:700">${z.lbl} <span style="color:var(--gray-400);font-weight:400">· ${n}</span></div>
+              <div style="font-size:10.5px;color:var(--gray-500);line-height:1.4">${z.desc}</div></div></div>`;
+        }).join('')}
+      </div>
+    </div>
+    <div style="overflow-x:auto;padding-bottom:12px"><table class="camp-table" style="width:100%;font-size:12px">
+      <tr><th>Posición</th><th class="num">Nuestro peso</th><th class="num">La tienen</th><th class="num">Δ acciones</th>
+          <th class="num">% del capital de ellos</th><th class="num">Convicción máx.</th><th class="num">Desde el corte</th><th class="num">Nuestro P&L</th></tr>
+      ${cartera.slice(0, 18).map(filaCartera).join('')}</table></div></details>`;
+
+  /* ② a quién hacerle caso */
+  const mgr = Object.entries(perf).sort((a, b) => (b[1].acierto ?? -1) - (a[1].acierto ?? -1));
+  const barra = (v, max, col) => {
+    const w = Math.max(2, Math.min(58, Math.abs(v || 0) / (max || 1) * 58));
+    return `<span style="display:inline-block;width:58px;height:7px;border-radius:4px;background:var(--gray-100);vertical-align:middle">
+      <span style="display:block;width:${w}px;height:7px;border-radius:4px;background:${col}"></span></span>`;
+  };
+  const sec2 = `<details open style="${secStyle}">
+    ${tit(2, 'fa-award', 'var(--green)', 'A quién hacerle caso',
+          'acierto medido con nuestros propios datos: sus decisiones de un trimestre contra lo que pasó en el siguiente')}
+    <div style="overflow-x:auto;padding-bottom:12px"><table class="camp-table" style="width:100%;font-size:12px">
+      <tr><th>Manager</th><th class="num">Libro en acciones</th><th class="num">Concentración</th>
+          <th class="num">Decisiones</th><th>Acierto</th><th class="num">Sus compras</th><th class="num">Sus ventas</th></tr>
+      ${mgr.map(([k, p]) => `<tr>
+        <td style="font-weight:600">${escapeHtml(k)}</td>
+        <td class="num">${gmInsUsd(p.libro)}</td>
+        <td class="num" title="cuánto del libro está en sus 10 mayores posiciones">${p.concentracion != null ? p.concentracion.toFixed(0) + '%' : '—'}</td>
+        <td class="num" style="color:var(--gray-500)">${(p.decisiones || 0).toLocaleString('en-US')}</td>
+        <td>${p.acierto == null
+              ? '<span style="font-size:10.5px;color:var(--gray-400)">muestra corta</span>'
+              : `${barra(p.acierto - 35, 35, p.acierto >= 52 ? 'var(--green)' : (p.acierto < 46 ? 'var(--red)' : 'var(--amber)'))}
+                 <span style="font-size:11.5px;font-weight:700;margin-left:6px;color:${p.acierto >= 52 ? 'var(--green)' : (p.acierto < 46 ? 'var(--red)' : 'var(--gray-700)')}">${p.acierto.toFixed(0)}%</span>`}</td>
+        <td class="num" style="color:${gmColor(p.ret_compras || 0)}">${p.ret_compras != null ? gmInsNum(p.ret_compras) : '—'}</td>
+        <td class="num" style="color:${gmColor(-(p.ret_ventas || 0))}">${p.ret_ventas != null ? gmInsNum(p.ret_ventas) : '—'}</td></tr>`).join('')}
+    </table></div>
+    <div style="font-size:10px;color:var(--gray-400);padding-bottom:10px">
+      <strong>Acierto</strong> = de todas las veces que sumaron o redujeron acciones, en qué porcentaje el papel se movió a su favor el trimestre siguiente.
+      <strong>Sus compras</strong> = retorno medio de lo que compraron; <strong>sus ventas</strong>, de lo que vendieron (en verde si les convino vender).
+      El libro es solo acciones: el 13F de Citadel incluye el nocional de sus opciones, por eso ahí aparece más chico que en la pestaña Inteligencia.</div></details>`;
+
+  /* ③ señales de convicción */
+  const chip = f => `<span style="display:inline-block;font-size:9.5px;padding:1px 7px;border-radius:99px;margin:1px 2px;background:var(--gray-100);color:var(--gray-500)"
+      title="${escapeHtml(f.fund)}${f.w != null ? ' · queda en ' + f.w + '% de su libro' : ''}${f.rank ? ' · su posición #' + f.rank : ''}">
+      ${escapeHtml(String(f.fund).split(' ')[0])}${f.nueva ? '<span style="color:var(--navy);font-weight:800"> N</span>' : (f.dsh != null ? ` <span style="color:var(--green)">${f.dsh > 0 ? '+' : ''}${Math.round(f.dsh)}%</span>` : '')}</span>`;
+  const timing = r => r == null ? '<span style="color:var(--gray-300)">—</span>'
+    : `<span style="color:${r > 0.35 ? 'var(--amber)' : 'var(--gray-500)'};font-size:11.5px"
+        title="${r > 0.35 ? 'El papel ya corrió: entramos tarde respecto a ellos.' : 'El papel no se ha movido tanto desde que compraron.'}">${gmInsNum(r * 100, 0)}</span>`;
+  const sec3 = (senales.length || (I.apuestas || []).length) ? `<details open style="${secStyle}">
+    ${tit(3, 'fa-lightbulb', 'var(--amber)', 'Señales de convicción fuera de nuestra cartera',
+          'compras REALES de acciones · "ya se movió" avisa si llegamos tarde')}
+    ${senales.length ? `<div style="font-size:11px;font-weight:700;color:var(--gray-500);margin:2px 0 4px">VARIOS MANAGERS EN LO MISMO</div>
+    <div style="overflow-x:auto"><table class="camp-table" style="width:100%;font-size:12px">
+      <tr><th>Emisora</th><th>Quién compró</th><th class="num">Con peso real</th><th class="num">Convicción máx.</th>
+          <th class="num">Nuevas</th><th class="num">Ya se movió</th></tr>
+      ${senales.map(x => `<tr onclick="gmInsAbrir('${escapeHtml(x.issuer).replace(/'/g, "\\'")}')" style="cursor:pointer">
+        <td style="font-weight:600">${escapeHtml(x.issuer)}</td>
+        <td>${(x.fondos || []).map(chip).join('')}</td>
+        <td class="num"><strong>${x.n_fuertes}</strong><span style="color:var(--gray-400)"> de ${x.n}</span></td>
+        <td class="num">${x.convic_max != null ? x.convic_max.toFixed(1) + '% <span style="font-size:10px;color:var(--gray-400)">' + escapeHtml(String(x.convic_fund).split(' ')[0]) + '</span>' : '—'}</td>
+        <td class="num">${x.nuevas || '—'}</td>
+        <td class="num">${timing(x.ret_q)}</td></tr>`).join('')}
+    </table></div>` : ''}
+    ${(I.apuestas || []).length ? `<div style="font-size:11px;font-weight:700;color:var(--gray-500);margin:14px 0 4px">APUESTA GRANDE DE UN SOLO MANAGER
+      <span style="font-weight:400;color:var(--gray-400)">· una posición que pesa ≥3% de su libro dice más que tres fondos añadiendo 0.2%</span></div>
+    <div style="overflow-x:auto;padding-bottom:12px"><table class="camp-table" style="width:100%;font-size:12px">
+      <tr><th>Emisora</th><th>Manager</th><th class="num">% de su libro</th><th class="num">Rank</th>
+          <th class="num">Movimiento</th><th class="num">Su acierto</th><th class="num">Ya se movió</th></tr>
+      ${I.apuestas.map(x => `<tr>
+        <td style="font-weight:600">${escapeHtml(x.issuer)}</td>
+        <td>${escapeHtml(x.fund)}${x.n_otros > 0 ? `<span style="font-size:10px;color:var(--gray-400)"> · otros ${x.n_otros} la tienen</span>` : '<span style="font-size:10px;color:var(--gray-400)"> · solo él</span>'}</td>
+        <td class="num" style="font-weight:700">${x.w.toFixed(1)}%</td>
+        <td class="num" style="color:var(--gray-500)">${x.rank ? '#' + x.rank : '—'}</td>
+        <td class="num" style="font-weight:700;color:${x.nueva ? 'var(--navy)' : 'var(--green)'}">${x.nueva ? 'NUEVA' : gmInsNum(x.dsh, 0)}</td>
+        <td class="num">${x.acierto != null ? x.acierto.toFixed(0) + '%' : '—'}</td>
+        <td class="num">${timing(x.ret_q)}</td></tr>`).join('')}
+    </table></div>` : ''}</details>` : '';
+
+  return `<div style="${GM_CARD}">
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:baseline;margin-bottom:8px">
+        <div style="font-weight:800;font-size:15px"><i class="fa-solid fa-chess"></i> 13F Insights</div>
+        <div style="font-size:11px;color:var(--gray-400)">${Object.keys(perf).length} managers · posiciones al cierre de ${escapeHtml(q)} · SEC EDGAR</div>
+      </div>
+      <div style="background:var(--gray-50);border-left:3px solid var(--navy);border-radius:8px;padding:11px 15px;font-size:13px;line-height:1.65">${lect.join(' ')}</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:10px;margin-top:12px">
+        ${kpi('Capital observado', gmInsUsd(capital), null, 'solo acciones de EE.UU.')}
+        ${kpi('Nos están dejando', String(nDejan.length), nDejan.length ? 'var(--red)' : 'var(--green)', 'posiciones nuestras de peso')}
+        ${kpi('Acompañados', String(nAcomp.length), 'var(--green)', 'suman donde ya estamos')}
+        ${kpi('Candidatas a subir peso', String(nSubir.length), 'var(--amber)', 'entran y pesamos poco')}
+      </div>
+    </div>
+    ${sec1}${sec2}${sec3}
+    <div id="gmInsModal" class="modal-backdrop" onclick="if(event.target===this)gmInsCerrar()" style="padding:20px">
+      <div style="background:var(--white);border-radius:14px;max-width:640px;width:100%;max-height:82vh;overflow:auto;padding:20px 22px;box-shadow:0 18px 50px rgba(0,0,0,.28)">
+        <div style="display:flex;justify-content:flex-end"><button onclick="gmInsCerrar()"
+          style="border:none;background:none;font-size:17px;color:var(--gray-400);cursor:pointer;padding:0 2px">&times;</button></div>
+        <div class="gmins-body"></div></div></div>
+    <div style="margin-top:10px;font-size:10.5px;color:var(--gray-400);line-height:1.5">
+      Los 13F se publican con ~45 días de rezago, solo cubren posiciones largas en acciones de EE.UU. y no muestran cortos ni deuda ni activos fuera del país.
+      Todo el análisis se mide en <strong>cambio de acciones</strong>, no en dólares: el valor mezcla la decisión con el movimiento del precio.</div>`;
 }
 
 let gmPrivados = null, gmPrivLoading = false;
