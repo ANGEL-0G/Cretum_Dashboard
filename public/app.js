@@ -20318,7 +20318,7 @@ function gmTabInsights(s) {
   };
   const sec2 = `<details open style="${secStyle}">
     ${tit(2, 'fa-award', 'var(--green)', 'A quién hacerle caso',
-          'de cada compra o venta que hizo, ¿el papel le ganó al mercado el trimestre siguiente? — no basta con que suba: en mercado alcista todo sube')}
+          'de cada compra o venta que hizo, ¿la acción le ganó al mercado el trimestre siguiente? — no basta con que suba: en mercado alcista todo sube')}
     <div style="overflow-x:auto;padding-bottom:12px"><table class="camp-table" style="width:100%;font-size:12px">
       <tr><th>Manager</th><th class="num">Cartera en acciones</th><th class="num">Top-10<br><span style="font-weight:400;text-transform:none">% de su libro</span></th>
           <th class="num">Compras y ventas<br><span style="font-weight:400;text-transform:none">medidas</span></th><th>Le ganó al mercado</th><th class="num">Retorno de<br><span style="font-weight:400;text-transform:none">sus compras</span></th><th class="num">Retorno de<br><span style="font-weight:400;text-transform:none">sus ventas</span></th></tr>
