@@ -1155,6 +1155,7 @@ const EN = {
   'Nueva nota': 'New note',
   'Buscar en esta carpeta…': 'Search in this folder…',
   'Tu espacio de notas': 'Your notes space',
+  'Tu espacio de notas por carpetas y colores, con editor de texto': 'Your notes space by folders and colors, with a text editor',
   'Elige una nota de la lista o crea una nueva para empezar a escribir.': 'Pick a note from the list or create a new one to start writing.',
   'Título de la nota': 'Note title',
   'Color de la nota': 'Note color',
