@@ -19970,7 +19970,7 @@ function gm13fCard() {
     ${tituloSec(1, 'fa-briefcase', 'var(--navy)', 'Qué hicieron con lo nuestro',
                 'tendencia = 4 trimestres de flujo · convicción = % de SU libro · desde el corte = movimiento del papel tras el 30-jun')}
     <div style="overflow-x:auto;padding-bottom:10px"><table class="camp-table" style="width:100%;font-size:12px">
-      <tr><th>Posición</th><th>Tendencia 4T</th><th>Convicción máx.</th><th>Movimientos del trimestre</th><th class="num">Neto Q</th><th class="num">Desde el corte</th><th class="num">Nuestro P&L</th></tr>${filas}</table></div></details>`;
+      <tr><th>Posición</th><th>Tendencia 4T</th><th>El más invertido</th><th>Movimientos del trimestre</th><th class="num">$ neto del trimestre</th><th class="num">El papel desde el corte</th><th class="num">Nuestro P&L</th></tr>${filas}</table></div></details>`;
 
   // ── 2) por manager (desplegable con sub-desplegables) ──
   const fondosHtml = (D.fondos || []).map(f => {
@@ -20001,7 +20001,7 @@ function gm13fCard() {
     ${tituloSec(2, 'fa-lightbulb', 'var(--amber)', 'Ideas — compraron algo que no tenemos en acciones',
                 'solo entran las que 3+ fondos movieron ≥0.25% de SU libro · la barra es el fondo que más la pesa · N = nueva · el cruce mira la cartera de ACCIONES, no el libro de opciones')}
     <div style="overflow-x:auto;padding-bottom:10px"><table class="camp-table" style="width:100%;font-size:12px">
-      <tr><th>Emisora</th><th>Quién compra</th><th>Con convicción</th><th>Convicción máx.</th><th>Nuevas</th><th class="num">Neto Q</th><th class="num">Precio al corte</th></tr>
+      <tr><th>Emisora</th><th>Quién compró</th><th>Compraron con peso</th><th>El más invertido</th><th>Posiciones nuevas</th><th class="num">$ neto del trimestre</th><th class="num">Precio al corte</th></tr>
       ${ideas.map(c => `<tr>
         <td style="font-weight:600">${escapeHtml(c.issuer)}</td>
         <td>${chipsFondos(c.fondos, 6)}</td>
@@ -20018,7 +20018,7 @@ function gm13fCard() {
     ${tituloSec(3, 'fa-triangle-exclamation', 'var(--red)', 'Revisar — están soltando algo que sí tenemos',
                 'ordenado por NUESTRA exposición · solo ventas de ≥0.25% del libro del fondo · C = cerrada')}
     <div style="overflow-x:auto;padding-bottom:10px"><table class="camp-table" style="width:100%;font-size:12px">
-      <tr><th>Posición</th><th>Nuestro peso</th><th>Quién vende</th><th>Con convicción</th><th class="num">Neto Q</th><th class="num">Desde el corte</th><th class="num">Nuestro P&L</th></tr>
+      <tr><th>Posición</th><th>Nuestro peso</th><th>Quién vende</th><th>Venden con peso</th><th class="num">$ neto del trimestre</th><th class="num">El papel desde el corte</th><th class="num">Nuestro P&L</th></tr>
       ${rev.map(c => `<tr>
         <td style="font-weight:600">${escapeHtml(c.ticker)} <span style="font-size:10px;color:var(--gray-400)">${escapeHtml(c.issuer)}</span></td>
         <td style="font-weight:700">${(c.peso ?? 0).toFixed(2)}%</td>
@@ -20201,23 +20201,23 @@ function gmInsAbrir(tk) {
         <div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--gray-500)">Nuestro peso</div>
         <div style="font-size:17px;font-weight:800">${f.peso.toFixed(2)}%</div></div>` : ''}
       <div style="background:var(--gray-50);border-radius:8px;padding:8px 11px">
-        <div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--gray-500)">Acciones del grupo</div>
+        <div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--gray-500)">Compraron o vendieron</div>
         <div style="font-size:17px;font-weight:800;color:${gmColor(f.dsh_agg || 0)}">${gmInsNum(f.dsh_agg)}</div></div>
       <div style="background:var(--gray-50);border-radius:8px;padding:8px 11px">
-        <div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--gray-500)">La tienen</div>
+        <div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--gray-500)">Cuántos la tienen</div>
         <div style="font-size:17px;font-weight:800">${f.n || 0}<span style="font-size:11px;color:var(--gray-400)"> de ${Object.keys(perf).length}</span></div></div>
       <div style="background:var(--gray-50);border-radius:8px;padding:8px 11px">
-        <div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--gray-500)">Del capital de ellos</div>
+        <div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--gray-500)">Peso en el capital del grupo</div>
         <div style="font-size:17px;font-weight:800">${f.peso_agg != null ? f.peso_agg.toFixed(2) + '%' : '—'}</div></div>
       ${f.desde_corte != null ? `<div style="background:var(--gray-50);border-radius:8px;padding:8px 11px">
-        <div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--gray-500)">Desde el corte</div>
+        <div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--gray-500)">El papel desde el corte</div>
         <div style="font-size:17px;font-weight:800;color:${gmColor(f.desde_corte)}">${gmInsNum(f.desde_corte)}</div></div>` : ''}
     </div>
     <table class="camp-table" style="width:100%;font-size:12px">
-      <tr><th>Manager</th><th class="num">Δ acciones</th><th class="num">% de su libro</th><th class="num">Rank</th></tr>${filas}</table>
+      <tr><th>Manager</th><th class="num">Compró o vendió<br><span style="font-weight:400;text-transform:none">(cambio en acciones)</span></th><th class="num">% de su libro</th><th class="num">Su posición #</th></tr>${filas}</table>
     <div style="font-size:10px;color:var(--gray-400);margin-top:8px">
-      Δ acciones = cambio real de títulos entre cierres de trimestre, sin efecto precio.
-      Rank = lugar de la posición dentro del libro de ese manager.</div>`;
+      "Compró o vendió" = cambio real de títulos entre cierres de trimestre, sin el efecto del precio.
+      "Su posición #" = qué lugar ocupa esta emisora dentro de la cartera de ese manager (#1 = su mayor posición).</div>`;
   el.classList.add('show');
 }
 function gmInsCerrar() { document.getElementById('gmInsModal')?.classList.remove('show'); }
@@ -20237,7 +20237,10 @@ function gmTabInsights(s) {
     return `<div style="${GM_CARD};color:var(--gray-400)">Sin datos de 13F todavía. El robot corre a las 7:05.</div>`;
   }
   const q = (D.quarters || [])[0] || '';
+  const MESC = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  const corteLbl = q ? `${parseInt(q.slice(8, 10))}-${MESC[parseInt(q.slice(5, 7)) - 1]}` : 'corte';
   const cartera = I.cartera || [], senales = I.senales || [], perf = I.perfiles || {};
+  const nMgr = Object.keys(perf).length;
   const nDejan = cartera.filter(f => f.zona === 'nos_dejan');
   const nAcomp = cartera.filter(f => f.zona === 'acompanados');
   const nSubir = cartera.filter(f => f.zona === 'entran_y_pesamos_poco');
@@ -20268,7 +20271,7 @@ function gmTabInsights(s) {
   }
   if (nAcomp.length) lect.push(`${nAcomp.length} de nuestras posiciones tienen al grupo sumando.`);
   if (senales.length) lect.push(`Hay <strong>${senales.length}</strong> compras de convicción fuera de nuestra cartera.`);
-  if (mejor) lect.push(`El manager con mejor acierto medido es <strong>${escapeHtml(mejor[0])}</strong> (${mejor[1].acierto}% en ${mejor[1].decisiones} decisiones).`);
+  if (mejor) lect.push(`El que mejor le pega es <strong>${escapeHtml(mejor[0])}</strong>: le ganó al mercado en el ${mejor[1].acierto}% de sus ${mejor[1].decisiones} compras y ventas.`);
 
   /* ① nuestra cartera */
   const filaCartera = f => {
@@ -20287,7 +20290,7 @@ function gmTabInsights(s) {
   };
   const sec1 = `<details open style="${secStyle}">
     ${tit(1, 'fa-crosshairs', 'var(--navy)', 'Nuestra cartera frente al consenso',
-          'eje vertical = cambio real de ACCIONES · click en cualquier fila para el detalle por manager')}
+          'todo se mide en ACCIONES compradas o vendidas, sin efecto precio · click en cualquier fila para ver manager por manager')}
     <div style="display:grid;grid-template-columns:minmax(0,2.1fr) minmax(190px,1fr);gap:16px;align-items:start;padding-bottom:8px">
       <div>${gmInsMapa(cartera, 620, 300)}</div>
       <div style="padding-top:6px">
@@ -20301,8 +20304,8 @@ function gmTabInsights(s) {
       </div>
     </div>
     <div style="overflow-x:auto;padding-bottom:12px"><table class="camp-table" style="width:100%;font-size:12px">
-      <tr><th>Posición</th><th class="num">Nuestro peso</th><th class="num">La tienen</th><th class="num">Δ acciones</th>
-          <th class="num">% del capital de ellos</th><th class="num">Convicción máx.</th><th class="num">Desde el corte</th><th class="num">Nuestro P&L</th></tr>
+      <tr><th>Posición</th><th class="num">Nuestro peso</th><th class="num">Cuántos la tienen</th><th class="num">Compraron o vendieron<br><span style="font-weight:400;text-transform:none">(cambio en acciones)</span></th>
+          <th class="num">Peso en el capital<br><span style="font-weight:400;text-transform:none">de los ${nMgr} juntos</span></th><th class="num">El más invertido<br><span style="font-weight:400;text-transform:none">(% de su libro)</span></th><th class="num">El papel desde<br><span style="font-weight:400;text-transform:none">el ${corteLbl}</span></th><th class="num">Nuestro P&L</th></tr>
       ${cartera.slice(0, 18).map(filaCartera).join('')}</table></div></details>`;
 
   /* ② a quién hacerle caso */
@@ -20314,10 +20317,10 @@ function gmTabInsights(s) {
   };
   const sec2 = `<details open style="${secStyle}">
     ${tit(2, 'fa-award', 'var(--green)', 'A quién hacerle caso',
-          'acierto = sus decisiones le GANARON AL UNIVERSO el trimestre siguiente (no solo "subió": en mercado alcista todo sube)')}
+          'de cada compra o venta que hizo, ¿el papel le ganó al mercado el trimestre siguiente? — no basta con que suba: en mercado alcista todo sube')}
     <div style="overflow-x:auto;padding-bottom:12px"><table class="camp-table" style="width:100%;font-size:12px">
-      <tr><th>Manager</th><th class="num">Libro en acciones</th><th class="num">Concentración</th>
-          <th class="num">Decisiones</th><th>Acierto</th><th class="num">Sus compras</th><th class="num">Sus ventas</th></tr>
+      <tr><th>Manager</th><th class="num">Cartera en acciones</th><th class="num">Top-10<br><span style="font-weight:400;text-transform:none">% de su libro</span></th>
+          <th class="num">Compras y ventas<br><span style="font-weight:400;text-transform:none">medidas</span></th><th>Le ganó al mercado</th><th class="num">Retorno de<br><span style="font-weight:400;text-transform:none">sus compras</span></th><th class="num">Retorno de<br><span style="font-weight:400;text-transform:none">sus ventas</span></th></tr>
       ${mgr.map(([k, p]) => `<tr>
         <td style="font-weight:600">${escapeHtml(k)}</td>
         <td class="num">${gmInsUsd(p.libro)}</td>
@@ -20331,9 +20334,9 @@ function gmTabInsights(s) {
         <td class="num" style="color:${gmColor(-(p.ret_ventas || 0))}">${p.ret_ventas != null ? gmInsNum(p.ret_ventas) : '—'}</td></tr>`).join('')}
     </table></div>
     <div style="font-size:10px;color:var(--gray-400);padding-bottom:10px">
-      <strong>Acierto</strong> = de sus decisiones (incluidas posiciones cerradas), qué porcentaje le ganó a la MEDIANA del universo el trimestre siguiente:
-      compra que rinde más que el mercado, venta que rinde menos. Un libro cuasi-índice converge a ~50% por construcción — y AQR y Citadel dan justo eso, que es la prueba de que la métrica funciona.
-      <strong>Sus compras / sus ventas</strong> = retorno medio BRUTO de lo que compraron y vendieron (sin restar el universo; en verde si les convino).
+      <strong>Le ganó al mercado</strong>: de todas sus compras y ventas (incluidas las posiciones que cerraron), qué porcentaje resultó mejor que la mediana del mercado el trimestre siguiente —
+      una compra gana si el papel rinde MÁS que el mercado; una venta, si rinde MENOS. Un libro tipo índice da ~50% por construcción, y AQR y Citadel dan justo eso: la métrica funciona.
+      <strong>Retorno de sus compras / ventas</strong> = cuánto rindió en promedio lo que compraron y lo que vendieron (retorno simple, sin restar el mercado; la venta en verde si les convino vender).
       El libro es solo acciones: el 13F de Citadel incluye el nocional de sus opciones, por eso ahí aparece más chico que en la pestaña Inteligencia.</div></details>`;
 
   /* ③ señales de convicción */
@@ -20345,11 +20348,11 @@ function gmTabInsights(s) {
         title="${r > 0.35 ? 'El papel ya corrió: entramos tarde respecto a ellos.' : 'El papel no se ha movido tanto desde que compraron.'}">${gmInsNum(r * 100, 0)}</span>`;
   const sec3 = (senales.length || (I.apuestas || []).length) ? `<details open style="${secStyle}">
     ${tit(3, 'fa-lightbulb', 'var(--amber)', 'Señales de convicción fuera de nuestra cartera',
-          'compras REALES de acciones · "ya se movió" avisa si llegamos tarde')}
+          'compras reales de acciones · si el papel ya subió mucho en el trimestre, vamos tarde')}
     ${senales.length ? `<div style="font-size:11px;font-weight:700;color:var(--gray-500);margin:2px 0 4px">VARIOS MANAGERS EN LO MISMO</div>
     <div style="overflow-x:auto"><table class="camp-table" style="width:100%;font-size:12px">
-      <tr><th>Emisora</th><th>Quién compró</th><th class="num">Con peso real</th><th class="num">Convicción máx.</th>
-          <th class="num">Nuevas</th><th class="num">Ya se movió</th></tr>
+      <tr><th>Emisora</th><th>Quién compró</th><th class="num">Compraron con peso<br><span style="font-weight:400;text-transform:none">(queda ≥0.4% de su libro)</span></th><th class="num">El más invertido<br><span style="font-weight:400;text-transform:none">(% de su libro)</span></th>
+          <th class="num">Posiciones<br><span style="font-weight:400;text-transform:none">nuevas</span></th><th class="num">El papel ya subió<br><span style="font-weight:400;text-transform:none">en el trimestre</span></th></tr>
       ${senales.map(x => `<tr onclick="gmInsAbrir('${escapeHtml(x.issuer).replace(/'/g, "\\'")}')" style="cursor:pointer">
         <td style="font-weight:600">${escapeHtml(x.issuer)}</td>
         <td>${(x.fondos || []).map(chip).join('')}</td>
@@ -20361,8 +20364,8 @@ function gmTabInsights(s) {
     ${(I.apuestas || []).length ? `<div style="font-size:11px;font-weight:700;color:var(--gray-500);margin:14px 0 4px">APUESTA GRANDE DE UN SOLO MANAGER
       <span style="font-weight:400;color:var(--gray-400)">· una posición que pesa ≥3% de su libro dice más que tres fondos añadiendo 0.2%</span></div>
     <div style="overflow-x:auto;padding-bottom:12px"><table class="camp-table" style="width:100%;font-size:12px">
-      <tr><th>Emisora</th><th>Manager</th><th class="num">% de su libro</th><th class="num">Rank</th>
-          <th class="num">Movimiento</th><th class="num">Su acierto</th><th class="num">Ya se movió</th></tr>
+      <tr><th>Emisora</th><th>Manager</th><th class="num">% de su libro</th><th class="num">Su posición #</th>
+          <th class="num">Compró<br><span style="font-weight:400;text-transform:none">(cambio en acciones)</span></th><th class="num">Le gana al mercado<br><span style="font-weight:400;text-transform:none">(historial)</span></th><th class="num">El papel ya subió<br><span style="font-weight:400;text-transform:none">en el trimestre</span></th></tr>
       ${I.apuestas.map(x => `<tr>
         <td style="font-weight:600">${escapeHtml(x.issuer)}</td>
         <td>${escapeHtml(x.fund)}${x.n_otros > 0 ? `<span style="font-size:10px;color:var(--gray-400)"> · otros ${x.n_otros} la tienen</span>` : '<span style="font-size:10px;color:var(--gray-400)"> · solo él</span>'}</td>
@@ -20380,7 +20383,7 @@ function gmTabInsights(s) {
       </div>
       <div style="background:var(--gray-50);border-left:3px solid var(--navy);border-radius:8px;padding:11px 15px;font-size:13px;line-height:1.65">${lect.join(' ')}</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:10px;margin-top:12px">
-        ${kpi('Capital observado', gmInsUsd(capital), null, 'solo acciones de EE.UU.')}
+        ${kpi('Capital que seguimos', gmInsUsd(capital), null, 'los ' + nMgr + ' managers, solo acciones de EE.UU.')}
         ${kpi('Nos están dejando', String(nDejan.length), nDejan.length ? 'var(--red)' : 'var(--green)', 'posiciones nuestras de peso')}
         ${kpi('Acompañados', String(nAcomp.length), 'var(--green)', 'suman donde ya estamos')}
         ${kpi('Candidatas a subir peso', String(nSubir.length), 'var(--amber)', 'entran y pesamos poco')}
