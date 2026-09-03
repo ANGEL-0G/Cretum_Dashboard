@@ -31,6 +31,27 @@ const EN = {
   'Cancelar': 'Cancel',
   'Verificar': 'Verify',
 
+  // ── 2FA / verificación en dos pasos (aviso + enrolamiento) ──
+  'Verificación en dos pasos': 'Two-step verification',
+  'Activa la verificación en dos pasos (2FA)': 'Turn on two-step verification (2FA)',
+  'A partir de ahora, todas las cuentas usan verificación en dos pasos (2FA). Configúrala en un momento con Google Authenticator: además de tu contraseña, se te pedirá un código de 6 dígitos solo tras 24 h de inactividad (no en cada inicio de sesión).': 'From now on, all accounts use two-step verification (2FA). Set it up in a moment with Google Authenticator: besides your password, you’ll be asked for a 6-digit code only after 24 h of inactivity (not on every sign-in).',
+  'Descarga Google Authenticator (recomendada)': 'Download Google Authenticator (recommended)',
+  'También sirve Microsoft Authenticator': 'Microsoft Authenticator also works',
+  'También puedes activarlo cuando quieras desde tu menú de perfil → Verificación en dos pasos.': 'You can also turn it on anytime from your profile menu → Two-step verification.',
+  'Ahora no': 'Not now',
+  'Activar 2FA ahora': 'Turn on 2FA now',
+  '2FA activo': '2FA on',
+  '2FA desactivado': '2FA off',
+  'Desactivar 2FA': 'Disable 2FA',
+  'Activar 2FA': 'Enable 2FA',
+  'Tu cuenta pide un código de tu app de autenticación (Google Authenticator) solo tras <strong>24 h de inactividad</strong>, no en cada inicio de sesión.': 'Your account asks for a code from your authenticator app (Google Authenticator) only after <strong>24 h of inactivity</strong>, not on every sign-in.',
+  'Suma una capa extra de seguridad: además de tu contraseña, un código de 6 dígitos desde tu celular con <strong>Google Authenticator</strong> (la app recomendada; también funcionan Authy o Microsoft Authenticator). Solo se te pedirá tras <strong>24 h de inactividad</strong>.': 'Add an extra layer of security: besides your password, a 6-digit code from your phone with <strong>Google Authenticator</strong> (the recommended app; Authy or Microsoft Authenticator also work). You’ll only be asked after <strong>24 h of inactivity</strong>.',
+  '<strong>1.</strong> Escanea este código con tu app de autenticación:': '<strong>1.</strong> Scan this code with your authenticator app:',
+  '¿No puedes escanear? Ingresa esta clave a mano:': 'Can’t scan? Enter this key manually:',
+  '<strong>2.</strong> Escribe el código de 6 dígitos que muestra la app': '<strong>2.</strong> Enter the 6-digit code shown by the app',
+  'Confirmar': 'Confirm',
+  'Generando código…': 'Generating code…',
+
   // ── Selector de empresa / saludos ──
   'Elige con cuál quieres trabajar': 'Choose which one to work with',
   'Hola': 'Hi',

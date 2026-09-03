@@ -375,14 +375,14 @@ async function mfaRefresh() {
     const verified = (data?.totp || []).find(f => f.status === 'verified');
     if (verified) {
       mfaRender(`
-        <div class="mfa-status on"><i class="fa-solid fa-circle-check"></i> 2FA activo</div>
-        <p class="mfa-p">Tu cuenta pide un código de tu app de autenticación (Google Authenticator) solo tras <strong>24 h de inactividad</strong>, no en cada inicio de sesión.</p>
-        <button class="camp-prev-cancel mfa-danger" onclick="mfaDisable('${verified.id}')"><i class="fa-solid fa-shield-halved"></i> Desactivar 2FA</button>`);
+        <div class="mfa-status on"><i class="fa-solid fa-circle-check"></i> ${t('2FA activo')}</div>
+        <p class="mfa-p">${t('Tu cuenta pide un código de tu app de autenticación (Google Authenticator) solo tras <strong>24 h de inactividad</strong>, no en cada inicio de sesión.')}</p>
+        <button class="camp-prev-cancel mfa-danger" onclick="mfaDisable('${verified.id}')"><i class="fa-solid fa-shield-halved"></i> ${t('Desactivar 2FA')}</button>`);
     } else {
       mfaRender(`
-        <div class="mfa-status off"><i class="fa-solid fa-shield-halved"></i> 2FA desactivado</div>
-        <p class="mfa-p">Suma una capa extra de seguridad: además de tu contraseña, un código de 6 dígitos desde tu celular con <strong>Google Authenticator</strong> (la app recomendada; también funcionan Authy o Microsoft Authenticator). Solo se te pedirá tras <strong>24 h de inactividad</strong>.</p>
-        <button class="btn-primary" onclick="mfaStartEnroll()"><i class="fa-solid fa-plus"></i> Activar 2FA</button>`);
+        <div class="mfa-status off"><i class="fa-solid fa-shield-halved"></i> ${t('2FA desactivado')}</div>
+        <p class="mfa-p">${t('Suma una capa extra de seguridad: además de tu contraseña, un código de 6 dígitos desde tu celular con <strong>Google Authenticator</strong> (la app recomendada; también funcionan Authy o Microsoft Authenticator). Solo se te pedirá tras <strong>24 h de inactividad</strong>.')}</p>
+        <button class="btn-primary" onclick="mfaStartEnroll()"><i class="fa-solid fa-plus"></i> ${t('Activar 2FA')}</button>`);
     }
   } catch (e) {
     mfaRender(`<div class="mfa-status off">Error: ${escapeHtml(e.message)}</div>`);
@@ -405,10 +405,10 @@ async function mfaStartEnroll() {
     const secret = data.totp.secret || '';
     const qrHtml = qr.trim().startsWith('<svg') ? qr : `<img src="${escapeHtml(qr)}" alt="QR 2FA">`;
     mfaRender(`
-      <p class="mfa-p"><strong>1.</strong> Escanea este código con tu app de autenticación:</p>
+      <p class="mfa-p">${t('<strong>1.</strong> Escanea este código con tu app de autenticación:')}</p>
       <div class="mfa-qr">${qrHtml}</div>
-      <p class="mfa-p mfa-secret">¿No puedes escanear? Ingresa esta clave a mano:<br><code>${escapeHtml(secret)}</code></p>
-      <label class="camp-f-lbl"><strong>2.</strong> Escribe el código de 6 dígitos que muestra la app</label>
+      <p class="mfa-p mfa-secret">${t('¿No puedes escanear? Ingresa esta clave a mano:')}<br><code>${escapeHtml(secret)}</code></p>
+      <label class="camp-f-lbl">${t('<strong>2.</strong> Escribe el código de 6 dígitos que muestra la app')}</label>
       <input id="mfaEnrollCode" class="camp-f-inp" inputmode="numeric" maxlength="6" placeholder="000000" onkeydown="if(event.key==='Enter')mfaConfirmEnroll()">
       <div class="camp-modal-msg" id="mfaEnrollMsg"></div>
       <div class="mfa-actions">
