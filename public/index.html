@@ -4212,8 +4212,8 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   .header-brand{padding:3px}
 }
 </style>
-<link rel="stylesheet" href="/mobile.css?v=20260903-dbpos">
-<link rel="stylesheet" href="/desk.css?v=20260903-dbpos">
+<link rel="stylesheet" href="/mobile.css?v=20260903-desk26">
+<link rel="stylesheet" href="/desk.css?v=20260903-desk26">
 </head>
 <body>
 <!-- Pantalla de carga tras "Actualizar": la pestaña sabe desde el primer byte que viene de una recarga
@@ -4353,6 +4353,20 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
       <span id="headerUser">—</span>
       <i class="fa-solid fa-chevron-down chev" style="font-size:10px;opacity:.7"></i>
     </button>
+  </div>
+
+  <!-- Bienvenida al home modular (escritorio; una vez por usuario) -->
+  <div class="camp-modal-backdrop" id="homeWelcome">
+    <div class="camp-modal home-welcome">
+      <div class="hwc-ico"><i class="fa-solid fa-table-cells-large"></i></div>
+      <div class="hwc-title" data-i18n>Bienvenido al nuevo Cretum Desk</div>
+      <p class="hwc-text" data-i18n>Añadimos widgets nuevos para un acceso más fácil a todo lo que te interesa: calendario, tareas pendientes, noticias y más. Para activarlos, añádelos y acomódalos como tú prefieras.</p>
+      <p class="hwc-note" data-i18n>Si ya los tenías acomodados, no hace falta cambiar nada: tu home se queda tal como lo dejaste.</p>
+      <div class="hwc-foot">
+        <button type="button" class="hwc-later" onclick="homeWelcomeClose(false)" data-i18n>Ahora no</button>
+        <button type="button" class="hwc-go" onclick="homeWelcomeClose(true)"><i class="fa-solid fa-pen"></i> <span data-i18n>Editar módulos</span></button>
+      </div>
+    </div>
   </div>
 
   <!-- Dropdown menu -->
@@ -7736,8 +7750,8 @@ i.snap-dot.snap-mix-dir{background:#4F5866}
   </div>
 </div>
 
-<script src="/i18n.js?v=20260903-dbpos"></script>
-<script src="/app.js?v=20260903-dbpos"></script>
-<script src="/mobile.js?v=20260903-dbpos"></script>
+<script src="/i18n.js?v=20260903-desk26"></script>
+<script src="/app.js?v=20260903-desk26"></script>
+<script src="/mobile.js?v=20260903-desk26"></script>
 </body>
 </html>

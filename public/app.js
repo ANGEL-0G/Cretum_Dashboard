@@ -4639,10 +4639,12 @@ const HW_DEF = {
   // mode: 'both' (iconos y nombres) | 'icons' (solo iconos, nombre al hover) | 'names' (solo nombres)
   // layout: 'grid' (cuadrícula) | 'list' (filas a lo ancho)
   modules:  { on: 1, mode: 'both', layout: 'grid', size: 1, w: 12, h: 300 },
-  calendar: { on: 1, w: 6, h: 340 },
-  news:     { on: 1, w: 12, h: 320 },
-  board:    { on: 1, w: 7, h: 400 },
-  tasks:    { on: 1, w: 5, h: 400 },
+  // Arranque limpio: solo Módulos encendido; los widgets se añaden desde 'Editar módulos'
+  // (quien ya guardó su home conserva lo que tenía: lo guardado manda sobre estos defaults)
+  calendar: { on: 0, w: 6, h: 340 },
+  news:     { on: 0, w: 12, h: 320 },
+  board:    { on: 0, w: 7, h: 400 },
+  tasks:    { on: 0, w: 5, h: 400 },
 };
 // Tamaños iniciales distintos por org (design v2: Cretum = calendario ancho + tareas; MVP = Slack ancho + calendario)
 const HW_DEF_ORG = {
@@ -4874,8 +4876,22 @@ function renderHomeModular() {
   host.style.display = '';
   host.innerHTML = (isDeskHome() ? hint : lockBar) + on.map(k => hwWindowHTML(k, cfg)).join('') + offRow;
   renderHeroClock();
+  maybeShowHomeWelcome();
 }
 
+// Bienvenida al home modular: una vez por usuario (por navegador, como el resto de preferencias del home)
+function homeWelcomeKey() { return `cretum_home_welcome_${currentUser || 'anon'}`; }
+function maybeShowHomeWelcome() {
+  if (!isDeskHome() || !hmActive() || currentView !== 'home' || !currentUser) return;
+  try { if (localStorage.getItem(homeWelcomeKey())) return; } catch (e) { return; }
+  const m = document.getElementById('homeWelcome'); if (!m) return;
+  try { localStorage.setItem(homeWelcomeKey(), String(Date.now())); } catch (e) {}
+  m.classList.add('show');
+}
+function homeWelcomeClose(edit) {
+  document.getElementById('homeWelcome')?.classList.remove('show');
+  if (edit && hmActive() && hwCfg().locked) toggleHomeEdit();
+}
 function hwToggle(key) {
   const cfg = hwCfg();
   cfg[key].on = cfg[key].on ? 0 : 1;

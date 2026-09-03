@@ -573,6 +573,34 @@
   .ft-header-top .ft-sub{margin-bottom:0}
   .ft-header-top{margin-bottom:16px}
 
+  /* ══ Bienvenida al home modular ══ */
+  .camp-modal.home-welcome{max-width:480px;width:calc(100% - 40px);border-radius:22px;padding:36px 36px 28px;text-align:center;border:1px solid #e4e9f1}
+  .hwc-ico{width:56px;height:56px;border-radius:18px;background:#e8eef7;color:#1a3a6b;display:grid;place-items:center;font-size:22px;margin:0 auto 18px}
+  [data-org="mvp"] .hwc-ico{background:#fcead9;color:#c9651f}
+  .hwc-title{font-size:26px;font-weight:700;letter-spacing:-.03em;line-height:1.1;color:#16233c;margin-bottom:12px}
+  .hwc-text{font-size:15px;line-height:1.6;color:#6b7890;margin:0 0 14px;text-wrap:pretty}
+  .hwc-note{font-size:13px;line-height:1.5;color:#8b95a7;margin:0 0 26px;padding:10px 14px;border-radius:12px;background:#f4f6fa}
+  [data-theme="dark"] .hwc-note{color:#98a2b3;background:#1b2130}
+  [data-theme="dark"][data-org="mvp"] .hwc-note{background:#221a14}
+  .hwc-foot{display:flex;gap:10px;justify-content:center}
+  .hwc-later,.hwc-go{min-height:44px;padding:0 20px;border-radius:999px;font:600 14px var(--font);cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:transform .16s cubic-bezier(.23,1,.32,1),background .16s ease,filter .16s ease}
+  .hwc-later{border:1px solid #e4e9f1;background:#fff;color:#5b687f}
+  .hwc-later:hover{background:#f7f9fc}
+  .hwc-go{border:0;background:#1a3a6b;color:#fff;box-shadow:0 8px 20px -8px rgba(26,58,107,.7)}
+  .hwc-go:hover{filter:brightness(1.08)}
+  .hwc-later:active,.hwc-go:active{transform:scale(.97)}
+  [data-org="mvp"] .hwc-go{background:#ED7824;box-shadow:0 8px 20px -8px rgba(237,120,36,.7)}
+  [data-theme="dark"] .camp-modal.home-welcome{background:#161b24;border-color:#2f3744}
+  [data-theme="dark"] .hwc-title{color:#eceff4}
+  [data-theme="dark"] .hwc-text{color:#98a2b3}
+  [data-theme="dark"] .hwc-ico{background:rgba(93,143,245,.16);color:#9fc0ee}
+  [data-theme="dark"] .hwc-later{background:transparent;border-color:#2f3744;color:#98a2b3}
+  [data-theme="dark"] .hwc-later:hover{background:#1b2130}
+  [data-theme="dark"] .hwc-go{background:#5d8ff5;color:#0c0f16;box-shadow:none}
+  [data-theme="dark"][data-org="mvp"] .camp-modal.home-welcome{background:#181410;border-color:#2f271e}
+  [data-theme="dark"][data-org="mvp"] .hwc-ico{background:rgba(248,149,64,.16);color:#f4a86c}
+  [data-theme="dark"][data-org="mvp"] .hwc-go{background:#F89540;color:#0d0a07}
+
   /* el panel de marca cede en pantallas angostas de escritorio */
   @media (max-width:899px){
     #loginWrap{grid-template-columns:1fr}
