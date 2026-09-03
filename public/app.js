@@ -20355,12 +20355,13 @@ function gmTabInsights(s) {
   for (const s2 of senales) {
     uni[s2.issuer] = { issuer: s2.issuer, sen: s2, fondos: s2.fondos || [], n: s2.n,
       n_fuertes: s2.n_fuertes, ret_q: s2.ret_q, fuerza: (s2.score || 0),
-      peso_agg: s2.peso_agg, dsh_agg: s2.dsh_agg };
+      peso_agg: s2.peso_agg, dsh_agg: s2.dsh_agg, tenedores: s2.tenedores };
   }
   for (const a2 of (I.apuestas || [])) {
     const u = uni[a2.issuer] || (uni[a2.issuer] = { issuer: a2.issuer, fondos: [], n: (a2.n_otros || 0) + 1,
       n_fuertes: null, ret_q: a2.ret_q, fuerza: 0 });
     u.apuesta = a2;
+    if (!u.tenedores && a2.tenedores) u.tenedores = a2.tenedores;
     u.ret_q = u.ret_q ?? a2.ret_q;
     if (u.dsh_agg == null && a2.dsh != null) u.dsh_agg = a2.dsh;   // el modal muestra el mov. de la apuesta
     u.fuerza = Math.max(u.fuerza, (a2.w || 0) * (1 + ((a2.acierto ?? 50) - 50) / 100));
@@ -20368,7 +20369,55 @@ function gmTabInsights(s) {
       u.fondos = [{ fund: a2.fund, dsh: a2.dsh, w: a2.w, rank: a2.rank, nueva: a2.nueva }, ...u.fondos];
     }
   }
-  const ideasUni = Object.values(uni).sort((a, b) => b.fuerza - a.fuerza);
+  /* calificación 0–100 que ORDENA las ideas de mejor a peor. Tres componentes con
+     tope, para que ninguno domine: SEÑAL (0–50: cuánto pesa la compra en el libro del
+     que más compró + cuántos compraron con peso + si es nueva al tope), MANAGER (0–25:
+     acierto histórico vs el mercado de los que compraron, ponderado por su peso) y
+     TIMING (0–25: cuánto se movió ya la acción desde que compraron). */
+  const califica = u => {
+    const ten = u.tenedores || u.fondos || [];
+    const compradores = ten.filter(f => !f.cerrada && (f.nueva || (f.dsh || 0) > 0));
+    const conPeso = compradores.filter(f => (f.w || 0) >= 0.4);
+    const wMax = compradores.length ? Math.max(...compradores.map(f => f.w || 0)) : 0;
+    const top = compradores.find(f => (f.w || 0) === wMax);
+    let sig = Math.min(32, wMax * 2.5) + Math.min(12, 6 * Math.max(0, conPeso.length - 1));
+    if (top && top.nueva) sig += (top.rank && top.rank <= 5) ? 6 : 3;
+    sig = Math.min(50, sig);
+    let sw = 0, sa = 0;
+    for (const f of compradores) { const ac = skillDe(f.fund); if (ac != null && f.w) { sw += f.w; sa += f.w * ac; } }
+    const acW = sw ? sa / sw : null;
+    const mgr = acW == null ? 12 : Math.max(0, Math.min(25, (acW - 38) * 1.4));
+    const r = u.ret_q;
+    const tim = r == null ? 12 : r <= -0.25 ? 4 : r < 0 ? 21 : r < 0.15 ? 25 : r < 0.35 ? 16 : 7;
+    return { total: Math.round(sig + mgr + tim), sig: Math.round(sig), mgr: Math.round(mgr), tim, acW };
+  };
+  const VEREDICTOS = [
+    [68, 'ATRACTIVA', 'var(--green)', 'var(--green-bg)'],
+    [52, 'RAZONABLE', 'var(--navy)', 'var(--navy-pale)'],
+    [38, 'CON RESERVAS', 'var(--amber)', 'var(--amber-bg)'],
+    [-999, 'DÉBIL', 'var(--red)', 'var(--red-bg)'],
+  ];
+  const veredictoDe = tot => VEREDICTOS.find(v => tot >= v[0]);
+  const porqueDe = u => {
+    const c = u.calif, pro = [], contra = [];
+    if (c.sig >= 34) pro.push('convicción muy alta'); else if (c.sig >= 22) pro.push('señal sólida'); else contra.push('señal moderada');
+    if (c.acW != null && c.acW >= 52) pro.push('managers que le ganan al mercado');
+    else if (c.acW != null && c.acW < 47) contra.push('managers con acierto flojo');
+    const r = u.ret_q;
+    if (r != null) {
+      if (r <= -0.25) contra.push(`llega dañada (cayó ${Math.round(-r * 100)}% desde que compraron)`);
+      else if (r >= 0.35) contra.push(`ya subió ${Math.round(r * 100)}%`);
+      else if (r < 0) pro.push('hoy más barata que su precio de compra');
+      else pro.push('todavía a tiempo');
+    }
+    let fr = pro.join(' y ');
+    if (contra.length) fr += (fr ? '; en contra: ' : 'En contra: ') + contra.join(' y ');
+    fr = fr.charAt(0).toUpperCase() + fr.slice(1);
+    return fr ? fr + '.' : '';
+  };
+  const ideasUni = Object.values(uni);
+  for (const u of ideasUni) u.calif = califica(u);
+  ideasUni.sort((a, b) => b.calif.total - a.calif.total);
   gm13f._ideasUni = ideasUni;   // para que el modal las encuentre por emisora
 
   const cajaTiming = r => {
@@ -20391,11 +20440,27 @@ function gmTabInsights(s) {
   };
   const chipFondo = f => {
     const ac = skillDe(f.fund);
+    const mov = f.cerrada ? '<span style="color:var(--red);font-weight:800">CERRÓ</span>'
+      : f.nueva ? '<span style="color:var(--navy);font-weight:800">NUEVA</span>'
+      : f.dsh == null || f.dsh === 0 ? ''
+      : `<span style="color:${f.dsh > 0 ? 'var(--green)' : 'var(--red)'}">${f.dsh > 0 ? '+' : ''}${Math.round(f.dsh)}%</span>`;
     return `<span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:2px 8px;border-radius:99px;margin:2px 3px 0 0;background:var(--gray-100);color:var(--gray-500)"
-      title="${escapeHtml(f.fund)} · la posición queda en ${f.w != null ? f.w + '% de su libro' : '?'}${f.rank ? ' · es su #' + f.rank : ''}${ac != null ? ' · le gana al mercado el ' + ac + '% de las veces' : ''}">
+      title="${escapeHtml(f.fund)} · la posición ${f.cerrada ? 'quedó CERRADA' : `queda en ${f.w != null ? f.w + '% de su libro' : '?'}`}${f.rank ? ' · es su #' + f.rank : ''}${ac != null ? ' · le gana al mercado el ' + ac + '% de las veces' : ''}">
       <strong style="color:var(--gray-700)">${escapeHtml(String(f.fund).split(' ')[0])}</strong>
-      ${f.nueva ? '<span style="color:var(--navy);font-weight:800">NUEVA</span>' : (f.dsh != null ? `<span style="color:var(--green)">+${Math.round(f.dsh)}%</span>` : '')}
-      ${f.w != null && f.w >= 0.4 ? `<span>· ${f.w.toFixed(1)}% de su libro</span>` : ''}</span>`;
+      ${mov}
+      ${!f.cerrada && f.w != null ? `<span>· ${f.w < 0.05 ? '&lt;0.1' : f.w.toFixed(1)}%</span>` : ''}</span>`;
+  };
+  // quiénes de los 15 la tienen, agrupados por lo que hicieron este trimestre
+  const filasTenedores = u => {
+    const ten = u.tenedores || u.fondos || [];
+    const compr = ten.filter(f => !f.cerrada && (f.nueva || (f.dsh || 0) > 0));
+    const vend = ten.filter(f => f.cerrada || (f.dsh || 0) < 0);
+    const quietos = ten.filter(f => !compr.includes(f) && !vend.includes(f));
+    const fila = (lbl, col, arr) => arr.length ? `<div style="margin-top:5px;display:flex;align-items:baseline;flex-wrap:wrap;gap:2px">
+      <span style="font-size:9px;font-weight:800;letter-spacing:.4px;color:${col};margin-right:4px;white-space:nowrap">${lbl}</span>${arr.map(chipFondo).join('')}</div>` : '';
+    return fila('COMPRARON · % de su libro', 'var(--green)', compr)
+      + fila('VENDIERON', 'var(--red)', vend)
+      + fila('SIN CAMBIO', 'var(--gray-400)', quietos);
   };
   const lecturaIdea = u => {
     const partes = [];
@@ -20422,28 +20487,41 @@ function gmTabInsights(s) {
     if (u.apuesta) chips.push(`<span style="font-size:9.5px;font-weight:800;letter-spacing:.4px;padding:2px 9px;border-radius:99px;background:var(--amber-bg);color:var(--amber)">APUESTA GRANDE · ${u.apuesta.w.toFixed(0)}% del libro de ${escapeHtml(u.apuesta.fund.split(' ')[0])}</span>`);
     return chips.join(' ');
   };
-  const tarjeta = u => `
+  const tarjeta = (u, i) => {
+    const c = u.calif, v = veredictoDe(c.total), pq = porqueDe(u);
+    return `
     <div onclick="gmInsAbrir('${escapeHtml(u.issuer).replace(/'/g, "\\'")}')"
       style="border:1px solid var(--gray-200);border-radius:11px;padding:12px 16px;margin:8px 0;background:var(--white);cursor:pointer">
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
-        <div style="font-size:14px;font-weight:800">${escapeHtml(bonito(u.issuer))}</div>
-        ${tipoChip(u)}
-      </div>
       <div style="display:flex;gap:14px;align-items:stretch;flex-wrap:wrap">
+        <div style="text-align:center;min-width:54px;align-self:center"
+          title="Calificación ${c.total}/100 = señal ${c.sig}/50 + manager ${c.mgr}/25 + timing ${c.tim}/25">
+          <div style="font-size:18px;font-weight:800;color:${v[2]};line-height:1">${i + 1}º</div>
+          <div style="font-size:12px;font-weight:800;color:${v[2]};margin-top:3px">${c.total}<span style="color:var(--gray-400);font-weight:400;font-size:9.5px">/100</span></div>
+        </div>
         <div style="flex:1;min-width:260px">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:5px">
+            <div style="font-size:14px;font-weight:800">${escapeHtml(bonito(u.issuer))}</div>
+            <span style="font-size:9.5px;font-weight:800;letter-spacing:.4px;padding:2px 9px;border-radius:99px;background:${v[3]};color:${v[2]}">${v[1]}</span>
+            ${tipoChip(u)}
+          </div>
           <div style="font-size:12.5px;line-height:1.6;color:var(--gray-700)">${lecturaIdea(u)}</div>
-          <div style="margin-top:6px">${(u.fondos || []).slice(0, 6).map(chipFondo).join('')}</div>
+          ${pq ? `<div style="font-size:11.5px;font-weight:600;color:${v[2]};margin-top:3px">${pq}</div>` : ''}
+          ${filasTenedores(u)}
+          <div style="font-size:10px;color:var(--gray-400);margin-top:6px"
+            title="Señal: peso de la compra en el libro del que más compró + cuántos compraron con peso + si es nueva al tope. Manager: acierto histórico vs el mercado, ponderado por peso. Timing: cuánto se movió ya la acción.">
+            Calificación ${c.total} = señal ${c.sig}/50 · manager ${c.mgr}/25 · timing ${c.tim}/25</div>
         </div>
         ${cajaTiming(u.ret_q)}
       </div>
     </div>`;
+  };
   const sec3 = ideasUni.length ? `<details open style="${secStyle}">
     ${tit(3, 'fa-lightbulb', 'var(--amber)', 'Ideas fuera de nuestra cartera',
-          'compras reales de acciones, ordenadas por fuerza de la señal · la caja de la derecha dice si seguimos a tiempo · click para el detalle')}
+          'ordenadas de mejor a peor · calificación = señal + acierto del manager + timing · la caja de la derecha dice si seguimos a tiempo · click para el detalle')}
     <div style="padding-bottom:12px">
-      ${ideasUni.slice(0, 6).map(tarjeta).join('')}
+      ${ideasUni.slice(0, 6).map((u, i) => tarjeta(u, i)).join('')}
       ${ideasUni.length > 6 ? `<details style="margin-top:4px"><summary style="cursor:pointer;list-style:none;font-size:11.5px;font-weight:700;color:var(--navy);padding:6px 2px">Ver las ${ideasUni.length - 6} restantes <i class="fa-solid fa-chevron-down" style="font-size:8px"></i></summary>
-        ${ideasUni.slice(6).map(tarjeta).join('')}</details>` : ''}
+        ${ideasUni.slice(6).map((u, i) => tarjeta(u, i + 6)).join('')}</details>` : ''}
     </div></details>` : '';
 
   return `<div style="${GM_CARD}">
