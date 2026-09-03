@@ -19932,7 +19932,11 @@ function gm13fCard() {
         <span style="display:block;width:${ancho}px;height:6px;border-radius:3px;background:var(--navy)"></span></span>
       <span style="font-size:10.5px;color:var(--gray-500)">${w.toFixed(1)}% <span style="color:var(--gray-400)">${escapeHtml(String(c.convic_fund || '').split(' ')[0])}</span></span></span>`;
   };
-  const chipsFondos = (fs, max) => (fs || []).slice(0, max || 5).map(f2 =>
+  // "3 de 7" = de los 7 fondos, 3 movieron ≥0.25% de su propio libro. Sin esto el
+  // conteo engaña: Citadel y AQR están en casi todo por construcción.
+  const conteoConv = (c) => c.n_conv == null ? `${c.n}` :
+    `<strong>${c.n_conv}</strong><span style="color:var(--gray-400)"> de ${c.n}</span>`;
+  const chipsFondos = (fs, max) => (fs || []).slice(0, max || 5).map(f2 =
     `<span style="display:inline-block;font-size:9.5px;padding:1px 7px;border-radius:99px;margin:1px 2px;background:var(--gray-100);color:var(--gray-500)" title="${escapeHtml(f2.fund)}${f2.w != null ? ' · ' + f2.w + '% de su libro' : ''}">${escapeHtml(f2.fund.split(' ')[0])}${f2.nueva ? '<span style="color:var(--navy);font-weight:800"> N</span>' : ''}${f2.cerrada ? '<span style="color:var(--red);font-weight:800"> C</span>' : ''}</span>`).join('');
   const desdeCorte = (v) => v == null ? '<span style="color:var(--gray-300)">—</span>'
     : `<span style="color:${gmColor(v)};font-size:11px" title="Movimiento del papel desde el cierre del trimestre (30-jun). NO es el costo de entrada de ellos: el 13F no lo dice.">${gmPct(v, 1)}</span>`;
@@ -19979,12 +19983,13 @@ function gm13fCard() {
   const ideas = D.ideas || [];
   const sec2b = ideas.length ? `<details open style="${secStyle}">
     ${tituloSec(2, 'fa-lightbulb', 'var(--amber)', 'Ideas — compraron algo que no tenemos en acciones',
-                'ordenadas por convicción agregada · la barra es el fondo que más la pesa · N = posición nueva · el cruce mira la cartera de ACCIONES, no el libro de opciones')}
+                'solo entran las que 3+ fondos movieron ≥0.25% de SU libro · la barra es el fondo que más la pesa · N = nueva · el cruce mira la cartera de ACCIONES, no el libro de opciones')}
     <div style="overflow-x:auto;padding-bottom:10px"><table class="camp-table" style="width:100%;font-size:12px">
-      <tr><th>Emisora</th><th>Quién compra</th><th>Convicción máx.</th><th>Nuevas</th><th class="num">Neto Q</th><th class="num">Precio al corte</th></tr>
+      <tr><th>Emisora</th><th>Quién compra</th><th>Con convicción</th><th>Convicción máx.</th><th>Nuevas</th><th class="num">Neto Q</th><th class="num">Precio al corte</th></tr>
       ${ideas.map(c => `<tr>
         <td style="font-weight:600">${escapeHtml(c.issuer)}</td>
         <td>${chipsFondos(c.fondos, 6)}</td>
+        <td style="text-align:center;font-size:12px">${conteoConv(c)}</td>
         <td>${convicChip(c)}</td>
         <td style="text-align:center">${c.nuevas ? `<span style="font-weight:700;color:var(--navy)">${c.nuevas}</span> <span style="font-size:10px;color:var(--gray-400)">de ${c.n}</span>` : `<span style="color:var(--gray-300)">—</span>`}</td>
         <td class="num" style="font-weight:700;color:var(--green)">${fm(c.neto)}</td>
@@ -19995,13 +20000,14 @@ function gm13fCard() {
   const rev = D.revisar || [];
   const sec3b = rev.length ? `<details open style="${secStyle}">
     ${tituloSec(3, 'fa-triangle-exclamation', 'var(--red)', 'Revisar — están soltando algo que sí tenemos',
-                'ordenado por NUESTRA exposición · C = posición cerrada')}
+                'ordenado por NUESTRA exposición · solo ventas de ≥0.25% del libro del fondo · C = cerrada')}
     <div style="overflow-x:auto;padding-bottom:10px"><table class="camp-table" style="width:100%;font-size:12px">
-      <tr><th>Posición</th><th>Nuestro peso</th><th>Quién vende</th><th class="num">Neto Q</th><th class="num">Desde el corte</th><th class="num">Nuestro P&L</th></tr>
+      <tr><th>Posición</th><th>Nuestro peso</th><th>Quién vende</th><th>Con convicción</th><th class="num">Neto Q</th><th class="num">Desde el corte</th><th class="num">Nuestro P&L</th></tr>
       ${rev.map(c => `<tr>
         <td style="font-weight:600">${escapeHtml(c.ticker)} <span style="font-size:10px;color:var(--gray-400)">${escapeHtml(c.issuer)}</span></td>
         <td style="font-weight:700">${(c.peso ?? 0).toFixed(2)}%</td>
         <td>${chipsFondos(c.fondos, 6)}</td>
+        <td style="text-align:center;font-size:12px">${conteoConv(c)}</td>
         <td class="num" style="font-weight:700;color:var(--red)">${fm(c.neto)}</td>
         <td class="num">${desdeCorte(c.desde_corte)}</td>
         <td class="num" style="color:${gmColor(c.plpct || 0)}">${c.plpct != null ? gmPct(c.plpct, 1) : '—'}</td></tr>`).join('')}
