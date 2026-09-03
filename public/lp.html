@@ -546,7 +546,12 @@
     var c = g.cuenta || {}, mtd = c.mtd || {}, qtd = c.qtd || {}, ytd = c.ytd || {};
     var host = $('dash'), sec = $('dashSec');
     var demoChip = g.demo ? '<span class="chip demo" style="margin-bottom:12px">Datos ilustrativos</span> ' : '';
-    var kpis = kpiCard('Valor de tu cuenta', 'money', mtd.end, cur, true, 'USD · al ' + esc(g.corte || ''), '', '')
+    // NAV vivo del mes en curso (lo publica el pipeline desde el Excel del
+    // administrador): el KPI muestra el valor al día; el Resumen del período y
+    // el Estado de Cuenta PDF siguen al mes cerrado.
+    var vivoOk = g.vivo && isFinite(+g.vivo.v);
+    var kpis = kpiCard('Valor de tu cuenta', 'money', vivoOk ? +g.vivo.v : mtd.end, cur, true,
+                vivoOk ? ('USD · hoy, ' + esc(g.vivo.fecha || '') + ' · preliminar') : ('USD · al ' + esc(g.corte || '')), '', '')
       + kpiCard('Rendimiento del mes', 'pct2', (mtd.ror || 0) * 100, '', false,
                 ((mtd.ni || 0) < 0 ? '−' : '+') + fmtMoney(Math.abs(mtd.ni || 0), cur), (mtd.ror || 0) < 0 ? 'neg' : 'pos', (mtd.ror || 0) < 0 ? 'neg' : 'pos')
       + kpiCard('Rendimiento del año', 'pct2', (ytd.ror || 0) * 100, '', false,
