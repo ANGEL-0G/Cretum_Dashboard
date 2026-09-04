@@ -20001,7 +20001,10 @@ function gm13fCard() {
   const H = D.hero || {};
   const secStyle = 'border:1px solid var(--gray-200);border-radius:10px;margin:8px 0;padding:2px 14px;background:var(--white)';
   const sumStyle = 'cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;font-weight:700;font-size:13px;padding:10px 0';
-  const chipF = f => `<span style="display:inline-block;font-size:10px;padding:2px 8px;border-radius:99px;margin:1px 2px;background:${f.diff >= 0 ? 'var(--green-bg)' : 'var(--red-bg)'};color:${f.diff >= 0 ? 'var(--green)' : 'var(--red)'}">${escapeHtml(f.fund.split(' ')[0])} ${fm(f.diff)}${f.nueva ? ' · NUEVA' : (f.cerrada ? ' · CERRADA' : '')}</span>`;
+  const chipF = f => {
+    const m = f.mov != null ? f.mov : f.diff;   // $ del movimiento (Δ acciones × precio), no Δ de valor
+    return `<span style="display:inline-block;font-size:10px;padding:2px 8px;border-radius:99px;margin:1px 2px;background:${m >= 0 ? 'var(--green-bg)' : 'var(--red-bg)'};color:${m >= 0 ? 'var(--green)' : 'var(--red)'}">${escapeHtml(f.fund.split(' ')[0])} ${fm(m)}${f.nueva ? ' · NUEVA' : (f.cerrada ? ' · CERRADA' : (f.dsh != null ? ` · ${f.dsh >= 0 ? '+' : ''}${Math.round(f.dsh)}%` : ''))}</span>`;
+  };
   const trendMini = (tr) => (tr || []).map((v, ix) => {
     const h = Math.min(14, Math.max(3, Math.log10(Math.abs(v) + 1) * 1.6));
     return `<span style="display:inline-block;width:7px;height:${h}px;margin-right:2px;border-radius:1.5px;background:${v > 0 ? 'var(--green)' : (v < 0 ? 'var(--red)' : 'var(--gray-200)')};vertical-align:baseline" title="${fm(v)}"></span>`;
@@ -20046,13 +20049,14 @@ function gm13fCard() {
     ${tituloSec(1, 'fa-briefcase', 'var(--navy)', 'Qué hicieron con lo nuestro',
                 'tendencia = 4 trimestres de flujo · convicción = % de SU libro · la acción desde el corte = cuánto se ha movido su precio desde el 30-jun')}
     <div style="overflow-x:auto;padding-bottom:10px"><table class="camp-table" style="width:100%;font-size:12px">
-      <tr><th>Posición</th><th>Tendencia 4T</th><th>El más invertido</th><th>Movimientos del trimestre</th><th class="num">$ neto del trimestre</th><th class="num">La acción desde el corte<br><span style="font-weight:400;text-transform:none">(su precio hoy vs el cierre del trimestre)</span></th><th class="num">Nuestro P&L</th></tr>${filas}</table></div></details>`;
+      <tr><th>Posición</th><th>Tendencia 4T</th><th>El más invertido</th><th>Movimientos del trimestre</th><th class="num">$ neto del trimestre<br><span style="font-weight:400;text-transform:none">(Δ acciones × precio de cierre)</span></th><th class="num">La acción desde el corte<br><span style="font-weight:400;text-transform:none">(su precio hoy vs el cierre del trimestre)</span></th><th class="num">Nuestro P&L</th></tr>${filas}</table></div></details>`;
 
   // ── 2) por manager (desplegable con sub-desplegables) ──
   const fondosHtml = (D.fondos || []).map(f => {
     const serie = (f.serie || []).map(s2 => `<span style="font-size:9.5px;color:var(--gray-400);margin-right:8px">${escapeHtml(String(s2.q).slice(2, 7))}: ${fmAbs(s2.total)}</span>`).join('');
-    const tb = (f.top_buys || []).map(x => `<div style="font-size:11.5px;margin:2px 0"><span style="color:var(--green);font-weight:700">${fm(x.diff)}</span> ${escapeHtml(x.name)}${x.nueva ? ' <span style="font-size:8.5px;font-weight:800;color:var(--navy)">NUEVA</span>' : ''}</div>`).join('');
-    const ts2 = (f.top_sells || []).map(x => `<div style="font-size:11.5px;margin:2px 0"><span style="color:var(--red);font-weight:700">${fm(x.diff)}</span> ${escapeHtml(x.name)}${x.cerrada ? ' <span style="font-size:8.5px;font-weight:800;color:var(--red)">CERRADA</span>' : ''}</div>`).join('');
+    const dshTag = x => x.dsh == null ? '' : ` <span style="font-size:10px;color:var(--gray-400)">${x.dsh >= 0 ? '+' : ''}${Math.round(x.dsh)}% acc</span>`;
+    const tb = (f.top_buys || []).map(x => `<div style="font-size:11.5px;margin:2px 0"><span style="color:var(--green);font-weight:700">${fm(x.diff)}</span> ${escapeHtml(x.name)}${x.nueva ? ' <span style="font-size:8.5px;font-weight:800;color:var(--navy)">NUEVA</span>' : dshTag(x)}</div>`).join('');
+    const ts2 = (f.top_sells || []).map(x => `<div style="font-size:11.5px;margin:2px 0"><span style="color:var(--red);font-weight:700">${fm(x.diff)}</span> ${escapeHtml(x.name)}${x.cerrada ? ' <span style="font-size:8.5px;font-weight:800;color:var(--red)">CERRADA</span>' : dshTag(x)}</div>`).join('');
     return `<details style="border-top:1px solid var(--gray-100);padding:4px 0"><summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;font-size:12.5px;padding:7px 0">
         <strong style="min-width:150px">${escapeHtml(f.name)}</strong>
         <span style="color:var(--gray-500)">${fmAbs(f.total)} en 13F</span>
@@ -20077,7 +20081,7 @@ function gm13fCard() {
     ${tituloSec(2, 'fa-lightbulb', 'var(--amber)', 'Ideas — compraron algo que no tenemos en acciones',
                 'solo entran las que 3+ fondos movieron ≥0.25% de SU libro · la barra es el fondo que más la pesa · N = nueva · el cruce mira la cartera de ACCIONES, no el libro de opciones')}
     <div style="overflow-x:auto;padding-bottom:10px"><table class="camp-table" style="width:100%;font-size:12px">
-      <tr><th>Emisora</th><th>Quién compró</th><th>Compraron con peso</th><th>El más invertido</th><th>Posiciones nuevas</th><th class="num">$ neto del trimestre</th><th class="num">Precio al corte</th></tr>
+      <tr><th>Emisora</th><th>Quién compró</th><th>Compraron con peso</th><th>El más invertido</th><th>Posiciones nuevas</th><th class="num">$ neto del trimestre<br><span style="font-weight:400;text-transform:none">(Δ acciones × precio de cierre)</span></th><th class="num">Precio al corte</th></tr>
       ${ideas.map(c => `<tr>
         <td style="font-weight:600">${escapeHtml(c.issuer)}</td>
         <td>${chipsFondos(c.fondos, 6)}</td>
@@ -20094,7 +20098,7 @@ function gm13fCard() {
     ${tituloSec(3, 'fa-triangle-exclamation', 'var(--red)', 'Revisar — están soltando algo que sí tenemos',
                 'ordenado por NUESTRA exposición · solo ventas de ≥0.25% del libro del fondo · C = cerrada')}
     <div style="overflow-x:auto;padding-bottom:10px"><table class="camp-table" style="width:100%;font-size:12px">
-      <tr><th>Posición</th><th>Nuestro peso</th><th>Quién vende</th><th>Venden con peso</th><th class="num">$ neto del trimestre</th><th class="num">La acción desde el corte<br><span style="font-weight:400;text-transform:none">(su precio hoy vs el cierre del trimestre)</span></th><th class="num">Nuestro P&L</th></tr>
+      <tr><th>Posición</th><th>Nuestro peso</th><th>Quién vende</th><th>Venden con peso</th><th class="num">$ neto del trimestre<br><span style="font-weight:400;text-transform:none">(Δ acciones × precio de cierre)</span></th><th class="num">La acción desde el corte<br><span style="font-weight:400;text-transform:none">(su precio hoy vs el cierre del trimestre)</span></th><th class="num">Nuestro P&L</th></tr>
       ${rev.map(c => `<tr>
         <td style="font-weight:600">${escapeHtml(c.ticker)} <span style="font-size:10px;color:var(--gray-400)">${escapeHtml(c.issuer)}</span></td>
         <td style="font-weight:700">${(c.peso ?? 0).toFixed(2)}%</td>
